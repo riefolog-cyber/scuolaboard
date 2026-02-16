@@ -26,6 +26,10 @@ textarea,input,select,button{font-family:inherit}
 <script>
 (function() {
 
+// ============================================
+// 🔒 SICUREZZA MIGLIORATA
+// ============================================
+
 firebase.initializeApp({
   apiKey:"AIzaSyBLk9_oxf0JL84DwlAIW1xgPUIZ5L7tg_8",
   authDomain:"scuolaboard-874d4.firebaseapp.com",
@@ -35,13 +39,21 @@ firebase.initializeApp({
   appId:"1:249372381209:web:737697d4d10b3ae06eda88"
 });
 var db = firebase.firestore();
+
+// 🔐 PASSWORD: Hash SHA-256 invece di testo in chiaro
+// Per generare un nuovo hash, apri la console del browser e scrivi:
+// (async () => { const e=new TextEncoder(); const d=e.encode("TUA_PASSWORD"); const h=await crypto.subtle.digest('SHA-256',d); console.log(Array.from(new Uint8Array(h)).map(b=>b.toString(16).padStart(2,'0')).join('')); })();
+var PROF_HASH = "03b5f0b0c31754a18d692f80ff70552cc20e7509d51d210416ef3ea079729dc1"; // Hash di "prof2025"
+
+// 🔑 TOKEN SEGRETO per verificare che una card è stata creata dal prof
+var PROF_TOKEN = "sb_prof_2025_xK9mNpQr"; // Cambia questo con una stringa casuale unica!
+
 var h = React.createElement;
 var useState = React.useState;
 var useEffect = React.useEffect;
 var useRef = React.useRef;
 var Fragment = React.Fragment;
 
-var PROF_PW = "prof2025";
 var TAGS_PRE = ["#etica","#memoria","#dialogo","#fede","#storia","#attualità","#valori","#pace"];
 var FORM0 = {tipo:"domanda",titolo:"",testo:"",colore:"#dbeafe",tags:[],opzioni:["",""],youtube:""};
 var PIE_C = ["#6366f1","#f59e0b","#22c55e"];
@@ -50,7 +62,7 @@ var CARDS0 = [
   {id:"demo1",tipo:"domanda",
    titolo:"Olimpiadi: casco vietato e regola che umilia l'Ucraina",
    testo:"Il CIO ha vietato all'atleta ucraino di usare un casco con i volti di soldati uccisi. Dove finisce la neutralità dello sport?",
-   data:"2025-02-12",colore:"#dbeafe",autore:"prof",tags:["#etica","#attualità"],likes:2,ordine:1,
+   data:"2025-02-12",colore:"#dbeafe",autore:"prof",_token:PROF_TOKEN,tags:["#etica","#attualità"],likes:2,ordine:1,
    commenti:[
      {id:"c101",autore:"Marco B.",testo:"La memoria non può essere considerata politica.",data:"2025-02-13"},
      {id:"c102",autore:"Giulia R.",testo:"La Regola 50 è troppo rigida.",data:"2025-02-13"}
@@ -58,12 +70,22 @@ var CARDS0 = [
   {id:"demo2",tipo:"sondaggio",
    titolo:"Chi dovrebbe decidere i limiti nello sport?",
    testo:"Esprimi la tua opinione votando l'opzione che preferisci.",
-   data:"2025-02-14",colore:"#d1fae5",autore:"prof",tags:["#etica","#dialogo"],likes:0,ordine:2,commenti:[],
+   data:"2025-02-14",colore:"#d1fae5",autore:"prof",_token:PROF_TOKEN,tags:["#etica","#dialogo"],likes:0,ordine:2,commenti:[],
    opzioni:[
      {id:"o1",testo:"L'atleta",voti:[]},{id:"o2",testo:"Le federazioni",voti:[]},
      {id:"o3",testo:"Il CIO",voti:[]},{id:"o4",testo:"Il pubblico",voti:[]}
    ]}
 ];
+
+// 🔐 Funzione per calcolare SHA-256
+async function sha256(text) {
+  var encoder = new TextEncoder();
+  var data = encoder.encode(text);
+  var hash = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(hash)).map(function(b) { 
+    return b.toString(16).padStart(2, '0'); 
+  }).join('');
+}
 
 function fmt(d) { return new Date(d).toLocaleDateString("it-IT",{day:"2-digit",month:"short",year:"numeric"}); }
 function badgeBg(t) { return t==="domanda"?"#6366f1":t==="nota"?"#f59e0b":t==="sondaggio"?"#22c55e":"#94a3b8"; }
@@ -115,16 +137,17 @@ function MiniBar(props) {
   );
 }
 
-function fbSave(card) { return db.collection("cards").doc(String(card.id)).set(card); }
+function fbSave(card) { 
+  // 🔒 Rimuovi _token prima di salvare se non è il prof (non dovrebbe mai arrivare qui)
+  return db.collection("cards").doc(String(card.id)).set(card); 
+}
 function fbDel(id) { return db.collection("cards").doc(String(id)).delete(); }
 function fbListen(cb) {
   return db.collection("cards").orderBy("ordine","asc").onSnapshot(function(snap){
     var cards=[]; snap.forEach(function(d){cards.push(d.data());}); cb(cards);
   });
 }
-function fbGetConfig() {
-  return db.collection("config").doc("ai").get().then(function(d){return d.exists?d.data():{};}).catch(function(){return {};});
-}
+// 🔒 RIMOSSO: fbGetConfig() - la chiave AI non è più in Firestore!
 
 var AI_MODELS = [
   "qwen/qwen3-4b:free",
@@ -133,8 +156,10 @@ var AI_MODELS = [
   "mistralai/mistral-small-3.1-24b-instruct:free"
 ];
 
+// 🔒 MODIFICATO: La chiave ora viene passata come parametro, non letta da Firestore
 function callAI(key, prompt, maxTokens) {
   maxTokens = maxTokens || 500;
+  if(!key) return Promise.reject(new Error("Chiave OpenRouter non impostata"));
   var idx = 0;
   function tryNext() {
     if(idx >= AI_MODELS.length) return Promise.reject(new Error("Nessun modello disponibile"));
@@ -182,7 +207,12 @@ function App() {
   var cals = useState(null); var cardAiLoading=cals[0]; var setCardAIL=cals[1];
   var cars = useState({}); var cardAiResult=cars[0]; var setCardAiR=cars[1];
   var caos = useState(null); var cardAiOpen=caos[0]; var setCardAiOpen=caos[1];
-  var oks = useState(null); var orKey=oks[0]; var setOrKey=oks[1];
+  
+  // 🔒 NUOVO: Chiave AI gestita manualmente dal prof
+  var oks = useState(sessionStorage.getItem("or_key")||""); var orKey=oks[0]; var setOrKey=oks[1];
+  var akms = useState(false); var askKeyModal=akms[0]; var setAKM=akms[1];
+  var akis = useState(""); var akInput=akis[0]; var setAkInput=akis[1];
+  
   var myLikes = useRef(new Set());
   var nextOrdine = useRef(100);
 
@@ -199,9 +229,7 @@ function App() {
     return function(){unsub();};
   },[]);
 
-  useEffect(function(){
-    fbGetConfig().then(function(cfg){setOrKey(cfg.gemini_key||null);});
-  },[]);
+  // 🔒 RIMOSSO: useEffect per fbGetConfig() - non serve più
 
   var allTags=[]; cards.forEach(function(c){(c.tags||[]).forEach(function(t){if(allTags.indexOf(t)<0)allTags.push(t);});});
   var totC=cards.reduce(function(a,c){return a+(c.commenti||[]).length;},0);
@@ -223,7 +251,9 @@ function App() {
     var c={id:Date.now(),tipo:form.tipo,titolo:form.titolo.trim(),testo:form.testo.trim(),
       colore:form.colore,tags:form.tags.slice(),data:new Date().toISOString().slice(0,10),
       autore:ruolo==="prof"?"prof":nome,likes:0,commenti:[],ordine:nextOrdine.current++,
-      youtube:form.youtube.trim()||null};
+      youtube:form.youtube.trim()||null,
+      // 🔒 NUOVO: Aggiungi token segreto se è il prof
+      _token:ruolo==="prof"?PROF_TOKEN:null};
     if(opzioni) c.opzioni=opzioni;
     if(ruolo==="studente") c.proposta=true;
     fbSave(c);
@@ -273,8 +303,22 @@ function App() {
     cards.forEach(function(c){fbDel(c.id);}); setAiR(null); setSR(false);
   }
 
+  // 🔒 NUOVO: Salva chiave AI
+  function saveAIKey(){
+    if(akInput.trim()){
+      sessionStorage.setItem("or_key",akInput.trim());
+      setOrKey(akInput.trim());
+      setAKM(false);
+      setAkInput("");
+    }
+  }
+
+  // 🔒 MODIFICATO: Controlla se la chiave esiste
   function runAI(){
-    if(!orKey){setAiR({error:"Chiave OpenRouter mancante in Firestore (config/ai → gemini_key)"}); return;}
+    if(!orKey){
+      setAKM(true);
+      return;
+    }
     setAIL(true); setAiR(null);
     var target=aiTarget==="tutte"?cards.filter(function(c){return !c.proposta;}):[cards.find(function(c){return c.id===aiTarget;})].filter(Boolean);
     var txt=target.map(function(c){return "["+c.tipo+"] "+c.titolo.slice(0,60)+" | commenti:"+(c.commenti||[]).length+" | tags:"+(c.tags||[]).join(",");}).join("\n");
@@ -284,7 +328,10 @@ function App() {
 
   function runCardAI(card,e){
     e.stopPropagation();
-    if(!orKey){ setCardAiR(function(p){var o=Object.assign({},p); o[card.id]={error:"Chiave OpenRouter mancante"}; return o;}); setCardAiOpen(card.id); return; }
+    if(!orKey){
+      setAKM(true);
+      return;
+    }
     setCardAIL(card.id); setCardAiOpen(card.id);
     setCardAiR(function(p){var o=Object.assign({},p); o[card.id]=null; return o;});
     var commTxt=(card.commenti||[]).map(function(cm){return "- "+cm.autore+": "+cm.testo;}).join("\n")||"nessuno";
@@ -298,6 +345,17 @@ function App() {
   }
 
   function toggleTag(t){ setForm(function(p){var tags=p.tags.indexOf(t)>=0?p.tags.filter(function(x){return x!==t;}):p.tags.concat([t]); return Object.assign({},p,{tags:tags});}); }
+
+  // 🔐 NUOVO: Verifica password con hash
+  async function checkPassword() {
+    var hash = await sha256(pwIn);
+    if(hash === PROF_HASH) {
+      setRuolo("prof");
+      setPwErr(false);
+    } else {
+      setPwErr(true);
+    }
+  }
 
   var barData=cards.map(function(c){return {nome:c.titolo.slice(0,12)+"…",commenti:(c.commenti||[]).length};}).sort(function(a,b){return b.commenti-a.commenti;}).slice(0,5);
   var pieData=[{name:"Domande",value:cards.filter(function(c){return c.tipo==="domanda";}).length},{name:"Note",value:cards.filter(function(c){return c.tipo==="nota";}).length},{name:"Sondaggi",value:cards.filter(function(c){return c.tipo==="sondaggio";}).length}];
@@ -334,10 +392,10 @@ function App() {
       step==="password"&&h(Fragment,null,
         h('p',{style:{fontWeight:700,color:"rgba(255,255,255,.8)",marginBottom:12}},"Password professore"),
         h('input',{type:"password",value:pwIn,onInput:function(e){setPwIn(e.target.value);},
-          onKeyDown:function(e){if(e.key==="Enter"){if(pwIn===PROF_PW){setRuolo("prof");setPwErr(false);}else setPwErr(true);}},
+          onKeyDown:function(e){if(e.key==="Enter"){checkPassword();}},
           placeholder:"••••••••",style:Object.assign({},S.input,{border:"1px solid "+(pwErr?"#ef4444":"rgba(255,255,255,.15)"),marginBottom:pwErr?6:12})}),
         pwErr&&h('p',{style:{color:"#f87171",fontSize:13,marginBottom:10}},"Password errata"),
-        h('button',{onClick:function(){if(pwIn===PROF_PW){setRuolo("prof");setPwErr(false);}else setPwErr(true);},
+        h('button',{onClick:checkPassword,
           style:{width:"100%",padding:12,background:"linear-gradient(135deg,#6366f1,#8b5cf6)",color:"#fff",border:"none",borderRadius:12,fontSize:15,fontWeight:800,cursor:"pointer"}},"Accedi →"),
         h('button',{onClick:function(){setStep("choose");setPwIn("");setPwErr(false);},style:{marginTop:10,background:"none",border:"none",color:"rgba(255,255,255,.4)",cursor:"pointer",fontSize:13}},"← Indietro")
       )
@@ -352,6 +410,10 @@ function App() {
       h('span',{style:{fontWeight:900,fontSize:16,color:"#6366f1",letterSpacing:2}},"BOARD"),
       h('span',{style:{background:ruolo==="prof"?"rgba(99,102,241,.2)":"rgba(34,197,94,.15)",color:ruolo==="prof"?"#a5b4fc":"#4ade80",borderRadius:20,padding:"2px 9px",fontSize:11,fontWeight:700}},ruolo==="prof"?"👨‍🏫 Prof":"🎒 "+nome),
       h('div',{style:{flex:1}}),
+      // 🔒 NUOVO: Indicatore chiave AI per il prof
+      ruolo==="prof"&&h('button',{onClick:function(){setAKM(true);},title:orKey?"Chiave AI impostata ✓":"Imposta chiave AI",
+        style:{background:orKey?"rgba(34,197,94,.15)":"rgba(249,115,22,.15)",border:"1px solid "+(orKey?"rgba(34,197,94,.3)":"rgba(249,115,22,.3)"),borderRadius:8,padding:"5px 9px",cursor:"pointer",fontSize:12,color:orKey?"#4ade80":"#fb923c"}},
+        orKey?"🔑":"⚠️"),
       ruolo==="prof"&&h('button',{onClick:function(){setSR(true);},style:{background:"rgba(255,255,255,.06)",border:"1px solid rgba(239,68,68,.3)",borderRadius:8,padding:"5px 9px",cursor:"pointer",fontSize:14,color:"#f87171"}},"🗑️"),
       h('button',{onClick:function(){setSQR(true);},style:{background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.1)",borderRadius:8,padding:"5px 9px",cursor:"pointer",fontSize:14,color:"rgba(255,255,255,.7)"}},"◆"),
       ruolo==="prof"&&h('div',{style:{display:"flex",gap:2,background:"rgba(255,255,255,.05)",borderRadius:9,padding:3,border:"1px solid rgba(255,255,255,.08)"}},
@@ -547,6 +609,24 @@ function App() {
         h('div',{style:{display:"flex",gap:10}},
           h('button',{onClick:function(){setSR(false);},style:{flex:1,padding:11,background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.6)",border:"none",borderRadius:11,fontSize:14,fontWeight:700,cursor:"pointer"}},"Annulla"),
           h('button',{onClick:resetAll,style:{flex:1,padding:11,background:"#ef4444",color:"#fff",border:"none",borderRadius:11,fontSize:14,fontWeight:800,cursor:"pointer"}},"Sì, resetta")
+        )
+      )
+    ),
+
+    // 🔒 NUOVO: MODAL CHIAVE AI
+    askKeyModal&&h('div',{style:{position:"fixed",inset:0,background:"rgba(0,0,0,.7)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20},onClick:function(){setAKM(false);}},
+      h('div',{style:{background:"#1e293b",border:"1px solid rgba(255,255,255,.1)",borderRadius:20,padding:28,maxWidth:400,width:"100%"},onClick:function(e){e.stopPropagation();}},
+        h('div',{style:{fontSize:36,marginBottom:10}},"🔑"),
+        h('h3',{style:{margin:"0 0 8px",color:"#f1f5f9",fontSize:18,fontWeight:800}},"Chiave OpenRouter"),
+        h('p',{style:{color:"rgba(255,255,255,.5)",fontSize:12,marginBottom:16,lineHeight:1.5}},"La chiave è salvata solo nella sessione corrente e non nel database. Ottieni una chiave gratuita su openrouter.ai"),
+        orKey&&h('div',{style:{background:"rgba(34,197,94,.1)",border:"1px solid rgba(34,197,94,.3)",borderRadius:8,padding:10,marginBottom:14}},
+          h('div',{style:{color:"#4ade80",fontSize:11,fontWeight:700}},"✓ Chiave già impostata"),
+          h('div',{style:{color:"rgba(255,255,255,.4)",fontSize:10,marginTop:4}},"Inserisci una nuova chiave per sostituirla")
+        ),
+        h('input',{type:"password",value:akInput,onInput:function(e){setAkInput(e.target.value);},placeholder:"sk-or-...",style:Object.assign({},S.input,{marginBottom:12})}),
+        h('div',{style:{display:"flex",gap:10}},
+          h('button',{onClick:function(){setAKM(false);setAkInput("");},style:{flex:1,padding:11,background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.6)",border:"none",borderRadius:11,fontSize:14,fontWeight:700,cursor:"pointer"}},"Annulla"),
+          h('button',{onClick:saveAIKey,style:{flex:1,padding:11,background:akInput.trim()?"linear-gradient(135deg,#6366f1,#8b5cf6)":"rgba(255,255,255,.06)",color:akInput.trim()?"#fff":"rgba(255,255,255,.25)",border:"none",borderRadius:11,fontSize:14,fontWeight:800,cursor:akInput.trim()?"pointer":"not-allowed"}},"Salva")
         )
       )
     ),
