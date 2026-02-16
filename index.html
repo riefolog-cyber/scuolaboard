@@ -56,7 +56,6 @@ var Fragment = React.Fragment;
 
 var TAGS_PRE = ["#etica","#memoria","#dialogo","#fede","#storia","#attualità","#valori","#pace"];
 var FORM0 = {tipo:"domanda",titolo:"",testo:"",colore:"#dbeafe",tags:[],opzioni:["",""],youtube:""};
-var PIE_C = ["#6366f1","#f59e0b","#22c55e"];
 
 var CARDS0 = [
   {id:"demo1",tipo:"domanda",
@@ -96,46 +95,9 @@ function ytId(url) {
   return m?m[1]:null;
 }
 
-function MiniPie(props) {
-  var data=props.data;
-  var size=120,cx=60,cy=60,r=42,ri=24;
-  var total=data.reduce(function(a,d){return a+d.value;},0)||1;
-  var angle=-Math.PI/2;
-  return h('svg',{width:size,height:size},
-    data.map(function(d,i){
-      var a=d.value/total*Math.PI*2;
-      var x1=cx+r*Math.cos(angle),y1=cy+r*Math.sin(angle);
-      var x2=cx+r*Math.cos(angle+a),y2=cy+r*Math.sin(angle+a);
-      var xi1=cx+ri*Math.cos(angle),yi1=cy+ri*Math.sin(angle);
-      var xi2=cx+ri*Math.cos(angle+a),yi2=cy+ri*Math.sin(angle+a);
-      var lg=a>Math.PI?1:0;
-      var path="M"+xi1+","+yi1+"L"+x1+","+y1+"A"+r+","+r+",0,"+lg+",1,"+x2+","+y2+"L"+xi2+","+yi2+"A"+ri+","+ri+",0,"+lg+",0,"+xi1+","+yi1;
-      angle+=a;
-      return h('path',{key:i,d:path,fill:PIE_C[i],opacity:.9});
-    }).concat(
-      data.map(function(d,i){return h('text',{key:'l'+i,x:4,y:13+i*15,fontSize:9,fill:PIE_C[i],fontWeight:700},d.name+": "+d.value);})
-    )
-  );
-}
 
-function MiniBar(props) {
-  var data=props.data;
-  if(!data.length) return null;
-  var max=Math.max.apply(null,data.map(function(d){return d.commenti;}).concat([1]));
-  var w=200,h2=100,pad=24;
-  var bw=Math.min(26,(w-pad*2)/data.length-4);
-  return h('svg',{width:w,height:h2+18},
-    data.map(function(d,i){
-      var bh=Math.round((d.commenti/max)*(h2-8));
-      var x=pad+i*(w-pad*2)/data.length+((w-pad*2)/data.length-bw)/2;
-      return h(Fragment,{key:i},
-        h('rect',{x:x,y:h2-bh,width:bw,height:bh||1,fill:"#6366f1",rx:3,opacity:.85}),
-        h('text',{x:x+bw/2,y:h2+13,textAnchor:"middle",fontSize:8,fill:"#94a3b8"},d.nome.slice(0,9)),
-        bh>0?h('text',{x:x+bw/2,y:h2-bh-3,textAnchor:"middle",fontSize:9,fill:"#a5b4fc",fontWeight:700},d.commenti):null
-      );
-    })
-  );
-}
+
+
 
 function fbSave(card) { 
   // 🔒 Rimuovi _token prima di salvare se non è il prof (non dovrebbe mai arrivare qui)
@@ -149,49 +111,84 @@ function fbListen(cb) {
 }
 // 🔒 RIMOSSO: fbGetConfig() - la chiave AI non è più in Firestore!
 
-var AI_MODELS = [
-  "meta-llama/llama-3.2-3b-instruct:free",
-  "google/gemma-3-1b-it:free",
-  "qwen/qwen-2.5-3b-instruct:free",
-  "huggingfaceh4/zephyr-7b-beta:free"
-];
+// 🔒 NUOVO: Trova automaticamente i modelli gratuiti disponibili
+var cachedFreeModels = null;
+var lastModelFetch = 0;
 
-// 🔒 MODIFICATO: La chiave ora viene passata come parametro, non letta da Firestore
+function getFreeModels(key) {
+  // Cache per 1 ora
+  if(cachedFreeModels && Date.now() - lastModelFetch < 3600000) {
+    return Promise.resolve(cachedFreeModels);
+  }
+  
+  return fetch("https://openrouter.ai/api/v1/models", {
+    headers:{"Authorization":"Bearer "+key}
+  }).then(function(r){return r.json();}).then(function(data){
+    if(!data.data) return [];
+    var freeModels = data.data.filter(function(m){
+      return m.id && m.id.includes(":free") && m.id.includes("/");
+    }).map(function(m){return m.id;});
+    cachedFreeModels = freeModels;
+    lastModelFetch = Date.now();
+    return freeModels;
+  }).catch(function(){return [];});
+}
+
+// 🔒 MODIFICATO: Cerca automaticamente i modelli free disponibili
 function callAI(key, prompt, maxTokens) {
   maxTokens = maxTokens || 500;
   if(!key) return Promise.reject(new Error("Chiave OpenRouter non impostata. Clicca su 🔑 nella barra in alto."));
-  var idx = 0;
+  
   var lastError = "";
-  function tryNext() {
-    if(idx >= AI_MODELS.length) return Promise.reject(new Error(lastError || "Tutti i modelli hanno fallito. Controlla la tua chiave API."));
-    var model = AI_MODELS[idx++];
-    return fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method:"POST",
-      headers:{"Content-Type":"application/json","Authorization":"Bearer "+key,"HTTP-Referer":"https://riefolog-cyber.github.io","X-Title":"ScuolaBoard"},
-      body:JSON.stringify({model:model,max_tokens:maxTokens,messages:[{role:"user",content:prompt}]})
-    }).then(function(r){return r.json();}).then(function(data){
-      if(data.error) {
-        lastError = data.error.message || data.error.type || "Errore API";
-        console.log("Modello " + model + " fallito:", lastError);
+  var modelsTried = [];
+  
+  return getFreeModels(key).then(function(freeModels){
+    if(!freeModels || freeModels.length === 0) {
+      // Fallback: modelli comunemente gratuiti
+      freeModels = [
+        "meta-llama/llama-3.2-3b-instruct:free",
+        "google/gemma-3-1b-it:free",
+        "qwen/qwen-2.5-3b-instruct:free",
+        "microsoft/phi-3-mini-128k-instruct:free"
+      ];
+    }
+    
+    var idx = 0;
+    function tryNext() {
+      if(idx >= freeModels.length) {
+        return Promise.reject(new Error("Nessun modello gratuito disponibile. Modelli provati: " + modelsTried.join(", ")));
+      }
+      var model = freeModels[idx++];
+      modelsTried.push(model.split("/")[1] || model);
+      
+      return fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method:"POST",
+        headers:{"Content-Type":"application/json","Authorization":"Bearer "+key,"HTTP-Referer":"https://riefolog-cyber.github.io","X-Title":"ScuolaBoard"},
+        body:JSON.stringify({model:model,max_tokens:maxTokens,messages:[{role:"user",content:prompt}]})
+      }).then(function(r){return r.json();}).then(function(data){
+        if(data.error) {
+          lastError = data.error.message || data.error.type || "Errore provider";
+          console.log("Modello " + model + " fallito:", lastError);
+          return tryNext();
+        }
+        if(!data.choices || !data.choices[0] || !data.choices[0].message) {
+          lastError = "Risposta non valida";
+          return tryNext();
+        }
+        console.log("Modello funzionante:", model);
+        var t=data.choices[0].message.content.replace(/```json|```/g,"").trim();
+        try {
+          return JSON.parse(t);
+        } catch(e) {
+          return {sintesi: t.slice(0,300), suggerimenti: [], domanda_emergente: ""};
+        }
+      }).catch(function(err){
+        lastError = err.message || "Errore di rete";
         return tryNext();
-      }
-      if(!data.choices || !data.choices[0] || !data.choices[0].message) {
-        lastError = "Risposta non valida dal modello";
-        return tryNext();
-      }
-      var t=data.choices[0].message.content.replace(/```json|```/g,"").trim();
-      try {
-        return JSON.parse(t);
-      } catch(e) {
-        // Se non è JSON valido, restituisci un oggetto con il testo
-        return {sintesi: t.slice(0,300), suggerimenti: [], domanda_emergente: ""};
-      }
-    }).catch(function(err){
-      lastError = err.message || "Errore di rete";
-      return tryNext();
-    });
-  }
-  return tryNext();
+      });
+    }
+    return tryNext();
+  });
 }
 
 var S = {
@@ -374,8 +371,6 @@ function App() {
     }
   }
 
-  var barData=cards.map(function(c){return {nome:c.titolo.slice(0,12)+"…",commenti:(c.commenti||[]).length};}).sort(function(a,b){return b.commenti-a.commenti;}).slice(0,5);
-  var pieData=[{name:"Domande",value:cards.filter(function(c){return c.tipo==="domanda";}).length},{name:"Note",value:cards.filter(function(c){return c.tipo==="nota";}).length},{name:"Sondaggi",value:cards.filter(function(c){return c.tipo==="sondaggio";}).length}];
   var qrUrl="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data="+encodeURIComponent(window.location.href);
 
   if(!dbReady) return h('div',{style:{minHeight:"100vh",background:"linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16}},
@@ -556,16 +551,6 @@ function App() {
           return h('div',{key:s.l,style:{flex:1,minWidth:90,background:"rgba(255,255,255,.05)",borderRadius:11,padding:"10px 12px",border:"1px solid rgba(255,255,255,.08)",borderTop:"3px solid "+s.c}},
             h('div',{style:{fontSize:18}},s.i),h('div',{style:{fontSize:22,fontWeight:800,color:"#f1f5f9"}},s.v),h('div',{style:{fontSize:10,color:"rgba(255,255,255,.4)"}},s.l));
         })
-      ),
-      h('div',{style:{display:"flex",gap:12,flexWrap:"wrap",marginBottom:16}},
-        h('div',{style:{flex:1,minWidth:160,background:"rgba(255,255,255,.05)",borderRadius:11,padding:14,border:"1px solid rgba(255,255,255,.08)"}},
-          h('div',{style:{fontWeight:700,color:"rgba(255,255,255,.7)",marginBottom:8,fontSize:12}},"📊 Tipo card"),
-          h(MiniPie,{data:pieData})
-        ),
-        h('div',{style:{flex:2,minWidth:200,background:"rgba(255,255,255,.05)",borderRadius:11,padding:14,border:"1px solid rgba(255,255,255,.08)"}},
-          h('div',{style:{fontWeight:700,color:"rgba(255,255,255,.7)",marginBottom:8,fontSize:12}},"💬 Commenti per card"),
-          h(MiniBar,{data:barData})
-        )
       ),
       h('div',{style:{background:"rgba(255,255,255,.05)",borderRadius:11,padding:16,border:"1px solid rgba(255,255,255,.08)"}},
         h('div',{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}},
