@@ -150,29 +150,46 @@ function fbListen(cb) {
 // 🔒 RIMOSSO: fbGetConfig() - la chiave AI non è più in Firestore!
 
 var AI_MODELS = [
-  "qwen/qwen3-4b:free",
-  "google/gemma-3-4b-it:free",
   "meta-llama/llama-3.2-3b-instruct:free",
-  "mistralai/mistral-small-3.1-24b-instruct:free"
+  "google/gemma-3-1b-it:free",
+  "qwen/qwen-2.5-3b-instruct:free",
+  "huggingfaceh4/zephyr-7b-beta:free"
 ];
 
 // 🔒 MODIFICATO: La chiave ora viene passata come parametro, non letta da Firestore
 function callAI(key, prompt, maxTokens) {
   maxTokens = maxTokens || 500;
-  if(!key) return Promise.reject(new Error("Chiave OpenRouter non impostata"));
+  if(!key) return Promise.reject(new Error("Chiave OpenRouter non impostata. Clicca su 🔑 nella barra in alto."));
   var idx = 0;
+  var lastError = "";
   function tryNext() {
-    if(idx >= AI_MODELS.length) return Promise.reject(new Error("Nessun modello disponibile"));
+    if(idx >= AI_MODELS.length) return Promise.reject(new Error(lastError || "Tutti i modelli hanno fallito. Controlla la tua chiave API."));
     var model = AI_MODELS[idx++];
     return fetch("https://openrouter.ai/api/v1/chat/completions", {
       method:"POST",
       headers:{"Content-Type":"application/json","Authorization":"Bearer "+key,"HTTP-Referer":"https://riefolog-cyber.github.io","X-Title":"ScuolaBoard"},
       body:JSON.stringify({model:model,max_tokens:maxTokens,messages:[{role:"user",content:prompt}]})
     }).then(function(r){return r.json();}).then(function(data){
-      if(data.error) return tryNext();
+      if(data.error) {
+        lastError = data.error.message || data.error.type || "Errore API";
+        console.log("Modello " + model + " fallito:", lastError);
+        return tryNext();
+      }
+      if(!data.choices || !data.choices[0] || !data.choices[0].message) {
+        lastError = "Risposta non valida dal modello";
+        return tryNext();
+      }
       var t=data.choices[0].message.content.replace(/```json|```/g,"").trim();
-      return JSON.parse(t);
-    }).catch(function(){return tryNext();});
+      try {
+        return JSON.parse(t);
+      } catch(e) {
+        // Se non è JSON valido, restituisci un oggetto con il testo
+        return {sintesi: t.slice(0,300), suggerimenti: [], domanda_emergente: ""};
+      }
+    }).catch(function(err){
+      lastError = err.message || "Errore di rete";
+      return tryNext();
+    });
   }
   return tryNext();
 }
