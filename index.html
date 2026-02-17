@@ -38,7 +38,7 @@ var db=firebase.firestore(), auth=firebase.auth();
 var h=React.createElement, useState=React.useState, useEffect=React.useEffect, useRef=React.useRef, Fragment=React.Fragment;
 var PROF_TOKEN="sb_prof_2025_xK9mNpQr";
 var TAGS_PRE=["#etica","#memoria","#dialogo","#fede","#storia","#attualità","#valori","#pace"];
-var FORM0={tipo:"domanda",titolo:"",testo:"",colore:"#dbeafe",tags:[],opzioni:["",""],youtube:""};
+var FORM0={tipo:"domanda",titolo:"",testo:"",colore:"#dbeafe",tags:[],opzioni:["",""],linkEsterno:""};
 
 function fmt(d){return new Date(d).toLocaleDateString("it-IT",{day:"2-digit",month:"short",year:"numeric"});}
 function badgeBg(t){return t==="domanda"?"#6366f1":t==="nota"?"#f59e0b":t==="sondaggio"?"#22c55e":"#94a3b8";}
@@ -110,6 +110,7 @@ function App(){
   var srs=useState(false),showReset=srs[0],setSR=srs[1];
   var srcs=useState(false),showRC=srcs[0],setSRC=srcs[1];
   var fms=useState(Object.assign({},FORM0)),form=fms[0],setForm=fms[1];
+  var ems=useState(null),editMode=ems[0],setEditMode=ems[1];
   var ncs=useState({autore:"",testo:""}),nc=ncs[0],setNc=ncs[1];
   var oks=useState(sessionStorage.getItem("or_key")||""),orKey=oks[0],setOrKey=oks[1];
   var akms=useState(false),askKeyModal=akms[0],setAKM=akms[1];
@@ -176,7 +177,6 @@ function App(){
   }
   function logout(){auth.signOut();setUser(null);sessionStorage.removeItem("or_key");}
 
-  // ✅ FIXED: exportData senza parentesi in eccesso
   function exportData(format){
     if(format==="csv"){
       var headers=["ID","Tipo","Titolo","Autore","Data","Like","Commenti"];
@@ -214,11 +214,35 @@ function App(){
     if(form.tipo==="sondaggio")
       opzioni=form.opzioni.filter(function(o){return o.trim();}).map(function(o,i){return{id:"o"+Date.now()+"_"+i,testo:o,voti:[]};});
     var autoreDisplay=user.role==="prof"?"Prof":(user.nome+" "+user.cognome);
-    var c={id:Date.now(),tipo:form.tipo,titolo:form.titolo.trim(),testo:form.testo.trim(),colore:form.colore,tags:form.tags.slice(),data:new Date().toISOString().slice(0,10),autore:autoreDisplay,likes:0,commenti:[],ordine:nextOrdine.current++,youtube:form.youtube.trim()||null,_token:user.role==="prof"?PROF_TOKEN:null};
-    if(opzioni)c.opzioni=opzioni;
-    if(user.role==="studente")c.proposta=true;
-    fbSave(c);setSM(false);setForm(Object.assign({},FORM0));
+    
+    if(editMode){
+      var c=Object.assign({},editMode,{tipo:form.tipo,titolo:form.titolo.trim(),testo:form.testo.trim(),colore:form.colore,tags:form.tags.slice(),linkEsterno:form.linkEsterno.trim()||null});
+      if(opzioni)c.opzioni=opzioni;
+      fbSave(c);
+      setEditMode(null);
+    }else{
+      var c={id:Date.now(),tipo:form.tipo,titolo:form.titolo.trim(),testo:form.testo.trim(),colore:form.colore,tags:form.tags.slice(),data:new Date().toISOString().slice(0,10),autore:autoreDisplay,likes:0,commenti:[],ordine:nextOrdine.current++,linkEsterno:form.linkEsterno.trim()||null,_token:user.role==="prof"?PROF_TOKEN:null};
+      if(opzioni)c.opzioni=opzioni;
+      if(user.role==="studente")c.proposta=true;
+      fbSave(c);
+    }
+    setSM(false);setForm(Object.assign({},FORM0));
   }
+  
+  function editCard(card){
+    setEditMode(card);
+    setForm({
+      tipo:card.tipo,
+      titolo:card.titolo,
+      testo:card.testo||"",
+      colore:card.colore,
+      tags:card.tags||[],
+      opzioni:card.opzioni?card.opzioni.map(function(o){return o.testo;}):["",""],
+      linkEsterno:card.linkEsterno||""
+    });
+    setSM(true);
+  }
+  
   function delCard(id){fbDel(id);setSC(null);}
   function appCard(id){var c=cards.find(function(x){return x.id===id;});if(!c)return;fbSave(Object.assign({},c,{proposta:false}));}
   function rstCard(id){
@@ -306,7 +330,6 @@ function App(){
   );
 
   return h("div",{style:{minHeight:"100vh",background:"linear-gradient(160deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%)",display:"flex",flexDirection:"column"}},
-    // TOP BAR
     h("div",{style:{background:"rgba(255,255,255,.04)",backdropFilter:"blur(12px)",borderBottom:"1px solid rgba(255,255,255,.08)",padding:"8px 14px",display:"flex",alignItems:"center",gap:8,position:"sticky",top:0,zIndex:50,flexWrap:"wrap"}},
       h("span",{style:{fontWeight:900,fontSize:16,color:"#fff",letterSpacing:2}},"SCUOLA"),
       h("span",{style:{fontWeight:900,fontSize:16,color:"#6366f1",letterSpacing:2}},"BOARD"),
@@ -324,10 +347,9 @@ function App(){
           return h("button",{key:t.k,onClick:function(){setView(t.k);},style:{padding:"4px 11px",borderRadius:7,border:"none",background:view===t.k?"rgba(99,102,241,.4)":"transparent",color:view===t.k?"#fff":"rgba(255,255,255,.4)",fontWeight:700,cursor:"pointer",fontSize:13}},t.i);
         })
       ),
-      h("button",{onClick:function(){setSM(true);},style:{background:"linear-gradient(135deg,#6366f1,#8b5cf6)",border:"none",borderRadius:20,width:34,height:34,cursor:"pointer",color:"#fff",fontSize:20,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800}},"+"),
+      h("button",{onClick:function(){setEditMode(null);setSM(true);},style:{background:"linear-gradient(135deg,#6366f1,#8b5cf6)",border:"none",borderRadius:20,width:34,height:34,cursor:"pointer",color:"#fff",fontSize:20,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800}},"+"),
       h("button",{onClick:logout,style:{background:"none",border:"1px solid rgba(255,255,255,.1)",borderRadius:7,padding:"4px 9px",cursor:"pointer",fontSize:11,color:"rgba(255,255,255,.3)"}},"Esci")
     ),
-    // BACHECA
     view==="bacheca"&&h(Fragment,null,
       h("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",gap:8,padding:"7px 14px",background:"rgba(255,255,255,.03)",borderBottom:"1px solid rgba(255,255,255,.06)",flexWrap:"wrap"}},
         h("span",{className:"pulse",style:{width:7,height:7,background:"#22c55e",borderRadius:"50%",display:"inline-block"}}),
@@ -379,7 +401,7 @@ function App(){
                     ),
                     h("div",{style:{fontWeight:800,fontSize:13,color:"#f1f5f9",lineHeight:1.4,marginBottom:5}},c.titolo),
                     c.testo&&h("div",{style:{fontSize:11,color:"rgba(255,255,255,.5)",lineHeight:1.5,overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}},c.testo),
-                    c.youtube&&ytId(c.youtube)&&h("div",{style:{marginTop:6,fontSize:10,color:"#f87171"}},"▶ Video YouTube"),
+                    c.linkEsterno&&h("div",{style:{marginTop:6,fontSize:10,color:"#60a5fa"}},"🔗 Link approfondimento"),
                     c.tipo==="sondaggio"&&c.opzioni&&h("div",{style:{marginTop:8}},
                       c.opzioni.map(function(o){
                         var pct=totV>0?Math.round(o.voti.length/totV*100):0;
@@ -398,6 +420,7 @@ function App(){
                   (c.commenti||[]).length>0&&h("span",{style:{background:"rgba(255,255,255,.07)",borderRadius:10,padding:"2px 7px",fontSize:10,color:"rgba(255,255,255,.4)"}},"💬 "+(c.commenti||[]).length),
                   h("span",{style:{flex:1}}),
                   h("span",{style:{fontSize:10,color:"rgba(255,255,255,.3)"}},fmt(c.data)),
+                  user.role==="prof"&&h("button",{onClick:function(e){e.stopPropagation();editCard(c);},title:"Modifica card",style:{background:"rgba(59,130,246,.2)",border:"1px solid rgba(59,130,246,.4)",borderRadius:20,padding:"3px 9px",cursor:"pointer",fontSize:11,color:"#60a5fa",fontWeight:700}},"✏️"),
                   user.role==="prof"&&h("button",{onClick:function(e){runCardAI(c,e);},title:"Analisi AI",style:{background:cOpen?"rgba(99,102,241,.4)":"rgba(99,102,241,.18)",border:"1px solid rgba(99,102,241,.4)",borderRadius:20,padding:"3px 11px",cursor:"pointer",fontSize:11,color:"#a5b4fc",fontWeight:700,display:"flex",alignItems:"center",gap:4}},
                     cLoad?h("span",{style:{display:"inline-block",animation:"spin 1s linear infinite",fontSize:12}},"⚙️"):"🤖",
                     h("span",null,cLoad?"…":"AI")
@@ -428,7 +451,6 @@ function App(){
           )
       )
     ),
-    // ANALISI AI GLOBALE
     view==="analisi"&&user.role==="prof"&&h("div",{style:{flex:1,padding:"18px 14px",maxWidth:820,margin:"0 auto",width:"100%"}},
       h("div",{style:{display:"flex",gap:10,flexWrap:"wrap",marginBottom:16}},
         [{l:"Card",v:cards.length,i:"📌",c:"#6366f1"},{l:"Domande",v:cards.filter(function(c){return c.tipo==="domanda";}).length,i:"💬",c:"#8b5cf6"},
@@ -474,7 +496,6 @@ function App(){
         aiResult&&aiResult.error&&h("div",{style:{color:"#f87171",padding:12,background:"rgba(239,68,68,.1)",borderRadius:9,fontSize:13}},aiResult.error)
       )
     ),
-    // MODAL QR
     showQR&&h("div",{style:{position:"fixed",inset:0,background:"rgba(0,0,0,.7)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20},onClick:function(){setSQR(false);}},
       h("div",{style:{background:"#1e293b",border:"1px solid rgba(255,255,255,.1)",borderRadius:20,padding:26,maxWidth:300,width:"100%",textAlign:"center"},onClick:function(e){e.stopPropagation();}},
         h("div",{style:{fontWeight:800,color:"#f1f5f9",fontSize:17,marginBottom:4}},"QR Code Bacheca"),
@@ -483,7 +504,6 @@ function App(){
         h("button",{onClick:function(){setSQR(false);},style:{background:"linear-gradient(135deg,#6366f1,#8b5cf6)",color:"#fff",border:"none",borderRadius:10,padding:"9px 24px",cursor:"pointer",fontSize:13,fontWeight:700,width:"100%"}},"Chiudi")
       )
     ),
-    // MODAL RESET TUTTO
     showReset&&h("div",{style:{position:"fixed",inset:0,background:"rgba(0,0,0,.7)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20},onClick:function(){setSR(false);}},
       h("div",{style:{background:"#1e293b",border:"1px solid rgba(255,255,255,.1)",borderRadius:20,padding:28,maxWidth:320,width:"100%",textAlign:"center"},onClick:function(e){e.stopPropagation();}},
         h("div",{style:{fontSize:44,marginBottom:10}},"🗑️"),
@@ -495,7 +515,6 @@ function App(){
         )
       )
     ),
-    // MODAL CHIAVE AI
     askKeyModal&&h("div",{style:{position:"fixed",inset:0,background:"rgba(0,0,0,.7)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20},onClick:function(){setAKM(false);}},
       h("div",{style:{background:"#1e293b",border:"1px solid rgba(255,255,255,.1)",borderRadius:20,padding:28,maxWidth:400,width:"100%"},onClick:function(e){e.stopPropagation();}},
         h("div",{style:{fontSize:36,marginBottom:10}},"🔑"),
@@ -512,7 +531,6 @@ function App(){
         )
       )
     ),
-    // MODAL DETTAGLIO CARD
     showCard&&h("div",{style:{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",padding:12},onClick:function(){setSC(null);}},
       h("div",{style:{background:"#1e293b",border:"1px solid rgba(255,255,255,.1)",borderRadius:20,width:"100%",maxWidth:520,maxHeight:"92vh",overflow:"auto"},onClick:function(e){e.stopPropagation();}},
         h("div",{style:{background:"linear-gradient(135deg,rgba(99,102,241,.3),rgba(139,92,246,.2))",borderRadius:"20px 20px 0 0",padding:18}},
@@ -525,8 +543,8 @@ function App(){
           ),
           h("h2",{style:{margin:"0 0 8px",color:"#fff",fontSize:17,fontWeight:800,lineHeight:1.3}},showCard.titolo),
           showCard.testo&&h("p",{style:{margin:0,color:"rgba(255,255,255,.65)",fontSize:12,lineHeight:1.7,whiteSpace:"pre-wrap"}},showCard.testo),
-          showCard.youtube&&ytId(showCard.youtube)&&h("div",{style:{marginTop:12,borderRadius:10,overflow:"hidden"}},
-            h("iframe",{width:"100%",height:200,src:"https://www.youtube.com/embed/"+ytId(showCard.youtube),frameBorder:0,allowFullScreen:true})
+          showCard.linkEsterno&&h("div",{style:{marginTop:12}},
+            h("a",{href:showCard.linkEsterno,target:"_blank",rel:"noopener noreferrer",style:{display:"inline-flex",alignItems:"center",gap:6,background:"rgba(59,130,246,.15)",color:"#60a5fa",padding:"6px 12px",borderRadius:8,textDecoration:"none",fontSize:12,fontWeight:600,border:"1px solid rgba(59,130,246,.3)"}},"🔗 Apri link per approfondire")
           ),
           showCard.tipo==="sondaggio"&&showCard.opzioni&&(function(){
             var totV=showCard.opzioni.reduce(function(a,o){return a+o.voti.length;},0);
@@ -553,6 +571,7 @@ function App(){
             h("span",{style:{fontSize:10,color:"rgba(255,255,255,.3)"}},fmt(showCard.data))
           ),
           user.role==="prof"&&h("div",{style:{display:"flex",gap:6,flexWrap:"wrap",marginTop:10}},
+            h("button",{onClick:function(){editCard(showCard);setSC(null);},style:{background:"rgba(59,130,246,.2)",color:"#60a5fa",border:"1px solid rgba(59,130,246,.3)",borderRadius:7,padding:"3px 10px",cursor:"pointer",fontSize:11,fontWeight:700}},"✏️ Modifica"),
             h("button",{onClick:function(){setSRC(true);},style:{background:"rgba(249,115,22,.12)",color:"#fb923c",border:"1px solid rgba(249,115,22,.2)",borderRadius:7,padding:"3px 10px",cursor:"pointer",fontSize:11,fontWeight:700}},"↺ Reset"),
             h("button",{onClick:function(){delCard(showCard.id);},style:{background:"rgba(239,68,68,.12)",color:"#f87171",border:"none",borderRadius:7,padding:"3px 9px",cursor:"pointer",fontSize:11,fontWeight:700}},"🗑️")
           )
@@ -579,7 +598,6 @@ function App(){
         )
       )
     ),
-    // MODAL RESET CARD
     showRC&&showCard&&h("div",{style:{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:20},onClick:function(){setSRC(false);}},
       h("div",{style:{background:"#1e293b",border:"1px solid rgba(255,255,255,.1)",borderRadius:20,padding:28,maxWidth:320,width:"100%",textAlign:"center"},onClick:function(e){e.stopPropagation();}},
         h("div",{style:{fontSize:40,marginBottom:10}},"↺"),
@@ -592,12 +610,11 @@ function App(){
         )
       )
     ),
-    // MODAL NUOVA CARD
-    showModal&&h("div",{style:{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:200,display:"flex",alignItems:"flex-end",justifyContent:"center"},onClick:function(){setSM(false);}},
+    showModal&&h("div",{style:{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",zIndex:200,display:"flex",alignItems:"flex-end",justifyContent:"center"},onClick:function(){setSM(false);setEditMode(null);}},
       h("div",{style:{background:"#1e293b",borderRadius:"20px 20px 0 0",padding:20,width:"100%",maxWidth:540,maxHeight:"90vh",overflow:"auto",border:"1px solid rgba(255,255,255,.1)",borderBottom:"none"},onClick:function(e){e.stopPropagation();}},
         h("div",{style:{width:32,height:3,background:"rgba(255,255,255,.15)",borderRadius:4,margin:"0 auto 16px"}}),
-        h("h3",{style:{margin:"0 0 4px",color:"#f1f5f9",fontSize:15,fontWeight:800}},user.role==="studente"?"💡 Proponi una discussione":"Nuova card"),
-        user.role==="studente"&&h("p",{style:{margin:"0 0 14px",color:"rgba(255,255,255,.3)",fontSize:11}},"Visibile dopo approvazione del professore"),
+        h("h3",{style:{margin:"0 0 4px",color:"#f1f5f9",fontSize:15,fontWeight:800}},editMode?"✏️ Modifica card":(user.role==="studente"?"💡 Proponi una discussione":"Nuova card")),
+        user.role==="studente"&&!editMode&&h("p",{style:{margin:"0 0 14px",color:"rgba(255,255,255,.3)",fontSize:11}},"Visibile dopo approvazione del professore"),
         user.role==="prof"&&h("div",{style:{display:"flex",gap:7,marginBottom:14}},
           [{v:"domanda",i:"💬"},{v:"nota",i:"📄"},{v:"sondaggio",i:"🗳️"}].map(function(t){
             return h("button",{key:t.v,onClick:function(){setForm(function(p){return Object.assign({},p,{tipo:t.v,colore:t.v==="domanda"?"#dbeafe":t.v==="nota"?"#fff9c4":"#d1fae5"});});},style:{flex:1,padding:"8px 4px",border:"1px solid "+(form.tipo===t.v?"#6366f1":"rgba(255,255,255,.1)"),borderRadius:10,background:form.tipo===t.v?"rgba(99,102,241,.25)":"rgba(255,255,255,.04)",cursor:"pointer",fontWeight:700,fontSize:12,color:form.tipo===t.v?"#a5b4fc":"rgba(255,255,255,.4)"}},t.i+" "+t.v);
@@ -612,8 +629,8 @@ function App(){
           h("textarea",{value:form.testo,onInput:function(e){setForm(function(p){return Object.assign({},p,{testo:e.target.value});});},rows:3,placeholder:"Descrizione, spunti…",style:Object.assign({},S.input,{resize:"vertical"})})
         ),
         h("div",{style:{marginBottom:10}},
-          h("label",{style:{fontSize:10,fontWeight:700,color:"rgba(255,255,255,.4)",display:"block",marginBottom:4,letterSpacing:1}},"▶ VIDEO YOUTUBE (opzionale)"),
-          h("input",{value:form.youtube,onInput:function(e){setForm(function(p){return Object.assign({},p,{youtube:e.target.value});});},placeholder:"https://youtube.com/watch?v=…",style:S.input})
+          h("label",{style:{fontSize:10,fontWeight:700,color:"rgba(255,255,255,.4)",display:"block",marginBottom:4,letterSpacing:1}},"🔗 LINK PER APPROFONDIRE (opzionale)"),
+          h("input",{value:form.linkEsterno,onInput:function(e){setForm(function(p){return Object.assign({},p,{linkEsterno:e.target.value});});},placeholder:"https://…",style:S.input})
         ),
         form.tipo==="sondaggio"&&h("div",{style:{marginBottom:10}},
           h("label",{style:{fontSize:10,fontWeight:700,color:"rgba(255,255,255,.4)",display:"block",marginBottom:4,letterSpacing:1}},"OPZIONI"),
@@ -630,7 +647,7 @@ function App(){
           )
         ),
         h("button",{onClick:addCard,style:{width:"100%",padding:13,background:form.titolo.trim()?"linear-gradient(135deg,#6366f1,#8b5cf6)":"rgba(255,255,255,.06)",color:form.titolo.trim()?"#fff":"rgba(255,255,255,.2)",border:"none",borderRadius:12,fontSize:14,fontWeight:800,cursor:form.titolo.trim()?"pointer":"not-allowed"}},
-          user.role==="studente"?"📩 Invia proposta":"📌 Pubblica card")
+          editMode?"💾 Salva modifiche":(user.role==="studente"?"📩 Invia proposta":"📌 Pubblica card"))
       )
     )
   );
