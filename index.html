@@ -37,7 +37,8 @@ firebase.initializeApp({
 var db=firebase.firestore(), auth=firebase.auth();
 var h=React.createElement, useState=React.useState, useEffect=React.useEffect, useRef=React.useRef, Fragment=React.Fragment;
 var PROF_TOKEN="sb_prof_2025_xK9mNpQr";
-var FORM0={tipo:"domanda",titolo:"",testo:"",colore:"#dbeafe",opzioni:["",""],linkEsterno:""};
+// linkEsterno ora è array di {url, label}
+var FORM0={tipo:"domanda",titolo:"",testo:"",colore:"#dbeafe",opzioni:["",""],links:[{url:"",label:""}]};
 
 function fmt(d){return new Date(d).toLocaleDateString("it-IT",{day:"2-digit",month:"short",year:"numeric"});}
 function badgeBg(t){return t==="domanda"?"#6366f1":t==="nota"?"#f59e0b":t==="sondaggio"?"#22c55e":"#94a3b8";}
@@ -48,6 +49,13 @@ function fbListen(cb){
   return db.collection("cards").orderBy("ordine","asc").onSnapshot(function(snap){
     var cards=[]; snap.forEach(function(d){cards.push(d.data());}); cb(cards);
   });
+}
+
+// Normalizza links: supporta sia vecchio formato stringa che nuovo array
+function normalizeLinks(card){
+  if(card.links&&Array.isArray(card.links))return card.links;
+  if(card.linkEsterno&&typeof card.linkEsterno==="string")return [{url:card.linkEsterno,label:""}];
+  return [];
 }
 
 var cachedFreeModels=null, lastModelFetch=0;
@@ -140,8 +148,8 @@ function App(){
       if(remote.length===0){
         if(user.role==="prof"){
           var CARDS0=[
-            {id:"demo1",tipo:"domanda",titolo:"Benvenuto in ScuolaBoard",testo:"Questa è una card demo. Cliccami per vedere i dettagli!",data:new Date().toISOString().slice(0,10),colore:"#dbeafe",autore:"Prof",_token:PROF_TOKEN,likes:0,ordine:1,commenti:[]},
-            {id:"demo2",tipo:"sondaggio",titolo:"Ti piace questa bacheca?",testo:"Vota la tua opzione preferita",data:new Date().toISOString().slice(0,10),colore:"#d1fae5",autore:"Prof",_token:PROF_TOKEN,likes:0,ordine:2,commenti:[],opzioni:[{id:"o1",testo:"Sì, molto!",voti:[]},{id:"o2",testo:"Così così",voti:[]},{id:"o3",testo:"Da migliorare",voti:[]}]}
+            {id:"demo1",tipo:"domanda",titolo:"Benvenuto in ScuolaBoard",testo:"Questa è una card demo. Cliccami per vedere i dettagli!",data:new Date().toISOString().slice(0,10),colore:"#dbeafe",autore:"Prof",_token:PROF_TOKEN,likes:0,ordine:1,commenti:[],links:[]},
+            {id:"demo2",tipo:"sondaggio",titolo:"Ti piace questa bacheca?",testo:"Vota la tua opzione preferita",data:new Date().toISOString().slice(0,10),colore:"#d1fae5",autore:"Prof",_token:PROF_TOKEN,likes:0,ordine:2,commenti:[],links:[],opzioni:[{id:"o1",testo:"Sì, molto!",voti:[]},{id:"o2",testo:"Così così",voti:[]},{id:"o3",testo:"Da migliorare",voti:[]}]}
           ];
           CARDS0.forEach(function(c){fbSave(c);});
         }
@@ -185,34 +193,36 @@ function App(){
     if(form.tipo==="sondaggio")
       opzioni=form.opzioni.filter(function(o){return o.trim();}).map(function(o,i){return{id:"o"+Date.now()+"_"+i,testo:o,voti:[]};});
     var autoreDisplay=user.role==="prof"?"Prof":(user.nome+" "+user.cognome);
-    
+    var cleanLinks=(form.links||[]).filter(function(l){return l.url&&l.url.trim();}).map(function(l){return{url:l.url.trim(),label:(l.label||"").trim()};});
+
     if(editMode){
-      var c=Object.assign({},editMode,{tipo:form.tipo,titolo:form.titolo.trim(),testo:form.testo.trim(),colore:form.colore,linkEsterno:form.linkEsterno.trim()||null});
+      var c=Object.assign({},editMode,{tipo:form.tipo,titolo:form.titolo.trim(),testo:form.testo.trim(),colore:form.colore,links:cleanLinks,linkEsterno:null});
       if(opzioni)c.opzioni=opzioni;
       fbSave(c);
       setEditMode(null);
     }else{
-      var c={id:Date.now(),tipo:form.tipo,titolo:form.titolo.trim(),testo:form.testo.trim(),colore:form.colore,data:new Date().toISOString().slice(0,10),autore:autoreDisplay,likes:0,commenti:[],ordine:nextOrdine.current++,linkEsterno:form.linkEsterno.trim()||null,_token:user.role==="prof"?PROF_TOKEN:null};
+      var c={id:Date.now(),tipo:form.tipo,titolo:form.titolo.trim(),testo:form.testo.trim(),colore:form.colore,data:new Date().toISOString().slice(0,10),autore:autoreDisplay,likes:0,commenti:[],ordine:nextOrdine.current++,links:cleanLinks,linkEsterno:null,_token:user.role==="prof"?PROF_TOKEN:null};
       if(opzioni)c.opzioni=opzioni;
       if(user.role==="studente")c.proposta=true;
       fbSave(c);
     }
     setSM(false);setForm(Object.assign({},FORM0));
   }
-  
+
   function editCard(card){
     setEditMode(card);
+    var links=normalizeLinks(card);
     setForm({
       tipo:card.tipo,
       titolo:card.titolo,
       testo:card.testo||"",
       colore:card.colore,
       opzioni:card.opzioni?card.opzioni.map(function(o){return o.testo;}):["",""],
-      linkEsterno:card.linkEsterno||""
+      links:links.length>0?links:[{url:"",label:""}]
     });
     setSM(true);
   }
-  
+
   function delCard(id){fbDel(id);setSC(null);}
   function appCard(id){var c=cards.find(function(x){return x.id===id;});if(!c)return;fbSave(Object.assign({},c,{proposta:false}));}
   function rstCard(id){
@@ -277,6 +287,20 @@ function App(){
 
   var qrUrl="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data="+encodeURIComponent(window.location.href);
 
+  // Helper: render links di una card
+  function renderLinks(card){
+    var links=normalizeLinks(card);
+    if(!links||links.length===0)return null;
+    return h("div",{style:{marginTop:8,display:"flex",flexDirection:"column",gap:5}},
+      links.map(function(l,i){
+        if(!l.url)return null;
+        return h("a",{key:i,href:l.url,target:"_blank",rel:"noopener noreferrer",style:{display:"inline-flex",alignItems:"center",gap:6,background:"rgba(59,130,246,.15)",color:"#60a5fa",padding:"5px 10px",borderRadius:7,textDecoration:"none",fontSize:11,fontWeight:600,border:"1px solid rgba(59,130,246,.3)"}},
+          "🔗 "+(l.label||"Approfondisci")
+        );
+      })
+    );
+  }
+
   if(authLoading)return h("div",{style:{minHeight:"100vh",background:"linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16}},
     h("div",{style:{width:48,height:48,border:"3px solid rgba(255,255,255,.2)",borderTop:"3px solid #6366f1",borderRadius:"50%",animation:"spin 1s linear infinite"}}),
     h("div",{style:{color:"rgba(255,255,255,.8)",fontWeight:700,fontSize:16,letterSpacing:2}},"SCUOLABOARD"),
@@ -309,7 +333,7 @@ function App(){
         user.role==="prof"?"👨‍🏫 Prof":"🎒 "+user.nome
       ),
       h("div",{style:{flex:1}}),
-      user.role==="prof"&&h("button",{onClick:function(){setAKM(true);},title:orKey?"Chiave AI impostata ✓":"Imposta chiave AI",style:{background:orKey?"rgba(34,197,94,.15)":"rgba(249,115,22,.15)",border:"1px solid "+(orKey?"rgba(34,197,94,.3)":"rgba(249,115,22,.3)"),borderRadius:8,padding:"5px 9px",cursor:"pointer",fontSize:12,color:orKey?"#4ade80":"#fb923c"}},orKey?"🔑":"⚠️"),
+      user.role==="prof"&&h("button",{onClick:function(){setAKM(true);},title:orKey?"Chiave AI impostata ✔":"Imposta chiave AI",style:{background:orKey?"rgba(34,197,94,.15)":"rgba(249,115,22,.15)",border:"1px solid "+(orKey?"rgba(34,197,94,.3)":"rgba(249,115,22,.3)"),borderRadius:8,padding:"5px 9px",cursor:"pointer",fontSize:12,color:orKey?"#4ade80":"#fb923c"}},orKey?"🔑":"⚠️"),
       user.role==="prof"&&h("button",{onClick:function(){setSR(true);},style:{background:"rgba(255,255,255,.06)",border:"1px solid rgba(239,68,68,.3)",borderRadius:8,padding:"5px 9px",cursor:"pointer",fontSize:14,color:"#f87171"}},"🗑️"),
       h("button",{onClick:function(){setSQR(true);},style:{background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.1)",borderRadius:8,padding:"5px 9px",cursor:"pointer",fontSize:14,color:"rgba(255,255,255,.7)"}},"◆"),
       user.role==="prof"&&h("div",{style:{display:"flex",gap:2,background:"rgba(255,255,255,.05)",borderRadius:9,padding:3,border:"1px solid rgba(255,255,255,.08)"}},
@@ -317,7 +341,7 @@ function App(){
           return h("button",{key:t.k,onClick:function(){setView(t.k);},style:{padding:"4px 11px",borderRadius:7,border:"none",background:view===t.k?"rgba(99,102,241,.4)":"transparent",color:view===t.k?"#fff":"rgba(255,255,255,.4)",fontWeight:700,cursor:"pointer",fontSize:13}},t.i);
         })
       ),
-      h("button",{onClick:function(){setEditMode(null);setSM(true);},style:{background:"linear-gradient(135deg,#6366f1,#8b5cf6)",border:"none",borderRadius:20,width:34,height:34,cursor:"pointer",color:"#fff",fontSize:20,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800}},"+"),
+      h("button",{onClick:function(){setEditMode(null);setForm(Object.assign({},FORM0));setSM(true);},style:{background:"linear-gradient(135deg,#6366f1,#8b5cf6)",border:"none",borderRadius:20,width:34,height:34,cursor:"pointer",color:"#fff",fontSize:20,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800}},"+"),
       h("button",{onClick:logout,style:{background:"none",border:"1px solid rgba(255,255,255,.1)",borderRadius:7,padding:"4px 9px",cursor:"pointer",fontSize:11,color:"rgba(255,255,255,.3)"}},"Esci")
     ),
     view==="bacheca"&&h(Fragment,null,
@@ -334,7 +358,7 @@ function App(){
         h("div",{style:{fontWeight:700,color:"#fb923c",fontSize:11,marginBottom:7,letterSpacing:1}},"⏳ PROPOSTE IN ATTESA"),
         proposte.map(function(c){return h("div",{key:c.id,style:{background:"rgba(255,255,255,.04)",border:"1px solid rgba(249,115,22,.2)",borderRadius:9,padding:"8px 12px",marginBottom:5,display:"flex",alignItems:"center",gap:8}},
           h("span",{style:{flex:1,fontSize:13,color:"rgba(255,255,255,.8)",fontWeight:600}},c.titolo),
-          h("button",{onClick:function(){appCard(c.id);},style:{background:"rgba(34,197,94,.2)",color:"#4ade80",border:"1px solid rgba(34,197,94,.3)",borderRadius:7,padding:"3px 10px",cursor:"pointer",fontSize:12,fontWeight:700}},"✓"),
+          h("button",{onClick:function(){appCard(c.id);},style:{background:"rgba(34,197,94,.2)",color:"#4ade80",border:"1px solid rgba(34,197,94,.3)",borderRadius:7,padding:"3px 10px",cursor:"pointer",fontSize:12,fontWeight:700}},"✔"),
           h("button",{onClick:function(){delCard(c.id);},style:{background:"rgba(239,68,68,.15)",color:"#f87171",border:"none",borderRadius:7,padding:"3px 8px",cursor:"pointer",fontSize:12,fontWeight:700}},"✕")
         );})
       ),
@@ -354,6 +378,7 @@ function App(){
               var cAiRes=cardAiResult[c.id];
               var cOpen=cardAiOpen===c.id;
               var cLoad=cardAiLoading===c.id;
+              var cardLinks=normalizeLinks(c);
               return h("div",{key:c.id,className:"fadein",style:{breakInside:"avoid",marginBottom:16,background:"rgba(255,255,255,.06)",backdropFilter:"blur(10px)",border:"1px solid rgba(255,255,255,.1)",borderRadius:16,overflow:"hidden"}},
                 h("div",{style:{cursor:"pointer"},onClick:function(){setSC(c);setNc({autore:"",testo:""});setSRC(false);}},
                   h("div",{style:{padding:"12px 14px 6px"}},
@@ -363,7 +388,7 @@ function App(){
                     ),
                     h("div",{style:{fontWeight:800,fontSize:13,color:"#f1f5f9",lineHeight:1.4,marginBottom:5}},c.titolo),
                     c.testo&&h("div",{style:{fontSize:11,color:"rgba(255,255,255,.5)",lineHeight:1.5,overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}},c.testo),
-                    c.linkEsterno&&h("div",{style:{marginTop:6,fontSize:10,color:"#60a5fa"}},"🔗 Link approfondimento"),
+                    cardLinks.length>0&&h("div",{style:{marginTop:5,fontSize:10,color:"#60a5fa"}},"🔗 "+cardLinks.length+" link"+(cardLinks.length>1?" disponibili":"")),
                     c.tipo==="sondaggio"&&c.opzioni&&h("div",{style:{marginTop:8}},
                       c.opzioni.map(function(o){
                         var pct=totV>0?Math.round(o.voti.length/totV*100):0;
@@ -392,7 +417,7 @@ function App(){
                   cLoad&&h("div",{style:{textAlign:"center",padding:"8px 0",color:"rgba(255,255,255,.4)",fontSize:12}},"⚙️ Analisi in corso…"),
                   !cLoad&&cAiRes&&!cAiRes.error&&h(Fragment,null,
                     cAiRes.sintesi&&h("div",{style:{marginBottom:8}},
-                      h("div",{style:{fontSize:9,fontWeight:800,color:"#a5b4fc",letterSpacing:1,marginBottom:3}},"🔍 SINTESI"),
+                      h("div",{style:{fontSize:9,fontWeight:800,color:"#a5b4fc",letterSpacing:1,marginBottom:3}},"📝 SINTESI"),
                       h("div",{style:{fontSize:11,color:"rgba(255,255,255,.75)",lineHeight:1.6}},cAiRes.sintesi)
                     ),
                     cAiRes.commento_classe&&h("div",{style:{marginBottom:8}},
@@ -437,7 +462,7 @@ function App(){
         aiLoading&&h("div",{style:{textAlign:"center",padding:28}},h("div",{style:{fontSize:32,animation:"spin 2s linear infinite",display:"inline-block"}},"⚙️"),h("div",{style:{marginTop:8,fontWeight:600,color:"rgba(255,255,255,.6)"}},"Analisi in corso…")),
         aiResult&&!aiResult.error&&h(Fragment,null,
           h("div",{style:{background:"rgba(99,102,241,.15)",borderRadius:10,padding:14,marginBottom:12,border:"1px solid rgba(99,102,241,.2)"}},
-            h("div",{style:{fontWeight:700,color:"#a5b4fc",marginBottom:6,fontSize:11,letterSpacing:1}},"🔍 SINTESI"),
+            h("div",{style:{fontWeight:700,color:"#a5b4fc",marginBottom:6,fontSize:11,letterSpacing:1}},"📝 SINTESI"),
             h("div",{style:{color:"rgba(255,255,255,.8)",fontSize:13,lineHeight:1.7}},aiResult.sintesi)
           ),
           aiResult.domanda_emergente&&h("div",{style:{background:"rgba(59,130,246,.12)",borderRadius:10,padding:14,marginBottom:12,display:"flex",gap:10,border:"1px solid rgba(59,130,246,.2)"}},
@@ -483,7 +508,7 @@ function App(){
         h("h3",{style:{margin:"0 0 8px",color:"#f1f5f9",fontSize:18,fontWeight:800}},"Chiave OpenRouter"),
         h("p",{style:{color:"rgba(255,255,255,.5)",fontSize:12,marginBottom:16,lineHeight:1.5}},"La chiave è salvata solo nella sessione corrente. Ottieni una chiave gratuita su openrouter.ai"),
         orKey&&h("div",{style:{background:"rgba(34,197,94,.1)",border:"1px solid rgba(34,197,94,.3)",borderRadius:8,padding:10,marginBottom:14}},
-          h("div",{style:{color:"#4ade80",fontSize:11,fontWeight:700}},"✓ Chiave già impostata"),
+          h("div",{style:{color:"#4ade80",fontSize:11,fontWeight:700}},"✔ Chiave già impostata"),
           h("div",{style:{color:"rgba(255,255,255,.4)",fontSize:10,marginTop:4}},"Inserisci una nuova chiave per sostituirla")
         ),
         h("input",{type:"password",value:akInput,onInput:function(e){setAkInput(e.target.value);},placeholder:"sk-or-…",style:Object.assign({},S.input,{marginBottom:12})}),
@@ -502,9 +527,7 @@ function App(){
           ),
           h("h2",{style:{margin:"0 0 8px",color:"#fff",fontSize:17,fontWeight:800,lineHeight:1.3}},showCard.titolo),
           showCard.testo&&h("p",{style:{margin:0,color:"rgba(255,255,255,.65)",fontSize:12,lineHeight:1.7,whiteSpace:"pre-wrap"}},showCard.testo),
-          showCard.linkEsterno&&h("div",{style:{marginTop:12}},
-            h("a",{href:showCard.linkEsterno,target:"_blank",rel:"noopener noreferrer",style:{display:"inline-flex",alignItems:"center",gap:6,background:"rgba(59,130,246,.15)",color:"#60a5fa",padding:"6px 12px",borderRadius:8,textDecoration:"none",fontSize:12,fontWeight:600,border:"1px solid rgba(59,130,246,.3)"}},"🔗 Apri link per approfondire")
-          ),
+          renderLinks(showCard),
           showCard.tipo==="sondaggio"&&showCard.opzioni&&(function(){
             var totV=showCard.opzioni.reduce(function(a,o){return a+o.voti.length;},0);
             var vn=user.role==="prof"?"Prof":(user.nome+" "+user.cognome);
@@ -516,7 +539,7 @@ function App(){
                 return h("div",{key:o.id,onClick:!hasVoted?function(){vote(showCard.id,o.id);}:undefined,style:{background:mv?"rgba(99,102,241,.25)":"rgba(255,255,255,.06)",border:"1px solid "+(mv?"rgba(99,102,241,.5)":"rgba(255,255,255,.1)"),borderRadius:9,padding:"8px 12px",marginBottom:6,cursor:hasVoted?"default":"pointer",position:"relative",overflow:"hidden"}},
                   h("div",{style:{position:"absolute",left:0,top:0,bottom:0,width:pct+"%",background:"rgba(99,102,241,.2)"}}),
                   h("div",{style:{position:"relative",display:"flex",justifyContent:"space-between"}},
-                    h("span",{style:{fontSize:13,fontWeight:mv?700:400,color:"#f1f5f9"}},o.testo+(mv?" ✓":"")),
+                    h("span",{style:{fontSize:13,fontWeight:mv?700:400,color:"#f1f5f9"}},o.testo+(mv?" ✔":"")),
                     h("span",{style:{fontSize:12,color:"rgba(255,255,255,.4)"}},pct+"% ("+o.voti.length+")")
                   )
                 );
@@ -587,9 +610,21 @@ function App(){
           h("label",{style:{fontSize:10,fontWeight:700,color:"rgba(255,255,255,.4)",display:"block",marginBottom:4,letterSpacing:1}},"TESTO"),
           h("textarea",{value:form.testo,onInput:function(e){setForm(function(p){return Object.assign({},p,{testo:e.target.value});});},rows:3,placeholder:"Descrizione, spunti…",style:Object.assign({},S.input,{resize:"vertical"})})
         ),
+        // Sezione multi-link
         h("div",{style:{marginBottom:10}},
-          h("label",{style:{fontSize:10,fontWeight:700,color:"rgba(255,255,255,.4)",display:"block",marginBottom:4,letterSpacing:1}},"🔗 LINK PER APPROFONDIRE (opzionale)"),
-          h("input",{value:form.linkEsterno,onInput:function(e){setForm(function(p){return Object.assign({},p,{linkEsterno:e.target.value});});},placeholder:"https://…",style:S.input})
+          h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}},
+            h("label",{style:{fontSize:10,fontWeight:700,color:"rgba(255,255,255,.4)",letterSpacing:1}},"🔗 LINK PER APPROFONDIRE"),
+            (form.links||[]).length<5&&h("button",{onClick:function(){setForm(function(p){return Object.assign({},p,{links:(p.links||[]).concat([{url:"",label:""}])});});},style:{background:"rgba(99,102,241,.2)",border:"1px solid rgba(99,102,241,.4)",borderRadius:7,padding:"3px 10px",cursor:"pointer",fontSize:11,color:"#a5b4fc",fontWeight:700}},"+ Aggiungi link")
+          ),
+          (form.links||[]).map(function(l,i){
+            return h("div",{key:i,style:{background:"rgba(255,255,255,.03)",border:"1px solid rgba(255,255,255,.08)",borderRadius:9,padding:"8px 10px",marginBottom:6}},
+              h("div",{style:{display:"flex",gap:5,marginBottom:5}},
+                h("input",{value:l.url,onInput:function(e){setForm(function(p){var ls=p.links.map(function(x,j){return j===i?Object.assign({},x,{url:e.target.value}):x;});return Object.assign({},p,{links:ls});});},placeholder:"https://…",style:Object.assign({},S.input,{flex:1})}),
+                (form.links||[]).length>1&&h("button",{onClick:function(){setForm(function(p){return Object.assign({},p,{links:p.links.filter(function(_,j){return j!==i;})});});},style:{background:"rgba(239,68,68,.2)",color:"#f87171",border:"none",borderRadius:7,padding:"0 9px",cursor:"pointer",fontSize:16,flexShrink:0}},"×")
+              ),
+              h("input",{value:l.label,onInput:function(e){setForm(function(p){var ls=p.links.map(function(x,j){return j===i?Object.assign({},x,{label:e.target.value}):x;});return Object.assign({},p,{links:ls});});},placeholder:"Etichetta (es. Wikipedia, Video…)",style:Object.assign({},S.input,{fontSize:11})})
+            );
+          })
         ),
         form.tipo==="sondaggio"&&h("div",{style:{marginBottom:10}},
           h("label",{style:{fontSize:10,fontWeight:700,color:"rgba(255,255,255,.4)",display:"block",marginBottom:4,letterSpacing:1}},"OPZIONI"),
@@ -599,7 +634,7 @@ function App(){
           );}),
           form.opzioni.length<6&&h("button",{onClick:function(){setForm(function(p){return Object.assign({},p,{opzioni:p.opzioni.concat([""])});});},style:{background:"rgba(255,255,255,.04)",border:"1px dashed rgba(255,255,255,.15)",borderRadius:7,padding:"5px 12px",cursor:"pointer",fontSize:12,color:"rgba(255,255,255,.4)",width:"100%"}},"+ Aggiungi opzione")
         ),
-        h("button",{onClick:addCard,style:{width:"100%",padding:13,background:form.titolo.trim()?"linear-gradient(135deg,#6366f1,#8b5cf6)":"rgba(255,255,255,.06)",color:form.titolo.trim()?"#fff":"rgba(255,255,255,.2)",border:"none",borderRadius:12,fontSize:14,fontWeight:800,cursor:form.titolo.trim()?"pointer":"not-allowed"}},
+        h("button",{onClick:addCard,style:{width:"100%",padding:13,background:form.titolo.trim()?"linear-gradient(135deg,#6366f1,#8b5cf6)":"rgba(255,255,255,.06)",color:form.titolo.trim()?"#fff":"rgba(255,255,255,.2)",border:"none",borderRadius:12,fontSize:14,fontWeight:800,cursor:form.titolo.trim()?"pointer":"not-allowed",marginTop:4}},
           editMode?"💾 Salva modifiche":(user.role==="studente"?"📩 Invia proposta":"📌 Pubblica card"))
       )
     )
