@@ -16,6 +16,9 @@ textarea,input,select,button{font-family:inherit}
 ::-webkit-scrollbar{width:6px}
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.2);border-radius:3px}
 </style>
+    <!-- jsPDF per esportazione PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body>
 <div id="root"></div>
@@ -38,7 +41,7 @@ var db=firebase.firestore(), auth=firebase.auth();
 var h=React.createElement, useState=React.useState, useEffect=React.useEffect, useRef=React.useRef, Fragment=React.Fragment;
 var PROF_TOKEN="sb_prof_2025_xK9mNpQr";
 var TAGS_PRE=["#etica","#memoria","#dialogo","#fede","#storia","#attualità","#valori","#pace"];
-var FORM0={tipo:"domanda",titolo:"",testo:"",colore:"#dbeafe",tags:[],opzioni:["",""],linkEsterno:""};
+var FORM0={tipo:"domanda",titolo:"",testo:"",colore:"#dbeafe",opzioni:["",""],linkEsterno:""};
 
 function fmt(d){return new Date(d).toLocaleDateString("it-IT",{day:"2-digit",month:"short",year:"numeric"});}
 function badgeBg(t){return t==="domanda"?"#6366f1":t==="nota"?"#f59e0b":t==="sondaggio"?"#22c55e":"#94a3b8";}
@@ -148,8 +151,8 @@ function App(){
       if(remote.length===0){
         if(user.role==="prof"){
           var CARDS0=[
-            {id:"demo1",tipo:"domanda",titolo:"Benvenuto in ScuolaBoard",testo:"Questa è una card demo. Cliccami per vedere i dettagli!",data:new Date().toISOString().slice(0,10),colore:"#dbeafe",autore:"Prof",_token:PROF_TOKEN,tags:["#info"],likes:0,ordine:1,commenti:[]},
-            {id:"demo2",tipo:"sondaggio",titolo:"Ti piace questa bacheca?",testo:"Vota la tua opzione preferita",data:new Date().toISOString().slice(0,10),colore:"#d1fae5",autore:"Prof",_token:PROF_TOKEN,tags:["#feedback"],likes:0,ordine:2,commenti:[],opzioni:[{id:"o1",testo:"Sì, molto!",voti:[]},{id:"o2",testo:"Così così",voti:[]},{id:"o3",testo:"Da migliorare",voti:[]}]}
+            {id:"demo1",tipo:"domanda",titolo:"Benvenuto in ScuolaBoard",testo:"Questa è una card demo. Cliccami per vedere i dettagli!",data:new Date().toISOString().slice(0,10),colore:"#dbeafe",autore:"Prof",_token:PROF_TOKEN,likes:0,ordine:1,commenti:[]},
+            {id:"demo2",tipo:"sondaggio",titolo:"Ti piace questa bacheca?",testo:"Vota la tua opzione preferita",data:new Date().toISOString().slice(0,10),colore:"#d1fae5",autore:"Prof",_token:PROF_TOKEN,likes:0,ordine:2,commenti:[],opzioni:[{id:"o1",testo:"Sì, molto!",voti:[]},{id:"o2",testo:"Così così",voti:[]},{id:"o3",testo:"Da migliorare",voti:[]}]}
           ];
           CARDS0.forEach(function(c){fbSave(c);});
         }
@@ -279,7 +282,7 @@ function App(){
   }
   function resetAll(){cards.forEach(function(c){fbDel(c.id);});setAiR(null);setSR(false);}
   function saveAIKey(){if(akInput.trim()){sessionStorage.setItem("or_key",akInput.trim());setOrKey(akInput.trim());setAKM(false);setAkInput("");}}
-  function toggleTag(t){setForm(function(p){var tags=p.tags.indexOf(t)>=0?p.tags.filter(function(x){return x!==t;}):p.tags.concat([t]);return Object.assign({},p,{tags:tags});});}
+  ):p.tags.concat([t]);return Object.assign({},p,{tags:tags});});}
 
   function runAI(){
     if(!orKey){setAKM(true);return;}
