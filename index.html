@@ -55,14 +55,13 @@ function normalizeLinks(c){
   return[];
 }
 
-// ── AI: usa openrouter/auto:free come router automatico + fallback su modelli specifici ──
+// ── AI: solo modelli 100% free su OpenRouter (nessun costo) ──
 var AI_MODELS=[
-  "openrouter/auto:free",
   "google/gemini-2.0-flash-exp:free",
-  "deepseek/deepseek-chat:free",
+  "deepseek/deepseek-chat-v3-0324:free",
   "meta-llama/llama-3.3-70b-instruct:free",
-  "nousresearch/hermes-3-llama-3.1-405b:free",
-  "mistralai/mistral-nemo:free"
+  "mistralai/mistral-small-3.1-24b-instruct:free",
+  "qwen/qwen3-8b:free"
 ];
 function callAI(k,prompt,mx){
   mx=mx||600;
@@ -366,11 +365,15 @@ function App(){
   }
   
   function resetSondaggio(cardId){
-    var card=cards.find(function(c){return c.id===cardId;});if(!card)return;
-    fbSave(Object.assign({},card,{
-      commenti:[],
-      opzioni:card.opzioni?card.opzioni.map(function(o){return Object.assign({},o,{voti:[]});}):card.opzioni
-    }));
+    var card=cards.find(function(c){return String(c.id)===String(cardId);});
+    if(!card)return;
+    var updated=Object.assign({},card,{commenti:[]});
+    if(updated.opzioni&&Array.isArray(updated.opzioni)){
+      updated.opzioni=updated.opzioni.map(function(o){return Object.assign({},o,{voti:[]});});
+    }else{
+      delete updated.opzioni;
+    }
+    fbSave(updated);
   }
 
   function saveAIKey(){if(akInput.trim()){sessionStorage.setItem("or_key",akInput.trim());setOrKey(akInput.trim());setAskKey(false);setAkInput("");}}
