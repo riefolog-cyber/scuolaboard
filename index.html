@@ -57,11 +57,12 @@ function normalizeLinks(c){
 
 // ── AI: solo modelli 100% free su OpenRouter (nessun costo) ──
 var AI_MODELS=[
-  "google/gemini-2.0-flash-exp:free",
-  "deepseek/deepseek-chat-v3-0324:free",
+  "openrouter/free",
+  "deepseek/deepseek-r1:free",
+  "deepseek/deepseek-chat:free",
   "meta-llama/llama-3.3-70b-instruct:free",
-  "mistralai/mistral-small-3.1-24b-instruct:free",
-  "qwen/qwen3-8b:free"
+  "google/gemini-2.0-flash-exp:free",
+  "qwen/qwq-32b:free"
 ];
 function callAI(k,prompt,mx){
   mx=mx||600;
