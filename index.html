@@ -30,7 +30,7 @@ textarea,input,select,button{font-family:inherit}
 <script>
 (function(){
 firebase.initializeApp({
-  apiKey:"AIzaSyBLk9_oxf0JL84DwlAIW1xgPUIZ5L7tg_8",
+  apiKey:"AIzaSyDIC39upI9VnY10MdP7__7l3omyGqspHNA",
   authDomain:"scuolaboard-874d4.firebaseapp.com",
   projectId:"scuolaboard-874d4",
   storageBucket:"scuolaboard-874d4.firebasestorage.app",
@@ -55,10 +55,11 @@ function normalizeLinks(c){
   return[];
 }
 
-// ── AI: Google Gemini API diretta (gratis 1500 req/giorno) ──
+// ── AI: Google Gemini API diretta (gratis 1500 req/giorno, 15 req/min) ──
 var GEMINI_MODEL="gemini-2.0-flash";
-function callAI(k,prompt,mx){
+function callAI(k,prompt,mx,_retry){
   mx=mx||600;
+  _retry=_retry||0;
   if(!k)return Promise.reject(new Error("Chiave Gemini non impostata."));
   var url="https://generativelanguage.googleapis.com/v1beta/models/"+GEMINI_MODEL+":generateContent?key="+k;
   return fetch(url,{
@@ -69,6 +70,11 @@ function callAI(k,prompt,mx){
       generationConfig:{maxOutputTokens:mx,temperature:0.7}
     })
   }).then(function(r){
+    if(r.status===429){
+      if(_retry>=3)throw new Error("Troppe richieste. Attendi qualche secondo e riprova.");
+      var wait=(_retry+1)*5000;
+      return new Promise(function(res){setTimeout(res,wait);}).then(function(){return callAI(k,prompt,mx,_retry+1);});
+    }
     if(!r.ok)return r.json().then(function(e){throw new Error(e.error&&e.error.message||"Errore Gemini "+r.status);});
     return r.json();
   }).then(function(d){
