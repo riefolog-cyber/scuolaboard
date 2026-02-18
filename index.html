@@ -35,7 +35,8 @@ firebase.initializeApp({
   projectId:"scuolaboard-874d4",
   storageBucket:"scuolaboard-874d4.firebasestorage.app",
   messagingSenderId:"249372381209",
-  appId:"1:249372381209:web:737697d4d10b3ae06eda88"
+  appId:"1:249372381209:web:737697d4d10b3ae06eda88",
+  measurementId:"G-04VJPEXN5Q"
 });
 var db=firebase.firestore(),auth=firebase.auth();
 var h=React.createElement,useState=React.useState,useEffect=React.useEffect,useRef=React.useRef,Fragment=React.Fragment;
@@ -55,42 +56,40 @@ function normalizeLinks(c){
   return[];
 }
 
-// ── AI: Google Gemini API diretta (gratis, 30 req/min) ──
-// flash-lite: 30 req/min | flash: 15 req/min (fallback)
-var GEMINI_MODELS=["gemini-2.0-flash-lite","gemini-2.0-flash","gemini-1.5-flash"];
-function callAI(k,prompt,mx,_mIdx,_retry){
+// ── AI: Groq API (free, 30 req/min, no 429) ──
+// Modelli gratuiti Groq in ordine di qualità
+var GROQ_MODELS=["llama-3.3-70b-versatile","llama3-70b-8192","llama3-8b-8192","mixtral-8x7b-32768"];
+function callAI(k,prompt,mx){
   mx=mx||600;
-  _mIdx=_mIdx||0;
-  _retry=_retry||0;
-  if(!k)return Promise.reject(new Error("Chiave Gemini non impostata."));
-  if(_mIdx>=GEMINI_MODELS.length)return Promise.reject(new Error("Tutti i modelli Gemini sono occupati. Riprova tra un minuto."));
-  var model=GEMINI_MODELS[_mIdx];
-  var url="https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent?key="+k;
-  return fetch(url,{
+  if(!k)return Promise.reject(new Error("Chiave Groq non impostata."));
+  return _callGroq(k,prompt,mx,0);
+}
+function _callGroq(k,prompt,mx,mIdx){
+  if(mIdx>=GROQ_MODELS.length)return Promise.reject(new Error("Nessun modello Groq disponibile. Verifica la chiave su console.groq.com"));
+  var model=GROQ_MODELS[mIdx];
+  return fetch("https://api.groq.com/openai/v1/chat/completions",{
     method:"POST",
-    headers:{"Content-Type":"application/json"},
+    headers:{"Content-Type":"application/json","Authorization":"Bearer "+k},
     body:JSON.stringify({
-      contents:[{parts:[{text:"Sei un assistente pedagogico italiano. Rispondi ESCLUSIVAMENTE con un oggetto JSON valido. Nessun testo prima o dopo. Nessun markdown. Nessun backtick. Solo JSON puro.\n\n"+prompt}]}],
-      generationConfig:{maxOutputTokens:mx,temperature:0.7}
+      model:model,
+      max_tokens:mx,
+      temperature:0.7,
+      messages:[
+        {role:"system",content:"Sei un assistente pedagogico italiano. Rispondi ESCLUSIVAMENTE con un oggetto JSON valido. Nessun testo prima o dopo. Nessun markdown. Nessun backtick. Solo JSON puro."},
+        {role:"user",content:prompt}
+      ]
     })
   }).then(function(r){
-    if(r.status===429){
-      if(_retry<2){
-        var wait=(_retry+1)*4000;
-        return new Promise(function(res){setTimeout(res,wait);}).then(function(){return callAI(k,prompt,mx,_mIdx,_retry+1);});
-      }
-      // retry esauriti su questo modello → passa al prossimo
-      return callAI(k,prompt,mx,_mIdx+1,0);
-    }
-    if(!r.ok)return r.json().then(function(e){throw new Error(e.error&&e.error.message||"Errore Gemini "+r.status);});
+    if(r.status===429||r.status===503)return _callGroq(k,prompt,mx,mIdx+1);
+    if(!r.ok)return r.json().then(function(e){throw new Error(e.error&&e.error.message||"Errore Groq "+r.status);});
     return r.json();
   }).then(function(d){
-    if(!d||!d.candidates||!d.candidates[0])throw new Error("Risposta Gemini vuota.");
-    var raw=(d.candidates[0].content.parts[0].text||"").trim();
+    if(!d||!d.choices||!d.choices[0]||!d.choices[0].message)return _callGroq(k,prompt,mx,mIdx+1);
+    var raw=(d.choices[0].message.content||"").trim();
     raw=raw.replace(/^```(?:json)?[\r\n]*/i,"").replace(/[\r\n]*```$/,"").trim();
     var match=raw.match(/\{[\s\S]*\}/);
-    if(!match)throw new Error("JSON non trovato nella risposta.");
-    return JSON.parse(match[0]);
+    if(!match)return _callGroq(k,prompt,mx,mIdx+1);
+    try{return JSON.parse(match[0]);}catch(e){return _callGroq(k,prompt,mx,mIdx+1);}
   });
 }
 
@@ -133,7 +132,7 @@ function App(){
   var [replyTesto,setReplyTesto]=useState("");
   var [confirmDel,setConfirmDel]=useState(null);
   var [showResetOpt,setShowResetOpt]=useState(false);
-  var [orKey,setOrKey]=useState(sessionStorage.getItem("gemini_key")||"");
+  var [orKey,setOrKey]=useState(sessionStorage.getItem("groq_key")||"");
   var [askKey,setAskKey]=useState(false);
   var [akInput,setAkInput]=useState("");
   var [aiLoad,setAiLoad]=useState(false);
@@ -213,7 +212,7 @@ function App(){
       }
     }
   }
-  function logout(){auth.signOut();setUser(null);sessionStorage.removeItem("gemini_key");}
+  function logout(){auth.signOut();setUser(null);sessionStorage.removeItem("groq_key");}
 
   function toggleVisibile(card,e){e.stopPropagation();fbSave(Object.assign({},card,{visibile:card.visibile===false}));}
 
@@ -378,7 +377,7 @@ function App(){
     fbSave(updated);
   }
 
-  function saveAIKey(){if(akInput.trim()){sessionStorage.setItem("gemini_key",akInput.trim());setOrKey(akInput.trim());setAskKey(false);setAkInput("");}}
+  function saveAIKey(){if(akInput.trim()){sessionStorage.setItem("groq_key",akInput.trim());setOrKey(akInput.trim());setAskKey(false);setAkInput("");}}
 
   function runAI(){
     if(!orKey){setAskKey(true);return;}
@@ -474,7 +473,7 @@ function App(){
       ),
       simulaSt&&h("span",{style:{background:"rgba(249,115,22,.25)",color:"#fb923c",border:"1px solid rgba(249,115,22,.5)",borderRadius:20,padding:"2px 10px",fontSize:11,fontWeight:800}},"👁️ VISTA STUDENTE"),
       h("div",{style:{flex:1}}),
-      isProf&&h("button",{onClick:function(){setAskKey(true);},title:orKey?"Chiave Gemini ✓":"Imposta chiave Gemini",style:{background:orKey?"rgba(34,197,94,.15)":"rgba(249,115,22,.15)",border:"1px solid "+(orKey?"rgba(34,197,94,.3)":"rgba(249,115,22,.3)"),borderRadius:8,padding:"5px 9px",cursor:"pointer",fontSize:12,color:orKey?"#4ade80":"#fb923c"}},orKey?"🔑":"⚠️"),
+      isProf&&h("button",{onClick:function(){setAskKey(true);},title:orKey?"Chiave Groq ✓":"Imposta chiave Groq",style:{background:orKey?"rgba(34,197,94,.15)":"rgba(249,115,22,.15)",border:"1px solid "+(orKey?"rgba(34,197,94,.3)":"rgba(249,115,22,.3)"),borderRadius:8,padding:"5px 9px",cursor:"pointer",fontSize:12,color:orKey?"#4ade80":"#fb923c"}},orKey?"🔑":"⚠️"),
       isProf&&h("button",{onClick:function(){setShowResetOpt(true);},style:{background:"rgba(255,255,255,.06)",border:"1px solid rgba(239,68,68,.3)",borderRadius:8,padding:"5px 9px",cursor:"pointer",fontSize:14,color:"#f87171"}},"🗑️"),
       h("button",{onClick:function(){setSQR(true);},style:{background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.1)",borderRadius:8,padding:"5px 9px",cursor:"pointer",fontSize:14,color:"rgba(255,255,255,.7)"}},"◆"),
       isProf&&h("button",{onClick:function(){setPreviewSt(function(v){return!v;});},style:{background:simulaSt?"rgba(249,115,22,.3)":"rgba(255,255,255,.07)",border:"1px solid "+(simulaSt?"rgba(249,115,22,.6)":"rgba(255,255,255,.15)"),borderRadius:8,padding:"5px 10px",cursor:"pointer",fontSize:12,fontWeight:700,color:simulaSt?"#fb923c":"rgba(255,255,255,.6)"}},simulaSt?"🔙 Prof":"👁️ Studente"),
@@ -743,10 +742,10 @@ function App(){
     askKey&&h("div",{style:{position:"fixed",inset:0,background:"rgba(0,0,0,.7)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20},onClick:function(){setAskKey(false);}},
       h("div",{style:{background:"#1e293b",border:"1px solid rgba(255,255,255,.1)",borderRadius:20,padding:28,maxWidth:400,width:"100%"},onClick:function(e){e.stopPropagation();}},
         h("div",{style:{fontSize:36,marginBottom:10}},"🔑"),
-        h("h3",{style:{margin:"0 0 8px",color:"#f1f5f9",fontSize:18,fontWeight:800}},"Chiave Google Gemini"),
-        h("p",{style:{color:"rgba(255,255,255,.5)",fontSize:12,marginBottom:16,lineHeight:1.5}},"Gratuita (1500 req/giorno). Ottienila su aistudio.google.com → Get API key"),
+        h("h3",{style:{margin:"0 0 8px",color:"#f1f5f9",fontSize:18,fontWeight:800}},"Chiave Groq"),
+        h("p",{style:{color:"rgba(255,255,255,.5)",fontSize:12,marginBottom:16,lineHeight:1.5}},"Gratuita (30 req/min). Ottienila su console.groq.com → API Keys"),
         orKey&&h("div",{style:{background:"rgba(34,197,94,.1)",border:"1px solid rgba(34,197,94,.3)",borderRadius:8,padding:10,marginBottom:14}},h("div",{style:{color:"#4ade80",fontSize:11,fontWeight:700}},"✓ Chiave già impostata")),
-        h("input",{type:"password",value:akInput,onInput:function(e){setAkInput(e.target.value);},placeholder:"AIza…",style:Object.assign({},S.input,{marginBottom:12})}),
+        h("input",{type:"password",value:akInput,onInput:function(e){setAkInput(e.target.value);},placeholder:"gsk_…",style:Object.assign({},S.input,{marginBottom:12})}),
         h("div",{style:{display:"flex",gap:10}},
           h("button",{onClick:function(){setAskKey(false);setAkInput("");},style:{flex:1,padding:11,background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.6)",border:"none",borderRadius:11,fontSize:14,fontWeight:700,cursor:"pointer"}},"Annulla"),
           h("button",{onClick:saveAIKey,style:{flex:1,padding:11,background:akInput.trim()?"linear-gradient(135deg,#6366f1,#8b5cf6)":"rgba(255,255,255,.06)",color:akInput.trim()?"#fff":"rgba(255,255,255,.25)",border:"none",borderRadius:11,fontSize:14,fontWeight:800,cursor:akInput.trim()?"pointer":"not-allowed"}},"Salva")
