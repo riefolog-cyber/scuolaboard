@@ -330,12 +330,33 @@ function App(){
     setAiLoad(true);setAiR(null);setAiErr("");
     var target=aiTarget==="tutte"?cards.filter(function(c){return !c.proposta;}):[cards.find(function(c){return String(c.id)===String(aiTarget);})].filter(Boolean);
     if(!target.length){setAiErr("Nessuna card selezionata.");setAiLoad(false);return;}
-    var txt=target.map(function(c){return"["+c.tipo.toUpperCase()+"] "+c.titolo+" | commenti: "+(c.commenti||[]).length+" | like: "+(c.likes||0);}).join("\n");
-    var prompt='Analizza queste card di una bacheca scolastica di Religione e rispondi con un oggetto JSON con queste chiavi:\n{"sintesi":"2-3 frasi sul clima della classe","suggerimenti":["suggerimento 1","suggerimento 2","suggerimento 3"],"domanda_emergente":"una domanda stimolo per la classe"}\n\nCard:\n'+txt.slice(0,1200);
-    callAI(orKey,prompt,700)
+
+    // Costruisci testo dettagliato di ogni card con commenti e voti
+    var dettaglio=target.map(function(c){
+      var riga="CARD: \""+c.titolo+"\" (tipo: "+c.tipo+", like: "+(c.likes||0)+")";
+      if(c.testo)riga+="\nTesto: "+c.testo;
+      if(c.tipo==="sondaggio"&&c.opzioni){
+        var totV=c.opzioni.reduce(function(a,o){return a+o.voti.length;},0);
+        riga+="\nVoti totali: "+totV;
+        c.opzioni.forEach(function(o){
+          var pct=totV>0?Math.round(o.voti.length/totV*100):0;
+          riga+="\n  - \""+o.testo+"\": "+o.voti.length+" voti ("+pct+"%)";
+          if(o.voti.length)riga+=" ["+o.voti.join(", ")+"]";
+        });
+      }
+      if(c.commenti&&c.commenti.length){
+        riga+="\nCommenti ("+c.commenti.length+"):";
+        c.commenti.forEach(function(cm){riga+="\n  - "+cm.autore+": \""+cm.testo+"\"";});
+      }else{riga+="\nCommenti: nessuno";}
+      return riga;
+    }).join("\n\n---\n\n");
+
+    var prompt='Sei un assistente pedagogico esperto che supporta un insegnante di Religione in una scuola secondaria di secondo grado.\n\nAnalizza ESCLUSIVAMENTE i dati reali delle card qui sotto. Non inventare nulla. Non aggiungere considerazioni generiche sulla religione o sulla didattica che non siano direttamente collegate a ciò che gli studenti hanno scritto o votato.\n\nRispondi con un oggetto JSON con queste 4 chiavi:\n\n{\n  "riepilogo": "Descrizione puntuale e dettagliata di cosa hanno scritto e votato gli studenti, card per card. Cita esplicitamente i commenti più significativi e i risultati dei sondaggi con le percentuali reali.",\n  "dibattito": "Analisi del tipo di interazione emersa nei commenti: c\'è confronto di opinioni? accordo generale? posizioni contrastanti? chi ha partecipato di più? quali idee si ripetono?",\n  "punti_chiave": ["punto concreto 1 emerso davvero dai dati", "punto concreto 2", "punto concreto 3", "punto concreto 4"],\n  "spunti_dibattito": ["Domanda o attività concreta da usare in classe basata su ciò che hanno scritto gli studenti 1", "spunto 2", "spunto 3"]\n}\n\nDATI REALI DELLE CARD:\n\n'+dettaglio.slice(0,2500);
+
+    callAI(orKey,prompt,900)
       .then(function(r){
-        if(r&&(r.sintesi||r.suggerimenti))setAiR(r);
-        else setAiErr("Risposta AI non valida. Riprova o cambia modello.");
+        if(r&&(r.riepilogo||r.dibattito))setAiR(r);
+        else setAiErr("Risposta AI non valida. Riprova.");
       })
       .catch(function(e){setAiErr(e.message||"Errore AI.");})
       .then(function(){setAiLoad(false);});
@@ -346,11 +367,23 @@ function App(){
     if(!orKey){setAskKey(true);return;}
     setCardAIL(card.id);setCardAiOpen(card.id);
     setCardAiRes(function(p){return Object.assign({},p,{[card.id]:null});});
-    var commTxt=(card.commenti||[]).map(function(cm){return"- "+cm.autore+": "+cm.testo;}).join("\n")||"nessuno";
-    var votiTxt=card.opzioni?card.opzioni.map(function(o){return o.testo+": "+o.voti.length+" voti";}).join(", "):"";
-    var prompt='Analizza questa card scolastica e rispondi con un oggetto JSON con queste chiavi:\n{"sintesi":"1-2 frasi sulla card","spunto":"una domanda o attività didattica concreta","commento_classe":"lettura breve dei commenti/voti degli studenti"}\n\nTipo: '+card.tipo+'\nTitolo: '+card.titolo+'\nTesto: '+(card.testo||"—")+'\nLike: '+(card.likes||0)+'\nCommenti:\n'+commTxt+(votiTxt?'\nVoti: '+votiTxt:"");
-    callAI(orKey,prompt,500)
-      .then(function(r){setCardAiRes(function(p){return Object.assign({},p,{[card.id]:r||({"error":"Risposta non valida"})});});})
+
+    var commTxt=(card.commenti||[]).length
+      ?card.commenti.map(function(cm){return"  - "+cm.autore+": \""+cm.testo+"\"";}).join("\n")
+      :"nessun commento";
+    var votiTxt="";
+    if(card.opzioni){
+      var totV=card.opzioni.reduce(function(a,o){return a+o.voti.length;},0);
+      votiTxt="\nVoti totali: "+totV+"\n"+card.opzioni.map(function(o){
+        var pct=totV>0?Math.round(o.voti.length/totV*100):0;
+        return"  - \""+o.testo+"\": "+o.voti.length+" voti ("+pct+"%)";
+      }).join("\n");
+    }
+
+    var prompt='Sei un assistente pedagogico esperto che supporta un insegnante di Religione.\n\nAnalizza SOLO i dati reali di questa card. Non inventare. Non generalizzare.\n\nRispondi con un oggetto JSON con queste 3 chiavi:\n\n{\n  "sintesi": "Cosa hanno scritto/votato DAVVERO gli studenti su questa card. Cita i commenti reali e le percentuali dei voti.",\n  "dinamica": "Come si sono confrontati gli studenti nei commenti: ci sono posizioni diverse? accordo? chi ha detto cosa di rilevante?",\n  "spunto": "Una domanda o attività concreta da usare in classe, ispirata direttamente da ciò che hanno scritto questi studenti (non generica)."\n}\n\nDATI REALI:\nTitolo: "'+card.titolo+'"\nTipo: '+card.tipo+'\nTesto: '+(card.testo||"(nessun testo)")+'\nLike: '+(card.likes||0)+votiTxt+'\nCommenti:\n'+commTxt;
+
+    callAI(orKey,prompt,600)
+      .then(function(r){setCardAiRes(function(p){return Object.assign({},p,{[card.id]:r||{error:"Risposta non valida"}});});})
       .catch(function(e){setCardAiRes(function(p){return Object.assign({},p,{[card.id]:{error:e.message}});});})
       .then(function(){setCardAIL(null);});
   }
@@ -481,13 +514,10 @@ function App(){
                   h("button",{onClick:function(e){
                     e.stopPropagation();
                     setSC(c);setNc({testo:""});setEditingCm(null);
-                    // scroll e focus sulla textarea commenti dopo apertura modale
                     setTimeout(function(){
-                      if(cmTextareaRef.current){
-                        cmTextareaRef.current.scrollIntoView({behavior:"smooth",block:"center"});
-                        cmTextareaRef.current.focus();
-                      }
-                    },120);
+                      var ta=document.getElementById("cm-textarea");
+                      if(ta){ta.scrollIntoView({behavior:"smooth",block:"center"});ta.focus();}
+                    },150);
                   },style:{background:"rgba(99,102,241,.15)",border:"1px solid rgba(99,102,241,.3)",borderRadius:20,padding:"3px 10px",cursor:"pointer",fontSize:12,color:"#a5b4fc",display:"flex",alignItems:"center",gap:4,fontWeight:700}},
                     "💬 Commenta",h("span",{style:{fontSize:11,background:"rgba(99,102,241,.3)",borderRadius:10,padding:"0 5px",marginLeft:2}},(c.commenti||[]).length||"0")
                   ),
@@ -501,9 +531,22 @@ function App(){
                 isProf&&!simulaSt&&cOpen&&h("div",{style:{borderTop:"1px solid rgba(99,102,241,.25)",background:"rgba(30,30,60,.7)",padding:"10px 14px"}},
                   cLoad&&h("div",{style:{textAlign:"center",padding:"8px 0",color:"rgba(255,255,255,.4)",fontSize:12}},"⚙️ Analisi in corso…"),
                   !cLoad&&cRes&&!cRes.error&&h(Fragment,null,
-                    cRes.sintesi&&h("div",{style:{marginBottom:8}},h("div",{style:{fontSize:9,fontWeight:800,color:"#a5b4fc",letterSpacing:1,marginBottom:3}},"📝 SINTESI"),h("div",{style:{fontSize:11,color:"rgba(255,255,255,.75)",lineHeight:1.6}},cRes.sintesi)),
-                    cRes.commento_classe&&h("div",{style:{marginBottom:8}},h("div",{style:{fontSize:9,fontWeight:800,color:"#4ade80",letterSpacing:1,marginBottom:3}},"👥 CLASSE"),h("div",{style:{fontSize:11,color:"rgba(255,255,255,.7)",lineHeight:1.6}},cRes.commento_classe)),
-                    cRes.spunto&&h("div",{style:{background:"rgba(34,197,94,.08)",borderRadius:7,padding:"7px 10px",border:"1px solid rgba(34,197,94,.15)"}},h("div",{style:{fontSize:9,fontWeight:800,color:"#4ade80",letterSpacing:1,marginBottom:3}},"💡 SPUNTO"),h("div",{style:{fontSize:11,color:"rgba(255,255,255,.7)",lineHeight:1.6,fontStyle:"italic"}},cRes.spunto))
+                    cRes.sintesi&&h("div",{style:{marginBottom:8}},
+                      h("div",{style:{fontSize:9,fontWeight:800,color:"#a5b4fc",letterSpacing:1,marginBottom:3}},"📋 SINTESI"),
+                      h("div",{style:{fontSize:11,color:"rgba(255,255,255,.8)",lineHeight:1.6,whiteSpace:"pre-wrap"}},cRes.sintesi)
+                    ),
+                    cRes.dinamica&&h("div",{style:{marginBottom:8}},
+                      h("div",{style:{fontSize:9,fontWeight:800,color:"#93c5fd",letterSpacing:1,marginBottom:3}},"💬 DINAMICA"),
+                      h("div",{style:{fontSize:11,color:"rgba(255,255,255,.75)",lineHeight:1.6}},cRes.dinamica)
+                    ),
+                    cRes.commento_classe&&!cRes.dinamica&&h("div",{style:{marginBottom:8}},
+                      h("div",{style:{fontSize:9,fontWeight:800,color:"#4ade80",letterSpacing:1,marginBottom:3}},"👥 CLASSE"),
+                      h("div",{style:{fontSize:11,color:"rgba(255,255,255,.7)",lineHeight:1.6}},cRes.commento_classe)
+                    ),
+                    cRes.spunto&&h("div",{style:{background:"rgba(34,197,94,.08)",borderRadius:7,padding:"7px 10px",border:"1px solid rgba(34,197,94,.15)"}},
+                      h("div",{style:{fontSize:9,fontWeight:800,color:"#4ade80",letterSpacing:1,marginBottom:3}},"💡 SPUNTO PER IL DIBATTITO"),
+                      h("div",{style:{fontSize:11,color:"rgba(255,255,255,.8)",lineHeight:1.6,fontStyle:"italic"}},cRes.spunto)
+                    )
                   ),
                   !cLoad&&cRes&&cRes.error&&h("div",{style:{color:"#f87171",fontSize:11}},cRes.error),
                   !cLoad&&!cRes&&h("div",{style:{color:"rgba(255,255,255,.3)",fontSize:11,textAlign:"center"}},"Premi 🤖 AI per avviare"),
@@ -541,14 +584,29 @@ function App(){
         aiErr&&h("div",{style:{color:"#f87171",padding:12,background:"rgba(239,68,68,.1)",borderRadius:9,fontSize:13,marginBottom:8}},aiErr),
         aiResult&&!aiErr&&h(Fragment,null,
           h("div",{style:{background:"rgba(99,102,241,.15)",borderRadius:10,padding:14,marginBottom:12,border:"1px solid rgba(99,102,241,.2)"}},
-            h("div",{style:{fontWeight:700,color:"#a5b4fc",marginBottom:6,fontSize:11,letterSpacing:1}},"📝 SINTESI"),
-            h("div",{style:{color:"rgba(255,255,255,.8)",fontSize:13,lineHeight:1.7}},aiResult.sintesi)
+            h("div",{style:{fontWeight:700,color:"#a5b4fc",marginBottom:8,fontSize:11,letterSpacing:1}},"📋 RIEPILOGO PUNTUALE"),
+            h("div",{style:{color:"rgba(255,255,255,.85)",fontSize:13,lineHeight:1.8,whiteSpace:"pre-wrap"}},aiResult.riepilogo||aiResult.sintesi||"—")
           ),
-          aiResult.domanda_emergente&&h("div",{style:{background:"rgba(59,130,246,.12)",borderRadius:10,padding:14,marginBottom:12,display:"flex",gap:10,border:"1px solid rgba(59,130,246,.2)"}},
-            h("span",{style:{fontSize:20}},"💡"),
-            h("div",null,h("div",{style:{fontWeight:700,color:"#93c5fd",fontSize:11,marginBottom:4,letterSpacing:1}},"DOMANDA EMERGENTE"),h("div",{style:{color:"rgba(255,255,255,.75)",fontSize:13,lineHeight:1.6,fontStyle:"italic"}},aiResult.domanda_emergente))
+          aiResult.dibattito&&h("div",{style:{background:"rgba(59,130,246,.12)",borderRadius:10,padding:14,marginBottom:12,border:"1px solid rgba(59,130,246,.2)"}},
+            h("div",{style:{fontWeight:700,color:"#93c5fd",marginBottom:8,fontSize:11,letterSpacing:1}},"💬 DINAMICA DEL DIBATTITO"),
+            h("div",{style:{color:"rgba(255,255,255,.8)",fontSize:13,lineHeight:1.8,whiteSpace:"pre-wrap"}},aiResult.dibattito)
           ),
-          aiResult.suggerimenti&&aiResult.suggerimenti.length>0&&h("div",{style:{background:"rgba(34,197,94,.08)",borderRadius:10,padding:14,border:"1px solid rgba(34,197,94,.15)"}},
+          aiResult.punti_chiave&&aiResult.punti_chiave.length>0&&h("div",{style:{background:"rgba(245,158,11,.08)",borderRadius:10,padding:14,marginBottom:12,border:"1px solid rgba(245,158,11,.2)"}},
+            h("div",{style:{fontWeight:700,color:"#fbbf24",marginBottom:10,fontSize:11,letterSpacing:1}},"🔑 PUNTI CHIAVE EMERSI"),
+            aiResult.punti_chiave.map(function(s,i){return h("div",{key:i,style:{display:"flex",gap:8,marginBottom:8,alignItems:"flex-start"}},
+              h("span",{style:{background:"#f59e0b",color:"#1a1a2e",borderRadius:"50%",width:18,height:18,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:800,flexShrink:0,marginTop:2}},i+1),
+              h("span",{style:{color:"rgba(255,255,255,.8)",fontSize:13,lineHeight:1.6}},s)
+            );})
+          ),
+          aiResult.spunti_dibattito&&aiResult.spunti_dibattito.length>0&&h("div",{style:{background:"rgba(34,197,94,.08)",borderRadius:10,padding:14,border:"1px solid rgba(34,197,94,.15)"}},
+            h("div",{style:{fontWeight:700,color:"#4ade80",marginBottom:10,fontSize:11,letterSpacing:1}},"💡 SPUNTI PER IL DIBATTITO IN CLASSE"),
+            aiResult.spunti_dibattito.map(function(s,i){return h("div",{key:i,style:{display:"flex",gap:8,marginBottom:8,alignItems:"flex-start"}},
+              h("span",{style:{background:"#22c55e",color:"#fff",borderRadius:"50%",width:18,height:18,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:800,flexShrink:0,marginTop:2}},i+1),
+              h("span",{style:{color:"rgba(255,255,255,.8)",fontSize:13,lineHeight:1.6,fontStyle:"italic"}},s)
+            );})
+          ),
+          // fallback per vecchio formato
+          aiResult.suggerimenti&&!aiResult.punti_chiave&&h("div",{style:{background:"rgba(34,197,94,.08)",borderRadius:10,padding:14,border:"1px solid rgba(34,197,94,.15)"}},
             h("div",{style:{fontWeight:700,color:"#4ade80",marginBottom:10,fontSize:11,letterSpacing:1}},"✅ SUGGERIMENTI"),
             aiResult.suggerimenti.map(function(s,i){return h("div",{key:i,style:{display:"flex",gap:8,marginBottom:8,alignItems:"flex-start"}},
               h("span",{style:{background:"#22c55e",color:"#fff",borderRadius:"50%",width:18,height:18,display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontWeight:800,flexShrink:0,marginTop:2}},i+1),
@@ -677,7 +735,7 @@ function App(){
           // Box nuovo commento
           h("div",{style:{marginTop:10,background:"rgba(255,255,255,.03)",borderRadius:10,padding:12,border:"1px solid rgba(255,255,255,.07)"}},
             h("div",{style:{fontSize:11,fontWeight:700,color:"#a5b4fc",marginBottom:7,padding:"4px 9px",background:"rgba(99,102,241,.15)",borderRadius:7}},"👤 "+myName(user)),
-            h("textarea",{ref:cmTextareaRef,value:nc.testo,onInput:function(e){setNc({testo:e.target.value});},rows:2,placeholder:"Scrivi un commento…",style:Object.assign({},S.input,{resize:"none",marginBottom:7})}),
+            h("textarea",{id:"cm-textarea",value:nc.testo,onInput:function(e){setNc({testo:e.target.value});},rows:2,placeholder:"Scrivi un commento…",style:Object.assign({},S.input,{resize:"none",marginBottom:7})}),
             h("button",{onClick:addCom,style:{width:"100%",padding:8,background:nc.testo.trim()?"linear-gradient(135deg,#6366f1,#8b5cf6)":"rgba(255,255,255,.06)",color:nc.testo.trim()?"#fff":"rgba(255,255,255,.25)",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer"}},"Pubblica commento")
           )
         )
