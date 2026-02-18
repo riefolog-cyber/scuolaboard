@@ -132,7 +132,7 @@ function App(){
   var [replyTesto,setReplyTesto]=useState("");
   var [confirmDel,setConfirmDel]=useState(null);
   var [showResetOpt,setShowResetOpt]=useState(false);
-  var [orKey,setOrKey]=useState(sessionStorage.getItem("groq_key")||"");
+  var [orKey,setOrKey]=useState(localStorage.getItem("groq_key")||"");
   var [askKey,setAskKey]=useState(false);
   var [akInput,setAkInput]=useState("");
   var [aiLoad,setAiLoad]=useState(false);
@@ -212,7 +212,7 @@ function App(){
       }
     }
   }
-  function logout(){auth.signOut();setUser(null);sessionStorage.removeItem("groq_key");}
+  function logout(){auth.signOut();setUser(null);localStorage.removeItem("groq_key");}
 
   function toggleVisibile(card,e){e.stopPropagation();fbSave(Object.assign({},card,{visibile:card.visibile===false}));}
 
@@ -377,7 +377,7 @@ function App(){
     fbSave(updated);
   }
 
-  function saveAIKey(){if(akInput.trim()){sessionStorage.setItem("groq_key",akInput.trim());setOrKey(akInput.trim());setAskKey(false);setAkInput("");}}
+  function saveAIKey(){if(akInput.trim()){localStorage.setItem("groq_key",akInput.trim());setOrKey(akInput.trim());setAskKey(false);setAkInput("");}}
 
   function runAI(){
     if(!orKey){setAskKey(true);return;}
@@ -499,16 +499,12 @@ function App(){
       isProf&&!simulaSt&&proposte.length>0&&h("div",{style:{padding:"10px 14px",background:"rgba(249,115,22,.06)",borderBottom:"1px solid rgba(249,115,22,.15)"}},
         h("div",{style:{fontWeight:700,color:"#fb923c",fontSize:11,marginBottom:7,letterSpacing:1}},"⏳ PROPOSTE IN ATTESA"),
         proposte.map(function(c){return h("div",{key:c.id,style:{background:"rgba(255,255,255,.04)",border:"1px solid rgba(249,115,22,.2)",borderRadius:9,padding:"8px 12px",marginBottom:5,display:"flex",alignItems:"center",gap:8}},
-          h("span",{style:{flex:1,fontSize:13,color:"rgba(255,255,255,.8)",fontWeight:600}},c.titolo),
+          h("span",{style:{flex:1,fontSize:13,color:"rgba(255,255,255,.8)",fontWeight:600}},h("span",{style:{fontSize:10,color:"#fb923c",fontWeight:800,marginRight:6,background:"rgba(249,115,22,.15)",padding:"1px 6px",borderRadius:10}},c.autore||"Studente"),c.titolo),
           h("button",{onClick:function(){appCard(c.id);},style:{background:"rgba(34,197,94,.2)",color:"#4ade80",border:"1px solid rgba(34,197,94,.3)",borderRadius:7,padding:"3px 10px",cursor:"pointer",fontSize:12,fontWeight:700}},"✓"),
           h("button",{onClick:function(){delCard(c.id);},style:{background:"rgba(239,68,68,.15)",color:"#f87171",border:"none",borderRadius:7,padding:"3px 8px",cursor:"pointer",fontSize:12,fontWeight:700}},"✕")
         );})
       ),
-      h("div",{style:{display:"flex",gap:6,padding:"10px 14px",background:"rgba(255,255,255,.02)",borderBottom:"1px solid rgba(255,255,255,.06)",flexWrap:"wrap"}},
-        [{k:"tutti",i:"◆",l:"TUTTI"},{k:"domanda",i:"💬",l:"DOMANDE"},{k:"nota",i:"📄",l:"NOTE"},{k:"sondaggio",i:"🗳️",l:"SONDAGGI"}].map(function(f){
-          return h("button",{key:f.k,onClick:function(){setFiltro(f.k);},style:S.filterBtn(filtro===f.k)},f.i+" "+f.l);
-        })
-      ),
+
       h("div",{style:{flex:1,padding:"18px 14px"}},
         visible.length===0
           ?h("div",{style:{display:"flex",flexDirection:"column",alignItems:"center",padding:"80px 20px",color:"rgba(255,255,255,.2)"}},h("div",{style:{fontSize:48,marginBottom:8}},"📌"),h("div",{style:{fontWeight:600}},"Nessun contenuto"))
@@ -797,7 +793,7 @@ function App(){
             h("button",{onClick:function(){editCard(showCard);setSC(null);},style:{background:"rgba(59,130,246,.2)",color:"#60a5fa",border:"1px solid rgba(59,130,246,.3)",borderRadius:7,padding:"3px 10px",cursor:"pointer",fontSize:11,fontWeight:700}},"✏️ Modifica"),
             h("button",{onClick:function(){delCard(showCard.id);},style:{background:"rgba(239,68,68,.12)",color:"#f87171",border:"none",borderRadius:7,padding:"3px 9px",cursor:"pointer",fontSize:11,fontWeight:700}},"🗑️ Elimina"),
             h("button",{onClick:function(e){toggleVisibile(showCard,e);},style:{background:showCard.visibile===false?"rgba(34,197,94,.15)":"rgba(255,255,255,.08)",color:showCard.visibile===false?"#4ade80":"rgba(255,255,255,.5)",border:"1px solid "+(showCard.visibile===false?"rgba(34,197,94,.3)":"rgba(255,255,255,.1)"),borderRadius:7,padding:"3px 10px",cursor:"pointer",fontSize:11,fontWeight:700}},showCard.visibile===false?"👁️ Mostra":"🚫 Nascondi"),
-            h("button",{onClick:function(e){e.stopPropagation();if(window.confirm("Azzerare commenti e voti di questa card? La card resterà intatta.")){resetSondaggio(showCard.id);}},style:{background:"rgba(249,115,22,.15)",color:"#fb923c",border:"1px solid rgba(249,115,22,.35)",borderRadius:7,padding:"3px 10px",cursor:"pointer",fontSize:11,fontWeight:700}},"🔄 Reset")
+            h("button",{onClick:function(e){e.stopPropagation();setConfirmDel({type:"resetCard",cardId:showCard.id});},style:{background:"rgba(249,115,22,.15)",color:"#fb923c",border:"1px solid rgba(249,115,22,.35)",borderRadius:7,padding:"3px 10px",cursor:"pointer",fontSize:11,fontWeight:700}},"🔄 Reset")
           )
         ),
 
