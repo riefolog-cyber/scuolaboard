@@ -130,6 +130,8 @@ function App(){
   var [editMode,setEditMode]=useState(null);
   var [nc,setNc]=useState({testo:""});
   var [editingCm,setEditingCm]=useState(null); // {id, testo} commento in modifica
+  var [replyTo,setReplyTo]=useState(null);     // {id, autore} commento a cui rispondere
+  var [replyTesto,setReplyTesto]=useState("");
   var [orKey,setOrKey]=useState(sessionStorage.getItem("or_key")||"");
   var [askKey,setAskKey]=useState(false);
   var [akInput,setAkInput]=useState("");
@@ -305,8 +307,23 @@ function App(){
   function addCom(){
     if(!user||!nc.testo.trim())return;
     var card=cards.find(function(c){return c.id===showCard.id;});if(!card)return;
-    fbSave(Object.assign({},card,{commenti:(card.commenti||[]).concat([{id:Date.now(),autore:myName(user),testo:nc.testo.trim(),data:new Date().toISOString().slice(0,10)}])}));
+    fbSave(Object.assign({},card,{commenti:(card.commenti||[]).concat([{id:Date.now(),autore:myName(user),testo:nc.testo.trim(),data:new Date().toISOString().slice(0,10),risposte:[]}])}));
     setNc({testo:""});
+  }
+  function addReply(cmId){
+    if(!user||!replyTesto.trim())return;
+    var card=cards.find(function(c){return c.id===showCard.id;});if(!card)return;
+    var nuova={id:Date.now(),autore:myName(user),testo:replyTesto.trim(),data:new Date().toISOString().slice(0,10)};
+    fbSave(Object.assign({},card,{commenti:card.commenti.map(function(cm){
+      return cm.id===cmId?Object.assign({},cm,{risposte:(cm.risposte||[]).concat([nuova])}):cm;
+    })}));
+    setReplyTo(null);setReplyTesto("");
+  }
+  function delReply(cmId,rId){
+    var card=cards.find(function(c){return c.id===showCard.id;});if(!card)return;
+    fbSave(Object.assign({},card,{commenti:card.commenti.map(function(cm){
+      return cm.id===cmId?Object.assign({},cm,{risposte:(cm.risposte||[]).filter(function(r){return r.id!==rId;})}):cm;
+    })}));
   }
   function delCom(cid,cmid){
     var card=cards.find(function(c){return c.id===cid;});if(!card)return;
