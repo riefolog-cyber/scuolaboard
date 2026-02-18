@@ -55,20 +55,27 @@ function normalizeLinks(c){
   return[];
 }
 
-// ── AI: modelli con fallback robusto ──
-var AI_MODELS=["google/gemma-2-9b-it:free","meta-llama/llama-3.1-8b-instruct:free","meta-llama/llama-3.2-3b-instruct:free","mistralai/mistral-7b-instruct:free"];
+// ── AI: usa openrouter/free come router automatico + fallback su modelli specifici ──
+var AI_MODELS=[
+  "openrouter/free",
+  "deepseek/deepseek-chat-v3-0324:free",
+  "meta-llama/llama-3.3-70b-instruct:free",
+  "mistralai/mistral-small-3.1-24b-instruct:free",
+  "deepseek/deepseek-r1-zero:free",
+  "nousresearch/deephermes-3-llama-3-8b-preview:free"
+];
 function callAI(k,prompt,mx){
   mx=mx||600;
   if(!k)return Promise.reject(new Error("Chiave OpenRouter non impostata."));
   var idx=0;
   function tryNext(){
-    if(idx>=AI_MODELS.length)return Promise.reject(new Error("Nessun modello AI disponibile. Riprova più tardi."));
+    if(idx>=AI_MODELS.length)return Promise.reject(new Error("Nessun modello AI disponibile. Verifica la chiave OpenRouter e riprova."));
     var model=AI_MODELS[idx++];
     return fetch("https://openrouter.ai/api/v1/chat/completions",{
       method:"POST",
       headers:{"Content-Type":"application/json","Authorization":"Bearer "+k,"HTTP-Referer":"https://riefolog-cyber.github.io","X-Title":"ScuolaBoard"},
       body:JSON.stringify({model:model,max_tokens:mx,messages:[
-        {role:"system",content:"Sei un assistente pedagogico. Rispondi SEMPRE e SOLO con un oggetto JSON valido, senza markdown, senza backtick, senza testo prima o dopo."},
+        {role:"system",content:"Sei un assistente pedagogico italiano. Rispondi ESCLUSIVAMENTE con un oggetto JSON valido. Nessun testo prima o dopo. Nessun markdown. Nessun backtick. Solo JSON puro."},
         {role:"user",content:prompt}
       ]})
     }).then(function(r){
@@ -76,8 +83,10 @@ function callAI(k,prompt,mx){
       return r.json();
     }).then(function(d){
       if(!d||d.error||!d.choices||!d.choices[0]||!d.choices[0].message)return tryNext();
-      var raw=d.choices[0].message.content||"";
-      // estrai JSON anche se il modello aggiunge testo attorno
+      var raw=(d.choices[0].message.content||"").trim();
+      // Rimuovi eventuali blocchi markdown ```json ... ```
+      raw=raw.replace(/^```(?:json)?[\r\n]*/i,"").replace(/[\r\n]*```$/,"").trim();
+      // Estrai il primo oggetto JSON trovato
       var match=raw.match(/\{[\s\S]*\}/);
       if(!match)return tryNext();
       try{return JSON.parse(match[0]);}catch(e){return tryNext();}
