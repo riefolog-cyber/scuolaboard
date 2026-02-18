@@ -55,13 +55,17 @@ function normalizeLinks(c){
   return[];
 }
 
-// ── AI: Google Gemini API diretta (gratis 1500 req/giorno, 15 req/min) ──
-var GEMINI_MODEL="gemini-2.0-flash";
-function callAI(k,prompt,mx,_retry){
+// ── AI: Google Gemini API diretta (gratis, 30 req/min) ──
+// flash-lite: 30 req/min | flash: 15 req/min (fallback)
+var GEMINI_MODELS=["gemini-2.0-flash-lite","gemini-2.0-flash","gemini-1.5-flash"];
+function callAI(k,prompt,mx,_mIdx,_retry){
   mx=mx||600;
+  _mIdx=_mIdx||0;
   _retry=_retry||0;
   if(!k)return Promise.reject(new Error("Chiave Gemini non impostata."));
-  var url="https://generativelanguage.googleapis.com/v1beta/models/"+GEMINI_MODEL+":generateContent?key="+k;
+  if(_mIdx>=GEMINI_MODELS.length)return Promise.reject(new Error("Tutti i modelli Gemini sono occupati. Riprova tra un minuto."));
+  var model=GEMINI_MODELS[_mIdx];
+  var url="https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent?key="+k;
   return fetch(url,{
     method:"POST",
     headers:{"Content-Type":"application/json"},
@@ -71,9 +75,12 @@ function callAI(k,prompt,mx,_retry){
     })
   }).then(function(r){
     if(r.status===429){
-      if(_retry>=3)throw new Error("Troppe richieste. Attendi qualche secondo e riprova.");
-      var wait=(_retry+1)*5000;
-      return new Promise(function(res){setTimeout(res,wait);}).then(function(){return callAI(k,prompt,mx,_retry+1);});
+      if(_retry<2){
+        var wait=(_retry+1)*4000;
+        return new Promise(function(res){setTimeout(res,wait);}).then(function(){return callAI(k,prompt,mx,_mIdx,_retry+1);});
+      }
+      // retry esauriti su questo modello → passa al prossimo
+      return callAI(k,prompt,mx,_mIdx+1,0);
     }
     if(!r.ok)return r.json().then(function(e){throw new Error(e.error&&e.error.message||"Errore Gemini "+r.status);});
     return r.json();
