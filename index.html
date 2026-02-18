@@ -123,6 +123,7 @@ function App(){
   var [previewSt,setPreviewSt]=useState(false);
   var [showModal,setSM]=useState(false);
   var [showCard,setSC]=useState(null);
+  var cmTextareaRef=useRef(null);
   var [showQR,setSQR]=useState(false);
   var [showReset,setSR]=useState(false);
   var [form,setForm]=useState(Object.assign({},FORM0));
@@ -154,10 +155,13 @@ function App(){
       db.collection("users").doc(fu.uid).get().then(function(ud){
         if(!ud.exists){
           var np=(fu.displayName||"").split(" ");
-          db.collection("users").doc(fu.uid).set({nome:np[0]||"Utente",cognome:np.slice(1).join(" ")||"",email:fu.email,role:"studente",provider:"google",lastLogin:firebase.firestore.FieldValue.serverTimestamp()});
+          return db.collection("users").doc(fu.uid).set({nome:np[0]||"Utente",cognome:np.slice(1).join(" ")||"",email:fu.email,role:"studente",provider:"google",lastLogin:firebase.firestore.FieldValue.serverTimestamp()});
         }
-      });
-    }).catch(function(e){console.error("Redirect result:",e);});
+      }).catch(function(e){console.error("Firestore user save:",e);});
+    }).catch(function(e){
+      console.error("Redirect result:",e);
+      // Non fare nulla: onAuthStateChanged gestirà lo stato
+    });
 
     var unsub=auth.onAuthStateChanged(function(fu){
       if(fu){
@@ -193,14 +197,23 @@ function App(){
   async function loginGoogle(){
     try{
       var provider=new firebase.auth.GoogleAuthProvider();
-      if(isMobile){
-        await auth.signInWithRedirect(provider);
-      }else{
-        var cr=await auth.signInWithPopup(provider);
-        var fu=cr.user,ud=await db.collection("users").doc(fu.uid).get();
-        if(!ud.exists){var np=(fu.displayName||"").split(" ");await db.collection("users").doc(fu.uid).set({nome:np[0]||"Utente",cognome:np.slice(1).join(" ")||"",email:fu.email,role:"studente",provider:"google",lastLogin:firebase.firestore.FieldValue.serverTimestamp()});}
+      provider.setCustomParameters({prompt:"select_account"});
+      // Usa sempre popup (funziona su GitHub Pages sia desktop che mobile)
+      var cr=await auth.signInWithPopup(provider);
+      var fu=cr.user,ud=await db.collection("users").doc(fu.uid).get();
+      if(!ud.exists){
+        var np=(fu.displayName||"").split(" ");
+        await db.collection("users").doc(fu.uid).set({nome:np[0]||"Utente",cognome:np.slice(1).join(" ")||"",email:fu.email,role:"studente",provider:"google",lastLogin:firebase.firestore.FieldValue.serverTimestamp()});
       }
-    }catch(e){console.error(e);}
+    }catch(e){
+      console.error("Login error:",e.code,e.message);
+      if(e.code==="auth/popup-blocked"){
+        // Safari blocca i popup: fallback su redirect
+        try{
+          await auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider());
+        }catch(e2){console.error("Redirect fallback error:",e2);}
+      }
+    }
   }
   function logout(){auth.signOut();setUser(null);sessionStorage.removeItem("or_key");}
 
@@ -465,8 +478,18 @@ function App(){
                   h("button",{onClick:function(e){e.stopPropagation();toggleLike(c.id);},style:{background:liked?"rgba(99,102,241,.3)":"rgba(255,255,255,.08)",border:"1px solid "+(liked?"rgba(99,102,241,.5)":"rgba(255,255,255,.1)"),borderRadius:20,padding:"3px 8px",cursor:"pointer",fontSize:12,color:liked?"#a5b4fc":"rgba(255,255,255,.5)",display:"flex",alignItems:"center",gap:4}},
                     "👍",h("span",{style:{fontSize:11,fontWeight:700}},c.likes||0)
                   ),
-                  h("button",{onClick:function(e){e.stopPropagation();setSC(c);setNc({testo:""});setEditingCm(null);},style:{background:"rgba(255,255,255,.07)",border:"1px solid rgba(255,255,255,.1)",borderRadius:20,padding:"3px 8px",cursor:"pointer",fontSize:12,color:"rgba(255,255,255,.5)",display:"flex",alignItems:"center",gap:4}},
-                    "💬",h("span",{style:{fontSize:11,fontWeight:700}},(c.commenti||[]).length||"")
+                  h("button",{onClick:function(e){
+                    e.stopPropagation();
+                    setSC(c);setNc({testo:""});setEditingCm(null);
+                    // scroll e focus sulla textarea commenti dopo apertura modale
+                    setTimeout(function(){
+                      if(cmTextareaRef.current){
+                        cmTextareaRef.current.scrollIntoView({behavior:"smooth",block:"center"});
+                        cmTextareaRef.current.focus();
+                      }
+                    },120);
+                  },style:{background:"rgba(99,102,241,.15)",border:"1px solid rgba(99,102,241,.3)",borderRadius:20,padding:"3px 10px",cursor:"pointer",fontSize:12,color:"#a5b4fc",display:"flex",alignItems:"center",gap:4,fontWeight:700}},
+                    "💬 Commenta",h("span",{style:{fontSize:11,background:"rgba(99,102,241,.3)",borderRadius:10,padding:"0 5px",marginLeft:2}},(c.commenti||[]).length||"0")
                   ),
                   h("span",{style:{flex:1}}),
                   h("span",{style:{fontSize:10,color:"rgba(255,255,255,.3)"}},fmt(c.data)),
@@ -654,7 +677,7 @@ function App(){
           // Box nuovo commento
           h("div",{style:{marginTop:10,background:"rgba(255,255,255,.03)",borderRadius:10,padding:12,border:"1px solid rgba(255,255,255,.07)"}},
             h("div",{style:{fontSize:11,fontWeight:700,color:"#a5b4fc",marginBottom:7,padding:"4px 9px",background:"rgba(99,102,241,.15)",borderRadius:7}},"👤 "+myName(user)),
-            h("textarea",{value:nc.testo,onInput:function(e){setNc({testo:e.target.value});},rows:2,placeholder:"Scrivi un commento…",style:Object.assign({},S.input,{resize:"none",marginBottom:7})}),
+            h("textarea",{ref:cmTextareaRef,value:nc.testo,onInput:function(e){setNc({testo:e.target.value});},rows:2,placeholder:"Scrivi un commento…",style:Object.assign({},S.input,{resize:"none",marginBottom:7})}),
             h("button",{onClick:addCom,style:{width:"100%",padding:8,background:nc.testo.trim()?"linear-gradient(135deg,#6366f1,#8b5cf6)":"rgba(255,255,255,.06)",color:nc.testo.trim()?"#fff":"rgba(255,255,255,.25)",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer"}},"Pubblica commento")
           )
         )
