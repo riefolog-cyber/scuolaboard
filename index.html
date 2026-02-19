@@ -510,11 +510,6 @@ function App(){
 
   var qrUrl="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data="+encodeURIComponent(window.location.href);
 
-  if(authLoad)return h("div",{style:{minHeight:"100vh",background:"linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16}},
-    h("div",{style:{width:48,height:48,border:"3px solid rgba(255,255,255,.2)",borderTop:"3px solid #6366f1",borderRadius:"50%",animation:"spin 1s linear infinite"}}),
-    h("div",{style:{color:"rgba(255,255,255,.8)",fontWeight:700,fontSize:16,letterSpacing:2}},"SCUOLABOARD")
-  );
-
   // Auto-show classe modal for students without classe
   useEffect(function(){
     if(user&&user.role==="studente"&&!user.classe){setShowClasseModal(true);}
@@ -524,6 +519,11 @@ function App(){
   useEffect(function(){
     if(viewStudenti&&isProf)loadStudenti();
   },[viewStudenti]);
+
+  if(authLoad)return h("div",{style:{minHeight:"100vh",background:"linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16}},
+    h("div",{style:{width:48,height:48,border:"3px solid rgba(255,255,255,.2)",borderTop:"3px solid #6366f1",borderRadius:"50%",animation:"spin 1s linear infinite"}}),
+    h("div",{style:{color:"rgba(255,255,255,.8)",fontWeight:700,fontSize:16,letterSpacing:2}},"SCUOLABOARD")
+  );
 
   if(!user)return h("div",{style:{minHeight:"100vh",background:"linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)",display:"flex",alignItems:"center",justifyContent:"center",padding:20}},
     h("div",{style:{background:"rgba(255,255,255,.05)",backdropFilter:"blur(20px)",border:"1px solid rgba(255,255,255,.1)",borderRadius:24,padding:36,width:"100%",maxWidth:420,textAlign:"center"}},
