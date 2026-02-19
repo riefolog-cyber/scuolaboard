@@ -282,11 +282,15 @@ function App(){
         ordine:nextOrd.current++,
         commenti:[],
         likes:0,
-        // Reset voti sondaggio
-        opzioni:orig.opzioni?orig.opzioni.map(function(o){return Object.assign({},o,{voti:[]});}):undefined,
         data:new Date().toISOString().slice(0,10),
         titolo:orig.titolo+" ["+cl+"]"
       });
+      // Firestore non accetta undefined: reset voti se sondaggio, altrimenti rimuovi il campo
+      if(orig.opzioni&&Array.isArray(orig.opzioni)){
+        copia.opzioni=orig.opzioni.map(function(o){return Object.assign({},o,{voti:[]});});
+      }else{
+        delete copia.opzioni;
+      }
       fbSave(copia);
     });
     setShowDuplica(null);
