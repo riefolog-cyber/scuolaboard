@@ -41,7 +41,9 @@ firebase.initializeApp({
 var db=firebase.firestore(),auth=firebase.auth();
 var h=React.createElement,useState=React.useState,useEffect=React.useEffect,useRef=React.useRef,Fragment=React.Fragment;
 var PROF_TOKEN="sb_prof_2025_xK9mNpQr";
-var FORM0={tipo:"domanda",titolo:"",testo:"",opzioni:["",""],links:[{url:"",label:""}]};
+var CLASSE_CODE="Fermi2025";
+var CLASSI_LIST=["1AO","1AI","1BO","1CO","2AO","2AI","2BO","2CO","3AO","3AI","3BO","4AO","4AI","4BO","5AO","5AA","5AI","5BO"];
+var FORM0={tipo:"domanda",titolo:"",testo:"",opzioni:["",""],links:[{url:"",label:""}],classi:["TUTTE"]};
 
 function fmt(d){return new Date(d).toLocaleDateString("it-IT",{day:"2-digit",month:"short",year:"numeric"});}
 function isNew(d){return Date.now()-new Date(d).getTime()<86400000;}
@@ -142,6 +144,13 @@ function App(){
   var [cardAiRes,setCardAiRes]=useState({});
   var [cardAiOpen,setCardAiOpen]=useState(null);
   var [aiErr,setAiErr]=useState("");
+  var [showClasseModal,setShowClasseModal]=useState(false);
+  var [classeInput,setClasseInput]=useState("");
+  var [classeCode,setClasseCode]=useState("");
+  var [classeErr,setClasseErr]=useState("");
+  var [filterClasse,setFilterClasse]=useState("tutte");
+  var [viewStudenti,setViewStudenti]=useState(false);
+  var [studenti,setStudenti]=useState([]);
   var myLikes=useRef(new Set());
   var nextOrd=useRef(100);
   var dragId=useRef(null);
@@ -166,8 +175,8 @@ function App(){
       if(fu){
         db.collection("users").doc(fu.uid).get().then(function(doc){
           var base={uid:fu.uid,email:fu.email,displayName:fu.displayName,photoURL:fu.photoURL};
-          if(doc.exists){var d=doc.data();setUser(Object.assign({},base,{role:d.role||"studente",nome:d.nome||fu.displayName?.split(" ")[0]||"Utente",cognome:d.cognome||fu.displayName?.split(" ").slice(1).join(" ")||""}));}
-          else{setUser(Object.assign({},base,{role:"studente",nome:fu.displayName?.split(" ")[0]||"Utente",cognome:fu.displayName?.split(" ").slice(1).join(" ")||""}));}
+          if(doc.exists){var d=doc.data();setUser(Object.assign({},base,{role:d.role||"studente",nome:d.nome||fu.displayName?.split(" ")[0]||"Utente",cognome:d.cognome||fu.displayName?.split(" ").slice(1).join(" ")||"",classe:d.classe||null}));}
+          else{setUser(Object.assign({},base,{role:"studente",nome:fu.displayName?.split(" ")[0]||"Utente",cognome:fu.displayName?.split(" ").slice(1).join(" ")||"",classe:null}));}
           setAuthLoad(false);
         }).catch(function(){setAuthLoad(false);});
       }else{setUser(null);setAuthLoad(false);}
@@ -214,6 +223,35 @@ function App(){
   }
   function logout(){auth.signOut();setUser(null);localStorage.removeItem("groq_key");}
 
+  function saveClasse(){
+    if(!classeInput)return;
+    if(classeCode.trim()!==CLASSE_CODE){setClasseErr("Codice non valido. Riprova.");return;}
+    db.collection("users").doc(user.uid).update({classe:classeInput}).then(function(){
+      setUser(function(u){return Object.assign({},u,{classe:classeInput});});
+      setShowClasseModal(false);setClasseErr("");
+    });
+  }
+
+  function loadStudenti(){
+    db.collection("users").where("role","==","studente").orderBy("cognome").get().then(function(snap){
+      var arr=[];snap.forEach(function(d){arr.push(Object.assign({uid:d.id},d.data()));});
+      setStudenti(arr);
+    });
+  }
+
+  function aggiornaClasseStudente(uid,nuovaClasse){
+    db.collection("users").doc(uid).update({classe:nuovaClasse}).then(function(){
+      setStudenti(function(prev){return prev.map(function(s){return s.uid===uid?Object.assign({},s,{classe:nuovaClasse}):s;});});
+    });
+  }
+
+  function rimuoviStudente(uid){
+    if(!window.confirm("Rimuovere questo studente?"))return;
+    db.collection("users").doc(uid).update({classe:null}).then(function(){
+      setStudenti(function(prev){return prev.map(function(s){return s.uid===uid?Object.assign({},s,{classe:null}):s;});});
+    });
+  }
+
   function toggleVisibile(card,e){e.stopPropagation();fbSave(Object.assign({},card,{visibile:card.visibile===false}));}
 
   function onDragStart(e,id){dragId.current=id;e.dataTransfer.effectAllowed="move";setTimeout(function(){var el=document.getElementById("card-"+id);if(el)el.classList.add("dragging");},0);}
@@ -243,6 +281,16 @@ function App(){
   var visible=cards.filter(function(c){
     if(simulaSt||!isProf){if(c.proposta||c.visibile===false)return false;}
     if(filtro!=="tutti"&&c.tipo!==filtro)return false;
+    // Filtro per classe studente
+    if(!isProf&&!simulaSt&&user&&user.classe){
+      var cc=c.classi||["TUTTE"];
+      if(cc.indexOf("TUTTE")<0&&cc.indexOf(user.classe)<0)return false;
+    }
+    // Filtro classe per prof
+    if((isProf&&!simulaSt)&&filterClasse!=="tutte"){
+      var cc=c.classi||["TUTTE"];
+      if(cc.indexOf("TUTTE")<0&&cc.indexOf(filterClasse)<0)return false;
+    }
     return true;
   });
 
@@ -254,13 +302,13 @@ function App(){
     var autore=myName(user);
     var cleanLinks=(form.links||[]).filter(function(l){return l.url&&l.url.trim();}).map(function(l){return{url:l.url.trim(),label:(l.label||"").trim()};});
     if(editMode){
-      var c=Object.assign({},editMode,{tipo:form.tipo,titolo:form.titolo.trim(),testo:form.testo.trim(),links:cleanLinks,linkEsterno:null});
+      var c=Object.assign({},editMode,{tipo:form.tipo,titolo:form.titolo.trim(),testo:form.testo.trim(),links:cleanLinks,linkEsterno:null,classi:form.classi&&form.classi.length?form.classi:["TUTTE"]});
       if(opzioni)c.opzioni=opzioni;
       fbSave(c);setEditMode(null);
     }else{
-      var c={id:Date.now(),tipo:form.tipo,titolo:form.titolo.trim(),testo:form.testo.trim(),data:new Date().toISOString().slice(0,10),autore:autore,likes:0,commenti:[],ordine:nextOrd.current++,links:cleanLinks,linkEsterno:null,visibile:true,_token:isProf?PROF_TOKEN:null};
+      var c={id:Date.now(),tipo:form.tipo,titolo:form.titolo.trim(),testo:form.testo.trim(),data:new Date().toISOString().slice(0,10),autore:autore,likes:0,commenti:[],ordine:nextOrd.current++,links:cleanLinks,linkEsterno:null,visibile:true,_token:isProf?PROF_TOKEN:null,classi:form.classi&&form.classi.length?form.classi:["TUTTE"]};
       if(opzioni)c.opzioni=opzioni;
-      if(!isProf)c.proposta=true;
+      if(!isProf){c.proposta=true;if(user.classe)c.classi=[user.classe];}
       fbSave(c);
     }
     setSM(false);setForm(Object.assign({},FORM0));
@@ -269,7 +317,7 @@ function App(){
   function editCard(card){
     setEditMode(card);
     var links=normalizeLinks(card);
-    setForm({tipo:card.tipo,titolo:card.titolo,testo:card.testo||"",opzioni:card.opzioni?card.opzioni.map(function(o){return o.testo;}):["",""],links:links.length?links:[{url:"",label:""}]});
+    setForm({tipo:card.tipo,titolo:card.titolo,testo:card.testo||"",opzioni:card.opzioni?card.opzioni.map(function(o){return o.testo;}):["",""],links:links.length?links:[{url:"",label:""}],classi:card.classi||["TUTTE"]});
     setSM(true);
   }
   
@@ -467,6 +515,16 @@ function App(){
     h("div",{style:{color:"rgba(255,255,255,.8)",fontWeight:700,fontSize:16,letterSpacing:2}},"SCUOLABOARD")
   );
 
+  // Auto-show classe modal for students without classe
+  React.useEffect(function(){
+    if(user&&user.role==="studente"&&!user.classe){setShowClasseModal(true);}
+  },[user]);
+
+  // Load studenti when prof opens studenti panel
+  React.useEffect(function(){
+    if(viewStudenti&&isProf)loadStudenti();
+  },[viewStudenti]);
+
   if(!user)return h("div",{style:{minHeight:"100vh",background:"linear-gradient(135deg,#1a1a2e,#16213e,#0f3460)",display:"flex",alignItems:"center",justifyContent:"center",padding:20}},
     h("div",{style:{background:"rgba(255,255,255,.05)",backdropFilter:"blur(20px)",border:"1px solid rgba(255,255,255,.1)",borderRadius:24,padding:36,width:"100%",maxWidth:420,textAlign:"center"}},
       h("div",{style:{fontSize:48,marginBottom:12}},"🎓"),
@@ -490,6 +548,8 @@ function App(){
         user.photoURL&&h("img",{src:user.photoURL,alt:"",style:{width:16,height:16,borderRadius:"50%"}}),
         isProf?"👨‍🏫 Prof":"🎒 "+user.nome
       ),
+      !isProf&&user.classe&&h("span",{style:{background:"rgba(251,146,60,.2)",color:"#fb923c",borderRadius:20,padding:"2px 9px",fontSize:11,fontWeight:700}},user.classe),
+      !isProf&&!user.classe&&h("button",{onClick:function(){setShowClasseModal(true);},style:{background:"rgba(239,68,68,.2)",color:"#f87171",border:"1px solid rgba(239,68,68,.3)",borderRadius:20,padding:"2px 9px",fontSize:11,fontWeight:700,cursor:"pointer"}},"⚠️ Scegli classe"),
       simulaSt&&h("span",{style:{background:"rgba(249,115,22,.25)",color:"#fb923c",border:"1px solid rgba(249,115,22,.5)",borderRadius:20,padding:"2px 10px",fontSize:11,fontWeight:800}},"👁️ VISTA STUDENTE"),
       h("div",{style:{flex:1}}),
       isProf&&h("button",{onClick:function(){setAskKey(true);},title:orKey?"Chiave Groq ✓":"Imposta chiave Groq",style:{background:orKey?"rgba(34,197,94,.15)":"rgba(249,115,22,.15)",border:"1px solid "+(orKey?"rgba(34,197,94,.3)":"rgba(249,115,22,.3)"),borderRadius:8,padding:"5px 9px",cursor:"pointer",fontSize:12,color:orKey?"#4ade80":"#fb923c"}},orKey?"🔑":"⚠️"),
@@ -497,8 +557,8 @@ function App(){
       h("button",{onClick:function(){setSQR(true);},style:{background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.1)",borderRadius:8,padding:"5px 9px",cursor:"pointer",fontSize:14,color:"rgba(255,255,255,.7)"}},"◆"),
       isProf&&h("button",{onClick:function(){setPreviewSt(function(v){return!v;});},style:{background:simulaSt?"rgba(249,115,22,.3)":"rgba(255,255,255,.07)",border:"1px solid "+(simulaSt?"rgba(249,115,22,.6)":"rgba(255,255,255,.15)"),borderRadius:8,padding:"5px 10px",cursor:"pointer",fontSize:12,fontWeight:700,color:simulaSt?"#fb923c":"rgba(255,255,255,.6)"}},simulaSt?"🔙 Prof":"👁️ Studente"),
       isProf&&!simulaSt&&h("div",{style:{display:"flex",gap:2,background:"rgba(255,255,255,.05)",borderRadius:9,padding:3,border:"1px solid rgba(255,255,255,.08)"}},
-        [{k:"bacheca",i:"📌"},{k:"analisi",i:"🤖"}].map(function(t){
-          return h("button",{key:t.k,onClick:function(){setView(t.k);},style:{padding:"4px 11px",borderRadius:7,border:"none",background:view===t.k?"rgba(99,102,241,.4)":"transparent",color:view===t.k?"#fff":"rgba(255,255,255,.4)",fontWeight:700,cursor:"pointer",fontSize:13}},t.i);
+        [{k:"bacheca",i:"📌"},{k:"analisi",i:"🤖"},{k:"studenti",i:"👥"}].map(function(t){
+          return h("button",{key:t.k,onClick:function(){setView(t.k);if(t.k==="studenti")setViewStudenti(true);else setViewStudenti(false);},style:{padding:"4px 11px",borderRadius:7,border:"none",background:view===t.k?"rgba(99,102,241,.4)":"transparent",color:view===t.k?"#fff":"rgba(255,255,255,.4)",fontWeight:700,cursor:"pointer",fontSize:13}},t.i);
         })
       ),
       !simulaSt&&h("button",{onClick:function(){setEditMode(null);setForm(Object.assign({},FORM0));setSM(true);},style:{background:"linear-gradient(135deg,#6366f1,#8b5cf6)",border:"none",borderRadius:20,width:34,height:34,cursor:"pointer",color:"#fff",fontSize:20,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800}},"+"),
@@ -514,6 +574,13 @@ function App(){
         h("span",{style:{fontSize:11,color:"rgba(255,255,255,.3)"}},"•"),
         h("span",{style:{fontSize:11,color:"rgba(255,255,255,.4)"}},totC+" commenti"),
         isProf&&!simulaSt&&proposte.length>0&&h("span",{style:{background:"rgba(239,68,68,.2)",color:"#f87171",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:800,border:"1px solid rgba(239,68,68,.3)"}},"⏳ "+proposte.length+" in attesa")
+      ),
+      isProf&&!simulaSt&&view==="bacheca"&&h("div",{style:{display:"flex",gap:6,padding:"8px 14px",background:"rgba(255,255,255,.02)",borderBottom:"1px solid rgba(255,255,255,.06)",flexWrap:"wrap",alignItems:"center"}},
+        h("span",{style:{fontSize:11,color:"rgba(255,255,255,.35)",fontWeight:700,letterSpacing:1}},"CLASSE:"),
+        h("button",{onClick:function(){setFilterClasse("tutte");},style:S.filterBtn(filterClasse==="tutte")},"🏫 TUTTE"),
+        CLASSI_LIST.map(function(cl){
+          return h("button",{key:cl,onClick:function(){setFilterClasse(cl);},style:S.filterBtn(filterClasse===cl)},cl);
+        })
       ),
       isProf&&!simulaSt&&proposte.length>0&&h("div",{style:{padding:"10px 14px",background:"rgba(249,115,22,.06)",borderBottom:"1px solid rgba(249,115,22,.15)"}},
         h("div",{style:{fontWeight:700,color:"#fb923c",fontSize:11,marginBottom:7,letterSpacing:1}},"⏳ PROPOSTE IN ATTESA"),
@@ -549,6 +616,7 @@ function App(){
                     h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6,gap:4}},
                       h("div",{style:{display:"flex",gap:4,alignItems:"center",flexWrap:"wrap"}},
                         h("span",{style:{background:badgeBg(c.tipo),color:"#fff",borderRadius:6,padding:"2px 8px",fontSize:10,fontWeight:800}},tipoIcon(c.tipo)+" "+c.tipo.toUpperCase()),
+              isProf&&c.classi&&c.classi.indexOf("TUTTE")<0&&h("span",{style:{background:"rgba(251,146,60,.2)",color:"#fb923c",borderRadius:6,padding:"2px 7px",fontSize:10,fontWeight:700}},c.classi.slice(0,3).join(", ")+(c.classi.length>3?"…":"")),
                         nuova&&h("span",{style:{background:"rgba(34,197,94,.25)",color:"#4ade80",borderRadius:6,padding:"2px 6px",fontSize:9,fontWeight:800,border:"1px solid rgba(34,197,94,.4)"}},"NUOVO"),
                         isProp&&h("span",{style:{fontSize:9,fontWeight:700,color:"#fb923c"}},"⏳"),
                         nascosta&&isProf&&h("span",{style:{background:"rgba(239,68,68,.2)",color:"#f87171",borderRadius:6,padding:"2px 6px",fontSize:9,fontWeight:800}},"NASCOSTA")
@@ -678,6 +746,36 @@ function App(){
       )
     ),
 
+    view==="studenti"&&isProf&&!simulaSt&&h("div",{style:{flex:1,padding:"18px 14px",overflowY:"auto"}},
+      h("div",{style:{maxWidth:700,margin:"0 auto"}},
+        h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}},
+          h("div",{style:{fontWeight:800,color:"#f1f5f9",fontSize:16}},"\u{1F465} Gestione Studenti"),
+          h("button",{onClick:loadStudenti,style:{background:"rgba(99,102,241,.2)",border:"1px solid rgba(99,102,241,.3)",color:"#a5b4fc",borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer"}},"\uD83D\uDD04 Aggiorna")
+        ),
+        h("div",{style:{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14}},
+          h("span",{style:{fontSize:11,color:"rgba(255,255,255,.4)",fontWeight:700,alignSelf:"center"}},"FILTRA:"),
+          h("button",{onClick:function(){setFilterClasse("tutte");},style:S.filterBtn(filterClasse==="tutte")},"TUTTI"),
+          CLASSI_LIST.map(function(cl){return h("button",{key:cl,onClick:function(){setFilterClasse(cl);},style:S.filterBtn(filterClasse===cl)},cl);})
+        ),
+        studenti.length===0&&h("div",{style:{textAlign:"center",color:"rgba(255,255,255,.3)",padding:40}},"Nessuno studente. Clicca Aggiorna."),
+        studenti.filter(function(s){return filterClasse==="tutte"||(s.classe===filterClasse);}).map(function(s){
+          return h("div",{key:s.uid,style:{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,padding:"10px 14px",marginBottom:8,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}},
+            h("div",{style:{flex:1,minWidth:140}},
+              h("div",{style:{fontWeight:700,color:"#f1f5f9",fontSize:13}},(s.nome||"")+" "+(s.cognome||"")),
+              h("div",{style:{fontSize:11,color:"rgba(255,255,255,.35)"}},s.email),
+              s.classe&&h("span",{style:{background:"rgba(251,146,60,.2)",color:"#fb923c",borderRadius:6,padding:"1px 7px",fontSize:10,fontWeight:700}},s.classe)
+            ),
+            h("select",{value:s.classe||"",onChange:function(e){aggiornaClasseStudente(s.uid,e.target.value||null);},
+              style:{background:"#1e293b",color:"#f1f5f9",border:"1px solid rgba(255,255,255,.15)",borderRadius:8,padding:"4px 8px",fontSize:12,cursor:"pointer"}},
+              h("option",{value:""},"-- nessuna --"),
+              CLASSI_LIST.map(function(cl){return h("option",{key:cl,value:cl},cl);})
+            ),
+            h("button",{onClick:function(){rimuoviStudente(s.uid);},style:{background:"rgba(239,68,68,.1)",border:"1px solid rgba(239,68,68,.2)",color:"#f87171",borderRadius:8,padding:"4px 8px",fontSize:11,cursor:"pointer",fontWeight:700}},"Rimuovi")
+          );
+        })
+      )
+    ),
+
     showQR&&h("div",{style:{position:"fixed",inset:0,background:"rgba(0,0,0,.7)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20},onClick:function(){setSQR(false);}},
       h("div",{style:{background:"#1e293b",border:"1px solid rgba(255,255,255,.1)",borderRadius:20,padding:26,maxWidth:300,width:"100%",textAlign:"center"},onClick:function(e){e.stopPropagation();}},
         h("div",{style:{fontWeight:800,color:"#f1f5f9",fontSize:17,marginBottom:4}},"QR Code Bacheca"),
@@ -695,6 +793,34 @@ function App(){
         h("div",{style:{display:"flex",gap:10}},
           h("button",{onClick:function(){setSR(false);},style:{flex:1,padding:11,background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.6)",border:"none",borderRadius:11,fontSize:14,fontWeight:700,cursor:"pointer"}},"Annulla"),
           h("button",{onClick:resetAll,style:{flex:1,padding:11,background:"#ef4444",color:"#fff",border:"none",borderRadius:11,fontSize:14,fontWeight:800,cursor:"pointer"}},"Sì, resetta")
+        )
+      )
+    ),
+
+    showClasseModal&&h("div",{style:{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:20}},
+      h("div",{style:{background:"#1e293b",border:"1px solid rgba(255,255,255,.1)",borderRadius:20,padding:28,maxWidth:420,width:"100%"}},
+        h("div",{style:{fontSize:40,marginBottom:10,textAlign:"center"}},"🏫"),
+        h("h3",{style:{margin:"0 0 6px",color:"#f1f5f9",fontSize:18,fontWeight:800,textAlign:"center"}},"Seleziona la tua classe"),
+        h("p",{style:{color:"rgba(255,255,255,.45)",fontSize:12,marginBottom:18,textAlign:"center",lineHeight:1.5}},"Inserisci il codice fornito dal prof e scegli la tua classe."),
+        classeErr&&h("div",{style:{background:"rgba(239,68,68,.15)",border:"1px solid rgba(239,68,68,.3)",borderRadius:8,padding:"8px 12px",marginBottom:12,color:"#f87171",fontSize:12,fontWeight:700}},classeErr),
+        h("div",{style:{marginBottom:12}},
+          h("div",{style:{fontSize:11,color:"rgba(255,255,255,.4)",marginBottom:5,fontWeight:700}},"CODICE CLASSE"),
+          h("input",{type:"password",value:classeCode,onInput:function(e){setClasseCode(e.target.value);setClasseErr("");},placeholder:"Inserisci il codice…",style:Object.assign({},S.input)})
+        ),
+        h("div",{style:{marginBottom:18}},
+          h("div",{style:{fontSize:11,color:"rgba(255,255,255,.4)",marginBottom:8,fontWeight:700}},"LA TUA CLASSE"),
+          h("div",{style:{display:"flex",flexWrap:"wrap",gap:6}},
+            CLASSI_LIST.map(function(cl){
+              return h("button",{key:cl,type:"button",onClick:function(){setClasseInput(cl);},
+                style:{padding:"6px 12px",borderRadius:8,border:"1px solid "+(classeInput===cl?"#6366f1":"rgba(255,255,255,.15)"),
+                background:classeInput===cl?"#6366f1":"rgba(255,255,255,.05)",
+                color:classeInput===cl?"#fff":"rgba(255,255,255,.6)",fontSize:13,fontWeight:700,cursor:"pointer"}},cl);
+            })
+          )
+        ),
+        h("div",{style:{display:"flex",gap:10}},
+          user&&user.classe&&h("button",{onClick:function(){setShowClasseModal(false);setClasseErr("");},style:{flex:1,padding:11,background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.6)",border:"none",borderRadius:11,fontSize:14,fontWeight:700,cursor:"pointer"}},"Annulla"),
+          h("button",{onClick:saveClasse,style:{flex:2,padding:11,background:classeInput&&classeCode?"linear-gradient(135deg,#6366f1,#8b5cf6)":"rgba(255,255,255,.06)",color:classeInput&&classeCode?"#fff":"rgba(255,255,255,.25)",border:"none",borderRadius:11,fontSize:14,fontWeight:800,cursor:classeInput&&classeCode?"pointer":"not-allowed"}},"Conferma classe")
         )
       )
     ),
@@ -904,6 +1030,26 @@ function App(){
           h("textarea",{value:form.testo,onInput:function(e){setForm(function(p){return Object.assign({},p,{testo:e.target.value});});},rows:3,placeholder:"Descrizione, spunti…",style:Object.assign({},S.input,{resize:"vertical"})})
         ),
         h("div",{style:{marginBottom:10}},
+          isProf&&h("div",{style:{marginBottom:10}},
+            h("label",{style:{fontSize:10,fontWeight:700,color:"rgba(255,255,255,.4)",letterSpacing:1,display:"block",marginBottom:6}},"🏫 VISIBILE A"),
+            h("div",{style:{display:"flex",flexWrap:"wrap",gap:5}},
+              h("button",{type:"button",onClick:function(){setForm(function(f){var isAll=f.classi&&f.classi.indexOf("TUTTE")>=0;return Object.assign({},f,{classi:isAll?[]:["TUTTE"]});});},
+                style:Object.assign({},S.filterBtn(form.classi&&form.classi.indexOf("TUTTE")>=0),{fontSize:11,padding:"3px 9px"})},
+                (form.classi&&form.classi.indexOf("TUTTE")>=0?"✓ ":"")+"TUTTE"),
+              CLASSI_LIST.map(function(cl){
+                var sel=form.classi&&form.classi.indexOf(cl)>=0&&form.classi.indexOf("TUTTE")<0;
+                return h("button",{type:"button",key:cl,onClick:function(){
+                  setForm(function(f){
+                    var cur=(f.classi||[]).filter(function(x){return x!=="TUTTE";});
+                    var idx=cur.indexOf(cl);
+                    var next=idx>=0?cur.filter(function(x){return x!==cl;}):[].concat(cur,[cl]);
+                    return Object.assign({},f,{classi:next.length?next:["TUTTE"]});
+                  });
+                },style:Object.assign({},S.filterBtn(sel),{fontSize:11,padding:"3px 9px"})},
+                (sel?"✓ ":"")+cl);
+              })
+            )
+          ),
           h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}},
             h("label",{style:{fontSize:10,fontWeight:700,color:"rgba(255,255,255,.4)",letterSpacing:1}},"🔗 LINK PER APPROFONDIRE"),
             (form.links||[]).length<5&&h("button",{onClick:function(){setForm(function(p){return Object.assign({},p,{links:(p.links||[]).concat([{url:"",label:""}])});});},
