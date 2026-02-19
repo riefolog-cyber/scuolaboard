@@ -516,12 +516,12 @@ function App(){
   );
 
   // Auto-show classe modal for students without classe
-  React.useEffect(function(){
+  useEffect(function(){
     if(user&&user.role==="studente"&&!user.classe){setShowClasseModal(true);}
   },[user]);
 
   // Load studenti when prof opens studenti panel
-  React.useEffect(function(){
+  useEffect(function(){
     if(viewStudenti&&isProf)loadStudenti();
   },[viewStudenti]);
 
