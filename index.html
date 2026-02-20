@@ -137,7 +137,7 @@ function App(){
   var [orKey,setOrKey]=useState(localStorage.getItem("groq_key")||"");
   var [askKey,setAskKey]=useState(false);
   var [akInput,setAkInput]=useState("");
-  var [aiLoad,setAiLoad]=useState(false);
+  var [aiRunning,setAiRunning]=useState(false);
   var [aiResult,setAiR]=useState(null);
   var [aiTarget,setAIT]=useState("tutte");
   var [aiErr,setAiErr]=useState("");
@@ -373,15 +373,15 @@ function App(){
   // AI analisi globale
   function runAI(){
     if(!orKey){setAskKey(true);return;}
-    setAiLoad(true);setAiR(null);setAiErr("");
+    setAiRunning(true);setAiR(null);setAiErr("");
     var target=aiTarget==="tutte"?cards.filter(function(c){return !c.proposta;}):[cards.find(function(c){return String(c.id)===String(aiTarget);})].filter(Boolean);
-    if(!target.length){setAiErr("Nessuna card.");setAiLoad(false);return;}
+    if(!target.length){setAiErr("Nessuna card.");setAiRunning(false);return;}
     var det=target.map(function(c){return "CARD: \""+c.titolo+"\" (tipo:"+c.tipo+", like:"+(c.likes||0)+")\n"+cardContext(c);}).join("\n\n---\n\n");
     var prompt='Sei un assistente pedagogico per un insegnante di Religione (scuola secondaria II grado).\nAnalizza SOLO i dati reali.\nRispondi con JSON:\n{"riepilogo":"...","dibattito":"...","punti_chiave":["..."],"spunti_dibattito":["..."]}\n\nDATI:\n'+det.slice(0,2500);
     callGroqJSON(orKey,prompt,900)
       .then(function(r){if(r&&(r.riepilogo||r.dibattito))setAiR(r);else setAiErr("Risposta non valida.");})
       .catch(function(e){setAiErr(e.message||"Errore AI.");})
-      .then(function(){setAiLoad(false);});
+      .then(function(){setAiRunning(false);});
   }
 
   // AI analisi inline — salva su Firestore
@@ -578,11 +578,11 @@ function App(){
               h("option",{value:"tutte"},"📋 Tutte le card"),
               cards.filter(function(c){return !c.proposta;}).map(function(c){return h("option",{key:c.id,value:String(c.id)},tipoIcon(c.tipo)+" "+c.titolo.slice(0,35)+(c.titolo.length>35?"…":""));})
             ),
-            h("button",{onClick:runAI,disabled:aiLoad,style:{background:aiLoad?"rgba(255,255,255,.1)":"linear-gradient(135deg,#6366f1,#8b5cf6)",color:aiLoad?"rgba(255,255,255,.3)":"#fff",border:"none",borderRadius:8,padding:"6px 16px",cursor:aiLoad?"not-allowed":"pointer",fontSize:12,fontWeight:700}},aiLoad?"⏳ Analisi…":"▶ Avvia")
+            h("button",{onClick:runAI,disabled:aiRunning,style:{background:aiRunning?"rgba(255,255,255,.1)":"linear-gradient(135deg,#6366f1,#8b5cf6)",color:aiRunning?"rgba(255,255,255,.3)":"#fff",border:"none",borderRadius:8,padding:"6px 16px",cursor:aiRunning?"not-allowed":"pointer",fontSize:12,fontWeight:700}},aiRunning?"⏳ Analisi…":"▶ Avvia")
           )
         ),
-        !aiResult&&!aiLoad&&!aiErr&&h("div",{style:{textAlign:"center",padding:28,color:"rgba(255,255,255,.2)"}},h("div",{style:{fontSize:36}},"📊"),h("div",{style:{fontWeight:600,fontSize:14,marginTop:8}},"Seleziona e premi Avvia")),
-        aiLoad&&h("div",{style:{textAlign:"center",padding:28}},h("div",{style:{fontSize:32,animation:"spin 2s linear infinite",display:"inline-block"}},"⚙️"),h("div",{style:{marginTop:8,fontWeight:600,color:"rgba(255,255,255,.6)"}},"Analisi in corso…")),
+        !aiResult&&!aiRunning&&!aiErr&&h("div",{style:{textAlign:"center",padding:28,color:"rgba(255,255,255,.2)"}},h("div",{style:{fontSize:36}},"📊"),h("div",{style:{fontWeight:600,fontSize:14,marginTop:8}},"Seleziona e premi Avvia")),
+        aiRunning&&h("div",{style:{textAlign:"center",padding:28}},h("div",{style:{fontSize:32,animation:"spin 2s linear infinite",display:"inline-block"}},"⚙️"),h("div",{style:{marginTop:8,fontWeight:600,color:"rgba(255,255,255,.6)"}},"Analisi in corso…")),
         aiErr&&h("div",{style:{color:"#f87171",padding:12,background:"rgba(239,68,68,.1)",borderRadius:9,fontSize:13,marginBottom:8}},aiErr),
         aiResult&&!aiErr&&h(Fragment,null,
           h("div",{style:{background:"rgba(99,102,241,.15)",borderRadius:10,padding:14,marginBottom:12,border:"1px solid rgba(99,102,241,.2)"}},h("div",{style:{fontWeight:700,color:"#a5b4fc",marginBottom:8,fontSize:11,letterSpacing:1}},"📋 RIEPILOGO"),h("div",{style:{color:"rgba(255,255,255,.85)",fontSize:13,lineHeight:1.8,whiteSpace:"pre-wrap"}},aiResult.riepilogo||"—")),
