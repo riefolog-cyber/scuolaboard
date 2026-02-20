@@ -235,8 +235,9 @@ function App(){
   }
 
   function loadStudenti(){
-    db.collection("users").where("role","==","studente").orderBy("cognome").get().then(function(snap){
+    db.collection("users").where("role","==","studente").get().then(function(snap){
       var arr=[];snap.forEach(function(d){arr.push(Object.assign({uid:d.id},d.data()));});
+      arr.sort(function(a,b){return(a.cognome||"").localeCompare(b.cognome||"","it");});
       setStudenti(arr);
     });
   }
