@@ -255,31 +255,36 @@ function App(){
       html+='<div class="meta">👤 '+escHtml(c.autore||"")+'&nbsp;&nbsp;📅 '+fmt(c.data)+'&nbsp;&nbsp;👍 '+(c.likes||0)+'</div>';
       if(exportIncludiAI){
         var aiD=aiMap[String(c.id)];
-        var cRes=aiD&&aiD.analisi;
-        var debugInfo='';
-        var rawSnap=null;
-        if(!cRes){
+        var rawAI=aiD;
+        if(!rawAI){
           try{
             var snap=await db.collection("ai_results").doc(String(c.id)).get();
-            rawSnap=snap;
-            if(snap.exists)cRes=snap.data().analisi;
-          }catch(e){debugInfo='Errore Firestore: '+e.message;}
+            if(snap.exists)rawAI=snap.data();
+          }catch(e){}
         }
-        // DEBUG: mostra struttura raw nel PDF
-        html+='<div style="background:#fffbeb;border:1px dashed #f59e0b;border-radius:6px;padding:8px;margin-bottom:6px;font-size:10px;color:#92400e;">';
-        html+='<b>DEBUG card id:</b> '+escHtml(String(c.id))+'<br>';
-        html+='<b>aiMap keys:</b> '+escHtml(Object.keys(aiMap).join(', '))+'<br>';
-        html+='<b>aiD from aiMap:</b> '+escHtml(JSON.stringify(aiD))+'<br>';
-        if(rawSnap){html+='<b>Firestore snap exists:</b> '+rawSnap.exists+'<br>';if(rawSnap.exists)html+='<b>Firestore raw data:</b> '+escHtml(JSON.stringify(rawSnap.data()))+'<br>';}
-        html+='<b>cRes finale:</b> '+escHtml(JSON.stringify(cRes))+'<br>';
-        if(debugInfo)html+='<b>Errore:</b> '+escHtml(debugInfo)+'<br>';
-        html+='</div>';
-        if(cRes&&(cRes.sintesi||cRes.dinamica||cRes.spunto)){
+        var cRes=rawAI&&rawAI.analisi;
+        var domande=rawAI&&Array.isArray(rawAI.domande)?rawAI.domande:(rawAI&&rawAI.domanda?[rawAI.domanda]:[]);
+        var hasAI=cRes&&(cRes.sintesi||cRes.dinamica||cRes.spunto);
+        var hasDomande=domande&&domande.length>0;
+        if(hasAI||hasDomande){
           html+='<div style="margin-top:10px;background:#f0f4ff;border:1px solid #c7d2fe;border-radius:8px;padding:10px 14px;">';
           html+='<div style="font-size:11px;font-weight:700;color:#6366f1;margin-bottom:8px;">🤖 Analisi AI</div>';
-          if(cRes.sintesi)html+='<div style="margin-bottom:7px;"><span style="font-size:10px;font-weight:700;color:#6366f1;letter-spacing:1px;">📋 SINTESI</span><div style="font-size:12px;color:#334155;margin-top:3px;line-height:1.6;">'+escHtml(cRes.sintesi)+'</div></div>';
-          if(cRes.dinamica)html+='<div style="margin-bottom:7px;"><span style="font-size:10px;font-weight:700;color:#3b82f6;letter-spacing:1px;">💬 DINAMICA</span><div style="font-size:12px;color:#334155;margin-top:3px;line-height:1.6;">'+escHtml(cRes.dinamica)+'</div></div>';
-          if(cRes.spunto)html+='<div><span style="font-size:10px;font-weight:700;color:#22c55e;letter-spacing:1px;">💡 SPUNTO</span><div style="font-size:12px;color:#334155;margin-top:3px;line-height:1.6;font-style:italic;">'+escHtml(cRes.spunto)+'</div></div>';
+          if(hasAI){
+            if(cRes.sintesi)html+='<div style="margin-bottom:7px;"><span style="font-size:10px;font-weight:700;color:#6366f1;letter-spacing:1px;">📋 SINTESI</span><div style="font-size:12px;color:#334155;margin-top:3px;line-height:1.6;white-space:pre-wrap;">'+escHtml(cRes.sintesi)+'</div></div>';
+            if(cRes.dinamica)html+='<div style="margin-bottom:7px;"><span style="font-size:10px;font-weight:700;color:#3b82f6;letter-spacing:1px;">💬 DINAMICA</span><div style="font-size:12px;color:#334155;margin-top:3px;line-height:1.6;white-space:pre-wrap;">'+escHtml(cRes.dinamica)+'</div></div>';
+            if(cRes.spunto)html+='<div style="margin-bottom:8px;"><span style="font-size:10px;font-weight:700;color:#22c55e;letter-spacing:1px;">💡 SPUNTO</span><div style="font-size:12px;color:#334155;margin-top:3px;line-height:1.6;font-style:italic;white-space:pre-wrap;">'+escHtml(cRes.spunto)+'</div></div>';
+          }
+          if(hasDomande){
+            html+='<div style="margin-top:'+(hasAI?'10':'0')+'px;">';
+            html+='<div style="font-size:10px;font-weight:700;color:#7c3aed;letter-spacing:1px;margin-bottom:6px;">❓ DOMANDE AL PROF</div>';
+            domande.forEach(function(d){
+              html+='<div style="background:#ede9fe;border-radius:6px;padding:8px 10px;margin-bottom:6px;">';
+              html+='<div style="font-size:11px;font-weight:700;color:#5b21b6;margin-bottom:4px;">Q: '+escHtml(d.q||"")+'</div>';
+              html+='<div style="font-size:12px;color:#334155;line-height:1.6;white-space:pre-wrap;">'+escHtml(d.risposta||"")+'</div>';
+              html+='</div>';
+            });
+            html+='</div>';
+          }
           html+='</div>';
         }
       }
@@ -953,7 +958,7 @@ function App(){
         ),
         (function(){
           var sel=cards.filter(function(c){if(c.proposta)return false;if(exportTipo!=="tutti"&&c.tipo!==exportTipo)return false;if(exportFiltro==="tutte")return true;var cc=c.classi||["TUTTE"];return cc.indexOf("TUTTE")>=0||cc.indexOf(exportFiltro)>=0;});
-          var conAI=sel.filter(function(c){var aiD=aiMap[String(c.id)];return aiD&&aiD.analisi&&(aiD.analisi.sintesi||aiD.analisi.dinamica||aiD.analisi.spunto);}).length;
+          var conAI=sel.filter(function(c){var aiD=aiMap[String(c.id)];var hasA=aiD&&aiD.analisi&&(aiD.analisi.sintesi||aiD.analisi.dinamica||aiD.analisi.spunto);var hasD=aiD&&((Array.isArray(aiD.domande)&&aiD.domande.length>0)||aiD.domanda);return hasA||hasD;}).length;
           return h("div",{style:{background:"rgba(99,102,241,.1)",border:"1px solid rgba(99,102,241,.2)",borderRadius:8,padding:"8px 12px",marginBottom:16,fontSize:12,color:"rgba(255,255,255,.5)",textAlign:"center"}},
             sel.length+" card selezionate",
             exportIncludiAI&&conAI>0&&h("span",{style:{marginLeft:8,color:"#a5b4fc",fontWeight:700}},"· "+conAI+" con analisi AI ✓"),
@@ -1224,17 +1229,4 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "prof";
     }
 
-    // ── PREFERITI ─────────────────────────────────────────────
-    // Ogni utente può leggere e scrivere solo i propri preferiti
-    match /preferiti/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-
-  }
-}
-
-══════════════════════════════════════════════════════════════
-*/
-</script>
-</body>
-</html>
+    // ── PREFERITI ───────────────────────────────────────────
