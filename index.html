@@ -40,7 +40,13 @@ firebase.initializeApp({
 var db=firebase.firestore(),auth=firebase.auth();
 var h=React.createElement,useState=React.useState,useEffect=React.useEffect,useRef=React.useRef,Fragment=React.Fragment;
 var PROF_TOKEN="sb_prof_2025_xK9mNpQr";
-var CLASSI_LIST=["1AO","1AI","1BO","1CO","2AO","2AI","2BO","2CO","3AO","3AI","3BO","4AO","4AI","4BO","5AO","5AA","5AI","5BO"];
+var CLASSI_COLORS=["#f59e0b","#22c55e","#3b82f6","#ec4899","#8b5cf6","#ef4444","#06b6d4","#f97316","#84cc16","#a855f7"];
+function classeColor(nome,lista){var idx=lista.indexOf(nome);return CLASSI_COLORS[idx%CLASSI_COLORS.length]||"#f59e0b";}
+var CLASSI_DEFAULT=["1AO","1AI","1BO","1CO","2AO","2AI","2BO","2CO","3AO","3AI","3BO","4AO","4AI","4BO","5AO","5AA","5AI","5BO"];
+function fbClassiSave(arr){return db.collection("config").doc("classi_custom").set({lista:arr,aggiornato:new Date().toISOString()});}
+function fbFavSave(uid,ids){return db.collection("preferiti").doc(uid).set({ids:ids,aggiornato:new Date().toISOString()});}
+function fbFavListen(uid,cb){return db.collection("preferiti").doc(uid).onSnapshot(function(doc){cb(doc.exists&&doc.data().ids?doc.data().ids:[]);});}
+function fbClassiListen(cb){return db.collection("config").doc("classi_custom").onSnapshot(function(doc){cb(doc.exists&&doc.data().lista?doc.data().lista:[]);});}
 var FORM0={tipo:"domanda",titolo:"",testo:"",opzioni:["",""],links:[{url:"",label:""}],classi:["TUTTE"]};
 
 function fmt(d){return new Date(d).toLocaleDateString("it-IT",{day:"2-digit",month:"short",year:"numeric"});}
@@ -157,10 +163,114 @@ function App(){
   var [filterClasse,setFilterClasse]=useState("tutte");
   var [viewStudenti,setViewStudenti]=useState(false);
   var [studenti,setStudenti]=useState([]);
+  // Classi custom
+  var [classiCustom,setClassiCustom]=useState([]);
+  var [addingClasse,setAddingClasse]=useState(false);
+  var [newClasseInput,setNewClasseInput]=useState("");
+  // Preferiti
+  var [preferiti,setPreferiti]=useState([]);
+  // Rinomina classe
+  var [rinominaClasse,setRinominaClasse]=useState(null);
+  var [rinominaInput,setRinominaInput]=useState("");
+  var [rinominaConferma,setRinominaConferma]=useState(false);
+  // Badge NEW: set di id card già lette (localStorage)
+  var seenRef=useRef((function(){try{var s=localStorage.getItem("seen_cards");return new Set(s?JSON.parse(s):[]);}catch(e){return new Set();}})());
+  function markSeen(id){if(!seenRef.current.has(String(id))){seenRef.current.add(String(id));try{localStorage.setItem("seen_cards",JSON.stringify([...seenRef.current]));}catch(e){}}}
+  // Export PDF
+  var [showExport,setShowExport]=useState(false);
+  var [exportFiltro,setExportFiltro]=useState("tutte");
+  var [exportTipo,setExportTipo]=useState("tutti");
+  var [exportIncludiCommenti,setExportIncludiCommenti]=useState(true);
+  var [exportIncludiVoti,setExportIncludiVoti]=useState(true);
   // Duplica
   var [showDuplica,setShowDuplica]=useState(null);
   var [duplicaClassi,setDuplicaClassi]=useState([]);
   var myLikes=useRef(new Set());
+  var CLASSI_LIST=CLASSI_DEFAULT.concat(classiCustom.filter(function(c){return CLASSI_DEFAULT.indexOf(c)<0;}));
+  function addClasseCustom(){
+    var v=newClasseInput.trim().toUpperCase();
+    if(!v)return;
+    if(CLASSI_LIST.indexOf(v)>=0){setAddingClasse(false);setNewClasseInput("");return;}
+    var next=classiCustom.concat([v]);
+    setClassiCustom(next);fbClassiSave(next);
+    setAddingClasse(false);setNewClasseInput("");
+  }
+  function removeClasseCustom(cl){
+    var next=classiCustom.filter(function(c){return c!==cl;});
+    setClassiCustom(next);fbClassiSave(next);
+  }
+  function apriRinomina(cl){setRinominaClasse(cl);setRinominaInput(cl);setRinominaConferma(false);}
+  function eseguiRinomina(){
+    var oldN=rinominaClasse,newN=rinominaInput.trim().toUpperCase();
+    if(!newN||newN===oldN){setRinominaClasse(null);return;}
+    if(!rinominaConferma){setRinominaConferma(true);return;}
+    // aggiorna lista classi
+    var next=classiCustom.map(function(c){return c===oldN?newN:c;});
+    setClassiCustom(next);fbClassiSave(next);
+    // aggiorna tutte le card che contengono oldN
+    var toUpdate=cards.filter(function(c){return (c.classi||[]).indexOf(oldN)>=0;});
+    toUpdate.forEach(function(c){fbSave(Object.assign({},c,{classi:c.classi.map(function(x){return x===oldN?newN:x;})}) );});
+    // aggiorna studenti con quella classe
+    db.collection("users").where("classe","==",oldN).get().then(function(snap){snap.forEach(function(d){d.ref.update({classe:newN});});});
+    setRinominaClasse(null);setRinominaConferma(false);
+  }
+  function togglePreferito(cardId){
+    var id=String(cardId);
+    var next=preferiti.indexOf(id)>=0?preferiti.filter(function(x){return x!==id;}):[].concat(preferiti,[id]);
+    setPreferiti(next);fbFavSave(user.uid,next);
+  }
+  function generaPDF(){
+    var cardsDaEsportare=cards.filter(function(c){
+      if(c.proposta)return false;
+      if(exportTipo!=="tutti"&&c.tipo!==exportTipo)return false;
+      if(exportFiltro==="tutte")return true;
+      var cc=c.classi||["TUTTE"];
+      return cc.indexOf("TUTTE")>=0||cc.indexOf(exportFiltro)>=0;
+    });
+    var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><style>';
+    html+='body{font-family:Arial,sans-serif;max-width:800px;margin:0 auto;padding:24px;color:#1e293b;}';
+    html+='h1{font-size:22px;border-bottom:3px solid #6366f1;padding-bottom:8px;margin-bottom:20px;}';
+    html+='.card{border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:18px;page-break-inside:avoid;}';
+    html+='.badge{display:inline-block;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;color:#fff;margin-bottom:8px;}';
+    html+='.titolo{font-size:15px;font-weight:700;margin-bottom:6px;}';
+    html+='.testo{font-size:13px;color:#475569;margin-bottom:8px;line-height:1.6;}';
+    html+='.meta{font-size:11px;color:#94a3b8;margin-bottom:8px;}';
+    html+='.classe{display:inline-block;background:#fef3c7;color:#92400e;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700;margin-right:4px;}';
+    html+='.commenti{margin-top:10px;padding-top:10px;border-top:1px solid #e2e8f0;}';
+    html+='.cm{background:#f8fafc;border-radius:6px;padding:7px 10px;margin-bottom:5px;font-size:12px;}';
+    html+='.opzione{margin-bottom:6px;}.bar{height:8px;background:#e2e8f0;border-radius:4px;margin-top:3px;}.fill{height:8px;background:#6366f1;border-radius:4px;}';
+    html+='@media print{body{padding:0;}}</style></head><body>';
+    html+='<h1>📌 ScuolaBoard — Export</h1>';
+    html+='<p style="font-size:12px;color:#94a3b8;margin-bottom:20px;">Generato il '+new Date().toLocaleDateString("it-IT",{day:"2-digit",month:"long",year:"numeric"})+(exportFiltro!=="tutte"?" · Classe: "+exportFiltro:"")+(exportTipo!=="tutti"?" · Tipo: "+exportTipo:"")+'</p>';
+    cardsDaEsportare.forEach(function(c){
+      var bgBadge=c.tipo==="domanda"?"#6366f1":c.tipo==="nota"?"#f59e0b":c.tipo==="sondaggio"?"#22c55e":"#94a3b8";
+      var cc=(c.classi||["TUTTE"]);
+      html+='<div class="card">';
+      html+='<span class="badge" style="background:'+bgBadge+'">'+tipoIcon(c.tipo)+' '+c.tipo.toUpperCase()+'</span>';
+      if(cc.indexOf("TUTTE")<0)cc.forEach(function(cl){html+='<span class="classe">'+cl+'</span>';});
+      html+='<div class="titolo">'+escHtml(c.titolo)+'</div>';
+      if(c.testo)html+='<div class="testo">'+escHtml(c.testo)+'</div>';
+      html+='<div class="meta">👤 '+escHtml(c.autore||"")+'&nbsp;&nbsp;📅 '+fmt(c.data)+'&nbsp;&nbsp;👍 '+(c.likes||0)+'</div>';
+      if(exportIncludiVoti&&c.tipo==="sondaggio"&&c.opzioni){
+        var totV=c.opzioni.reduce(function(a,o){return a+o.voti.length;},0);
+        html+='<div style="margin-top:8px;font-size:12px;font-weight:700;margin-bottom:6px;">🗳️ Risultati ('+totV+' voti)</div>';
+        c.opzioni.forEach(function(o){var pct=totV>0?Math.round(o.voti.length/totV*100):0;html+='<div class="opzione"><span style="font-size:12px;">'+escHtml(o.testo)+'</span> <span style="font-size:11px;color:#6366f1;font-weight:700;">'+pct+'% ('+o.voti.length+')</span><div class="bar"><div class="fill" style="width:'+pct+'%"></div></div></div>';});
+      }
+      if(exportIncludiCommenti&&(c.commenti||[]).length>0){
+        html+='<div class="commenti"><div style="font-size:11px;font-weight:700;color:#6366f1;margin-bottom:6px;">💬 Commenti ('+c.commenti.length+')</div>';
+        c.commenti.forEach(function(cm){html+='<div class="cm"><b>'+escHtml(cm.autore)+'</b>: '+escHtml(cm.testo)+'<span style="font-size:10px;color:#94a3b8;margin-left:8px;">'+fmt(cm.data||"")+'</span>';if(cm.risposte&&cm.risposte.length){cm.risposte.forEach(function(r){html+='<div style="margin-left:12px;margin-top:4px;padding-left:8px;border-left:2px solid #e2e8f0;font-size:11px;"><b>'+escHtml(r.autore)+'</b>: '+escHtml(r.testo)+'</div>';});}html+='</div>';});
+        html+='</div>';
+      }
+      html+='</div>';
+    });
+    html+='</body></html>';
+    var blob=new Blob([html],{type:"text/html"});
+    var url=URL.createObjectURL(blob);
+    var w=window.open(url,"_blank");
+    setTimeout(function(){if(w)w.print();},600);
+    setShowExport(false);
+  }
+  function escHtml(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
   var nextOrd=useRef(100);
   var dragId=useRef(null);
 
@@ -201,12 +311,16 @@ function App(){
         setSC(function(prev){return prev?remote.find(function(c){return c.id===prev.id;})||null:null;});
       }
     });
+    // Ascolta classi custom (tutti gli utenti)
+    var u3=fbClassiListen(function(lista){setClassiCustom(lista);});
+    // Ascolta preferiti studente
+    var u4=fbFavListen(user.uid,function(ids){setPreferiti(ids);});
     // Ascolta ai_results solo per prof
     var u2=null;
     if(user.role==="prof"){
       u2=aiLoad(function(m){setAiMap(m);});
     }
-    return function(){u1();if(u2)u2();};
+    return function(){u1();if(u2)u2();u3();u4();};
   },[user]);
 
   async function loginGoogle(){
@@ -457,6 +571,7 @@ function App(){
       h("div",{style:{flex:1}}),
       isProf&&h("button",{onClick:function(){setAskKey(true);},style:{background:orKey?"rgba(34,197,94,.15)":"rgba(249,115,22,.15)",border:"1px solid "+(orKey?"rgba(34,197,94,.3)":"rgba(249,115,22,.3)"),borderRadius:8,padding:"5px 9px",cursor:"pointer",fontSize:12,color:orKey?"#4ade80":"#fb923c"}},orKey?"🔑":"⚠️"),
       isProf&&h("button",{onClick:function(){setShowResetOpt(true);},style:{background:"rgba(255,255,255,.06)",border:"1px solid rgba(239,68,68,.3)",borderRadius:8,padding:"5px 9px",cursor:"pointer",fontSize:14,color:"#f87171"}},"🗑️"),
+      isProf&&!simulaSt&&h("button",{onClick:function(){setShowExport(true);},style:{background:"rgba(255,255,255,.06)",border:"1px solid rgba(99,102,241,.3)",borderRadius:8,padding:"5px 9px",cursor:"pointer",fontSize:14,color:"#a5b4fc"},title:"Esporta PDF"},"📄"),
       h("button",{onClick:function(){setSQR(true);},style:{background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.1)",borderRadius:8,padding:"5px 9px",cursor:"pointer",fontSize:14,color:"rgba(255,255,255,.7)"}},"◆"),
       isProf&&h("button",{onClick:function(){setPreviewSt(function(v){return !v;});},style:{background:simulaSt?"rgba(249,115,22,.3)":"rgba(255,255,255,.07)",border:"1px solid "+(simulaSt?"rgba(249,115,22,.6)":"rgba(255,255,255,.15)"),borderRadius:8,padding:"5px 10px",cursor:"pointer",fontSize:12,fontWeight:700,color:simulaSt?"#fb923c":"rgba(255,255,255,.6)"}},simulaSt?"🔙 Prof":"👁️ Studente"),
       isProf&&!simulaSt&&h("div",{style:{display:"flex",gap:2,background:"rgba(255,255,255,.05)",borderRadius:9,padding:3,border:"1px solid rgba(255,255,255,.08)"}},
@@ -482,8 +597,27 @@ function App(){
       isProf&&!simulaSt&&view==="bacheca"&&h("div",{style:{display:"flex",gap:6,padding:"8px 14px",background:"rgba(255,255,255,.02)",borderBottom:"1px solid rgba(255,255,255,.06)",flexWrap:"wrap",alignItems:"center"}},
         h("span",{style:{fontSize:11,color:"rgba(255,255,255,.35)",fontWeight:700,letterSpacing:1}},"CLASSE:"),
         h("button",{onClick:function(){setFilterClasse("tutte");},style:S.filterBtn(filterClasse==="tutte")},"🏫 TUTTE"),
-        CLASSI_LIST.map(function(cl){return h("button",{key:cl,onClick:function(){setFilterClasse(cl);},style:S.filterBtn(filterClasse===cl)},cl);}),
-        h("button",{onClick:function(){setFilterClasse("_solo");},style:S.filterBtn(filterClasse==="_solo")},"Solo prof")
+        CLASSI_DEFAULT.map(function(cl){return h("button",{key:cl,onClick:function(){setFilterClasse(cl);},style:S.filterBtn(filterClasse===cl)},cl);}),
+        h("button",{onClick:function(){setFilterClasse("_solo");},style:S.filterBtn(filterClasse==="_solo")},"Solo prof"),
+        CLASSI_LIST.filter(function(cl){return CLASSI_DEFAULT.indexOf(cl)<0;}).map(function(cl){
+          var sel=filterClasse===cl;
+          var cc=classeColor(cl,classiCustom);
+          return h("span",{key:"custom-"+cl,style:{display:"flex",alignItems:"center",gap:0,borderRadius:20,overflow:"hidden",border:"1px solid "+(sel?cc:"rgba(255,255,255,.15)"),background:sel?cc+"33":"rgba(255,255,255,.04)"}},
+            h("button",{onClick:function(){setFilterClasse(cl);},style:{padding:"3px 2px 3px 9px",background:"none",border:"none",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5},title:"Clicca per filtrare — doppio clic per rinominare",onDoubleClick:function(e){e.stopPropagation();apriRinomina(cl);}},
+              h("span",{style:{width:8,height:8,borderRadius:"50%",background:cc,display:"inline-block",flexShrink:0}}),
+              h("span",{style:{color:sel?"#fff":"rgba(255,255,255,.7)"}},cl)
+            ),
+            h("button",{onClick:function(e){e.stopPropagation();apriRinomina(cl);},title:"Rinomina",style:{padding:"3px 5px",background:"none",border:"none",color:"rgba(255,255,255,.3)",fontSize:10,cursor:"pointer",lineHeight:1}},"✏️"),
+            h("button",{onClick:function(e){e.stopPropagation();removeClasseCustom(cl);if(filterClasse===cl)setFilterClasse("tutte");},title:"Rimuovi classe",style:{padding:"3px 7px 3px 2px",background:"none",border:"none",color:"rgba(255,255,255,.3)",fontSize:10,cursor:"pointer",lineHeight:1}},"×")
+          );
+        }),
+        addingClasse
+          ?h("div",{style:{display:"flex",gap:4,alignItems:"center"}},
+              h("input",{value:newClasseInput,onInput:function(e){setNewClasseInput(e.target.value.toUpperCase());},onKeyDown:function(e){if(e.key==="Enter")addClasseCustom();if(e.key==="Escape"){setAddingClasse(false);setNewClasseInput("");}},placeholder:"es. 1AX",autoFocus:true,maxLength:10,style:{width:80,padding:"3px 8px",border:"1px solid #6366f1",borderRadius:8,fontSize:12,background:"rgba(255,255,255,.1)",color:"#f1f5f9"}}),
+              h("button",{onClick:addClasseCustom,style:{background:"#6366f1",color:"#fff",border:"none",borderRadius:8,padding:"3px 9px",cursor:"pointer",fontSize:12,fontWeight:700}},"✓"),
+              h("button",{onClick:function(){setAddingClasse(false);setNewClasseInput("");},style:{background:"rgba(255,255,255,.07)",color:"rgba(255,255,255,.4)",border:"none",borderRadius:8,padding:"3px 9px",cursor:"pointer",fontSize:12}},"✕")
+            )
+          :h("button",{onClick:function(){setAddingClasse(true);},style:{display:"flex",alignItems:"center",gap:4,padding:"3px 10px",borderRadius:20,border:"1px dashed rgba(99,102,241,.5)",background:"rgba(99,102,241,.08)",color:"#a5b4fc",fontSize:12,fontWeight:700,cursor:"pointer"}},"+")
       ),
       isProf&&!simulaSt&&proposte.length>0&&h("div",{style:{padding:"10px 14px",background:"rgba(249,115,22,.06)",borderBottom:"1px solid rgba(249,115,22,.15)"}},
         h("div",{style:{fontWeight:700,color:"#fb923c",fontSize:11,marginBottom:7,letterSpacing:1}},"⏳ PROPOSTE IN ATTESA"),
@@ -493,6 +627,16 @@ function App(){
           h("button",{onClick:function(){delCard(c.id);},style:{background:"rgba(239,68,68,.15)",color:"#f87171",border:"none",borderRadius:7,padding:"3px 8px",cursor:"pointer",fontSize:12}},"✕")
         );})
       ),
+      !isProf&&!simulaSt&&preferiti.length>0&&(function(){
+        var prefCards=visible.filter(function(c){return preferiti.indexOf(String(c.id))>=0;});
+        if(!prefCards.length)return null;
+        return h("div",{style:{padding:"8px 14px",background:"rgba(245,158,11,.04)",borderBottom:"1px solid rgba(245,158,11,.12)"}},
+          h("div",{style:{fontSize:11,fontWeight:700,color:"#fbbf24",marginBottom:7,letterSpacing:1}},"★ I TUOI PREFERITI"),
+          h("div",{style:{display:"flex",gap:8,flexWrap:"wrap"}},
+            prefCards.map(function(c){return h("button",{key:c.id,onClick:function(){setSC(c);markSeen(c.id);setNc({testo:""});setEditingCm(null);setCardQErr("");setCardQ("");},style:{background:"rgba(245,158,11,.12)",border:"1px solid rgba(245,158,11,.25)",borderRadius:8,padding:"4px 12px",cursor:"pointer",fontSize:12,color:"#fbbf24",fontWeight:700,maxWidth:200,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},c.titolo);})
+          )
+        );
+      })(),
       h("div",{style:{flex:1,padding:"18px 14px"}},
         visible.length===0
           ?h("div",{style:{display:"flex",flexDirection:"column",alignItems:"center",padding:"80px 20px",color:"rgba(255,255,255,.2)"}},h("div",{style:{fontSize:48,marginBottom:8}},"📌"),h("div",{style:{fontWeight:600}},"Nessun contenuto visibile"))
@@ -505,7 +649,7 @@ function App(){
               var cOpen=cardAiOpen===c.id,cLoad=cardAiLoad===c.id;
               var isOwner=!isProf&&user&&c.autore===myName(user)&&!c.proposta;
               var cardLinks=normalizeLinks(c);
-              var nascosta=c.visibile===false,nuova=isNew(c.data);
+              var nascosta=c.visibile===false,nuova=!seenRef.current.has(String(c.id));
               var cc=c.classi||["TUTTE"];
               return h("div",{
                 id:"card-"+c.id,key:c.id,className:"card-wrap fadein",
@@ -517,12 +661,15 @@ function App(){
                 onDrop:isProf&&!simulaSt?function(e){onDrop(e,c.id);}:undefined,
                 style:{breakInside:"avoid",marginBottom:16,background:nascosta?"rgba(255,255,255,.03)":"rgba(255,255,255,.06)",backdropFilter:"blur(10px)",border:"1px solid "+(nascosta?"rgba(255,255,255,.06)":"rgba(255,255,255,.1)"),borderRadius:16,overflow:"hidden",opacity:nascosta?.5:1}
               },
-                h("div",{style:{cursor:"pointer"},onClick:function(){setSC(c);setNc({testo:""});setEditingCm(null);setCardQErr("");setCardQ("");}},
+                h("div",{style:{cursor:"pointer"},onClick:function(){setSC(c);markSeen(c.id);setNc({testo:""});setEditingCm(null);setCardQErr("");setCardQ("");}},
                   h("div",{style:{padding:"12px 14px 6px"}},
                     h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6,gap:4}},
                       h("div",{style:{display:"flex",gap:4,alignItems:"center",flexWrap:"wrap"}},
                         h("span",{style:{background:badgeBg(c.tipo),color:"#fff",borderRadius:6,padding:"2px 8px",fontSize:10,fontWeight:800}},tipoIcon(c.tipo)+" "+c.tipo.toUpperCase()),
-                        isProf&&cc.indexOf("TUTTE")<0&&cc.length>0&&h("span",{style:{background:"rgba(251,146,60,.2)",color:"#fb923c",borderRadius:6,padding:"2px 7px",fontSize:10,fontWeight:700}},cc.slice(0,3).join(", ")+(cc.length>3?"…":"")),
+                        isProf&&cc.indexOf("TUTTE")<0&&cc.length>0&&h("span",{style:{display:"inline-flex",alignItems:"center",gap:3,background:"rgba(255,255,255,.07)",borderRadius:6,padding:"2px 7px",fontSize:10,fontWeight:700,color:"rgba(255,255,255,.7)"}},
+                          cc.slice(0,3).map(function(cl,i){var isCustom=CLASSI_DEFAULT.indexOf(cl)<0;var ccc=isCustom?classeColor(cl,classiCustom):"#fb923c";return h("span",{key:i,style:{display:"inline-flex",alignItems:"center",gap:3}},h("span",{style:{width:6,height:6,borderRadius:"50%",background:ccc,display:"inline-block"}}),cl,(i<Math.min(cc.length,3)-1?", ":""));}),
+                          cc.length>3&&"…"
+                        ),
                         isProf&&cc.length===0&&h("span",{style:{background:"rgba(239,68,68,.2)",color:"#f87171",borderRadius:6,padding:"2px 7px",fontSize:10,fontWeight:700}},"Solo prof"),
                         nuova&&h("span",{style:{background:"rgba(34,197,94,.25)",color:"#4ade80",borderRadius:6,padding:"2px 6px",fontSize:9,fontWeight:800,border:"1px solid rgba(34,197,94,.4)"}},"NUOVO"),
                         nascosta&&isProf&&h("span",{style:{background:"rgba(239,68,68,.2)",color:"#f87171",borderRadius:6,padding:"2px 6px",fontSize:9,fontWeight:800}},"NASCOSTA")
@@ -543,7 +690,8 @@ function App(){
                 ),
                 h("div",{style:{padding:"6px 14px 10px",display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}},
                   h("button",{onClick:function(e){e.stopPropagation();toggleLike(c.id);},style:{background:liked?"rgba(99,102,241,.3)":"rgba(255,255,255,.08)",border:"1px solid "+(liked?"rgba(99,102,241,.5)":"rgba(255,255,255,.1)"),borderRadius:20,padding:"3px 8px",cursor:"pointer",fontSize:12,color:liked?"#a5b4fc":"rgba(255,255,255,.5)",display:"flex",alignItems:"center",gap:4}},"👍",h("span",{style:{fontSize:11,fontWeight:700}},c.likes||0)),
-                  h("button",{onClick:function(e){e.stopPropagation();setSC(c);setNc({testo:""});setEditingCm(null);setCardQErr("");setCardQ("");setTimeout(function(){var ta=document.getElementById("cm-textarea");if(ta){ta.scrollIntoView({behavior:"smooth",block:"center"});ta.focus();}},150);},style:{background:"rgba(99,102,241,.15)",border:"1px solid rgba(99,102,241,.3)",borderRadius:20,padding:"3px 10px",cursor:"pointer",fontSize:12,color:"#a5b4fc",display:"flex",alignItems:"center",gap:4,fontWeight:700}},"💬 Commenta",h("span",{style:{fontSize:11,background:"rgba(99,102,241,.3)",borderRadius:10,padding:"0 5px",marginLeft:2}},(c.commenti||[]).length||"0")),
+                  h("button",{onClick:function(e){e.stopPropagation();setSC(c);markSeen(c.id);setNc({testo:""});setEditingCm(null);setCardQErr("");setCardQ("");setTimeout(function(){var ta=document.getElementById("cm-textarea");if(ta){ta.scrollIntoView({behavior:"smooth",block:"center"});ta.focus();}},150);},style:{background:"rgba(99,102,241,.15)",border:"1px solid rgba(99,102,241,.3)",borderRadius:20,padding:"3px 10px",cursor:"pointer",fontSize:12,color:"#a5b4fc",display:"flex",alignItems:"center",gap:4,fontWeight:700}},"💬 Commenta",h("span",{style:{fontSize:11,background:"rgba(99,102,241,.3)",borderRadius:10,padding:"0 5px",marginLeft:2}},(c.commenti||[]).length||"0")),
+                  !isProf&&!simulaSt&&h("button",{onClick:function(e){e.stopPropagation();togglePreferito(c.id);},style:{background:preferiti.indexOf(String(c.id))>=0?"rgba(245,158,11,.3)":"rgba(255,255,255,.06)",border:"1px solid "+(preferiti.indexOf(String(c.id))>=0?"rgba(245,158,11,.5)":"rgba(255,255,255,.1)"),borderRadius:20,padding:"3px 9px",cursor:"pointer",fontSize:13,color:preferiti.indexOf(String(c.id))>=0?"#fbbf24":"rgba(255,255,255,.3)"}},preferiti.indexOf(String(c.id))>=0?"★":"☆"),
                   h("span",{style:{flex:1}}),
                   h("span",{style:{fontSize:10,color:"rgba(255,255,255,.3)"}},fmt(c.data)),
                   isProf&&!simulaSt&&h("button",{onClick:function(e){e.stopPropagation();editCard(c);},style:{background:"rgba(59,130,246,.2)",border:"1px solid rgba(59,130,246,.4)",borderRadius:20,padding:"3px 9px",cursor:"pointer",fontSize:11,color:"#60a5fa",fontWeight:700}},"✏️"),
@@ -620,7 +768,7 @@ function App(){
           return h("div",{key:s.uid,style:{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,padding:"10px 14px",marginBottom:8,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}},
             h("div",{style:{flex:1,minWidth:140}},h("div",{style:{fontWeight:700,color:"#f1f5f9",fontSize:13}},(s.nome||"")+" "+(s.cognome||"")),h("div",{style:{fontSize:11,color:"rgba(255,255,255,.35)"}},s.email),s.classe&&h("span",{style:{background:"rgba(251,146,60,.2)",color:"#fb923c",borderRadius:6,padding:"1px 7px",fontSize:10,fontWeight:700}},s.classe)),
             h("select",{value:s.classe||"",onChange:function(e){aggiornaClasseStudente(s.uid,e.target.value);},style:{background:"#1e293b",color:"#f1f5f9",border:"1px solid rgba(255,255,255,.15)",borderRadius:8,padding:"4px 8px",fontSize:12,cursor:"pointer"}},
-              h("option",{value:""},"-- nessuna --"),CLASSI_LIST.map(function(cl){return h("option",{key:cl,value:cl},cl);})),
+              h("option",{value:""},"-- nessuna --"),CLASSI_LIST.map(function(cl){return h("option",{key:cl,value:cl},(CLASSI_DEFAULT.indexOf(cl)<0?"★ ":"")+cl);})),
             h("button",{onClick:function(){rimuoviStudente(s.uid);},style:{background:"rgba(239,68,68,.1)",border:"1px solid rgba(239,68,68,.2)",color:"#f87171",borderRadius:8,padding:"4px 8px",fontSize:11,cursor:"pointer",fontWeight:700}},"Rimuovi")
           );
         })
@@ -651,11 +799,38 @@ function App(){
         h("h3",{style:{margin:"0 0 6px",color:"#f1f5f9",fontSize:18,fontWeight:800,textAlign:"center"}},"Seleziona la tua classe"),
         h("p",{style:{color:"rgba(255,255,255,.45)",fontSize:12,marginBottom:18,textAlign:"center"}},"Vedrai solo i contenuti a te destinati."),
         h("div",{style:{display:"flex",flexWrap:"wrap",gap:7,marginBottom:18,justifyContent:"center"}},
-          CLASSI_LIST.map(function(cl){return h("button",{key:cl,type:"button",onClick:function(){setClasseInput(cl);},style:{padding:"7px 13px",borderRadius:9,border:"1px solid "+(classeInput===cl?"#6366f1":"rgba(255,255,255,.15)"),background:classeInput===cl?"#6366f1":"rgba(255,255,255,.05)",color:classeInput===cl?"#fff":"rgba(255,255,255,.6)",fontSize:13,fontWeight:700,cursor:"pointer"}},cl);})
+          CLASSI_LIST.map(function(cl){
+            var isCustom=CLASSI_DEFAULT.indexOf(cl)<0;
+            var cc=isCustom?classeColor(cl,classiCustom):null;
+            var sel=classeInput===cl;
+            return h("button",{key:cl,type:"button",onClick:function(){setClasseInput(cl);},style:{padding:"7px 13px",borderRadius:9,border:"1px solid "+(sel?(cc||"#6366f1"):"rgba(255,255,255,.15)"),background:sel?(cc||"#6366f1")+"33":"rgba(255,255,255,.05)",color:sel?"#fff":"rgba(255,255,255,.6)",fontSize:13,fontWeight:700,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5}},
+              isCustom&&h("span",{style:{width:8,height:8,borderRadius:"50%",background:cc,display:"inline-block",flexShrink:0}}),
+              cl
+            );
+          })
         ),
         h("div",{style:{display:"flex",gap:10}},
           user&&user.classe&&h("button",{onClick:function(){setShowClasseModal(false);},style:{flex:1,padding:11,background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.6)",border:"none",borderRadius:11,fontSize:14,fontWeight:700,cursor:"pointer"}},"Annulla"),
           h("button",{onClick:saveClasse,style:{flex:2,padding:11,background:classeInput?"linear-gradient(135deg,#6366f1,#8b5cf6)":"rgba(255,255,255,.06)",color:classeInput?"#fff":"rgba(255,255,255,.25)",border:"none",borderRadius:11,fontSize:14,fontWeight:800,cursor:classeInput?"pointer":"not-allowed"}},classeInput?"Conferma: "+classeInput:"Seleziona una classe")
+        )
+      )
+    ),
+
+    // RINOMINA CLASSE
+    rinominaClasse&&h("div",{style:{position:"fixed",inset:0,background:"rgba(0,0,0,.8)",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:20},onClick:function(){setRinominaClasse(null);setRinominaConferma(false);}},
+      h("div",{style:{background:"#1e293b",border:"1px solid rgba(255,255,255,.1)",borderRadius:20,padding:28,maxWidth:380,width:"100%"},onClick:function(e){e.stopPropagation();}},
+        h("div",{style:{fontSize:36,marginBottom:10,textAlign:"center"}},"✏️"),
+        h("h3",{style:{margin:"0 0 6px",color:"#f1f5f9",fontSize:17,fontWeight:800,textAlign:"center"}},"Rinomina classe"),
+        h("p",{style:{color:"rgba(255,255,255,.4)",fontSize:12,marginBottom:16,textAlign:"center"}},"Il nome verrà aggiornato in tutte le card e gli studenti assegnati."),
+        !rinominaConferma&&h("input",{value:rinominaInput,onInput:function(e){setRinominaInput(e.target.value.toUpperCase());},onKeyDown:function(e){if(e.key==="Enter")eseguiRinomina();if(e.key==="Escape"){setRinominaClasse(null);setRinominaConferma(false);}},maxLength:10,autoFocus:true,style:Object.assign({},S.input,{marginBottom:14,fontSize:16,textAlign:"center",fontWeight:700})}),
+        rinominaConferma&&h("div",{style:{background:"rgba(239,68,68,.12)",border:"1px solid rgba(239,68,68,.3)",borderRadius:10,padding:"12px 16px",marginBottom:14,textAlign:"center"}},
+          h("div",{style:{color:"#f87171",fontWeight:700,fontSize:13,marginBottom:4}},"⚠️ Conferma rinomina"),
+          h("div",{style:{color:"rgba(255,255,255,.5)",fontSize:12}},'"'+rinominaClasse+'" → "'+rinominaInput+'"'),
+          h("div",{style:{color:"rgba(255,255,255,.35)",fontSize:11,marginTop:4}},"Verranno aggiornate "+cards.filter(function(c){return(c.classi||[]).indexOf(rinominaClasse)>=0;}).length+" card")
+        ),
+        h("div",{style:{display:"flex",gap:10}},
+          h("button",{onClick:function(){setRinominaClasse(null);setRinominaConferma(false);},style:{flex:1,padding:11,background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.6)",border:"none",borderRadius:11,fontSize:14,fontWeight:700,cursor:"pointer"}},"Annulla"),
+          h("button",{onClick:eseguiRinomina,style:{flex:2,padding:11,background:rinominaInput.trim()&&rinominaInput.trim()!==rinominaClasse?"linear-gradient(135deg,#6366f1,#8b5cf6)":"rgba(255,255,255,.06)",color:rinominaInput.trim()&&rinominaInput.trim()!==rinominaClasse?"#fff":"rgba(255,255,255,.25)",border:"none",borderRadius:11,fontSize:14,fontWeight:800,cursor:rinominaInput.trim()&&rinominaInput.trim()!==rinominaClasse?"pointer":"not-allowed"}},rinominaConferma?"✓ Confermato — Rinomina":"Rinomina")
         )
       )
     ),
@@ -714,6 +889,43 @@ function App(){
       )
     ),
 
+    // EXPORT PDF
+    showExport&&h("div",{style:{position:"fixed",inset:0,background:"rgba(0,0,0,.8)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20},onClick:function(){setShowExport(false);}},
+      h("div",{style:{background:"#1e293b",border:"1px solid rgba(255,255,255,.1)",borderRadius:20,padding:28,maxWidth:420,width:"100%"},onClick:function(e){e.stopPropagation();}},
+        h("div",{style:{fontSize:36,marginBottom:8,textAlign:"center"}},"📄"),
+        h("h3",{style:{margin:"0 0 4px",color:"#f1f5f9",fontSize:17,fontWeight:800,textAlign:"center"}},"Esporta PDF"),
+        h("p",{style:{color:"rgba(255,255,255,.4)",fontSize:12,marginBottom:18,textAlign:"center"}},"Scegli cosa includere, poi stampa come PDF"),
+        h("div",{style:{marginBottom:14}},
+          h("label",{style:{fontSize:11,fontWeight:700,color:"rgba(255,255,255,.4)",letterSpacing:1,display:"block",marginBottom:8}},"🏫 CLASSE"),
+          h("div",{style:{display:"flex",flexWrap:"wrap",gap:5}},
+            h("button",{type:"button",onClick:function(){setExportFiltro("tutte");},style:Object.assign({},S.filterBtn(exportFiltro==="tutte"),{fontSize:11,padding:"3px 9px"})},"Tutte"),
+            CLASSI_LIST.map(function(cl){return h("button",{type:"button",key:cl,onClick:function(){setExportFiltro(cl);},style:Object.assign({},S.filterBtn(exportFiltro===cl),{fontSize:11,padding:"3px 9px"})},cl);})
+          )
+        ),
+        h("div",{style:{marginBottom:14}},
+          h("label",{style:{fontSize:11,fontWeight:700,color:"rgba(255,255,255,.4)",letterSpacing:1,display:"block",marginBottom:8}},"📌 TIPO CARD"),
+          h("div",{style:{display:"flex",gap:5,flexWrap:"wrap"}},
+            [{v:"tutti",l:"Tutti"},{v:"domanda",l:"💬 Domande"},{v:"nota",l:"📄 Note"},{v:"sondaggio",l:"🗳️ Sondaggi"}].map(function(t){return h("button",{type:"button",key:t.v,onClick:function(){setExportTipo(t.v);},style:Object.assign({},S.filterBtn(exportTipo===t.v),{fontSize:11,padding:"3px 9px"})},t.l);})
+          )
+        ),
+        h("div",{style:{display:"flex",gap:10,marginBottom:18}},
+          h("label",{style:{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:13,color:"rgba(255,255,255,.7)"}},
+            h("input",{type:"checkbox",checked:exportIncludiCommenti,onChange:function(e){setExportIncludiCommenti(e.target.checked);},style:{width:16,height:16,cursor:"pointer"}}),
+            "Includi commenti"),
+          h("label",{style:{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:13,color:"rgba(255,255,255,.7)"}},
+            h("input",{type:"checkbox",checked:exportIncludiVoti,onChange:function(e){setExportIncludiVoti(e.target.checked);},style:{width:16,height:16,cursor:"pointer"}}),
+            "Includi risultati sondaggi")
+        ),
+        h("div",{style:{background:"rgba(99,102,241,.1)",border:"1px solid rgba(99,102,241,.2)",borderRadius:8,padding:"8px 12px",marginBottom:16,fontSize:12,color:"rgba(255,255,255,.5)",textAlign:"center"}},
+          cards.filter(function(c){if(c.proposta)return false;if(exportTipo!=="tutti"&&c.tipo!==exportTipo)return false;if(exportFiltro==="tutte")return true;var cc=c.classi||["TUTTE"];return cc.indexOf("TUTTE")>=0||cc.indexOf(exportFiltro)>=0;}).length+" card selezionate"
+        ),
+        h("div",{style:{display:"flex",gap:10}},
+          h("button",{onClick:function(){setShowExport(false);},style:{flex:1,padding:11,background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.6)",border:"none",borderRadius:11,fontSize:14,fontWeight:700,cursor:"pointer"}},"Annulla"),
+          h("button",{onClick:generaPDF,style:{flex:2,padding:11,background:"linear-gradient(135deg,#6366f1,#8b5cf6)",color:"#fff",border:"none",borderRadius:11,fontSize:14,fontWeight:800,cursor:"pointer"}},"📥 Genera e stampa")
+        )
+      )
+    ),
+
     askKey&&h("div",{style:{position:"fixed",inset:0,background:"rgba(0,0,0,.7)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20},onClick:function(){setAskKey(false);}},
       h("div",{style:{background:"#1e293b",border:"1px solid rgba(255,255,255,.1)",borderRadius:20,padding:28,maxWidth:400,width:"100%"},onClick:function(e){e.stopPropagation();}},
         h("div",{style:{fontSize:36,marginBottom:10}},"🔑"),
@@ -756,8 +968,9 @@ function App(){
               }).concat([h("div",{key:"tot",style:{fontSize:11,color:"rgba(255,255,255,.3)",textAlign:"right",marginTop:4}},totV+" voti")])
             );
           })(),
-          h("div",{style:{marginTop:12,display:"flex",justifyContent:"space-between",alignItems:"center"}},
+          h("div",{style:{marginTop:12,display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}},
             h("button",{onClick:function(e){e.stopPropagation();toggleLike(showCard.id);},style:{background:myLikes.current.has(String(showCard.id))?"rgba(99,102,241,.3)":"rgba(255,255,255,.08)",border:"1px solid "+(myLikes.current.has(String(showCard.id))?"rgba(99,102,241,.5)":"rgba(255,255,255,.1)"),borderRadius:20,padding:"5px 14px",cursor:"pointer",fontSize:14,color:myLikes.current.has(String(showCard.id))?"#a5b4fc":"rgba(255,255,255,.5)",display:"flex",alignItems:"center",gap:6,fontWeight:700}},"👍 ",(showCard.likes||0)),
+            !isProf&&h("button",{onClick:function(){togglePreferito(showCard.id);},style:{background:preferiti.indexOf(String(showCard.id))>=0?"rgba(245,158,11,.3)":"rgba(255,255,255,.06)",border:"1px solid "+(preferiti.indexOf(String(showCard.id))>=0?"rgba(245,158,11,.5)":"rgba(255,255,255,.1)"),borderRadius:20,padding:"5px 12px",cursor:"pointer",fontSize:15,color:preferiti.indexOf(String(showCard.id))>=0?"#fbbf24":"rgba(255,255,255,.3)",fontWeight:700}},preferiti.indexOf(String(showCard.id))>=0?"★ Preferita":"☆ Aggiungi"),
             h("span",{style:{fontSize:10,color:"rgba(255,255,255,.3)"}},fmt(showCard.data))
           ),
           !isProf&&showCard.autore===myName(user)&&!showCard.proposta&&h("div",{style:{display:"flex",gap:6,flexWrap:"wrap",marginTop:10}},
@@ -927,6 +1140,60 @@ function App(){
 
 ReactDOM.createRoot(document.getElementById("root")).render(h(App,null));
 })();
+/*
+══════════════════════════════════════════════════════════════
+  FIRESTORE SECURITY RULES — incolla nella Firebase Console
+  Percorso: Firebase Console → Firestore Database → Rules
+══════════════════════════════════════════════════════════════
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── CARDS ────────────────────────────────────────────────
+    // Tutti gli autenticati possono leggere e scrivere
+    // (necessario per proposte studenti, like, commenti, voti)
+    match /cards/{cardId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // ── USERS ─────────────────────────────────────────────────
+    // Ogni utente legge/modifica solo il proprio documento
+    // Il prof può leggere tutti
+    match /users/{userId} {
+      allow read: if request.auth != null &&
+        (request.auth.uid == userId ||
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "prof");
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // ── CONFIG (classi custom, ecc.) ──────────────────────────
+    // Tutti possono leggere (serve per vedere le classi)
+    // Solo il prof può scrivere
+    match /config/{docId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "prof";
+    }
+
+    // ── AI RESULTS ────────────────────────────────────────────
+    // Solo il prof può leggere e scrivere
+    match /ai_results/{docId} {
+      allow read, write: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "prof";
+    }
+
+    // ── PREFERITI ─────────────────────────────────────────────
+    // Ogni utente può leggere e scrivere solo i propri preferiti
+    match /preferiti/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+  }
+}
+
+══════════════════════════════════════════════════════════════
+*/
 </script>
 </body>
 </html>
