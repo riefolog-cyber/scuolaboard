@@ -182,6 +182,7 @@ function App(){
   var [exportTipo,setExportTipo]=useState("tutti");
   var [exportIncludiCommenti,setExportIncludiCommenti]=useState(true);
   var [exportIncludiVoti,setExportIncludiVoti]=useState(true);
+  var [exportIncludiAI,setExportIncludiAI]=useState(true);
   // Duplica
   var [showDuplica,setShowDuplica]=useState(null);
   var [duplicaClassi,setDuplicaClassi]=useState([]);
@@ -251,6 +252,7 @@ function App(){
       html+='<div class="titolo">'+escHtml(c.titolo)+'</div>';
       if(c.testo)html+='<div class="testo">'+escHtml(c.testo)+'</div>';
       html+='<div class="meta">👤 '+escHtml(c.autore||"")+'&nbsp;&nbsp;📅 '+fmt(c.data)+'&nbsp;&nbsp;👍 '+(c.likes||0)+'</div>';
+      if(exportIncludiAI){var aiD=aiMap[String(c.id)];var cRes=aiD&&aiD.analisi;if(cRes&&(cRes.sintesi||cRes.dinamica||cRes.spunto)){html+='<div style="margin-top:10px;background:#f0f4ff;border:1px solid #c7d2fe;border-radius:8px;padding:10px 14px;">';html+='<div style="font-size:11px;font-weight:700;color:#6366f1;margin-bottom:8px;">🤖 Analisi AI</div>';if(cRes.sintesi)html+='<div style="margin-bottom:7px;"><span style="font-size:10px;font-weight:700;color:#6366f1;letter-spacing:1px;">📋 SINTESI</span><div style="font-size:12px;color:#334155;margin-top:3px;line-height:1.6;">'+escHtml(cRes.sintesi)+'</div></div>';if(cRes.dinamica)html+='<div style="margin-bottom:7px;"><span style="font-size:10px;font-weight:700;color:#3b82f6;letter-spacing:1px;">💬 DINAMICA</span><div style="font-size:12px;color:#334155;margin-top:3px;line-height:1.6;">'+escHtml(cRes.dinamica)+'</div></div>';if(cRes.spunto)html+='<div><span style="font-size:10px;font-weight:700;color:#22c55e;letter-spacing:1px;">💡 SPUNTO</span><div style="font-size:12px;color:#334155;margin-top:3px;line-height:1.6;font-style:italic;">'+escHtml(cRes.spunto)+'</div></div>';html+='</div>';}}
       if(exportIncludiVoti&&c.tipo==="sondaggio"&&c.opzioni){
         var totV=c.opzioni.reduce(function(a,o){return a+o.voti.length;},0);
         html+='<div style="margin-top:8px;font-size:12px;font-weight:700;margin-bottom:6px;">🗳️ Risultati ('+totV+' voti)</div>';
@@ -613,7 +615,7 @@ function App(){
         }),
         addingClasse
           ?h("div",{style:{display:"flex",gap:4,alignItems:"center"}},
-              h("input",{value:newClasseInput,onInput:function(e){setNewClasseInput(e.target.value.toUpperCase());},onKeyDown:function(e){if(e.key==="Enter")addClasseCustom();if(e.key==="Escape"){setAddingClasse(false);setNewClasseInput("");}},placeholder:"es. 1AX",autoFocus:true,maxLength:10,style:{width:80,padding:"3px 8px",border:"1px solid #6366f1",borderRadius:8,fontSize:12,background:"rgba(255,255,255,.1)",color:"#f1f5f9"}}),
+              h("input",{value:newClasseInput,onInput:function(e){setNewClasseInput(e.target.value.toUpperCase());},onKeyDown:function(e){if(e.key==="Enter")addClasseCustom();if(e.key==="Escape"){setAddingClasse(false);setNewClasseInput("");}},placeholder:"es. 1AX",autoFocus:true,maxLength:20,style:{width:120,padding:"3px 8px",border:"1px solid #6366f1",borderRadius:8,fontSize:12,background:"rgba(255,255,255,.1)",color:"#f1f5f9"}}),
               h("button",{onClick:addClasseCustom,style:{background:"#6366f1",color:"#fff",border:"none",borderRadius:8,padding:"3px 9px",cursor:"pointer",fontSize:12,fontWeight:700}},"✓"),
               h("button",{onClick:function(){setAddingClasse(false);setNewClasseInput("");},style:{background:"rgba(255,255,255,.07)",color:"rgba(255,255,255,.4)",border:"none",borderRadius:8,padding:"3px 9px",cursor:"pointer",fontSize:12}},"✕")
             )
@@ -822,7 +824,7 @@ function App(){
         h("div",{style:{fontSize:36,marginBottom:10,textAlign:"center"}},"✏️"),
         h("h3",{style:{margin:"0 0 6px",color:"#f1f5f9",fontSize:17,fontWeight:800,textAlign:"center"}},"Rinomina classe"),
         h("p",{style:{color:"rgba(255,255,255,.4)",fontSize:12,marginBottom:16,textAlign:"center"}},"Il nome verrà aggiornato in tutte le card e gli studenti assegnati."),
-        !rinominaConferma&&h("input",{value:rinominaInput,onInput:function(e){setRinominaInput(e.target.value.toUpperCase());},onKeyDown:function(e){if(e.key==="Enter")eseguiRinomina();if(e.key==="Escape"){setRinominaClasse(null);setRinominaConferma(false);}},maxLength:10,autoFocus:true,style:Object.assign({},S.input,{marginBottom:14,fontSize:16,textAlign:"center",fontWeight:700})}),
+        !rinominaConferma&&h("input",{value:rinominaInput,onInput:function(e){setRinominaInput(e.target.value.toUpperCase());},onKeyDown:function(e){if(e.key==="Enter")eseguiRinomina();if(e.key==="Escape"){setRinominaClasse(null);setRinominaConferma(false);}},maxLength:20,autoFocus:true,style:Object.assign({},S.input,{marginBottom:14,fontSize:16,textAlign:"center",fontWeight:700})}),
         rinominaConferma&&h("div",{style:{background:"rgba(239,68,68,.12)",border:"1px solid rgba(239,68,68,.3)",borderRadius:10,padding:"12px 16px",marginBottom:14,textAlign:"center"}},
           h("div",{style:{color:"#f87171",fontWeight:700,fontSize:13,marginBottom:4}},"⚠️ Conferma rinomina"),
           h("div",{style:{color:"rgba(255,255,255,.5)",fontSize:12}},'"'+rinominaClasse+'" → "'+rinominaInput+'"'),
@@ -914,7 +916,10 @@ function App(){
             "Includi commenti"),
           h("label",{style:{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:13,color:"rgba(255,255,255,.7)"}},
             h("input",{type:"checkbox",checked:exportIncludiVoti,onChange:function(e){setExportIncludiVoti(e.target.checked);},style:{width:16,height:16,cursor:"pointer"}}),
-            "Includi risultati sondaggi")
+            "Includi risultati sondaggi"),
+          h("label",{style:{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:13,color:"rgba(255,255,255,.7)"}},
+            h("input",{type:"checkbox",checked:exportIncludiAI,onChange:function(e){setExportIncludiAI(e.target.checked);},style:{width:16,height:16,cursor:"pointer"}}),
+            "Includi analisi AI")
         ),
         h("div",{style:{background:"rgba(99,102,241,.1)",border:"1px solid rgba(99,102,241,.2)",borderRadius:8,padding:"8px 12px",marginBottom:16,fontSize:12,color:"rgba(255,255,255,.5)",textAlign:"center"}},
           cards.filter(function(c){if(c.proposta)return false;if(exportTipo!=="tutti"&&c.tipo!==exportTipo)return false;if(exportFiltro==="tutte")return true;var cc=c.classi||["TUTTE"];return cc.indexOf("TUTTE")>=0||cc.indexOf(exportFiltro)>=0;}).length+" card selezionate"
