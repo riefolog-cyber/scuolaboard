@@ -243,7 +243,8 @@ function App(){
     html+='@media print{body{padding:0;}}</style></head><body>';
     html+='<h1>📌 ScuolaBoard — Export</h1>';
     html+='<p style="font-size:12px;color:#94a3b8;margin-bottom:20px;">Generato il '+new Date().toLocaleDateString("it-IT",{day:"2-digit",month:"long",year:"numeric"})+(exportFiltro!=="tutte"?" · Classe: "+exportFiltro:"")+(exportTipo!=="tutti"?" · Tipo: "+exportTipo:"")+'</p>';
-    cardsDaEsportare.forEach(function(c){
+    for(var ci=0;ci<cardsDaEsportare.length;ci++){
+      var c=cardsDaEsportare[ci];
       var bgBadge=c.tipo==="domanda"?"#6366f1":c.tipo==="nota"?"#f59e0b":c.tipo==="sondaggio"?"#22c55e":"#94a3b8";
       var cc=(c.classi||["TUTTE"]);
       html+='<div class="card">';
@@ -252,7 +253,19 @@ function App(){
       html+='<div class="titolo">'+escHtml(c.titolo)+'</div>';
       if(c.testo)html+='<div class="testo">'+escHtml(c.testo)+'</div>';
       html+='<div class="meta">👤 '+escHtml(c.autore||"")+'&nbsp;&nbsp;📅 '+fmt(c.data)+'&nbsp;&nbsp;👍 '+(c.likes||0)+'</div>';
-      if(exportIncludiAI){var aiD=aiMap[String(c.id)];var cRes=aiD&&aiD.analisi;if(!cRes){try{var snap=await db.collection("ai_results").doc(String(c.id)).get();if(snap.exists)cRes=snap.data().analisi;}catch(e){}}if(cRes&&(cRes.sintesi||cRes.dinamica||cRes.spunto)){html+='<div style="margin-top:10px;background:#f0f4ff;border:1px solid #c7d2fe;border-radius:8px;padding:10px 14px;">';html+='<div style="font-size:11px;font-weight:700;color:#6366f1;margin-bottom:8px;">🤖 Analisi AI</div>';if(cRes.sintesi)html+='<div style="margin-bottom:7px;"><span style="font-size:10px;font-weight:700;color:#6366f1;letter-spacing:1px;">📋 SINTESI</span><div style="font-size:12px;color:#334155;margin-top:3px;line-height:1.6;">'+escHtml(cRes.sintesi)+'</div></div>';if(cRes.dinamica)html+='<div style="margin-bottom:7px;"><span style="font-size:10px;font-weight:700;color:#3b82f6;letter-spacing:1px;">💬 DINAMICA</span><div style="font-size:12px;color:#334155;margin-top:3px;line-height:1.6;">'+escHtml(cRes.dinamica)+'</div></div>';if(cRes.spunto)html+='<div><span style="font-size:10px;font-weight:700;color:#22c55e;letter-spacing:1px;">💡 SPUNTO</span><div style="font-size:12px;color:#334155;margin-top:3px;line-height:1.6;font-style:italic;">'+escHtml(cRes.spunto)+'</div></div>';html+='</div>';}}
+      if(exportIncludiAI){
+        var aiD=aiMap[String(c.id)];
+        var cRes=aiD&&aiD.analisi;
+        if(!cRes){try{var snap=await db.collection("ai_results").doc(String(c.id)).get();if(snap.exists)cRes=snap.data().analisi;}catch(e){}}
+        if(cRes&&(cRes.sintesi||cRes.dinamica||cRes.spunto)){
+          html+='<div style="margin-top:10px;background:#f0f4ff;border:1px solid #c7d2fe;border-radius:8px;padding:10px 14px;">';
+          html+='<div style="font-size:11px;font-weight:700;color:#6366f1;margin-bottom:8px;">🤖 Analisi AI</div>';
+          if(cRes.sintesi)html+='<div style="margin-bottom:7px;"><span style="font-size:10px;font-weight:700;color:#6366f1;letter-spacing:1px;">📋 SINTESI</span><div style="font-size:12px;color:#334155;margin-top:3px;line-height:1.6;">'+escHtml(cRes.sintesi)+'</div></div>';
+          if(cRes.dinamica)html+='<div style="margin-bottom:7px;"><span style="font-size:10px;font-weight:700;color:#3b82f6;letter-spacing:1px;">💬 DINAMICA</span><div style="font-size:12px;color:#334155;margin-top:3px;line-height:1.6;">'+escHtml(cRes.dinamica)+'</div></div>';
+          if(cRes.spunto)html+='<div><span style="font-size:10px;font-weight:700;color:#22c55e;letter-spacing:1px;">💡 SPUNTO</span><div style="font-size:12px;color:#334155;margin-top:3px;line-height:1.6;font-style:italic;">'+escHtml(cRes.spunto)+'</div></div>';
+          html+='</div>';
+        }
+      }
       if(exportIncludiVoti&&c.tipo==="sondaggio"&&c.opzioni){
         var totV=c.opzioni.reduce(function(a,o){return a+o.voti.length;},0);
         html+='<div style="margin-top:8px;font-size:12px;font-weight:700;margin-bottom:6px;">🗳️ Risultati ('+totV+' voti)</div>';
@@ -264,7 +277,7 @@ function App(){
         html+='</div>';
       }
       html+='</div>';
-    });
+    }
     html+='</body></html>';
     var blob=new Blob([html],{type:"text/html"});
     var url=URL.createObjectURL(blob);
