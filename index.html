@@ -256,7 +256,24 @@ function App(){
       if(exportIncludiAI){
         var aiD=aiMap[String(c.id)];
         var cRes=aiD&&aiD.analisi;
-        if(!cRes){try{var snap=await db.collection("ai_results").doc(String(c.id)).get();if(snap.exists)cRes=snap.data().analisi;}catch(e){}}
+        var debugInfo='';
+        var rawSnap=null;
+        if(!cRes){
+          try{
+            var snap=await db.collection("ai_results").doc(String(c.id)).get();
+            rawSnap=snap;
+            if(snap.exists)cRes=snap.data().analisi;
+          }catch(e){debugInfo='Errore Firestore: '+e.message;}
+        }
+        // DEBUG: mostra struttura raw nel PDF
+        html+='<div style="background:#fffbeb;border:1px dashed #f59e0b;border-radius:6px;padding:8px;margin-bottom:6px;font-size:10px;color:#92400e;">';
+        html+='<b>DEBUG card id:</b> '+escHtml(String(c.id))+'<br>';
+        html+='<b>aiMap keys:</b> '+escHtml(Object.keys(aiMap).join(', '))+'<br>';
+        html+='<b>aiD from aiMap:</b> '+escHtml(JSON.stringify(aiD))+'<br>';
+        if(rawSnap){html+='<b>Firestore snap exists:</b> '+rawSnap.exists+'<br>';if(rawSnap.exists)html+='<b>Firestore raw data:</b> '+escHtml(JSON.stringify(rawSnap.data()))+'<br>';}
+        html+='<b>cRes finale:</b> '+escHtml(JSON.stringify(cRes))+'<br>';
+        if(debugInfo)html+='<b>Errore:</b> '+escHtml(debugInfo)+'<br>';
+        html+='</div>';
         if(cRes&&(cRes.sintesi||cRes.dinamica||cRes.spunto)){
           html+='<div style="margin-top:10px;background:#f0f4ff;border:1px solid #c7d2fe;border-radius:8px;padding:10px 14px;">';
           html+='<div style="font-size:11px;font-weight:700;color:#6366f1;margin-bottom:8px;">🤖 Analisi AI</div>';
