@@ -947,7 +947,7 @@ function App(){
           return h("button",{key:t.k,onClick:function(){setView(t.k);setViewStudenti(t.k==="studenti");},style:{padding:"4px 11px",borderRadius:7,border:"none",background:view===t.k?"rgba(99,102,241,.4)":"transparent",color:view===t.k?"#fff":"rgba(255,255,255,.4)",fontWeight:700,cursor:"pointer",fontSize:13}},t.i);
         })
       ),
-      !simulaSt&&h("button",{onClick:function(){setEditMode(null);setForm(Object.assign({},FORM0));setSM(true);},style:{background:"linear-gradient(135deg,#6366f1,#8b5cf6)",border:"none",borderRadius:20,width:34,height:34,cursor:"pointer",color:"#fff",fontSize:20,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800}},"+"),
+      isProf&&!simulaSt&&h("button",{onClick:function(){setEditMode(null);setForm(Object.assign({},FORM0));setSM(true);},style:{background:"linear-gradient(135deg,#6366f1,#8b5cf6)",border:"none",borderRadius:20,width:34,height:34,cursor:"pointer",color:"#fff",fontSize:20,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800}},"+"),
       !isProf&&!simulaSt&&h("button",{onClick:function(){setShowProfilo(true);},style:{background:"rgba(99,102,241,.15)",border:"1px solid rgba(99,102,241,.3)",borderRadius:8,padding:"4px 9px",cursor:"pointer",fontSize:12,color:"#a5b4fc",fontWeight:700}},"📊 Il mio profilo"),
       h("button",{onClick:logout,style:{background:"none",border:"1px solid rgba(255,255,255,.1)",borderRadius:7,padding:"4px 9px",cursor:"pointer",fontSize:11,color:"rgba(255,255,255,.3)"}},"Esci")
     ),
