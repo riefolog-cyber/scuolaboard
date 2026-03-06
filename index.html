@@ -259,6 +259,10 @@ function App(){
   var [aiQuizGenTesto,setAiQuizGenTesto]=useState("");
   var [aiQuizGenLoading,setAiQuizGenLoading]=useState(false);
   var [aiQuizGenErr,setAiQuizGenErr]=useState("");
+  var [aiQuizGenNumDom,setAiQuizGenNumDom]=useState(4);
+  var [aiQuizGenTipo,setAiQuizGenTipo]=useState("multipla"); // multipla | verofalso | aperta | misto
+  var [aiQuizGenAnteprima,setAiQuizGenAnteprima]=useState(null); // array domande generate, null = step 1
+  var [aiQuizGenRegenIdx,setAiQuizGenRegenIdx]=useState(null); // indice domanda in regen
   var [showSommario,setShowSommario]=useState(null); // cardId
   var [sommarioResult,setSommarioResult]=useState({});
   var [sommarioLoading,setSommarioLoading]=useState(null);
@@ -1019,19 +1023,56 @@ function App(){
   var qrUrl="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data="+encodeURIComponent(window.location.href);
 
   // ── Generazione quiz da AI ──
+  function buildQuizPrompt(testo,num,tipo){
+    var tipoIstr="";
+    if(tipo==="multipla")tipoIstr='Genera SOLO domande a scelta multipla. Ogni domanda ha 4 opzioni, una sola corretta.\nFormato per ogni domanda: {"tipo":"multipla","testo":"...","opzioni":["A","B","C","D"],"corretta":"0"}\n(corretta = indice 0-based della risposta giusta)';
+    else if(tipo==="verofalso")tipoIstr='Genera SOLO domande Vero/Falso.\nFormato per ogni domanda: {"tipo":"verofalso","testo":"...","opzioni":["Vero","Falso"],"corretta":"Vero"}\n(corretta = "Vero" oppure "Falso")';
+    else if(tipo==="aperta")tipoIstr='Genera SOLO domande a risposta aperta (verranno valutate dall\'AI).\nFormato per ogni domanda: {"tipo":"aperta","testo":"...","opzioni":[],"corretta":""}';
+    else tipoIstr='Mescola i tipi: alcune scelta multipla (4 opzioni), alcune Vero/Falso, alcune aperte.\nFormato multipla: {"tipo":"multipla","testo":"...","opzioni":["A","B","C","D"],"corretta":"0"}\nFormato verofalso: {"tipo":"verofalso","testo":"...","opzioni":["Vero","Falso"],"corretta":"Vero"}\nFormato aperta: {"tipo":"aperta","testo":"...","opzioni":[],"corretta":""}\n';
+    return 'Sei un insegnante di IRC (Religione Cattolica) in una scuola secondaria di II grado.\nDato il seguente testo, genera esattamente '+num+' domande per un quiz didattico.\n'+tipoIstr+'\nRispondi SOLO con questo JSON, nessun testo esterno:\n{\n  "domande": [ /* array di '+num+' oggetti domanda */ ]\n}\n\nTESTO:\n'+testo.slice(0,2500);
+  }
+
   async function aiGeneraQuiz(){
     if(!aiQuizGenTesto.trim()||!orKey){if(!orKey)setAskKey(true);return;}
     setAiQuizGenLoading(true);setAiQuizGenErr("");
-    var prompt='Sei un insegnante di IRC (Religione) in una scuola secondaria di II grado.\nDato il seguente testo, genera 4 domande a scelta multipla per un quiz didattico.\nOgni domanda deve avere 4 opzioni, una sola corretta.\nRispondi SOLO con questo JSON:\n{\n  "domande": [\n    {"testo":"...","opzioni":["A","B","C","D"],"corretta":"0"},\n    ...\n  ]\n}\nL\'indice corretta è 0-based (0=prima opzione).\n\nTESTO:\n'+aiQuizGenTesto.slice(0,2000);
+    var prompt=buildQuizPrompt(aiQuizGenTesto,aiQuizGenNumDom,aiQuizGenTipo);
     try{
-      var r=await callGroqJSON(orKey,prompt,1200);
+      var r=await callGroqJSON(orKey,prompt,1800);
       if(r&&Array.isArray(r.domande)&&r.domande.length){
-        var newDom=r.domande.map(function(d){return{tipo:"multipla",testo:d.testo||"",opzioni:d.opzioni||["","","",""],corretta:String(d.corretta||"0")};});
-        setForm(function(p){return Object.assign({},p,{tipo:"quiz",quizDomande:(p.quizDomande||[]).concat(newDom)});});
-        setShowAiQuizGen(false);setAiQuizGenTesto("");
-      } else {setAiQuizGenErr("Risposta AI non valida. Riprova.");}
+        var domande=r.domande.map(function(d){
+          if(d.tipo==="verofalso")return{tipo:"verofalso",testo:d.testo||"",opzioni:["Vero","Falso"],corretta:d.corretta||"Vero"};
+          if(d.tipo==="aperta")return{tipo:"aperta",testo:d.testo||"",opzioni:[],corretta:""};
+          return{tipo:"multipla",testo:d.testo||"",opzioni:d.opzioni&&d.opzioni.length>=2?d.opzioni:["","","",""],corretta:String(d.corretta||"0")};
+        });
+        setAiQuizGenAnteprima(domande);
+      } else {setAiQuizGenErr("L'AI non ha generato domande valide. Riprova con un testo più lungo.");}
     }catch(e){setAiQuizGenErr(e.message||"Errore AI.");}
     setAiQuizGenLoading(false);
+  }
+
+  async function aiRigenDomanda(idx){
+    if(!aiQuizGenAnteprima||!orKey)return;
+    setAiQuizGenRegenIdx(idx);
+    var d=aiQuizGenAnteprima[idx];
+    var prompt=buildQuizPrompt(aiQuizGenTesto,1,d.tipo==="multipla"?"multipla":d.tipo==="verofalso"?"verofalso":"aperta");
+    try{
+      var r=await callGroqJSON(orKey,prompt,600);
+      if(r&&Array.isArray(r.domande)&&r.domande.length){
+        var nd=r.domande[0];
+        var nuova;
+        if(nd.tipo==="verofalso")nuova={tipo:"verofalso",testo:nd.testo||"",opzioni:["Vero","Falso"],corretta:nd.corretta||"Vero"};
+        else if(nd.tipo==="aperta")nuova={tipo:"aperta",testo:nd.testo||"",opzioni:[],corretta:""};
+        else nuova={tipo:"multipla",testo:nd.testo||"",opzioni:nd.opzioni&&nd.opzioni.length>=2?nd.opzioni:["","","",""],corretta:String(nd.corretta||"0")};
+        setAiQuizGenAnteprima(function(prev){var a=prev.slice();a[idx]=nuova;return a;});
+      }
+    }catch(e){}
+    setAiQuizGenRegenIdx(null);
+  }
+
+  function aiConfirmaQuiz(){
+    if(!aiQuizGenAnteprima)return;
+    setForm(function(p){return Object.assign({},p,{tipo:"quiz",quizDomande:(p.quizDomande||[]).concat(aiQuizGenAnteprima)});});
+    setShowAiQuizGen(false);setAiQuizGenTesto("");setAiQuizGenAnteprima(null);setAiQuizGenErr("");
   }
 
   // ── Riassunto discussione ──
@@ -2203,10 +2244,10 @@ function App(){
           form.opzioni.length<6&&h("button",{onClick:function(){setForm(function(p){return Object.assign({},p,{opzioni:p.opzioni.concat([""])});});},style:{background:"rgba(255,255,255,.04)",border:"1px dashed rgba(255,255,255,.15)",borderRadius:7,padding:"5px 12px",cursor:"pointer",fontSize:12,color:"rgba(255,255,255,.4)",width:"100%"}},"+ Aggiungi opzione")
         ),
         form.tipo==="quiz"&&h("div",{style:{marginBottom:10}},
-          h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}},
+          h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,flexWrap:"wrap",gap:6}},
             h("label",{style:{fontSize:10,fontWeight:700,color:"rgba(255,255,255,.4)",letterSpacing:1}},"🧩 DOMANDE QUIZ"),
-            h("div",{style:{display:"flex",alignItems:"center",gap:8}},
-              h("button",{onClick:function(){if(!orKey){setAskKey(true);return;}setShowAiQuizGen(true);},style:{background:"rgba(99,102,241,.2)",border:"1px solid rgba(99,102,241,.4)",borderRadius:7,padding:"3px 10px",cursor:"pointer",fontSize:11,color:"#a5b4fc",fontWeight:700,display:"flex",alignItems:"center",gap:4}},"✨ Genera con AI"),
+            h("div",{style:{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}},
+              h("button",{onClick:function(){if(!orKey){setAskKey(true);return;}setAiQuizGenAnteprima(null);setAiQuizGenErr("");setShowAiQuizGen(true);},style:{background:"linear-gradient(135deg,rgba(99,102,241,.3),rgba(139,92,246,.25))",border:"1px solid rgba(99,102,241,.5)",borderRadius:7,padding:"4px 11px",cursor:"pointer",fontSize:11,color:"#c4b5fd",fontWeight:800,display:"flex",alignItems:"center",gap:4}},"✨ Genera con AI"),
               h("label",{style:{fontSize:10,color:"rgba(255,255,255,.35)"}},"⏱ Timer (min):"),
               h("input",{type:"number",min:1,max:120,value:form.quizTimer||10,onInput:function(e){setForm(function(p){return Object.assign({},p,{quizTimer:parseInt(e.target.value)||10});});},style:Object.assign({},S.input,{width:54,textAlign:"center",padding:"3px 6px"})})
             )
@@ -2261,17 +2302,89 @@ function App(){
     ),
 
     // ── MODAL AI GENERA QUIZ ──
-    showAiQuizGen&&h("div",{style:{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",zIndex:600,display:"flex",alignItems:"center",justifyContent:"center",padding:20},onClick:function(){setShowAiQuizGen(false);}},
-      h("div",{style:{background:"#1e293b",border:"1px solid rgba(99,102,241,.4)",borderRadius:20,padding:26,maxWidth:520,width:"100%"},onClick:function(e){e.stopPropagation();}},
-        h("div",{style:{display:"flex",alignItems:"center",gap:10,marginBottom:14}},
-          h("span",{style:{fontSize:32}},"✨"),
-          h("div",null,h("h3",{style:{margin:0,color:"#f1f5f9",fontSize:16,fontWeight:800}},"Genera Quiz con AI"),h("p",{style:{margin:0,color:"rgba(255,255,255,.4)",fontSize:12}},"Incolla un testo: l'AI crea 4 domande a scelta multipla"))
+    showAiQuizGen&&h("div",{style:{position:"fixed",inset:0,background:"rgba(0,0,0,.88)",zIndex:700,display:"flex",alignItems:"flex-end",justifyContent:"center",padding:"0"},onClick:function(){if(!aiQuizGenLoading){setShowAiQuizGen(false);}}},
+      h("div",{style:{background:"#0f172a",borderRadius:"20px 20px 0 0",padding:24,width:"100%",maxWidth:580,maxHeight:"92vh",overflowY:"auto",border:"1px solid rgba(99,102,241,.3)",borderBottom:"none"},onClick:function(e){e.stopPropagation();}},
+        h("div",{style:{width:32,height:3,background:"rgba(255,255,255,.15)",borderRadius:4,margin:"0 auto 16px"}}),
+
+        // ── HEADER ──
+        h("div",{style:{display:"flex",alignItems:"center",gap:10,marginBottom:16}},
+          h("div",{style:{width:38,height:38,borderRadius:10,background:"linear-gradient(135deg,#6366f1,#8b5cf6)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}},"✨"),
+          h("div",null,
+            h("div",{style:{fontWeight:800,color:"#f1f5f9",fontSize:15}},"Genera Quiz con AI"),
+            h("div",{style:{color:"rgba(255,255,255,.4)",fontSize:11}},aiQuizGenAnteprima?"Anteprima — modifica o rigenera":"Incolla un testo, scegli il tipo e il numero di domande")
+          ),
+          !aiQuizGenLoading&&h("button",{onClick:function(){setShowAiQuizGen(false);},style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.3)",fontSize:20,cursor:"pointer",flexShrink:0}},"×")
         ),
-        h("textarea",{value:aiQuizGenTesto,onInput:function(e){setAiQuizGenTesto(e.target.value);},rows:8,placeholder:"Incolla qui il testo da cui generare le domande (un capitolo del libro, un articolo, delle note…)",style:Object.assign({},S.input,{resize:"vertical",marginBottom:12,fontSize:13,lineHeight:1.6})}),
-        aiQuizGenErr&&h("div",{style:{background:"rgba(239,68,68,.1)",border:"1px solid rgba(239,68,68,.3)",borderRadius:8,padding:"8px 12px",color:"#f87171",fontSize:12,marginBottom:12}},aiQuizGenErr),
-        h("div",{style:{display:"flex",gap:10}},
-          h("button",{onClick:function(){setShowAiQuizGen(false);setAiQuizGenTesto("");setAiQuizGenErr("");},style:{flex:1,padding:11,background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.6)",border:"none",borderRadius:11,fontSize:13,fontWeight:700,cursor:"pointer"}},"Annulla"),
-          h("button",{onClick:aiGeneraQuiz,disabled:aiQuizGenLoading||!aiQuizGenTesto.trim(),style:{flex:2,padding:11,background:aiQuizGenLoading||!aiQuizGenTesto.trim()?"rgba(255,255,255,.1)":"linear-gradient(135deg,#6366f1,#8b5cf6)",color:aiQuizGenLoading||!aiQuizGenTesto.trim()?"rgba(255,255,255,.3)":"#fff",border:"none",borderRadius:11,fontSize:14,fontWeight:800,cursor:aiQuizGenLoading||!aiQuizGenTesto.trim()?"not-allowed":"pointer"}},aiQuizGenLoading?"⏳ Generazione in corso…":"✨ Genera domande")
+
+        // ── STEP 1: configurazione ──
+        !aiQuizGenAnteprima&&h(Fragment,null,
+          h("textarea",{value:aiQuizGenTesto,onInput:function(e){setAiQuizGenTesto(e.target.value);},rows:7,placeholder:"Incolla qui il testo sorgente: capitolo del libro, articolo, appunti di lezione…",style:Object.assign({},S.input,{resize:"vertical",marginBottom:12,fontSize:12,lineHeight:1.65})}),
+
+          // tipo + numero domande
+          h("div",{style:{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}},
+            h("div",{style:{flex:2,minWidth:160}},
+              h("label",{style:{fontSize:10,fontWeight:700,color:"rgba(255,255,255,.4)",letterSpacing:1,display:"block",marginBottom:6}},"TIPO DI DOMANDE"),
+              h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:5}},
+                [{v:"multipla",i:"🔘",l:"Scelta multipla"},{v:"verofalso",i:"☑️",l:"Vero / Falso"},{v:"aperta",i:"✍️",l:"Risposta aperta"},{v:"misto",i:"🔀",l:"Misto"}].map(function(t){
+                  var sel=aiQuizGenTipo===t.v;
+                  return h("button",{key:t.v,onClick:function(){setAiQuizGenTipo(t.v);},style:{padding:"7px 8px",border:"1px solid "+(sel?"#6366f1":"rgba(255,255,255,.1)"),borderRadius:8,background:sel?"rgba(99,102,241,.25)":"rgba(255,255,255,.04)",color:sel?"#c4b5fd":"rgba(255,255,255,.5)",fontSize:11,fontWeight:sel?800:500,cursor:"pointer",textAlign:"left"}},t.i+" "+t.l);
+                })
+              )
+            ),
+            h("div",{style:{flex:1,minWidth:100}},
+              h("label",{style:{fontSize:10,fontWeight:700,color:"rgba(255,255,255,.4)",letterSpacing:1,display:"block",marginBottom:6}},"N° DOMANDE"),
+              h("input",{type:"number",min:1,max:10,value:aiQuizGenNumDom,onInput:function(e){var v=Math.max(1,Math.min(10,parseInt(e.target.value)||4));setAiQuizGenNumDom(v);},style:Object.assign({},S.input,{fontSize:22,fontWeight:800,textAlign:"center",padding:"10px 8px",height:72,color:"#c4b5fd"})}),
+              h("div",{style:{fontSize:9,color:"rgba(255,255,255,.25)",textAlign:"center",marginTop:3}},"min 1 — max 10")
+            )
+          ),
+
+          aiQuizGenErr&&h("div",{style:{background:"rgba(239,68,68,.1)",border:"1px solid rgba(239,68,68,.3)",borderRadius:8,padding:"8px 12px",color:"#f87171",fontSize:12,marginBottom:10}},aiQuizGenErr),
+
+          h("div",{style:{display:"flex",gap:8}},
+            h("button",{onClick:function(){setShowAiQuizGen(false);},style:{flex:1,padding:11,background:"rgba(255,255,255,.07)",color:"rgba(255,255,255,.5)",border:"none",borderRadius:11,fontSize:13,fontWeight:700,cursor:"pointer"}},"Annulla"),
+            h("button",{onClick:aiGeneraQuiz,disabled:aiQuizGenLoading||!aiQuizGenTesto.trim(),style:{flex:2,padding:11,background:aiQuizGenLoading||!aiQuizGenTesto.trim()?"rgba(255,255,255,.08)":"linear-gradient(135deg,#6366f1,#8b5cf6)",color:aiQuizGenLoading||!aiQuizGenTesto.trim()?"rgba(255,255,255,.25)":"#fff",border:"none",borderRadius:11,fontSize:14,fontWeight:800,cursor:aiQuizGenLoading||!aiQuizGenTesto.trim()?"not-allowed":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}},
+              aiQuizGenLoading?h(Fragment,null,h("span",{style:{display:"inline-block",animation:"spin 1s linear infinite"}},"⚙️")," Generazione in corso…"):"✨ Genera "+aiQuizGenNumDom+" domande"
+            )
+          )
+        ),
+
+        // ── STEP 2: anteprima domande ──
+        aiQuizGenAnteprima&&h(Fragment,null,
+          h("div",{style:{background:"rgba(34,197,94,.08)",border:"1px solid rgba(34,197,94,.2)",borderRadius:9,padding:"8px 12px",marginBottom:14,fontSize:12,color:"#4ade80",display:"flex",alignItems:"center",gap:6}},
+            "✅ Generate ",h("strong",null,aiQuizGenAnteprima.length)," domande — controlla, modifica o rigenera singole domande, poi conferma."
+          ),
+          aiQuizGenAnteprima.map(function(d,i){
+            var isRegen=aiQuizGenRegenIdx===i;
+            var tipoBadgeBg=d.tipo==="multipla"?"#6366f1":d.tipo==="verofalso"?"#22c55e":"#f59e0b";
+            var tipoLabel=d.tipo==="multipla"?"Multipla":d.tipo==="verofalso"?"Vero/Falso":"Aperta";
+            return h("div",{key:i,style:{background:"rgba(255,255,255,.04)",border:"1px solid rgba(99,102,241,.2)",borderRadius:11,padding:"11px 13px",marginBottom:8,opacity:isRegen?.5:1}},
+              h("div",{style:{display:"flex",alignItems:"center",gap:7,marginBottom:8}},
+                h("span",{style:{background:"#6366f1",color:"#fff",borderRadius:"50%",width:20,height:20,display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:800,flexShrink:0}},i+1),
+                h("span",{style:{background:tipoBadgeBg+"33",color:tipoBadgeBg,borderRadius:6,padding:"1px 7px",fontSize:10,fontWeight:700,border:"1px solid "+tipoBadgeBg+"55"}},tipoLabel),
+                h("div",{style:{flex:1}}),
+                h("button",{onClick:function(){aiRigenDomanda(i);},disabled:isRegen||aiQuizGenRegenIdx!==null,title:"Rigenera questa domanda",style:{background:"rgba(99,102,241,.15)",border:"1px solid rgba(99,102,241,.3)",borderRadius:7,padding:"3px 8px",cursor:isRegen||aiQuizGenRegenIdx!==null?"not-allowed":"pointer",fontSize:11,color:"#a5b4fc",fontWeight:700}},isRegen?"⏳":"↻ Rigenera")
+              ),
+              h("div",{style:{fontSize:13,color:"rgba(255,255,255,.9)",lineHeight:1.6,marginBottom:d.tipo!=="aperta"?8:0,fontWeight:600}},d.testo),
+              d.tipo==="multipla"&&h("div",{style:{display:"flex",flexDirection:"column",gap:4}},
+                d.opzioni.map(function(op,j){
+                  var isCorr=String(d.corretta)===String(j);
+                  return h("div",{key:j,style:{display:"flex",alignItems:"center",gap:7,background:isCorr?"rgba(34,197,94,.1)":"rgba(255,255,255,.03)",borderRadius:7,padding:"5px 9px",border:"1px solid "+(isCorr?"rgba(34,197,94,.3)":"rgba(255,255,255,.07)")}},
+                    h("span",{style:{width:16,height:16,borderRadius:"50%",border:"2px solid "+(isCorr?"#22c55e":"rgba(255,255,255,.2)"),background:isCorr?"#22c55e":"transparent",flexShrink:0}}),
+                    h("span",{style:{fontSize:12,color:isCorr?"#4ade80":"rgba(255,255,255,.65)"}},op),
+                    isCorr&&h("span",{style:{marginLeft:"auto",fontSize:10,color:"#4ade80",fontWeight:700}},"✓ corretta")
+                  );
+                })
+              ),
+              d.tipo==="verofalso"&&h("div",{style:{display:"flex",gap:8}},
+                ["Vero","Falso"].map(function(vf){var isCorr=d.corretta===vf;return h("div",{key:vf,style:{flex:1,padding:"6px 10px",borderRadius:8,border:"1px solid "+(isCorr?"rgba(34,197,94,.4)":"rgba(255,255,255,.1)"),background:isCorr?"rgba(34,197,94,.1)":"rgba(255,255,255,.03)",color:isCorr?"#4ade80":"rgba(255,255,255,.4)",fontSize:12,fontWeight:isCorr?800:400,textAlign:"center"}},vf+(isCorr?" ✓":""));})
+              ),
+              d.tipo==="aperta"&&h("div",{style:{fontSize:11,color:"rgba(255,255,255,.35)",fontStyle:"italic"}},"✨ Risposta libera — valutata dall'AI al momento della correzione")
+            );
+          }),
+          h("div",{style:{display:"flex",gap:8,marginTop:6,paddingTop:14,borderTop:"1px solid rgba(255,255,255,.07)"}},
+            h("button",{onClick:function(){setAiQuizGenAnteprima(null);},style:{flex:1,padding:11,background:"rgba(255,255,255,.07)",color:"rgba(255,255,255,.5)",border:"none",borderRadius:11,fontSize:12,fontWeight:700,cursor:"pointer"}},"← Modifica testo"),
+            h("button",{onClick:aiConfirmaQuiz,disabled:aiQuizGenRegenIdx!==null,style:{flex:2,padding:11,background:aiQuizGenRegenIdx!==null?"rgba(255,255,255,.08)":"linear-gradient(135deg,#22c55e,#16a34a)",color:aiQuizGenRegenIdx!==null?"rgba(255,255,255,.25)":"#fff",border:"none",borderRadius:11,fontSize:14,fontWeight:800,cursor:aiQuizGenRegenIdx!==null?"not-allowed":"pointer"}},"✅ Aggiungi "+aiQuizGenAnteprima.length+" domande al quiz")
+          )
         )
       )
     ),
