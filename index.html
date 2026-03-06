@@ -362,12 +362,12 @@ function App(){
   // Sound on new proposal for prof
   useEffect(function(){
     if(!isProf)return;
-    var count=proposte.length;
+    var count=cards.filter(function(c){return c.proposta===true;}).length;
     if(prevProposteCount.current>0&&count>prevProposteCount.current){
       playAlarm();
     }
     prevProposteCount.current=count;
-  },[proposte.length]);
+  },[cards]);
 
   // Push notification for students on new cards
   useEffect(function(){
