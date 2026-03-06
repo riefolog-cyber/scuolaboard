@@ -2065,12 +2065,8 @@ function App(){
         ),
         isProf&&!editMode&&h("div",{style:{marginBottom:10}},h("label",{style:{fontSize:10,fontWeight:700,color:"rgba(255,255,255,.4)",display:"block",marginBottom:4,letterSpacing:1}},"\u23f0 PUBBLICA IL (opzionale)"),h("input",{type:"datetime-local",value:form.pubblicaIl||"",onInput:function(e){setForm(function(p){return Object.assign({},p,{pubblicaIl:e.target.value});});},style:Object.assign({},S.input,{colorScheme:"dark",fontSize:12})}),h("p",{style:{fontSize:10,color:"rgba(255,255,255,.3)",marginTop:4}},"La card sarà nascosta agli studenti fino a questa data/ora")),
         h("button",{onClick:addCard,style:{width:"100%",padding:13,marginTop:4,background:form.titolo.trim()?"linear-gradient(135deg,#6366f1,#8b5cf6)":"rgba(255,255,255,.06)",color:form.titolo.trim()?"#fff":"rgba(255,255,255,.2)",border:"none",borderRadius:12,fontSize:14,fontWeight:800,cursor:form.titolo.trim()?"pointer":"not-allowed"}},editMode?"💾 Salva modifiche":(!isProf?"📤 Invia proposta":"✅ Crea card"))
-      )
-    )
-  );
-}
-
-showRifiutaModal&&h("div",{style:{position:"fixed",inset:0,background:"rgba(0,0,0,.82)",zIndex:500,display:"flex",alignItems:"center",justifyContent:"center",padding:20},onClick:function(){setShowRifiutaModal(null);setRifiutaInput("");}},
+      ),
+    showRifiutaModal&&h("div",{style:{position:"fixed",inset:0,background:"rgba(0,0,0,.82)",zIndex:500,display:"flex",alignItems:"center",justifyContent:"center",padding:20},onClick:function(){setShowRifiutaModal(null);setRifiutaInput("");}},
       h("div",{style:{background:"#1e293b",border:"1px solid rgba(239,68,68,.35)",borderRadius:20,padding:26,maxWidth:360,width:"100%"},onClick:function(e){e.stopPropagation();}},
         h("div",{style:{fontSize:36,textAlign:"center",marginBottom:8}},"\u274c"),
         h("h3",{style:{margin:"0 0 4px",color:"#f87171",fontSize:15,fontWeight:800,textAlign:"center"}},"Rifiuta proposta"),
@@ -2082,8 +2078,11 @@ showRifiutaModal&&h("div",{style:{position:"fixed",inset:0,background:"rgba(0,0,
           h("button",{onClick:function(){rifiutaConMot(showRifiutaModal.id,rifiutaInput);},style:{flex:2,padding:11,background:"linear-gradient(135deg,#ef4444,#f87171)",color:"#fff",border:"none",borderRadius:11,fontSize:14,fontWeight:800,cursor:"pointer"}},"\u274c Rifiuta")
         )
       )
-    ),
-    ReactDOM.createRoot(document.getElementById("root")).render(h(App,null));
+    )
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(h(App,null));
 })();
 </script>
 </body>
