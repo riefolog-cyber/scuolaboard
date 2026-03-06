@@ -67,7 +67,8 @@ function puntiSave(nome,delta){
 }
 function puntiListen(cb){
   return db.collection("punti_studenti").onSnapshot(function(s){var m={};s.forEach(function(d){m[d.id]=d.data();});cb(m);});
-}return db.collection("config").doc("classi_custom").onSnapshot(function(doc){cb(doc.exists&&doc.data().lista?doc.data().lista:[]);});}
+}
+function fbClassiListen(cb){return db.collection("config").doc("classi_custom").onSnapshot(function(doc){cb(doc.exists&&doc.data().lista?doc.data().lista:[]);});}}
 var FORM0={tipo:"domanda",titolo:"",testo:"",opzioni:["",""],links:[{url:"",label:""}],classi:["TUTTE"],quizDomande:[],quizTimer:10,pubblicaIl:""};
 
 function fmt(d){return new Date(d).toLocaleDateString("it-IT",{day:"2-digit",month:"short",year:"numeric"});}
