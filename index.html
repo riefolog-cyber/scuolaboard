@@ -139,7 +139,7 @@ function msgPrivatiListen(profMode,nameOrUid,cb){
   }
 }
 function fbClassiListen(cb){return db.collection("config").doc("classi_custom").onSnapshot(function(doc){cb(doc.exists&&doc.data().lista?doc.data().lista:[]);});}
-var FORM0={tipo:"domanda",titolo:"",testo:"",opzioni:["",""],links:[{url:"",label:""}],classi:["TUTTE"],quizDomande:[],quizTimer:10,pubblicaIl:"",immagini:[],copertina:null};
+var FORM0={tipo:"domanda",titolo:"",testo:"",opzioni:["",""],links:[{url:"",label:""}],classi:["TUTTE"],quizDomande:[],quizTimer:10,pubblicaIl:"",immagini:[],copertina:null,scalaDomanda:"",brainstormAnonimo:true};
 
 function fmt(d){return new Date(d).toLocaleDateString("it-IT",{day:"2-digit",month:"short",year:"numeric"});}
 function fmtDT(d){
@@ -189,8 +189,8 @@ function useCountUp(target,duration){
   },[target]);
   return val;
 }
-function badgeBg(t){return t==="domanda"?"#6366f1":t==="nota"?"#f59e0b":t==="sondaggio"?"#22c55e":t==="annuncio"?"#ef4444":t==="alzata"?"#06b6d4":"#94a3b8";}
-function tipoIcon(t){return t==="domanda"?"💬":t==="nota"?"📄":t==="sondaggio"?"🗳️":t==="quiz"?"🧩":t==="annuncio"?"📢":t==="alzata"?"✋":"📌";}
+function badgeBg(t){return t==="domanda"?"#6366f1":t==="nota"?"#f59e0b":t==="sondaggio"?"#22c55e":t==="annuncio"?"#ef4444":t==="alzata"?"#06b6d4":t==="scala"?"#a855f7":t==="brainstorm"?"#f97316":"#94a3b8";}
+function tipoIcon(t){return t==="domanda"?"💬":t==="nota"?"📄":t==="sondaggio"?"🗳️":t==="quiz"?"🧩":t==="annuncio"?"📢":t==="alzata"?"✋":t==="scala"?"📊":t==="brainstorm"?"💡":"📌";}
 function fbSave(c){return db.collection("cards").doc(String(c.id)).set(c);}
 function fbDel(id){return db.collection("cards").doc(String(id)).delete();}
 function fbListen(cb){return db.collection("cards").orderBy("ordine","asc").onSnapshot(function(s){var a=[];s.forEach(function(d){a.push(d.data());});cb(a);});}
@@ -318,7 +318,36 @@ var S={
   annullaBtn:{flex:1,padding:11,background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.6)",border:"none",borderRadius:11,fontSize:14,fontWeight:700,cursor:"pointer"}
 };
 
-function renderLinks(card){
+// ── WORD CLOUD ──────────────────────────────────────────────
+var STOP_IT=new Set(["il","la","lo","le","gli","i","un","una","uno","di","del","della","dell","dei","delle","degli","a","ad","al","alla","all","ai","alle","agli","da","dal","dalla","dall","dai","dalle","dagli","in","nel","nella","nell","nei","nelle","negli","su","sul","sulla","sull","sui","sulle","sugli","con","per","tra","fra","e","ed","o","ma","se","che","chi","cui","non","ho","ha","hai","hanno","è","sono","sei","siamo","siete","era","erano","mi","ti","ci","vi","si","lo","la","li","le","ne","me","te","lui","lei","noi","voi","loro","questo","questa","questi","queste","quello","quella","quelli","quelle","molto","più","anche","come","quando","dove","perché","perche","poi","già","gia","ancora","sempre","mai","tutto","tutti","tutta","tutte","mio","mia","miei","mie","tuo","tua","tuoi","tue","suo","sua","suoi","sue","nostro","nostra","nostri","nostre","loro","fare","fatto","avere","essere","stato","stata","stati","state","che","cosa","come","però","pero","quindi","allora","anzi","invece","oppure","né","ne","sia","sia","può","puo","deve","vuole","vero","modo","parte","volta","caso","prima","dopo","qui","lì","li","ora","poi"]);
+function buildWordCloud(cards,cardId){
+  var testi=[];
+  cards.filter(function(c){return !c.proposta&&(cardId==="tutte"||String(c.id)===String(cardId));}).forEach(function(c){
+    (c.commenti||[]).forEach(function(cm){testi.push(cm.testo);if(cm.risposte)cm.risposte.forEach(function(r){testi.push(r.testo);});});
+    if(c.tipo==="brainstorm")(c.idee||[]).forEach(function(i){testi.push(i.testo);});
+  });
+  var freq={};
+  testi.join(" ").toLowerCase().replace(/[^a-zàèéìòùa-z\s]/gi,"").split(/\s+/).forEach(function(w){
+    if(w.length<3||STOP_IT.has(w))return;
+    freq[w]=(freq[w]||0)+1;
+  });
+  return Object.entries(freq).filter(function(e){return e[1]>0;}).sort(function(a,b){return b[1]-a[1];}).slice(0,50);
+}
+// ── SCALA DI ACCORDO ────────────────────────────────────────
+function scalaSave(cardId,nome,valore){
+  return db.collection("scala_risposte").doc(String(cardId)+"_"+nome).set({cardId:String(cardId),nome:nome,valore:valore,data:new Date().toISOString()});
+}
+function scalaListen(cardId,cb){
+  return db.collection("scala_risposte").where("cardId","==",String(cardId)).onSnapshot(function(s){var a=[];s.forEach(function(d){a.push(d.data());});cb(a);});
+}
+// ── BRAINSTORMING ────────────────────────────────────────────
+function brainstormSave(cardId,nome,testo,anonimo){
+  var id=String(cardId)+"_"+Date.now()+"_"+Math.random().toString(36).slice(2,6);
+  return db.collection("cards").doc(String(cardId)).update({
+    idee:firebase.firestore.FieldValue.arrayUnion({id:id,testo:testo.trim(),nome:anonimo?"Anonimo":nome,data:new Date().toISOString(),approvata:false})
+  });
+}
+
   var links=normalizeLinks(card);
   if(!links.length)return null;
   return h("div",{style:{marginTop:8,display:"flex",flexDirection:"column",gap:5}},
@@ -446,9 +475,17 @@ function App(){
   function setAiQuizGenAnteprima(v){setAqg(function(p){return Object.assign({},p,{anteprima:typeof v==="function"?v(p.anteprima):v});});}
   function setAiQuizGenRegenIdx(v){setAqg(function(p){return Object.assign({},p,{regenIdx:v});});}
   var [imgUploading,setImgUploading]=useState(false);
-  var [showSommario,setShowSommario]=useState(null); // cardId
+  var [showSommario,setShowSommario]=useState(null);
   var [sommarioResult,setSommarioResult]=useState({});
   var [sommarioLoading,setSommarioLoading]=useState(null);
+  // ── WORD CLOUD ──
+  var [showWordCloud,setShowWordCloud]=useState(false);
+  var [wcTarget,setWcTarget]=useState("tutte");
+  // ── SCALA ──
+  var [scalaRisposte,setScalaRisposte]=useState([]);
+  var scalaUnsubRef=useRef(null);
+  // ── BRAINSTORM ──
+  var [brainstormTesto,setBrainstormTesto]=useState("");
   var [showMsgPrivato,setShowMsgPrivato]=useState(null); // {cardId, studenteName}
   var [msgPrivatoTesto,setMsgPrivatoTesto]=useState("");
   var [msgPrivatiMap,setMsgPrivatiMap]=useState({});
@@ -601,6 +638,7 @@ function App(){
       if(showSommario){setShowSommario(null);return;}
       if(showMsgPrivato){setShowMsgPrivato(null);setMsgPrivatoTesto("");return;}
       if(showMsgInbox){setShowMsgInbox(false);return;}
+      if(showWordCloud){setShowWordCloud(false);return;}
       if(askKey){setAskKey(false);setAkInput("");return;}
       if(showDuplica){setShowDuplica(null);return;}
       if(confirmDel){setConfirmDel(null);return;}
@@ -614,7 +652,7 @@ function App(){
     }
     document.addEventListener("keydown",onKey);
     return function(){document.removeEventListener("keydown",onKey);};
-  },[lightbox,showCard,showModal,showAiQuizGen,showSommario,showMsgPrivato,showMsgInbox,askKey,showDuplica,confirmDel,showReset,showResetOpt,showAmm,showProfilo,showTimerModal,showClasseModal,rinominaClasse,user]);
+  },[lightbox,showCard,showModal,showAiQuizGen,showSommario,showMsgPrivato,showMsgInbox,showWordCloud,askKey,showDuplica,confirmDel,showReset,showResetOpt,showAmm,showProfilo,showTimerModal,showClasseModal,rinominaClasse,user]);
 
   useEffect(function(){
     auth.getRedirectResult().then(function(cr){
@@ -703,6 +741,13 @@ function App(){
     if(!showCard||showCard.tipo!=="quiz"){setQuizRisposte([]);return;}
     quizUnsubRef.current=quizListenRisposte(showCard.id,function(arr){setQuizRisposte(arr);});
     return function(){if(quizUnsubRef.current){quizUnsubRef.current();quizUnsubRef.current=null;}};
+  },[showCard?String(showCard.id):null]);
+
+  useEffect(function(){
+    if(scalaUnsubRef.current){scalaUnsubRef.current();scalaUnsubRef.current=null;}
+    if(!showCard||showCard.tipo!=="scala"){setScalaRisposte([]);return;}
+    scalaUnsubRef.current=scalaListen(showCard.id,function(arr){setScalaRisposte(arr);});
+    return function(){if(scalaUnsubRef.current){scalaUnsubRef.current();scalaUnsubRef.current=null;}};
   },[showCard?String(showCard.id):null]);
 
   async function loginGoogle(){
@@ -841,6 +886,8 @@ function App(){
       if(opzioni)c.opzioni=opzioni;
       if(quizDomande)c.quizDomande=quizDomande;
       if(form.tipo==="quiz")c.quizTimer=form.quizTimer||10;
+      if(form.tipo==="scala"){c.scalaMin=form.scalaMin||"Per niente";c.scalaMax=form.scalaMax||"Completamente";}
+      if(form.tipo==="brainstorm"){c.brainstormAnonimo=form.brainstormAnonimo!==false;c.idee=[];}
       if(!isProf){c.proposta=true;if(user.classe)c.classi=[user.classe];}
       fbSave(c);
       if(isProf)showToast("Card pubblicata ✓","ok");
@@ -1627,6 +1674,20 @@ function App(){
                     c.tipo==="quiz"&&c.quizDomande&&h("div",{style:{marginTop:6,display:"flex",alignItems:"center",gap:6}},
                       h("span",{style:{fontSize:11,color:"rgba(236,72,153,.8)",fontWeight:700}},"🧩 "+c.quizDomande.length+" domande"),
                       c.quizTimer&&h("span",{style:{fontSize:11,color:"rgba(255,255,255,.52)"}},"⏱ "+c.quizTimer+" min")
+                    ),
+                    c.tipo==="scala"&&(function(){
+                      var risposte=[];// live count not available in grid, show static badge
+                      var scalaMin=c.scalaMin||"Per niente";var scalaMax=c.scalaMax||"Completamente";
+                      return h("div",{style:{marginTop:6}},
+                        h("div",{style:{display:"flex",justifyContent:"space-between",fontSize:10,color:"rgba(168,85,247,.7)",marginBottom:4}},h("span",null,scalaMin),h("span",null,scalaMax)),
+                        h("div",{style:{display:"flex",gap:4}},
+                          [1,2,3,4,5].map(function(v){return h("div",{key:v,style:{flex:1,height:6,borderRadius:3,background:"rgba(168,85,247,"+(0.1+v*0.12)+")"}});})
+                        )
+                      );
+                    })(),
+                    c.tipo==="brainstorm"&&h("div",{style:{marginTop:6,display:"flex",alignItems:"center",gap:6}},
+                      h("span",{style:{fontSize:11,color:"rgba(249,115,22,.8)",fontWeight:700}},"💡 "+(c.idee&&c.idee.filter(function(i){return i.approvata;}).length||0)+" idee approvate"),
+                      c.brainstormAnonimo&&h("span",{style:{fontSize:10,color:"rgba(255,255,255,.35)"}},"anonimo")
                     )
                   )
                 ),
@@ -1715,6 +1776,7 @@ function App(){
          })
       ),
       h("div",{style:{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}},
+        h("button",{onClick:function(){setShowWordCloud(true);},style:{background:"rgba(99,102,241,.15)",border:"1px solid rgba(99,102,241,.3)",borderRadius:9,padding:"8px 14px",cursor:"pointer",fontSize:12,fontWeight:700,color:"#a5b4fc"}},"☁️ Word Cloud commenti"),
         h("button",{onClick:function(){setShowReportSett(true);if(!reportSett)generaReportSettimanale();},style:{background:"rgba(139,92,246,.15)",border:"1px solid rgba(139,92,246,.3)",borderRadius:9,padding:"8px 14px",cursor:"pointer",fontSize:12,fontWeight:700,color:"#c4b5fd"}},"📋 Report settimanale AI"),
         !pushEnabled&&h("button",{onClick:requestPushPermission,style:{background:"rgba(34,197,94,.12)",border:"1px solid rgba(34,197,94,.3)",borderRadius:9,padding:"8px 14px",cursor:"pointer",fontSize:12,fontWeight:700,color:"#4ade80"}},"🔔 Attiva notifiche push"),
         pushEnabled&&h("span",{style:{background:"rgba(34,197,94,.15)",border:"1px solid rgba(34,197,94,.3)",borderRadius:9,padding:"8px 14px",fontSize:12,fontWeight:700,color:"#4ade80"}},"✅ Notifiche push attive")
@@ -1986,6 +2048,105 @@ function App(){
                   }))
               ),
               isProf&&!simulaSt&&alzate.length>0&&h("button",{onClick:function(){db.collection("cards").doc(String(showCard.id)).update({alzate:[]}).catch(function(){fbSave(Object.assign({},showCard,{alzate:[]}));});showToast("Mani abbassate tutte","ok");},style:{width:"100%",marginTop:8,padding:"8px",background:"rgba(239,68,68,.15)",border:"1px solid rgba(239,68,68,.3)",borderRadius:9,cursor:"pointer",fontSize:12,fontWeight:700,color:"#f87171"}},"✕ Abbassa tutte le mani")
+            );
+          })(),
+
+          // ── SCALA DI ACCORDO ──
+          showCard.tipo==="scala"&&(function(){
+            var vn=myName(user);
+            var miaRisp=scalaRisposte.find(function(r){return r.nome===vn;});
+            var mioValore=miaRisp?miaRisp.valore:null;
+            var isStudente=!isProf||simulaSt;
+            var labels=["","Per niente","Poco","Abbastanza","Molto","Completamente"];
+            var scalaMin=showCard.scalaMin||"Per niente";
+            var scalaMax=showCard.scalaMax||"Completamente";
+            // Distribuzione
+            var dist={1:0,2:0,3:0,4:0,5:0};
+            scalaRisposte.forEach(function(r){if(r.valore>=1&&r.valore<=5)dist[r.valore]++;});
+            var tot=scalaRisposte.length;
+            var media=tot>0?(scalaRisposte.reduce(function(s,r){return s+r.valore;},0)/tot).toFixed(1):null;
+            return h("div",{style:{marginTop:14}},
+              // Slider studente
+              isStudente&&h("div",{style:{background:"rgba(168,85,247,.08)",border:"1px solid rgba(168,85,247,.25)",borderRadius:12,padding:"14px 16px",marginBottom:12}},
+                h("div",{style:{fontSize:11,fontWeight:800,color:"#c084fc",letterSpacing:1,marginBottom:12}},"📊 LA TUA RISPOSTA"),
+                h("div",{style:{display:"flex",justifyContent:"space-between",fontSize:11,color:"rgba(255,255,255,.5)",marginBottom:8}},
+                  h("span",null,scalaMin),h("span",null,scalaMax)
+                ),
+                h("div",{style:{display:"flex",gap:8,justifyContent:"center",marginBottom:10}},
+                  [1,2,3,4,5].map(function(v){
+                    var sel=mioValore===v;
+                    return h("button",{key:v,onClick:function(){scalaSave(showCard.id,vn,v).then(function(){showToast("Risposta salvata ✓","ok");}).catch(function(){showToast("Errore salvataggio","err");});},style:{width:46,height:46,borderRadius:12,border:"2px solid "+(sel?"#a855f7":"rgba(168,85,247,.25)"),background:sel?"rgba(168,85,247,.35)":"rgba(168,85,247,.06)",color:sel?"#e9d5ff":"rgba(255,255,255,.6)",fontWeight:800,fontSize:16,cursor:"pointer",transition:"all .15s",boxShadow:sel?"0 0 12px rgba(168,85,247,.4)":"none"}},v);
+                  })
+                ),
+                mioValore&&h("div",{style:{textAlign:"center",fontSize:12,color:"#c084fc",fontWeight:700}},"Hai risposto: "+mioValore+" — "+[scalaMin,"","","",scalaMax][mioValore-1<2?0:(mioValore-1>2?4:2)])
+              ),
+              // Risultati prof
+              (isProf&&!simulaSt)&&tot>0&&h("div",{style:{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,padding:"12px 14px"}},
+                h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}},
+                  h("div",{style:{fontSize:11,fontWeight:800,color:"rgba(255,255,255,.6)",letterSpacing:1}},tot+" RISPOSTE"),
+                  media&&h("div",{style:{background:"rgba(168,85,247,.2)",border:"1px solid rgba(168,85,247,.4)",borderRadius:20,padding:"3px 12px",fontSize:14,fontWeight:800,color:"#c084fc"}},"Media: "+media)
+                ),
+                [1,2,3,4,5].map(function(v){
+                  var pct=tot>0?Math.round(dist[v]/tot*100):0;
+                  var clr=v<=2?"#f87171":v===3?"#fbbf24":"#4ade80";
+                  return h("div",{key:v,style:{marginBottom:6}},
+                    h("div",{style:{display:"flex",alignItems:"center",gap:8,marginBottom:2}},
+                      h("span",{style:{width:16,fontSize:13,fontWeight:800,color:clr,textAlign:"center"}},v),
+                      h("div",{style:{flex:1,height:8,background:"rgba(255,255,255,.08)",borderRadius:4,overflow:"hidden"}},
+                        h("div",{style:{height:8,width:pct+"%",background:clr,borderRadius:4,transition:"width .4s ease"}})
+                      ),
+                      h("span",{style:{fontSize:11,color:"rgba(255,255,255,.5)",width:32,textAlign:"right"}},pct+"%")
+                    )
+                  );
+                }),
+                h("div",{style:{display:"flex",justifyContent:"space-between",fontSize:10,color:"rgba(255,255,255,.35)",marginTop:4}},
+                  h("span",null,scalaMin),h("span",null,scalaMax)
+                )
+              ),
+              (isProf&&!simulaSt)&&tot===0&&h("div",{style:{textAlign:"center",color:"rgba(255,255,255,.35)",fontSize:12,padding:"12px 0"}},"Nessuna risposta ancora")
+            );
+          })(),
+
+          // ── BRAINSTORMING ──
+          showCard.tipo==="brainstorm"&&(function(){
+            var vn=myName(user);
+            var isStudente=!isProf||simulaSt;
+            var idee=showCard.idee||[];
+            var ideeApprovate=idee.filter(function(i){return i.approvata;});
+            var miaIdea=idee.find(function(i){return i.nome===vn||(showCard.brainstormAnonimo&&i._nomeReale===vn);});
+            var COLORS_BS=["#6366f1","#22c55e","#f59e0b","#ef4444","#06b6d4","#a855f7","#f97316","#14b8a6","#ec4899","#84cc16"];
+            return h("div",{style:{marginTop:14}},
+              // Input studente
+              isStudente&&!miaIdea&&h("div",{style:{background:"rgba(249,115,22,.08)",border:"1px solid rgba(249,115,22,.25)",borderRadius:12,padding:"12px 14px",marginBottom:12}},
+                h("div",{style:{fontSize:11,fontWeight:800,color:"#fb923c",letterSpacing:1,marginBottom:8}},"💡 LA TUA IDEA"),
+                h("div",{style:{display:"flex",gap:6}},
+                  h("input",{value:brainstormTesto,onInput:function(e){setBrainstormTesto(e.target.value.slice(0,60));},placeholder:"Scrivi la tua idea (max 60 caratteri)…",style:Object.assign({},{display:"block",width:"100%",background:"rgba(255,255,255,.08)",border:"1px solid rgba(255,255,255,.15)",borderRadius:8,padding:"8px 10px",color:"#f1f5f9",fontSize:13,outline:"none"},{})}),
+                  h("button",{onClick:function(){if(!brainstormTesto.trim())return;brainstormSave(showCard.id,vn,brainstormTesto,showCard.brainstormAnonimo).then(function(){setBrainstormTesto("");showToast("Idea inviata ✓","ok");}).catch(function(){showToast("Errore","err");});},style:{background:brainstormTesto.trim()?"linear-gradient(135deg,#f97316,#f59e0b)":"rgba(255,255,255,.06)",border:"none",borderRadius:8,padding:"8px 14px",cursor:brainstormTesto.trim()?"pointer":"not-allowed",color:brainstormTesto.trim()?"#fff":"rgba(255,255,255,.3)",fontWeight:800,fontSize:12,flexShrink:0,whiteSpace:"nowrap"}},"Invia")
+                ),
+                h("div",{style:{fontSize:10,color:"rgba(255,255,255,.35)",marginTop:4}},brainstormTesto.length+"/60 — "+(showCard.brainstormAnonimo?"Risposta anonima":"Il tuo nome sarà visibile"))
+              ),
+              miaIdea&&isStudente&&h("div",{style:{background:"rgba(249,115,22,.1)",border:"1px solid rgba(249,115,22,.3)",borderRadius:10,padding:"8px 12px",marginBottom:12,fontSize:12,color:"#fb923c",fontWeight:700}},"✅ Idea inviata: \""+miaIdea.testo+"\""),
+              // Idee approvate (visibili a tutti)
+              ideeApprovate.length>0&&h("div",{style:{marginBottom:12}},
+                h("div",{style:{fontSize:11,fontWeight:800,color:"rgba(255,255,255,.6)",letterSpacing:1,marginBottom:8}},ideeApprovate.length+" IDEE DELLA CLASSE"),
+                h("div",{style:{display:"flex",flexWrap:"wrap",gap:8}},
+                  ideeApprovate.map(function(idea,i){
+                    return h("div",{key:idea.id,className:"fadein",style:{background:COLORS_BS[i%COLORS_BS.length]+"22",border:"1px solid "+COLORS_BS[i%COLORS_BS.length]+"55",borderRadius:20,padding:"6px 14px",fontSize:13,fontWeight:700,color:COLORS_BS[i%COLORS_BS.length]}},idea.testo);
+                  })
+                )
+              ),
+              // Vista prof: gestione approvazioni
+              isProf&&!simulaSt&&idee.filter(function(i){return !i.approvata;}).length>0&&h("div",{style:{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,padding:"12px 14px"}},
+                h("div",{style:{fontSize:11,fontWeight:800,color:"rgba(255,255,255,.58)",letterSpacing:1,marginBottom:8}},"⏳ IN ATTESA DI APPROVAZIONE"),
+                idee.filter(function(i){return !i.approvata;}).map(function(idea){
+                  return h("div",{key:idea.id,style:{display:"flex",alignItems:"center",gap:8,marginBottom:6,background:"rgba(255,255,255,.03)",borderRadius:8,padding:"6px 10px"}},
+                    h("div",{style:{flex:1,fontSize:12,color:"rgba(255,255,255,.8)"}},idea.testo,h("span",{style:{fontSize:10,color:"rgba(255,255,255,.35)",marginLeft:6}},showCard.brainstormAnonimo?"":"— "+idea.nome)),
+                    h("button",{onClick:function(){var nuove=idee.map(function(x){return x.id===idea.id?Object.assign({},x,{approvata:true}):x;});db.collection("cards").doc(String(showCard.id)).update({idee:nuove}).catch(function(){fbSave(Object.assign({},showCard,{idee:nuove}));});showToast("Idea approvata ✓","ok");},style:{background:"rgba(34,197,94,.2)",border:"1px solid rgba(34,197,94,.4)",borderRadius:7,padding:"3px 10px",cursor:"pointer",fontSize:11,color:"#4ade80",fontWeight:700,flexShrink:0}},"✓ Approva"),
+                    h("button",{onClick:function(){var nuove=idee.filter(function(x){return x.id!==idea.id;});db.collection("cards").doc(String(showCard.id)).update({idee:nuove}).catch(function(){fbSave(Object.assign({},showCard,{idee:nuove}));});showToast("Idea rimossa","ok");},style:{background:"rgba(239,68,68,.15)",border:"1px solid rgba(239,68,68,.3)",borderRadius:7,padding:"3px 8px",cursor:"pointer",fontSize:11,color:"#f87171",fontWeight:700,flexShrink:0}},"✕")
+                  );
+                })
+              ),
+              isProf&&!simulaSt&&idee.length===0&&h("div",{style:{textAlign:"center",color:"rgba(255,255,255,.35)",fontSize:12,padding:"12px 0"}},"Nessuna idea inviata ancora")
             );
           })(),
 
@@ -2557,9 +2718,9 @@ function App(){
         h("div",{style:{width:32,height:3,background:"rgba(255,255,255,.15)",borderRadius:4,margin:"0 auto 16px"}}),
         h("h3",{style:{margin:"0 0 4px",color:"#f1f5f9",fontSize:15,fontWeight:800}},editMode?"✏️ Modifica card":(!isProf?"💡 Proponi una card":"➕ Nuova card")),
         !isProf&&!editMode&&h("p",{style:{margin:"0 0 14px",color:"rgba(255,255,255,.45)",fontSize:11}},"La tua proposta sarà visibile dopo l'approvazione del prof"),
-        isProf&&h("div",{style:{display:"flex",gap:7,marginBottom:14}},
-          [{v:"domanda",i:"💬"},{v:"nota",i:"📄"},{v:"sondaggio",i:"🗳️"},{v:"quiz",i:"🧩"},{v:"annuncio",i:"📢"},{v:"alzata",i:"✋"}].map(function(t){
-            return h("button",{key:t.v,onClick:function(){setForm(function(p){return Object.assign({},p,{tipo:t.v});});},style:{flex:1,padding:"8px 4px",border:"1px solid "+(form.tipo===t.v?"#6366f1":"rgba(255,255,255,.1)"),borderRadius:10,background:form.tipo===t.v?"rgba(99,102,241,.25)":"rgba(255,255,255,.04)",cursor:"pointer",fontWeight:700,fontSize:12,color:form.tipo===t.v?"#a5b4fc":"rgba(255,255,255,.58)"}},t.i+" "+t.v);
+        isProf&&h("div",{style:{display:"flex",gap:5,marginBottom:14,flexWrap:"wrap"}},
+          [{v:"domanda",i:"💬"},{v:"nota",i:"📄"},{v:"sondaggio",i:"🗳️"},{v:"quiz",i:"🧩"},{v:"annuncio",i:"📢"},{v:"alzata",i:"✋"},{v:"scala",i:"📊"},{v:"brainstorm",i:"💡"}].map(function(t){
+            return h("button",{key:t.v,onClick:function(){setForm(function(p){return Object.assign({},p,{tipo:t.v});});},style:{flex:"1 1 auto",minWidth:70,padding:"8px 4px",border:"1px solid "+(form.tipo===t.v?"#6366f1":"rgba(255,255,255,.1)"),borderRadius:10,background:form.tipo===t.v?"rgba(99,102,241,.25)":"rgba(255,255,255,.04)",cursor:"pointer",fontWeight:700,fontSize:11,color:form.tipo===t.v?"#a5b4fc":"rgba(255,255,255,.58)"}},t.i+" "+t.v);
           })
         ),
         h("div",{style:{marginBottom:10}},h("label",{style:{fontSize:11,fontWeight:700,color:"rgba(255,255,255,.58)",display:"block",marginBottom:4,letterSpacing:1}},"TITOLO *"),h("input",{value:form.titolo,onInput:function(e){setForm(function(p){return Object.assign({},p,{titolo:e.target.value});});},placeholder:"Es. Riflessione su…",style:S.input})),
@@ -2683,6 +2844,32 @@ function App(){
           h("button",{onClick:function(){setForm(function(p){return Object.assign({},p,{quizDomande:(p.quizDomande||[]).concat([{tipo:"multipla",testo:"",opzioni:["","","",""],corretta:""}])});});},style:{background:"rgba(236,72,153,.1)",border:"1px dashed rgba(236,72,153,.3)",borderRadius:8,padding:"7px 12px",cursor:"pointer",fontSize:12,color:"#f472b6",width:"100%",fontWeight:700}},"+ Aggiungi domanda")
         ),
         isProf&&!editMode&&h("div",{style:{marginBottom:10}},h("label",{style:{fontSize:11,fontWeight:700,color:"rgba(255,255,255,.58)",display:"block",marginBottom:4,letterSpacing:1}},"\u23f0 PUBBLICA IL (opzionale)"),h("input",{type:"datetime-local",value:form.pubblicaIl||"",onInput:function(e){setForm(function(p){return Object.assign({},p,{pubblicaIl:e.target.value});});},style:Object.assign({},S.input,{colorScheme:"dark",fontSize:12})}),h("p",{style:{fontSize:11,color:"rgba(255,255,255,.45)",marginTop:4}},"La card sarà nascosta agli studenti fino a questa data/ora")),
+
+        // ── SCALA DI ACCORDO ──
+        form.tipo==="scala"&&h("div",{style:{marginBottom:10,background:"rgba(168,85,247,.08)",border:"1px solid rgba(168,85,247,.25)",borderRadius:10,padding:12}},
+          h("div",{style:{fontSize:11,fontWeight:800,color:"#c084fc",letterSpacing:1,marginBottom:8}},"📊 SCALA DI ACCORDO"),
+          h("p",{style:{fontSize:11,color:"rgba(255,255,255,.55)",marginBottom:10,lineHeight:1.5}},"Gli studenti risponderanno su una scala da 1 (Per niente) a 5 (Completamente). Puoi personalizzare le etichette."),
+          h("div",{style:{display:"flex",gap:6}},
+            h("div",{style:{flex:1}},
+              h("label",{style:{fontSize:10,color:"rgba(255,255,255,.45)",display:"block",marginBottom:3}},"Etichetta 1 (min)"),
+              h("input",{value:(form.scalaMin)||"Per niente",onInput:function(e){setForm(function(p){return Object.assign({},p,{scalaMin:e.target.value});});},style:Object.assign({},S.input,{fontSize:11})})
+            ),
+            h("div",{style:{flex:1}},
+              h("label",{style:{fontSize:10,color:"rgba(255,255,255,.45)",display:"block",marginBottom:3}},"Etichetta 5 (max)"),
+              h("input",{value:(form.scalaMax)||"Completamente",onInput:function(e){setForm(function(p){return Object.assign({},p,{scalaMax:e.target.value});});},style:Object.assign({},S.input,{fontSize:11})})
+            )
+          )
+        ),
+
+        // ── BRAINSTORMING ──
+        form.tipo==="brainstorm"&&h("div",{style:{marginBottom:10,background:"rgba(249,115,22,.08)",border:"1px solid rgba(249,115,22,.25)",borderRadius:10,padding:12}},
+          h("div",{style:{fontSize:11,fontWeight:800,color:"#fb923c",letterSpacing:1,marginBottom:8}},"💡 BRAINSTORMING"),
+          h("p",{style:{fontSize:11,color:"rgba(255,255,255,.55)",marginBottom:10,lineHeight:1.5}},"Gli studenti inviano idee brevi (max 60 caratteri). Il prof approva quelle da mostrare a tutti."),
+          h("label",{style:{display:"flex",alignItems:"center",gap:8,cursor:"pointer",fontSize:12,color:"rgba(255,255,255,.7)"}},
+            h("input",{type:"checkbox",checked:form.brainstormAnonimo!==false,onChange:function(e){setForm(function(p){return Object.assign({},p,{brainstormAnonimo:e.target.checked});});},style:{width:15,height:15,cursor:"pointer"}}),
+            "Risposte anonime (il nome non è visibile agli studenti)"
+          )
+        ),
         h("button",{onClick:addCard,style:{width:"100%",padding:13,marginTop:4,background:form.titolo.trim()?"linear-gradient(135deg,#6366f1,#8b5cf6)":"rgba(255,255,255,.06)",color:form.titolo.trim()?"#fff":"rgba(255,255,255,.2)",border:"none",borderRadius:12,fontSize:14,fontWeight:800,cursor:form.titolo.trim()?"pointer":"not-allowed"}},editMode?"💾 Salva modifiche":(!isProf?"📤 Invia proposta":"✅ Crea card"))
       )
     ),
@@ -2948,6 +3135,52 @@ function App(){
         h("button",{onClick:function(){setShowReportSett(false);},style:{width:"100%",marginTop:14,padding:10,background:"rgba(255,255,255,.07)",color:"rgba(255,255,255,.65)",border:"none",borderRadius:11,fontSize:13,fontWeight:700,cursor:"pointer"}},"Chiudi")
       )
     ),
+
+    // ── WORD CLOUD MODAL ──
+    showWordCloud&&isProf&&(function(){
+      var parole=buildWordCloud(cards,wcTarget);
+      var maxFreq=parole.length>0?parole[0][1]:1;
+      var WCCOLORS=["#a5b4fc","#c084fc","#67e8f9","#4ade80","#fbbf24","#f87171","#fb923c","#e879f9","#34d399","#60a5fa"];
+      return h("div",{onClick:function(){setShowWordCloud(false);},style:{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",backdropFilter:"blur(6px)",zIndex:600,display:"flex",alignItems:"center",justifyContent:"center",padding:20}},
+        h("div",{onClick:function(e){e.stopPropagation();},style:{background:"rgba(15,20,40,.97)",border:"1px solid rgba(99,102,241,.3)",borderRadius:20,padding:24,maxWidth:660,width:"100%",maxHeight:"85vh",overflowY:"auto",boxShadow:"0 24px 60px rgba(0,0,0,.6)"}},
+          h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}},
+            h("div",null,
+              h("h3",{style:{margin:0,color:"#f1f5f9",fontSize:16,fontWeight:800}},"☁️ Word Cloud"),
+              h("p",{style:{margin:"4px 0 0",color:"rgba(255,255,255,.45)",fontSize:11}},"Le parole più usate nei commenti della classe")
+            ),
+            h("button",{onClick:function(){setShowWordCloud(false);},style:{background:"rgba(255,255,255,.08)",border:"none",borderRadius:"50%",width:28,height:28,cursor:"pointer",fontSize:15,color:"rgba(255,255,255,.7)"}},"×")
+          ),
+          // Filtro card
+          h("div",{style:{display:"flex",gap:5,flexWrap:"wrap",marginBottom:16}},
+            h("button",{onClick:function(){setWcTarget("tutte");},style:{padding:"3px 10px",borderRadius:20,border:"1px solid "+(wcTarget==="tutte"?"#6366f1":"rgba(255,255,255,.15)"),background:wcTarget==="tutte"?"rgba(99,102,241,.25)":"transparent",color:wcTarget==="tutte"?"#a5b4fc":"rgba(255,255,255,.55)",fontSize:11,fontWeight:700,cursor:"pointer"}},"Tutte le card"),
+            cards.filter(function(c){return !c.proposta&&(c.commenti||[]).length>0;}).map(function(c){return h("button",{key:c.id,onClick:function(){setWcTarget(String(c.id));},style:{padding:"3px 10px",borderRadius:20,border:"1px solid "+(wcTarget===String(c.id)?"#6366f1":"rgba(255,255,255,.1)"),background:wcTarget===String(c.id)?"rgba(99,102,241,.25)":"transparent",color:wcTarget===String(c.id)?"#a5b4fc":"rgba(255,255,255,.45)",fontSize:11,fontWeight:600,cursor:"pointer",maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},c.titolo.slice(0,25)+(c.titolo.length>25?"…":""));})
+          ),
+          parole.length===0
+            ?h("div",{style:{textAlign:"center",padding:"40px 20px",color:"rgba(255,255,255,.35)"}},
+                h("div",{style:{fontSize:40,marginBottom:8}},"💬"),
+                h("div",{style:{fontSize:13}},"Nessun commento ancora. Le parole appariranno qui man mano che gli studenti commentano.")
+              )
+            :h("div",{style:{display:"flex",flexWrap:"wrap",gap:8,justifyContent:"center",alignItems:"center",padding:"12px 0",minHeight:200}},
+                parole.map(function(entry,i){
+                  var parola=entry[0],freq=entry[1];
+                  var size=Math.round(12+(freq/maxFreq)*28);
+                  var opacity=0.45+((freq/maxFreq)*0.55);
+                  var color=WCCOLORS[i%WCCOLORS.length];
+                  return h("span",{key:parola,title:freq+" occorrenze",className:"fadein",style:{
+                    fontSize:size,fontWeight:freq/maxFreq>0.5?800:600,color:color,
+                    opacity:opacity,lineHeight:1.2,cursor:"default",
+                    transition:"all .2s",padding:"2px 4px",borderRadius:4,
+                    animationDelay:(i*0.02)+"s"
+                  }},parola);
+                })
+              ),
+          parole.length>0&&h("div",{style:{marginTop:16,paddingTop:12,borderTop:"1px solid rgba(255,255,255,.06)",display:"flex",gap:12,flexWrap:"wrap"}},
+            h("span",{style:{fontSize:11,color:"rgba(255,255,255,.35)"}},"Parole analizzate: "+parole.length),
+            h("span",{style:{fontSize:11,color:"rgba(255,255,255,.35)"}},"Parola più usata: "+parole[0][0]+" ("+parole[0][1]+"x)")
+          )
+        )
+      );
+    })(),
 
   );
 }
