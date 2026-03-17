@@ -348,6 +348,7 @@ function brainstormSave(cardId,nome,testo,anonimo){
   });
 }
 
+function renderLinks(card){
   var links=normalizeLinks(card);
   if(!links.length)return null;
   return h("div",{style:{marginTop:8,display:"flex",flexDirection:"column",gap:5}},
