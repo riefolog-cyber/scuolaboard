@@ -467,7 +467,6 @@ function App(){
   var [showPrivacy,setShowPrivacy]=useState(false);
   var [newCardsBanner,setNewCardsBanner]=useState([]);
   var [showBanner,setShowBanner]=useState(false);
-  var [sortMode,setSortMode]=useState("ordine");
   var [showProfilo,setShowProfilo]=useState(false);
   var [showTimerModal,setShowTimerModal]=useState(false);
   var [timerInput,setTimerInput]=useState("");
@@ -807,15 +806,10 @@ function App(){
   });
 
   var visibleSorted=visible.slice().sort(function(a,b){
-    // Pinned always first
     if(a.pinned&&!b.pinned)return -1;
     if(b.pinned&&!a.pinned)return 1;
     if(a.tipo==="annuncio"&&b.tipo!=="annuncio")return -1;
     if(b.tipo==="annuncio"&&a.tipo!=="annuncio")return 1;
-    if(sortMode==="recenti")return new Date(b.data)-new Date(a.data);
-    if(sortMode==="scadenza"){var now2=Date.now();var aMs=a.scadenza?new Date(a.scadenza).getTime()-now2:Infinity;var bMs=b.scadenza?new Date(b.scadenza).getTime()-now2:Infinity;return aMs-bMs;}
-    if(sortMode==="commenti")return((b.commenti||[]).length)-((a.commenti||[]).length);
-    if(sortMode==="like")return(b.likes||0)-(a.likes||0);
     return(a.ordine||0)-(b.ordine||0);
   });
 
@@ -1513,15 +1507,6 @@ function App(){
           h("button",{onClick:bulkDelete,style:{background:"rgba(239,68,68,.2)",border:"1px solid rgba(239,68,68,.4)",borderRadius:8,padding:"4px 10px",cursor:"pointer",fontSize:11,fontWeight:700,color:"#f87171"}},"🗑️ Elimina "+bulkSelected.length)
         ),
         h("button",{onClick:function(){setBulkMode(false);setBulkSelected([]);},style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.45)",cursor:"pointer",fontSize:12,fontWeight:700}},"✕")
-      ),
-            h("div",{style:{padding:"8px 14px",background:"rgba(255,255,255,.02)",borderBottom:"1px solid rgba(255,255,255,.05)"}},
-        h("div",{style:{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",justifyContent:"center"}},
-          h("div",{style:{display:"flex",gap:3,background:"rgba(255,255,255,.04)",borderRadius:10,padding:3,border:"1px solid rgba(255,255,255,.07)"}},
-            [{k:"ordine",l:"📌",t:"Ordine manuale"},{k:"recenti",l:"🕐",t:"Più recenti"},{k:"scadenza",l:"⏰",t:"In scadenza"},{k:"commenti",l:"💬",t:"Più commentate"},{k:"like",l:"👍",t:"Più apprezzate"}].map(function(s){
-              return h("button",{key:s.k,title:s.t,onClick:function(){setSortMode(s.k);},style:{background:sortMode===s.k?"rgba(99,102,241,.5)":"transparent",border:"none",borderRadius:7,padding:"5px 9px",cursor:"pointer",fontSize:13,color:sortMode===s.k?"#fff":"rgba(255,255,255,.58)",transition:"background .15s,color .15s",fontWeight:sortMode===s.k?700:400}},s.l);
-            })
-          )
-        )
       ),
       h("div",{style:{flex:1,padding:"10px 14px 18px"}},
         cards.length===0
