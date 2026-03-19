@@ -227,10 +227,9 @@ function compressImage(file,maxW,maxH,quality){
 }
 
 function aiSave(cardId,data){
-  return db.collection("ai_results").doc(String(cardId)).set(data,{merge:true}).then(function(){
-    // Refresh local aiMap after save since we use get() not onSnapshot
-    aiLoad(function(m){if(typeof setAiMap==="function")setAiMap(m);});
-  });
+  // Invalida cache sessionStorage prima di salvare
+  try{sessionStorage.removeItem("ai_results_cache");sessionStorage.removeItem("ai_results_cache_at");}catch(e){}
+  return db.collection("ai_results").doc(String(cardId)).set(data,{merge:true});
 }
 function aiLoad(cb){
   // Try sessionStorage cache first — ai_results change rarely
@@ -1250,18 +1249,24 @@ function App(){
     if(!orKey){setAskKey(true);return;}
     setCardQLoad(true);setCardQErr("");
     var card=showCard;
-    var prompt='Sei un esperto di didattica per un insegnante di Religione (scuola secondaria di II grado).\n\nSei un consulente didattico di IRC (Religione Cattolica, scuola secondaria II grado).\\nRispondi alla domanda del prof basandoti ESCLUSIVAMENTE sui dati reali della card. Non inventare nulla.\\nSe i dati non bastano, dillo in una frase e indica cosa osservare per trovare la risposta.\\n\\nDATI CARD:\\n'+cardContext(card)+'\\n\\nDOMANDA DEL PROF:\\n'+cardQ.trim()+'\\n\\nRispondi in max 4 frasi, stile diretto: niente preamboli, niente \'come docente di IRC\', vai subito al punto.';
+    var prompt='Sei un esperto di didattica per un insegnante di Religione (scuola secondaria di II grado).\n\nSei un consulente didattico di IRC (Religione Cattolica, scuola secondaria II grado).\nRispondi alla domanda del prof basandoti ESCLUSIVAMENTE sui dati reali della card. Non inventare nulla.\nSe i dati non bastano, dillo in una frase e indica cosa osservare per trovare la risposta.\n\nDATI CARD:\n'+cardContext(card)+'\n\nDOMANDA DEL PROF:\n'+cardQ.trim()+'\n\nRispondi in max 4 frasi, stile diretto: niente preamboli, niente \'come docente di IRC\', vai subito al punto.';
     callGroqText(orKey,prompt,400)
       .then(function(txt){
         var aiD=aiMap[String(card.id)];
         var esistenti=aiD&&Array.isArray(aiD.domande)?aiD.domande:(aiD&&aiD.domanda?[aiD.domanda]:[]);
         var nuova={id:Date.now(),q:cardQ.trim(),risposta:txt,data:new Date().toISOString()};
         var aggiornate=esistenti.concat([nuova]);
+        // Aggiorna aiMap localmente subito, senza aspettare Firestore
+        setAiMap(function(prev){
+          var next=Object.assign({},prev);
+          next[String(card.id)]=Object.assign({},prev[String(card.id)]||{},{domande:aggiornate,domanda:null});
+          return next;
+        });
         aiSave(card.id,{domande:aggiornate,domanda:null});
         setCardQ("");
       })
       .catch(function(e){setCardQErr(e.message||"Errore di rete.");})
-      .then(function(){setCardQLoad(false);});
+      .finally(function(){setCardQLoad(false);});
   }
 
   var qrUrl="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data="+encodeURIComponent(window.location.href);
@@ -2507,7 +2512,7 @@ function App(){
                       h("span",{style:{fontSize:11,color:"#a5b4fc",fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}},"❓ "+d.q)
                     ),
                     h("div",{style:{display:"flex",alignItems:"center",gap:6,flexShrink:0}},
-                      h("button",{onClick:function(e){e.stopPropagation();var aggiornate=domande.filter(function(_,i){return i!==idx;});aiSave(showCard.id,{domande:aggiornate});},style:{background:"none",border:"none",color:"rgba(255,255,255,.2)",fontSize:12,cursor:"pointer",padding:"0 2px"}},"×"),
+                      h("button",{onClick:function(e){e.stopPropagation();var aggiornate=domande.filter(function(_,i){return i!==idx;});aiSave(showCard.id,{domande:aggiornate});setAiMap(function(prev){var next=Object.assign({},prev);next[String(showCard.id)]=Object.assign({},prev[String(showCard.id)]||{},{domande:aggiornate});return next;});},style:{background:"none",border:"none",color:"rgba(255,255,255,.2)",fontSize:12,cursor:"pointer",padding:"0 2px"}},"×"),
                       h("span",{style:{color:"rgba(255,255,255,.45)",fontSize:12,display:"inline-block",transform:isOpen?"rotate(180deg)":"rotate(0deg)"}},"▾")
                     )
                   ),
