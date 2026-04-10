@@ -272,7 +272,7 @@ function _groq(k,prompt,mx,mi,json){
     body:JSON.stringify({
       model:GROQ_MODELS[mi],max_tokens:mx,temperature:0.7,
       messages:[
-        {role:"system",content:json?"Sei un esperto di didattica IRC (Religione Cattolica) in una scuola secondaria italiana. Rispondi SOLO con JSON valido. Nessun testo prima o dopo il JSON, nessun markdown, nessun commento.":"Sei un esperto di didattica IRC (Religione Cattolica) in una scuola secondaria italiana. Rispondi in italiano, in modo diretto e professionale, come faresti con un collega docente."},
+        {role:"system",content:json?"Sei un esperto di didattica per una scuola secondaria italiana. Rispondi SOLO con JSON valido. Nessun testo prima o dopo il JSON, nessun markdown, nessun commento.":"Sei un esperto di didattica per una scuola secondaria italiana. Rispondi in italiano, in modo diretto e professionale, come faresti con un collega docente."},
         {role:"user",content:prompt}
       ]
     })
@@ -709,7 +709,7 @@ function App(){
         setSC(function(prev){return prev?remote.find(function(c){return c.id===prev.id;})||null:null;});
       }
     });
-    var u3=fbClassiListen(function(lista){setClassiCustom(lista);});
+    var u3=fbClassiListen(function(lista){setClassiCustom(lista)});
     var u4=fbFavListen(user.uid,function(ids){setPreferiti(ids);});
     // Messaggi privati
     var u7=msgPrivatiListen(user.role==="prof",myName(user),function(arr){
@@ -1101,14 +1101,14 @@ function App(){
           var risposta=(r.risposte&&r.risposte[item.i])||"";
           if(!risposta.trim())return Promise.resolve(null);
           var prompt=
-            "Sei un docente di IRC (scuola secondaria II grado). Valuta questa risposta aperta.\n\n"+
+            "Sei un docente di scuola secondaria. Valuta questa risposta aperta.\n\n"+
             "DOMANDA: "+item.d.testo+"\n"+
             "RISPOSTA: "+risposta+"\n\n"+
             "Restituisci SOLO questo JSON (nessun testo fuori):\n"+
             "{\n"+
             "  \"voto\": <numero 0.0-1.0>,\n"+
             "  \"punti_forza\": \"1-2 frasi: cosa ha capito davvero lo studente, cita qualcosa di specifico dalla sua risposta.\",\n"+
-            "  \"lacune\": \"1-2 frasi: il concetto IRC più importante che manca o è sbagliato, spiegato così che il prof possa intervenire subito.\",\n"+
+            "  \"lacune\": \"1-2 frasi: il concetto più importante che manca o è sbagliato, spiegato così che il prof possa intervenire subito.\",\n"+
             "  \"suggerimento\": \"1 frase: domanda o attività concreta che il prof può proporre a questo studente per colmare la lacuna principale.\"\n"+
             "}\n\n"+
             "Scala voto: 0.75-1.0=risposta completa e argomentata; 0.4-0.74=parziale ma pertinente; 0-0.39=assente o fuori tema.\n"+
@@ -1226,7 +1226,7 @@ function App(){
     var target=aiTarget==="tutte"?cards.filter(function(c){return !c.proposta;}):[cards.find(function(c){return String(c.id)===String(aiTarget);})].filter(Boolean);
     if(!target.length){setAiErr("Nessuna card.");setAiRunning(false);return;}
     var det=target.map(function(c){return "CARD: \""+c.titolo+"\" (tipo:"+c.tipo+", like:"+(c.likes||0)+")\n"+cardContext(c);}).join("\n\n---\n\n");
-    var prompt='Sei un docente esperto di IRC (Religione Cattolica) in una scuola secondaria di II grado.\nHai accesso ai dati reali della bacheca digitale della tua classe. Analizza SOLO ciò che è effettivamente presente.\n\nESEMPIO di output atteso (NON usare questi contenuti, è solo per il formato):\n{"riepilogo":"La card \'Libertà e responsabilità\' ha dominato con 14 commenti contro 3 delle altre due card.","dibattito":"Due posizioni nette: libertà assoluta (6 studenti) vs libertà come dono responsabile (5). Nessun cambio di posizione nel dibattito.","punti_chiave":["Il concetto di libertà è inteso dai più in chiave individualistica, non evangelica","Solo 3 studenti hanno citato riferimenti biblici nei commenti","La card sul Sacramento è rimasta quasi ignorata: da riprendere"],"spunti_dibattito":["Avviare la lezione con il dilemma: \'Sei libero di fare del male?\'","Chiedere a chi ha scritto \'libertà totale\' di confrontarsi con Gv 8,32","Collegare la card ignorata al percorso in corso con un link esplicito"]}\n\nRispondi ESCLUSIVAMENTE con questo JSON:\n{\n  "riepilogo": "Max 2 frasi: quale argomento ha generato più partecipazione e perché, con dati numerici reali (es. \'7 commenti su X contro 2 su Y\').",\n  "dibattito": "Max 2 frasi: la polarizzazione o convergenza reale emersa. Se ci sono posizioni opposte, citale. Se la partecipazione è stata superficiale, dillo.",\n  "punti_chiave": ["Osservazione concreta su un tema emerso, con riferimento a commenti reali", "Pattern comportamentale o di pensiero rilevato nella classe", "Aspetto didattico da monitorare o valorizzare"],\n  "spunti_dibattito": ["Attività specifica da fare nella prossima lezione basata su ciò che è emerso", "Domanda provocatoria da lanciare alla classe sul tema più discusso", "Connessione con il programma IRC da sviluppare"]\n}\n\nREGOLE FERREE: riepilogo e dibattito MAX 2 frasi. punti_chiave e spunti: 3 voci brevi e concrete, niente genericità.\n\nDATI BACHECA:\n'+det.slice(0,3000);
+    var prompt='Sei un docente esperto in una scuola secondaria di II grado.\nHai accesso ai dati reali della bacheca digitale della tua classe. Analizza SOLO ciò che è effettivamente presente.\n\nRispondi ESCLUSIVAMENTE con questo JSON:\n{\n  "riepilogo": "Max 2 frasi: quale argomento ha generato più partecipazione e perché, con dati numerici reali (es. \'7 commenti su X contro 2 su Y\').",\n  "dibattito": "Max 2 frasi: la polarizzazione o convergenza reale emersa. Se ci sono posizioni opposte, citale. Se la partecipazione è stata superficiale, dillo.",\n  "punti_chiave": ["Osservazione concreta su un tema emerso, con riferimento a commenti reali", "Pattern comportamentale o di pensiero rilevato nella classe", "Aspetto didattico da monitorare o valorizzare"],\n  "spunti_dibattito": ["Attività specifica da fare nella prossima lezione basata su ciò che è emerso", "Domanda provocatoria da lanciare alla classe sul tema più discusso", "Connessione con il programma da sviluppare"]\n}\n\nREGOLE FERREE: riepilogo e dibattito MAX 2 frasi. punti_chiave e spunti: 3 voci brevi e concrete, niente genericità.\n\nDATI BACHECA:\n'+det.slice(0,3000);
     callGroqJSON(orKey,prompt,1200)
       .then(function(r){if(r&&(r.riepilogo||r.dibattito))setAiR(r);else setAiErr("Risposta non valida.");})
       .catch(function(e){setAiErr(e.message||"Errore AI.");})
@@ -1238,7 +1238,7 @@ function App(){
     if(!orKey){setAskKey(true);return;}
     var freshCard=cards.find(function(c){return String(c.id)===String(card.id);})||card;
     setCardAIL(String(freshCard.id));setCardAiOpen(String(freshCard.id));setCardAiErr(null);
-    var prompt='Sei un docente esperto di IRC (Religione Cattolica) in una scuola secondaria di II grado.\nAnalizza la card didattica basandoti SOLO sui dati reali forniti. Non inventare nulla.\n\nESEMPIO di output atteso (NON usare questi contenuti, è solo per mostrare il formato):\n{"sintesi":"La card sul Decalogo ha coinvolto 8 studenti con 11 commenti. Il dibattito è stato vivace con posizioni nette sulla rilevanza attuale dei precetti.","dinamica":"Luca e Sofia hanno argomentato con riferimenti biblici precisi; altri si sono limitati a opinioni generiche. Emerge una tensione tra visione normativa e spirituale.","spunto":"Portare in classe 2-3 casi concreti di conflitto etico contemporaneo e chiedere agli studenti quale precetto del Decalogo si applica.","domande_stimolo":["Quale dei 10 comandamenti ritieni più difficile da rispettare oggi e perché?","Luca ha scritto che i comandamenti \'limitano la libertà\': sei d\'accordo?","Se dovessi aggiornare il Decalogo per il 2024, cosa cambieresti?"]}\n\nRispondi ESCLUSIVAMENTE con questo JSON (nessun testo fuori dal JSON):\n{\n  "sintesi": "Max 2 frasi: tema e partecipazione reale con numeri concreti.",\n  "dinamica": "Max 2 frasi: posizioni emerse, studenti significativi.",\n  "spunto": "1 azione concreta e immediatamente applicabile per il prof.",\n  "domande_stimolo": ["domanda sul punto più discusso","domanda che sfida un presupposto","domanda che aggancia alla vita reale"]\n}\n\nREGOLE FERREE: sintesi e dinamica MAX 2 frasi. spunto MAX 1 frase. domande_stimolo: 3 domande brevi.\n\nDATI CARD:\n'+cardContext(freshCard);
+    var prompt='Sei un docente esperto in una scuola secondaria di II grado.\nAnalizza la card didattica basandoti SOLO sui dati reali forniti. Non inventare nulla.\n\nRispondi ESCLUSIVAMENTE con questo JSON (nessun testo fuori dal JSON):\n{\n  "sintesi": "Max 2 frasi: tema e partecipazione reale con numeri concreti.",\n  "dinamica": "Max 2 frasi: posizioni emerse, studenti significativi.",\n  "spunto": "1 azione concreta e immediatamente applicabile per il prof.",\n  "domande_stimolo": ["domanda sul punto più discusso","domanda che sfida un presupposto","domanda che aggancia alla vita reale"]\n}\n\nREGOLE FERREE: sintesi e dinamica MAX 2 frasi. spunto MAX 1 frase. domande_stimolo: 3 domande brevi.\n\nDATI CARD:\n'+cardContext(freshCard);
     callGroqJSON(orKey,prompt,700)
       .then(function(r){
         if(r&&!r.error){
@@ -1257,7 +1257,7 @@ function App(){
     if(!orKey){setAskKey(true);return;}
     setCardQLoad(true);setCardQErr("");
     var card=showCard;
-    var prompt='Sei un esperto di didattica per un insegnante di Religione (scuola secondaria di II grado).\n\nSei un consulente didattico di IRC (Religione Cattolica, scuola secondaria II grado).\nRispondi alla domanda del prof basandoti ESCLUSIVAMENTE sui dati reali della card. Non inventare nulla.\nSe i dati non bastano, dillo in una frase e indica cosa osservare per trovare la risposta.\n\nDATI CARD:\n'+cardContext(card)+'\n\nDOMANDA DEL PROF:\n'+cardQ.trim()+'\n\nRispondi in max 4 frasi, stile diretto: niente preamboli, niente \'come docente di IRC\', vai subito al punto.';
+    var prompt='Sei un consulente didattico per una scuola secondaria di II grado.\nRispondi alla domanda del prof basandoti ESCLUSIVAMENTE sui dati reali della card. Non inventare nulla.\nSe i dati non bastano, dillo in una frase e indica cosa osservare per trovare la risposta.\n\nDATI CARD:\n'+cardContext(card)+'\n\nDOMANDA DEL PROF:\n'+cardQ.trim()+'\n\nRispondi in max 4 frasi, stile diretto: niente preamboli, vai subito al punto.';
     callGroqText(orKey,prompt,400)
       .then(function(txt){
         var aiD=aiMap[String(card.id)];
@@ -1286,7 +1286,7 @@ function App(){
     else if(tipo==="verofalso")tipoIstr='Genera SOLO domande Vero/Falso.\nFormato per ogni domanda: {"tipo":"verofalso","testo":"...","opzioni":["Vero","Falso"],"corretta":"Vero"}\n(corretta = "Vero" oppure "Falso")';
     else if(tipo==="aperta")tipoIstr='Genera SOLO domande a risposta aperta (verranno valutate dall\'AI).\nFormato per ogni domanda: {"tipo":"aperta","testo":"...","opzioni":[],"corretta":""}';
     else tipoIstr='Mescola i tipi: alcune scelta multipla (4 opzioni), alcune Vero/Falso, alcune aperte.\nFormato multipla: {"tipo":"multipla","testo":"...","opzioni":["A","B","C","D"],"corretta":"0"}\nFormato verofalso: {"tipo":"verofalso","testo":"...","opzioni":["Vero","Falso"],"corretta":"Vero"}\nFormato aperta: {"tipo":"aperta","testo":"...","opzioni":[],"corretta":""}\n';
-    return 'Sei un insegnante di IRC (Religione Cattolica) in una scuola secondaria di II grado.\nGenera esattamente '+num+' domande didattiche per un quiz.\n'+(titolo?'ARGOMENTO: '+titolo+'\n':'')+tipoIstr+'\nLe domande devono essere pertinenti al contesto IRC (Bibbia, Tradizione, Sacramenti, ecc.) e adatte a studenti di scuola secondaria.\nRispondi SOLO con questo JSON, nessun testo esterno:\n{\n  "domande": [ /* array di '+num+' oggetti domanda */ ]\n}\n\nTESTO:\n'+testo.slice(0,2500);
+    return 'Sei un insegnante di scuola secondaria di II grado.\nGenera esattamente '+num+' domande didattiche per un quiz.\n'+(titolo?'ARGOMENTO: '+titolo+'\n':'')+tipoIstr+'\nLe domande devono essere pertinenti al testo fornito e adatte a studenti di scuola secondaria.\nRispondi SOLO con questo JSON, nessun testo esterno:\n{\n  "domande": [ /* array di '+num+' oggetti domanda */ ]\n}\n\nTESTO:\n'+testo.slice(0,2500);
   }
 
   async function aiGeneraQuiz(){
@@ -1339,7 +1339,7 @@ function App(){
     if(commenti.length<2){setSommarioResult(function(p){return Object.assign({},p,{[card.id]:"Troppo pochi commenti per un riassunto significativo."});});return;}
     setSommarioLoading(card.id);
     var txt=commenti.map(function(c){var r=c.autore+": "+c.testo;if(c.risposte&&c.risposte.length)r+=c.risposte.map(function(x){return"\n  ↳ "+x.autore+": "+x.testo;}).join("");return r;}).join("\n");
-    var prompt='Sei un docente di IRC (Religione Cattolica, scuola secondaria II grado).\nLeggi questa discussione tra studenti su una card della bacheca digitale e produci un riassunto operativo per il prof.\n\nDISCUSSIONE:\n'+txt.slice(0,3000)+'\n\nRispondi con ESATTAMENTE questo formato (niente altro):\n• [posizione o tema emerso — cita chi l\'ha sollevato se significativo]\n• [accordo o contrasto tra studenti — con riferimento concreto]\n• [lacuna concettuale o misconcezione da correggere in classe]\n• [spunto didattico diretto: cosa fare nella prossima lezione]\n\nMax 4 bullet, 1 frase ciascuno, linguaggio diretto da collega a collega.';
+    var prompt='Sei un docente di scuola secondaria.\nLeggi questa discussione tra studenti su una card della bacheca digitale e produci un riassunto operativo per il prof.\n\nDISCUSSIONE:\n'+txt.slice(0,3000)+'\n\nRispondi con ESATTAMENTE questo formato (niente altro):\n• [posizione o tema emerso — cita chi l\'ha sollevato se significativo]\n• [accordo o contrasto tra studenti — con riferimento concreto]\n• [lacuna concettuale o misconcezione da correggere in classe]\n• [spunto didattico diretto: cosa fare nella prossima lezione]\n\nMax 4 bullet, 1 frase ciascuno, linguaggio diretto da collega a collega.';
     try{
       var res=await callGroqText(orKey,prompt,600);
       setSommarioResult(function(p){return Object.assign({},p,{[card.id]:res});});
@@ -1360,7 +1360,7 @@ function App(){
       var pct=Math.round(o.voti.length/totV*100);
       return '"'+o.testo+'": '+o.voti.length+' voti ('+pct+'%)';
     }).join(', ');
-    var prompt='Sei un docente di IRC (scuola secondaria II grado).\nAnalizza i risultati di questo sondaggio della tua classe e fornisci una lettura didattica sintetica.\n\nDOMANDA SONDAGGIO: '+card.titolo+'\nRISULTATI ('+totV+' votanti): '+votiTxt+'\n\nRispondi con ESATTAMENTE questo formato (niente altro):\n• [lettura del risultato principale: cosa rivela sulla comprensione o posizione della classe]\n• [eventuali sorprese o distribuzioni inattese rispetto a un percorso IRC tipico]\n• [1 domanda da lanciare in classe per approfondire il dato più significativo]\n\nMax 3 bullet, 1 frase ciascuno. Stile diretto da collega a collega.';
+    var prompt='Sei un docente di scuola secondaria.\nAnalizza i risultati di questo sondaggio della tua classe e fornisci una lettura didattica sintetica.\n\nDOMANDA SONDAGGIO: '+card.titolo+'\nRISULTATI ('+totV+' votanti): '+votiTxt+'\n\nRispondi con ESATTAMENTE questo formato (niente altro):\n• [lettura del risultato principale: cosa rivela sulla comprensione o posizione della classe]\n• [eventuali sorprese o distribuzioni inattese rispetto al percorso didattico]\n• [1 domanda da lanciare in classe per approfondire il dato più significativo]\n\nMax 3 bullet, 1 frase ciascuno. Stile diretto da collega a collega.';
     try{
       var res=await callGroqText(orKey,prompt,350);
       setSondaggioAiResult(function(p){return Object.assign({},p,{[card.id]:res});});
@@ -1390,7 +1390,7 @@ function App(){
       cardSettimana.map(function(c){return "- "+c.titolo+" ["+c.tipo+"]: "+(c.commenti||[]).length+" commenti";}).join("\n")+
       "\n\nTOTALE BACHECA: "+tutteCard.length+" card, "+totComm+" commenti, "+studentiAttivi.length+" studenti attivi\n"+
       "Card più discusse: "+topCard.map(function(c){return c.titolo+" ("+((c.commenti||[]).length)+"comm)";}).join(", ");
-    var prompt='Sei un docente di IRC (scuola secondaria II grado). Genera un report settimanale operativo basato sui dati reali della tua bacheca digitale.\n\n'+contesto+'\n\nRispondi SOLO con questo JSON:\n{\n"panoramica":"1 frase: andamento generale della settimana con dati concreti (card pubblicate, partecipazione, trend rispetto atteso)",\n"punto_forza":"1 frase: l\'aspetto didattico più positivo emerso questa settimana, con riferimento specifico",\n"da_migliorare":"1 frase: il problema o gap didattico principale da affrontare, con riferimento ai dati",\n"prossima_settimana":["Azione concreta 1 da fare lunedì","Argomento IRC da sviluppare basato su ciò che è emerso","Card o attività specifica da proporre"],\n"domanda_classe":"1 domanda aperta da lanciare come prima card della prossima settimana, basata su ciò che è rimasto irrisolto"\n}';
+    var prompt='Sei un docente di scuola secondaria. Genera un report settimanale operativo basato sui dati reali della tua bacheca digitale.\n\n'+contesto+'\n\nRispondi SOLO con questo JSON:\n{\n"panoramica":"1 frase: andamento generale della settimana con dati concreti (card pubblicate, partecipazione, trend rispetto atteso)",\n"punto_forza":"1 frase: l\'aspetto didattico più positivo emerso questa settimana, con riferimento specifico",\n"da_migliorare":"1 frase: il problema o gap didattico principale da affrontare, con riferimento ai dati",\n"prossima_settimana":["Azione concreta 1 da fare lunedì","Argomento da sviluppare basato su ciò che è emerso","Card o attività specifica da proporre"],\n"domanda_classe":"1 domanda aperta da lanciare come prima card della prossima settimana, basata su ciò che è rimasto irrisolto"\n}';
     try{
       var res=await callGroqJSON(orKey,prompt,600);
       setReportSett(res);
@@ -1875,7 +1875,7 @@ function App(){
         h("div",{style:{textAlign:"center",marginBottom:16}},
           h("div",{style:{fontSize:44,marginBottom:8}},"🔒"),
           h("div",{style:{fontWeight:900,color:"#f1f5f9",fontSize:18,marginBottom:4}},"Prima di iniziare"),
-          h("div",{style:{fontSize:12,color:"rgba(255,255,255,.45)",lineHeight:1.6}},"Questa bacheca è uno strumento didattico del tuo insegnante di Religione.")
+          h("div",{style:{fontSize:12,color:"rgba(255,255,255,.45)",lineHeight:1.6}},"Questa bacheca è uno strumento didattico del tuo insegnante.")
         ),
         h("div",{style:{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,padding:"14px 16px",marginBottom:16,display:"flex",flexDirection:"column",gap:10}},
           [{i:"👤",t:"Il tuo nome e cognome (da account Google) sono visibili al professore e agli altri studenti della classe."},
