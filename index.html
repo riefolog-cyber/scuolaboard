@@ -261,7 +261,7 @@ function quizListenRisposte(cardId,cb){
   });
 }
 
-var GROQ_MODELS=["llama-3.3-70b-versatile","llama3-70b-8192","llama3-8b-8192"];
+var GROQ_MODELS=["openai/gpt-oss-120b","llama-3.3-70b-versatile","llama3-70b-8192"];
 function callGroqJSON(k,prompt,mx){return _groq(k,prompt,mx||700,0,true);}
 function callGroqText(k,prompt,mx){return _groq(k,prompt,mx||600,0,false);}
 function _groq(k,prompt,mx,mi,json){
