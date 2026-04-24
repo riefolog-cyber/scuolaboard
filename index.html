@@ -193,7 +193,9 @@ function badgeBg(t){return t==="domanda"?"#6366f1":t==="nota"?"#f59e0b":t==="son
 function tipoIcon(t){return t==="domanda"?"💬":t==="nota"?"📄":t==="sondaggio"?"🗳️":t==="quiz"?"🧩":t==="annuncio"?"📢":t==="alzata"?"✋":t==="scala"?"📊":t==="brainstorm"?"💡":"📌";}
 function fbSave(c){return db.collection("cards").doc(String(c.id)).set(c);}
 function fbDel(id){return db.collection("cards").doc(String(id)).delete();}
-function fbListen(cb){return db.collection("cards").orderBy("ordine","asc").onSnapshot(function(s){var a=[];s.forEach(function(d){a.push(d.data());});cb(a);});}
+function fbListen(anno, cb) {
+  // Filtro automatico per anno scolastico
+  return db.collection("cards").where("annoScolastico", "==", anno).orderBy("ordine", "asc").onSnapshot(function(s) {return db.collection("cards").orderBy("ordine","asc").onSnapshot(function(s){var a=[];s.forEach(function(d){a.push(d.data());});cb(a);});}
 function normalizeLinks(c){
   if(c.links&&Array.isArray(c.links))return c.links;
   if(c.linkEsterno&&typeof c.linkEsterno==="string")return[{url:c.linkEsterno,label:""}];
@@ -3202,5 +3204,25 @@ function App(){
 ReactDOM.createRoot(document.getElementById("root")).render(h(App,null));
 })();
 </script>
+
+<script>
+  // Questo script sposta le vecchie card senza anno nel 2025/26 appena carichi la pagina
+  setTimeout(function() {
+    db.collection("cards").get().then(function(s) {
+      var batch = db.batch();
+      var count = 0;
+      s.forEach(function(doc) {
+        if (!doc.data().annoScolastico) {
+          batch.update(doc.ref, { annoScolastico: "2025/2026" });
+          count++;
+        }
+      });
+      if (count > 0) {
+        batch.commit().then(function() { console.log("Migrate " + count + " schede nel 2025/26"); });
+      }
+    });
+  }, 5000);
+</script>
+
 </body>
 </html>
