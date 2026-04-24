@@ -407,7 +407,7 @@ function ValutazioneApertaAI(h,s,risposta,di,d,isProf){
 
 function App(){
   var [user,setUser]=useState(null);
-  var ANNI_DISPONIBILI=["2021/2022","2022/2023","2023/2024","2024/2025","2025/2026","2026/2027","2027/2028"];
+  var ANNI_DISPONIBILI=["2025/2026","2026/2027","2027/2028","2028/2029","2029/2030"];
   var annoDefault=(function(){var s=null;try{s=sessionStorage.getItem("annoScolasticoAttivo");}catch(e){}return s||"2025/2026";})();
   var [annoScolastico,setAnnoScolastico]=useState(annoDefault);
   var [showAnnoMenu,setShowAnnoMenu]=useState(false);
@@ -684,11 +684,7 @@ function App(){
     if(!user)return;
     var isFirstLoad=true;
     var u1=fbListen(function(remote){
-      if(remote.length===0&&user.role==="prof"){
-        [{id:"demo1",tipo:"domanda",titolo:"Benvenuto in ScuolaBoard",testo:"Questa è una card demo!",data:new Date().toISOString().slice(0,10),autore:"Prof",likes:0,ordine:1,commenti:[],links:[],visibile:true,classi:["TUTTE"]},
-         {id:"demo2",tipo:"sondaggio",titolo:"Ti piace questa bacheca?",testo:"Vota!",data:new Date().toISOString().slice(0,10),autore:"Prof",likes:0,ordine:2,commenti:[],links:[],visibile:true,classi:["TUTTE"],opzioni:[{id:"o1",testo:"Sì, molto!",voti:[]},{id:"o2",testo:"Così così",voti:[]},{id:"o3",testo:"Da migliorare",voti:[]}]}
-        ].forEach(function(c){fbSave(c);});
-      } else {
+      {
         nextOrd.current=Math.max.apply(null,remote.map(function(c){return c.ordine||0;}).concat([0]))+1;
         // Auto-publish: se una card ha pubblicaIl nel passato ed è ancora nascosta, pubblicala
         if(user.role==="prof"){
@@ -710,16 +706,11 @@ function App(){
           if(nuove.length>0){setNewCardsBanner(nuove);setShowBanner(true);}
         }
         isFirstLoad=false;
-        // Salva sempre TUTTE le card nello stato allCards
         setAllCards(remote);
-        // Funzione filtro: card senza annoScolastico = 2025/2026 (card pre-modifica)
-        function filtraPerAnno(lista, anno){
-          return lista.filter(function(c){
-            var a = c.annoScolastico || "2025/2026";
-            return a === anno;
-          });
-        }
-        var filtered = filtraPerAnno(remote, annoScolastico);
+        var filtered=remote.filter(function(c){
+          var a=c.annoScolastico||"2025/2026";
+          return a===annoScolastico;
+        });
         setCards(filtered);
         setSC(function(prev){return prev?filtered.find(function(c){return c.id===prev.id;})||null:null;});
       }
@@ -751,7 +742,6 @@ function App(){
     return function(){u1();if(u2)u2();u3();u4();if(u5)u5();u6();if(u7)u7();};
   },[user]);
 
-  // Ri-filtra quando cambia anno (senza ricontattare Firebase)
   useEffect(function(){
     if(!allCards.length)return;
     var filtered=allCards.filter(function(c){
@@ -762,7 +752,6 @@ function App(){
     setSC(null);
   },[annoScolastico]);
 
-  // Chiudi menu anno cliccando fuori
   useEffect(function(){
     if(!showAnnoMenu)return;
     function handleOutside(){setShowAnnoMenu(false);}
@@ -1520,7 +1509,7 @@ function App(){
             anno);
           }),
           h("div",{style:{margin:"8px 10px 4px",padding:"6px 0 0",borderTop:"1px solid rgba(255,255,255,.07)",fontSize:10,color:"rgba(255,255,255,.3)",lineHeight:1.5}},
-            "Card senza anno → 2025/2026.",h("br",null),"Ogni anno ha la sua bacheca.")
+            "Ogni anno ha la sua bacheca.",h("br",null),"I dati passati restano archiviati.")
         )
       ),
       h("div",{style:{flex:1}}),
