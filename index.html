@@ -116,7 +116,7 @@ firebase.initializeApp({
   messagingSenderId:"249372381209",
   appId:"1:249372381209:web:737697d4d10b3ae06eda88"
 });
-var db=firebase.firestore(),auth=firebase.auth();
+window.db=firebase.firestore(); var auth=firebase.auth();
 var h=React.createElement,useState=React.useState,useEffect=React.useEffect,useRef=React.useRef,Fragment=React.Fragment;
 var CLASSI_COLORS=["#f59e0b","#22c55e","#3b82f6","#ec4899","#8b5cf6","#ef4444","#06b6d4","#f97316","#84cc16","#a855f7"];
 function classeColor(nome,lista){var idx=lista.indexOf(nome);return CLASSI_COLORS[idx%CLASSI_COLORS.length]||"#f59e0b";}
@@ -194,8 +194,20 @@ function tipoIcon(t){return t==="domanda"?"💬":t==="nota"?"📄":t==="sondaggi
 function fbSave(c){return db.collection("cards").doc(String(c.id)).set(c);}
 function fbDel(id){return db.collection("cards").doc(String(id)).delete();}
 function fbListen(anno, cb) {
-  // Filtro automatico per anno scolastico
-  return db.collection("cards").where("annoScolastico", "==", anno).orderBy("ordine", "asc").onSnapshot(function(s) {return db.collection("cards").orderBy("ordine","asc").onSnapshot(function(s){var a=[];s.forEach(function(d){a.push(d.data());});cb(a);});}
+  return db.collection("cards")
+    .where("annoScolastico", "==", anno)
+    .orderBy("ordine", "asc")
+    .onSnapshot(function(s) {
+      var a = [];
+      s.forEach(function(d) {
+        var data = d.data();
+        data.id = d.id;
+        a.push(data);
+      });
+      cb(a);
+    });
+}
+
 function normalizeLinks(c){
   if(c.links&&Array.isArray(c.links))return c.links;
   if(c.linkEsterno&&typeof c.linkEsterno==="string")return[{url:c.linkEsterno,label:""}];
@@ -411,6 +423,7 @@ function App(){
   var [user,setUser]=useState(null);
   var [authLoad,setAuthLoad]=useState(true);
   var [cards,setCards]=useState([]);
+  var [annoAttivo,setAnnoAttivo]=useState("2025/2026");
   var [view,setView]=useState("bacheca");
   var [previewSt,setPreviewSt]=useState(false);
   var [previewClasse,setPreviewClasse]=useState("TUTTE");
@@ -3205,24 +3218,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(h(App,null));
 })();
 </script>
 
-<script>
-  // Questo script sposta le vecchie card senza anno nel 2025/26 appena carichi la pagina
-  setTimeout(function() {
-    db.collection("cards").get().then(function(s) {
-      var batch = db.batch();
-      var count = 0;
-      s.forEach(function(doc) {
-        if (!doc.data().annoScolastico) {
-          batch.update(doc.ref, { annoScolastico: "2025/2026" });
-          count++;
-        }
-      });
-      if (count > 0) {
-        batch.commit().then(function() { console.log("Migrate " + count + " schede nel 2025/26"); });
-      }
-    });
-  }, 5000);
-</script>
+
 
 </body>
 </html>
