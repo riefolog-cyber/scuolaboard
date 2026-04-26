@@ -841,7 +841,7 @@ function App(){
   function confermaCopiaAnno(){
     if(!showCopiaAnno||!copiaAnnoTarget)return;
     var newId=Date.now()+"_ca_"+Math.random().toString(36).slice(2,5);
-    var copia=Object.assign({},showCopiaAnno,{id:newId,ordine:nextOrd.current++,commenti:[],likes:0,likesBy:[],reazioni:{},alzate:[],idee:[],data:new Date().toISOString().slice(0,10),annoScolastico:copiaAnnoTarget,visibile:true});
+    var copia=Object.assign({},showCopiaAnno,{id:newId,ordine:nextOrd.current++,commenti:[],likes:0,likesBy:[],reazioni:{},alzate:[],idee:[],data:new Date().toISOString().slice(0,10),annoScolastico:copiaAnnoTarget,visibile:false});
     delete copia.proposta;delete copia.motivazioneRifiuto;
     if(Array.isArray(showCopiaAnno.opzioni)){copia.opzioni=showCopiaAnno.opzioni.map(function(o){return Object.assign({},o,{voti:[]});});}
     fbSave(copia);
@@ -1771,7 +1771,7 @@ function App(){
                   isProf&&!simulaSt&&h("button",{onClick:function(e){e.stopPropagation();editCard(c);},style:{background:"rgba(59,130,246,.2)",border:"1px solid rgba(59,130,246,.4)",borderRadius:20,padding:"3px 9px",cursor:"pointer",fontSize:11,color:"#60a5fa",fontWeight:700}},"✏️"),
                   isOwner&&h("button",{onClick:function(e){e.stopPropagation();editCard(c);},style:{background:"rgba(59,130,246,.2)",border:"1px solid rgba(59,130,246,.4)",borderRadius:20,padding:"3px 9px",cursor:"pointer",fontSize:11,color:"#60a5fa",fontWeight:700}},"✏️"),
                   isProf&&!simulaSt&&h("button",{onClick:function(e){apriDuplica(c,e);},style:{background:"rgba(245,158,11,.15)",border:"1px solid rgba(245,158,11,.3)",borderRadius:20,padding:"3px 9px",cursor:"pointer",fontSize:11,color:"#fbbf24",fontWeight:700}},"📋"),
-                  isProf&&!simulaSt&&h("button",{"aria-label":"Copia in altro anno","data-tip":"Copia in altro anno",onClick:function(e){apriCopiaAnno(c,e);},style:{background:"rgba(99,102,241,.15)",border:"1px solid rgba(99,102,241,.3)",borderRadius:20,padding:"3px 9px",cursor:"pointer",fontSize:11,color:"#a5b4fc",fontWeight:700}},"🗓️"),
+                  isProf&&!simulaSt&&h("button",{"aria-label":"Copia in altro anno","data-tip":"Copia in altro anno",onClick:function(e){e.preventDefault();e.stopPropagation();setShowCopiaAnno(c);setCopiaAnnoTarget("");},style:{background:"rgba(99,102,241,.15)",border:"1px solid rgba(99,102,241,.3)",borderRadius:20,padding:"3px 9px",cursor:"pointer",fontSize:11,color:"#a5b4fc",fontWeight:700}},"🗓️"),
                   isProf&&!simulaSt&&h("button",{onClick:function(e){
                     e.stopPropagation();
                     if(cRes){setCardAiOpen(cOpen?"closed_"+String(c.id):String(c.id));}
@@ -1907,7 +1907,7 @@ function App(){
         h("div",{style:{display:"flex",gap:10}},
           h("button",{onClick:function(){setShowDuplica(null);},style:S.annullaBtn},"Annulla"),
           h("button",{onClick:confermaDuplica,style:{flex:2,padding:11,background:duplicaClassi.length?"linear-gradient(135deg,#f59e0b,#f97316)":"rgba(255,255,255,.06)",color:duplicaClassi.length?"#fff":"rgba(255,255,255,.40)",border:"none",borderRadius:11,fontSize:14,fontWeight:800,cursor:duplicaClassi.length?"pointer":"not-allowed"}},duplicaClassi.length?"📋 Duplica in "+duplicaClassi.length+" class"+(duplicaClassi.length===1?"e":"i"):"Seleziona almeno 1 classe"),
-    showCopiaAnno&&h("div",{style:{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",backdropFilter:"blur(3px)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20},onClick:function(){setShowCopiaAnno(null);setCopiaAnnoTarget("");}},
+    showCopiaAnno&&h("div",{style:{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",backdropFilter:"blur(3px)",zIndex:450,display:"flex",alignItems:"center",justifyContent:"center",padding:20},onClick:function(){setShowCopiaAnno(null);setCopiaAnnoTarget("");}},
       h("div",{style:{background:"rgba(20,20,40,.97)",border:"1px solid rgba(99,102,241,.3)",borderRadius:20,padding:26,width:"100%",maxWidth:360,boxShadow:"0 24px 60px rgba(0,0,0,.5)"},onClick:function(e){e.stopPropagation();}},
         h("h3",{style:{margin:"0 0 4px",color:"#f1f5f9",fontSize:16,fontWeight:800,textAlign:"center"}},"🗓️ Copia in altro anno"),
         h("p",{style:{color:"rgba(255,255,255,.58)",fontSize:12,marginBottom:4,textAlign:"center"}},'"'+( showCopiaAnno?showCopiaAnno.titolo:"")+'"'),
