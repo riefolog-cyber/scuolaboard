@@ -59,7 +59,10 @@ button:active{transform:scale(.96)}
 [data-tip]{position:relative;}
 [data-tip]::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:rgba(15,10,30,.95);color:#f1f5f9;border:1px solid rgba(255,255,255,.12);border-radius:7px;padding:4px 9px;font-size:11px;font-weight:600;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .15s;z-index:999;letter-spacing:.2px;}
 [data-tip]:hover::after{opacity:1;}
-@media(hover:none){[data-tip]::after{display:none;}}
+[data-tip-down]{position:relative;}
+[data-tip-down]::after{content:attr(data-tip-down);position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);background:rgba(15,10,30,.95);color:#f1f5f9;border:1px solid rgba(255,255,255,.12);border-radius:7px;padding:4px 9px;font-size:11px;font-weight:600;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .15s;z-index:999;letter-spacing:.2px;}
+[data-tip-down]:hover::after{opacity:1;}
+@media(hover:none){[data-tip]::after{display:none;}[data-tip-down]::after{display:none;}}
 
 /* ── MOBILE RESPONSIVENESS ── */
 @media (max-width: 480px) {
@@ -412,6 +415,8 @@ function App(){
   var [annoScolastico,setAnnoScolastico]=useState(annoDefault);
   var [showAnnoMenu,setShowAnnoMenu]=useState(false);
   var [allCards,setAllCards]=useState([]);
+  var [showCopiaAnno,setShowCopiaAnno]=useState(null);
+  var [copiaAnnoTarget,setCopiaAnnoTarget]=useState("");
   var [authLoad,setAuthLoad]=useState(true);
   var [cards,setCards]=useState([]);
   var [view,setView]=useState("bacheca");
@@ -645,6 +650,7 @@ function App(){
       if(showMsgInbox){setShowMsgInbox(false);return;}
       if(showWordCloud){setShowWordCloud(false);return;}
       if(askKey){setAskKey(false);setAkInput("");return;}
+      if(showCopiaAnno){setShowCopiaAnno(null);setCopiaAnnoTarget("");return;}
       if(showDuplica){setShowDuplica(null);return;}
       if(confirmDel){setConfirmDel(null);return;}
       if(showReset){setSR(false);return;}
@@ -657,7 +663,7 @@ function App(){
     }
     document.addEventListener("keydown",onKey);
     return function(){document.removeEventListener("keydown",onKey);};
-  },[lightbox,showCard,showModal,showAiQuizGen,showSommario,showMsgPrivato,showMsgInbox,showWordCloud,askKey,showDuplica,confirmDel,showReset,showResetOpt,showAmm,showProfilo,showTimerModal,showClasseModal,rinominaClasse,user]);
+  },[lightbox,showCard,showModal,showAiQuizGen,showSommario,showMsgPrivato,showMsgInbox,showWordCloud,askKey,showDuplica,showCopiaAnno,confirmDel,showReset,showResetOpt,showAmm,showProfilo,showTimerModal,showClasseModal,rinominaClasse,user]);
 
   useEffect(function(){
     auth.getRedirectResult().then(function(cr){
@@ -707,10 +713,7 @@ function App(){
         }
         isFirstLoad=false;
         setAllCards(remote);
-        var filtered=remote.filter(function(c){
-          var a=c.annoScolastico||"2025/2026";
-          return a===annoScolastico;
-        });
+        var filtered=remote.filter(function(c){return (c.annoScolastico||"2025/2026")===annoScolastico;});
         setCards(filtered);
         setSC(function(prev){return prev?filtered.find(function(c){return c.id===prev.id;})||null:null;});
       }
@@ -744,12 +747,8 @@ function App(){
 
   useEffect(function(){
     if(!allCards.length)return;
-    var filtered=allCards.filter(function(c){
-      var a=c.annoScolastico||"2025/2026";
-      return a===annoScolastico;
-    });
-    setCards(filtered);
-    setSC(null);
+    var filtered=allCards.filter(function(c){return (c.annoScolastico||"2025/2026")===annoScolastico;});
+    setCards(filtered);setSC(null);
   },[annoScolastico]);
 
   useEffect(function(){
@@ -838,6 +837,17 @@ function App(){
   }
 
   function apriDuplica(card,e){e.stopPropagation();setShowDuplica(card);setDuplicaClassi([]);}
+  function apriCopiaAnno(card,e){e.stopPropagation();setShowCopiaAnno(card);setCopiaAnnoTarget("");}
+  function confermaCopiaAnno(){
+    if(!showCopiaAnno||!copiaAnnoTarget)return;
+    var newId=Date.now()+"_ca_"+Math.random().toString(36).slice(2,5);
+    var copia=Object.assign({},showCopiaAnno,{id:newId,ordine:nextOrd.current++,commenti:[],likes:0,likesBy:[],reazioni:{},alzate:[],idee:[],data:new Date().toISOString().slice(0,10),annoScolastico:copiaAnnoTarget,visibile:true});
+    delete copia.proposta;delete copia.motivazioneRifiuto;
+    if(Array.isArray(showCopiaAnno.opzioni)){copia.opzioni=showCopiaAnno.opzioni.map(function(o){return Object.assign({},o,{voti:[]});});}
+    fbSave(copia);
+    showToast("Card copiata in "+copiaAnnoTarget+" ✓","ok");
+    setShowCopiaAnno(null);setCopiaAnnoTarget("");
+  }
   function confermaDuplica(){
     if(!showDuplica||!duplicaClassi.length)return;
     duplicaClassi.forEach(function(cl){
@@ -1485,45 +1495,25 @@ function App(){
         )
       ),
       h("div",{style:{position:"relative",display:"flex",alignItems:"center"},onClick:function(e){e.stopPropagation();}},
-        h("button",{
-          onClick:function(e){e.stopPropagation();setShowAnnoMenu(function(v){return !v;});},
-          style:{background:"rgba(99,102,241,.2)",border:"1px solid rgba(99,102,241,.45)",borderRadius:20,padding:"3px 13px",cursor:"pointer",fontSize:12,fontWeight:800,color:"#c4b5fd",display:"flex",alignItems:"center",gap:5,whiteSpace:"nowrap"}
-        },"📅 ",annoScolastico," ▾"),
+        h("button",{onClick:function(e){e.stopPropagation();setShowAnnoMenu(function(v){return !v;});},style:{background:"rgba(99,102,241,.2)",border:"1px solid rgba(99,102,241,.45)",borderRadius:20,padding:"3px 13px",cursor:"pointer",fontSize:12,fontWeight:800,color:"#c4b5fd",display:"flex",alignItems:"center",gap:5,whiteSpace:"nowrap"}},"📅 ",annoScolastico," ▾"),
         showAnnoMenu&&h("div",{style:{position:"absolute",top:"calc(100% + 8px)",left:0,background:"rgba(13,13,30,.98)",border:"1px solid rgba(99,102,241,.4)",borderRadius:14,padding:"8px 6px",zIndex:300,minWidth:170,boxShadow:"0 12px 40px rgba(0,0,0,.7)"}},
-          h("div",{style:{fontSize:10,fontWeight:800,color:"rgba(255,255,255,.38)",letterSpacing:1.2,padding:"2px 10px 8px",textTransform:"uppercase"}},"Anno scolastico"),
-          ANNI_DISPONIBILI.map(function(anno){
-            var sel=anno===annoScolastico;
-            return h("button",{key:anno,onClick:function(e){
-              e.stopPropagation();
-              setAnnoScolastico(anno);
-              try{sessionStorage.setItem("annoScolasticoAttivo",anno);}catch(ex){}
-              setShowAnnoMenu(false);
-            },style:{
-              display:"flex",alignItems:"center",gap:8,width:"100%",textAlign:"left",
-              background:sel?"rgba(99,102,241,.25)":"transparent",
-              border:"none",borderRadius:9,padding:"7px 12px",
-              cursor:"pointer",fontSize:13,fontWeight:sel?800:500,
-              color:sel?"#e0e7ff":"rgba(255,255,255,.72)",marginBottom:1
-            }},
-            h("span",{style:{width:16,textAlign:"center",fontSize:12}},sel?"✓":""),
-            anno);
-          }),
-          h("div",{style:{margin:"8px 10px 4px",padding:"6px 0 0",borderTop:"1px solid rgba(255,255,255,.07)",fontSize:10,color:"rgba(255,255,255,.3)",lineHeight:1.5}},
-            "Ogni anno ha la sua bacheca.",h("br",null),"I dati passati restano archiviati.")
+          h("div",{style:{fontSize:10,fontWeight:800,color:"rgba(255,255,255,.38)",letterSpacing:1.2,padding:"2px 10px 8px"}},"ANNO SCOLASTICO"),
+          ANNI_DISPONIBILI.map(function(anno){var sel=anno===annoScolastico;return h("button",{key:anno,onClick:function(e){e.stopPropagation();setAnnoScolastico(anno);try{sessionStorage.setItem("annoScolasticoAttivo",anno);}catch(ex){}setShowAnnoMenu(false);},style:{display:"flex",alignItems:"center",gap:8,width:"100%",textAlign:"left",background:sel?"rgba(99,102,241,.25)":"transparent",border:"none",borderRadius:9,padding:"7px 12px",cursor:"pointer",fontSize:13,fontWeight:sel?800:500,color:sel?"#e0e7ff":"rgba(255,255,255,.72)",marginBottom:1}},h("span",{style:{width:16,textAlign:"center",fontSize:12}},sel?"✓":""),anno);}),
+          h("div",{style:{margin:"8px 10px 4px",padding:"6px 0 0",borderTop:"1px solid rgba(255,255,255,.07)",fontSize:10,color:"rgba(255,255,255,.3)",lineHeight:1.5}},"Ogni anno ha la sua bacheca.",h("br",null),"I dati passati restano archiviati.")
         )
       ),
       h("div",{style:{flex:1}}),
-      isProf&&h("button",{"aria-label":"Imposta chiave API Groq","data-tip":"API Groq",onClick:function(){setAskKey(true);},style:{background:orKey?"rgba(34,197,94,.15)":"rgba(249,115,22,.15)",border:"1px solid "+(orKey?"rgba(34,197,94,.3)":"rgba(249,115,22,.3)"),borderRadius:8,padding:"5px 9px",cursor:"pointer",fontSize:12,color:orKey?"#4ade80":"#fb923c"}},orKey?"🔑":"⚠️"),
-      isProf&&h("button",{"aria-label":"Opzioni reset","data-tip":"Reset bacheca",onClick:function(){setShowResetOpt(true);},style:{background:"rgba(255,255,255,.06)",border:"1px solid rgba(239,68,68,.3)",borderRadius:8,padding:"5px 9px",cursor:"pointer",fontSize:14,color:"#f87171"}},"🗑️"),
-      isProf&&!simulaSt&&h("button",{"aria-label":"Ammonizioni","data-tip":"Ammonizioni",onClick:function(){setShowAmm({autore:null,cardId:null,cmId:null});},style:{background:"rgba(245,158,11,.12)",border:"1px solid rgba(245,158,11,.3)",borderRadius:8,padding:"5px 9px",cursor:"pointer",fontSize:14,color:"#fbbf24"}},"⚠️"),
-      h("button",{"aria-label":"QR Code bacheca","data-tip":"QR Code",onClick:function(){setSQR(true);},style:{background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.1)",borderRadius:8,padding:"5px 9px",cursor:"pointer",fontSize:14,color:"rgba(255,255,255,.7)"}},"◆"),
+      isProf&&h("button",{"aria-label":"Imposta chiave API Groq","data-tip-down":"API Groq",onClick:function(){setAskKey(true);},style:{background:orKey?"rgba(34,197,94,.15)":"rgba(249,115,22,.15)",border:"1px solid "+(orKey?"rgba(34,197,94,.3)":"rgba(249,115,22,.3)"),borderRadius:8,padding:"5px 9px",cursor:"pointer",fontSize:12,color:orKey?"#4ade80":"#fb923c"}},orKey?"🔑":"⚠️"),
+      isProf&&h("button",{"aria-label":"Opzioni reset","data-tip-down":"Reset bacheca",onClick:function(){setShowResetOpt(true);},style:{background:"rgba(255,255,255,.06)",border:"1px solid rgba(239,68,68,.3)",borderRadius:8,padding:"5px 9px",cursor:"pointer",fontSize:14,color:"#f87171"}},"🗑️"),
+      isProf&&!simulaSt&&h("button",{"aria-label":"Ammonizioni","data-tip-down":"Ammonizioni",onClick:function(){setShowAmm({autore:null,cardId:null,cmId:null});},style:{background:"rgba(245,158,11,.12)",border:"1px solid rgba(245,158,11,.3)",borderRadius:8,padding:"5px 9px",cursor:"pointer",fontSize:14,color:"#fbbf24"}},"⚠️"),
+      h("button",{"aria-label":"QR Code bacheca","data-tip-down":"QR Code",onClick:function(){setSQR(true);},style:{background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.1)",borderRadius:8,padding:"5px 9px",cursor:"pointer",fontSize:14,color:"rgba(255,255,255,.7)"}},"◆"),
       isProf&&h("button",{onClick:function(){setPreviewSt(function(v){return !v;});},style:{background:simulaSt?"rgba(249,115,22,.3)":"rgba(255,255,255,.07)",border:"1px solid "+(simulaSt?"rgba(249,115,22,.6)":"rgba(255,255,255,.15)"),borderRadius:8,padding:"5px 10px",cursor:"pointer",fontSize:12,fontWeight:700,color:simulaSt?"#fb923c":"rgba(255,255,255,.6)"}},simulaSt?"🔙 Prof":"👁️ Studente"),
       isProf&&!simulaSt&&h("div",{style:{display:"flex",gap:2,background:"rgba(255,255,255,.05)",borderRadius:9,padding:3,border:"1px solid rgba(255,255,255,.08)"}},
         [{k:"bacheca",i:"📌"},{k:"analisi",i:"🤖"},{k:"studenti",i:"👥"}].map(function(t){
           return h("button",{key:t.k,onClick:function(){setView(t.k);setViewStudenti(t.k==="studenti");},style:{padding:"4px 11px",borderRadius:7,border:"none",background:view===t.k?"rgba(99,102,241,.4)":"transparent",color:view===t.k?"#fff":"rgba(255,255,255,.58)",fontWeight:700,cursor:"pointer",fontSize:13}},t.i);
         })
       ),
-      isProf&&!simulaSt&&h("button",{"aria-label":"Selezione multipla","data-tip":"Selezione multipla",onClick:function(){setBulkMode(function(v){if(v)setBulkSelected([]);return !v;});},style:{background:bulkMode?"rgba(99,102,241,.4)":"rgba(255,255,255,.07)",border:"1px solid "+(bulkMode?"rgba(99,102,241,.6)":"rgba(255,255,255,.15)"),borderRadius:8,padding:"5px 9px",cursor:"pointer",fontSize:13,color:bulkMode?"#a5b4fc":"rgba(255,255,255,.52)",fontWeight:700}},"☑"),
+      isProf&&!simulaSt&&h("button",{"aria-label":"Selezione multipla","data-tip-down":"Selezione multipla",onClick:function(){setBulkMode(function(v){if(v)setBulkSelected([]);return !v;});},style:{background:bulkMode?"rgba(99,102,241,.4)":"rgba(255,255,255,.07)",border:"1px solid "+(bulkMode?"rgba(99,102,241,.6)":"rgba(255,255,255,.15)"),borderRadius:8,padding:"5px 9px",cursor:"pointer",fontSize:13,color:bulkMode?"#a5b4fc":"rgba(255,255,255,.52)",fontWeight:700}},"☑"),
       isProf&&!simulaSt&&h("button",{onClick:function(){setEditMode(null);setForm(Object.assign({},FORM0));setSM(true);},style:{background:"linear-gradient(135deg,#6366f1,#8b5cf6)",border:"none",borderRadius:20,width:34,height:34,cursor:"pointer",color:"#fff",fontSize:20,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800}},"+"),
       !isProf&&!simulaSt&&(function(){
         var nonLette=visibleSorted.filter(function(card){return !seenRef.current.has(String(card.id));}).length;
@@ -1770,17 +1760,18 @@ function App(){
                     )
                   ),
                   h("div",{style:{display:"flex",gap:3}},["🤔","💡","🔥"].map(function(emoji){var lista=(c.reazioni&&c.reazioni[emoji])||[];var hasMe=lista.indexOf(myName(user))>=0;return h("button",{key:emoji,onClick:function(e){e.stopPropagation();toggleReazione(c.id,emoji);},title:lista.length>0?lista.join(", "):emoji,style:{background:hasMe?"rgba(99,102,241,.25)":"rgba(255,255,255,.06)",border:"1px solid "+(hasMe?"rgba(99,102,241,.4)":"rgba(255,255,255,.1)"),borderRadius:20,padding:"3px 7px",cursor:"pointer",fontSize:12,color:hasMe?"#a5b4fc":"rgba(255,255,255,.65)",display:"flex",alignItems:"center",gap:3}},emoji,lista.length>0&&h("span",{style:{fontSize:11,fontWeight:700}},lista.length));})),
-                  h("button",{"aria-label":"Apri commenti","data-tip":"Commenta",onClick:function(e){e.stopPropagation();setSC(c);setQRisposte({});setQInviato(false);setQLoading(false);markSeen(c.id);setNc({testo:""});setEditingCm(null);setCardQErr("");setCardQ("");setTimeout(function(){var ta=document.getElementById("cm-textarea");if(ta){ta.scrollIntoView({behavior:"smooth",block:"center"});ta.focus();}},150);},style:{background:"rgba(99,102,241,.15)",border:"1px solid rgba(99,102,241,.3)",borderRadius:20,padding:"3px 10px",cursor:"pointer",fontSize:12,color:"#a5b4fc",display:"flex",alignItems:"center",gap:4,fontWeight:700}},"💬 Commenta",h("span",{style:{fontSize:11,background:"rgba(99,102,241,.3)",borderRadius:10,padding:"0 5px",marginLeft:2}},(c.commenti||[]).length||"0")),
+                  h("button",{"aria-label":"Apri commenti","data-tip-down":"Commenta",onClick:function(e){e.stopPropagation();setSC(c);setQRisposte({});setQInviato(false);setQLoading(false);markSeen(c.id);setNc({testo:""});setEditingCm(null);setCardQErr("");setCardQ("");setTimeout(function(){var ta=document.getElementById("cm-textarea");if(ta){ta.scrollIntoView({behavior:"smooth",block:"center"});ta.focus();}},150);},style:{background:"rgba(99,102,241,.15)",border:"1px solid rgba(99,102,241,.3)",borderRadius:20,padding:"3px 10px",cursor:"pointer",fontSize:12,color:"#a5b4fc",display:"flex",alignItems:"center",gap:4,fontWeight:700}},"💬 Commenta",h("span",{style:{fontSize:11,background:"rgba(99,102,241,.3)",borderRadius:10,padding:"0 5px",marginLeft:2}},(c.commenti||[]).length||"0")),
                   isProf&&!simulaSt&&(c.commenti||[]).length>=3&&h("button",{onClick:function(e){e.stopPropagation();setShowSommario(c.id);if(!sommarioResult[c.id])riassuntiCommentiRun(c);},style:{background:"rgba(34,197,94,.12)",border:"1px solid rgba(34,197,94,.3)",borderRadius:20,padding:"3px 9px",cursor:"pointer",fontSize:11,color:"#4ade80",fontWeight:700,display:"flex",alignItems:"center",gap:3}},"📝",h("span",null,"Riassumi")),
                   isProf&&!simulaSt&&h("button",{onClick:function(e){e.stopPropagation();setShowMsgPrivato({cardId:c.id,cardTitolo:c.titolo,studenteName:null});setMsgPrivatoTesto("");},style:{background:"rgba(245,158,11,.12)",border:"1px solid rgba(245,158,11,.3)",borderRadius:20,padding:"3px 9px",cursor:"pointer",fontSize:11,color:"#fbbf24",fontWeight:700}},"✉️"),
                   !isProf&&!simulaSt&&h("button",{onClick:function(e){e.stopPropagation();togglePreferito(c.id);},style:{background:preferiti.indexOf(String(c.id))>=0?"rgba(245,158,11,.3)":"rgba(255,255,255,.06)",border:"1px solid "+(preferiti.indexOf(String(c.id))>=0?"rgba(245,158,11,.5)":"rgba(255,255,255,.1)"),borderRadius:20,padding:"3px 9px",cursor:"pointer",fontSize:13,color:preferiti.indexOf(String(c.id))>=0?"#fbbf24":"rgba(255,255,255,.45)"}},preferiti.indexOf(String(c.id))>=0?"★":"☆"),
                   h("span",{style:{flex:1}}),
                   h("span",{style:{fontSize:11,color:"rgba(255,255,255,.45)",title:fmt(c.data)}},timeAgo(c.data)),
-                  isProf&&!simulaSt&&h("button",{"aria-label":"Copia link","data-tip":"Copia link",onClick:function(e){e.stopPropagation();var url=window.location.href.split("#")[0]+"#card-"+c.id;navigator.clipboard&&navigator.clipboard.writeText(url).then(function(){showToast("Link copiato 🔗","ok");}).catch(function(){showToast("Link: "+url,"ok");});},style:{background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.12)",borderRadius:20,padding:"3px 9px",cursor:"pointer",fontSize:11,color:"rgba(255,255,255,.52)",fontWeight:700}},"🔗"),
+                  isProf&&!simulaSt&&h("button",{"aria-label":"Copia link","data-tip-down":"Copia link",onClick:function(e){e.stopPropagation();var url=window.location.href.split("#")[0]+"#card-"+c.id;navigator.clipboard&&navigator.clipboard.writeText(url).then(function(){showToast("Link copiato 🔗","ok");}).catch(function(){showToast("Link: "+url,"ok");});},style:{background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.12)",borderRadius:20,padding:"3px 9px",cursor:"pointer",fontSize:11,color:"rgba(255,255,255,.52)",fontWeight:700}},"🔗"),
                   isProf&&!simulaSt&&h("button",{"aria-label":c.pinned?"Rimuovi pin":"Fissa in cima",onClick:function(e){e.stopPropagation();fbSave(Object.assign({},c,{pinned:!c.pinned}));showToast(c.pinned?"Card rimossa dai pin":"Card fissata in cima 📌","ok");},style:{background:c.pinned?"rgba(245,158,11,.35)":"rgba(255,255,255,.07)",border:"1px solid "+(c.pinned?"rgba(245,158,11,.6)":"rgba(255,255,255,.15)"),borderRadius:20,padding:"3px 9px",cursor:"pointer",fontSize:11,color:c.pinned?"#fbbf24":"rgba(255,255,255,.58)",fontWeight:700}},c.pinned?"📌":"☐"),
                   isProf&&!simulaSt&&h("button",{onClick:function(e){e.stopPropagation();editCard(c);},style:{background:"rgba(59,130,246,.2)",border:"1px solid rgba(59,130,246,.4)",borderRadius:20,padding:"3px 9px",cursor:"pointer",fontSize:11,color:"#60a5fa",fontWeight:700}},"✏️"),
                   isOwner&&h("button",{onClick:function(e){e.stopPropagation();editCard(c);},style:{background:"rgba(59,130,246,.2)",border:"1px solid rgba(59,130,246,.4)",borderRadius:20,padding:"3px 9px",cursor:"pointer",fontSize:11,color:"#60a5fa",fontWeight:700}},"✏️"),
                   isProf&&!simulaSt&&h("button",{onClick:function(e){apriDuplica(c,e);},style:{background:"rgba(245,158,11,.15)",border:"1px solid rgba(245,158,11,.3)",borderRadius:20,padding:"3px 9px",cursor:"pointer",fontSize:11,color:"#fbbf24",fontWeight:700}},"📋"),
+                  isProf&&!simulaSt&&h("button",{"aria-label":"Copia in altro anno","data-tip":"Copia in altro anno",onClick:function(e){apriCopiaAnno(c,e);},style:{background:"rgba(99,102,241,.15)",border:"1px solid rgba(99,102,241,.3)",borderRadius:20,padding:"3px 9px",cursor:"pointer",fontSize:11,color:"#a5b4fc",fontWeight:700}},"🗓️"),
                   isProf&&!simulaSt&&h("button",{onClick:function(e){
                     e.stopPropagation();
                     if(cRes){setCardAiOpen(cOpen?"closed_"+String(c.id):String(c.id));}
@@ -1915,7 +1906,25 @@ function App(){
         ),
         h("div",{style:{display:"flex",gap:10}},
           h("button",{onClick:function(){setShowDuplica(null);},style:S.annullaBtn},"Annulla"),
-          h("button",{onClick:confermaDuplica,style:{flex:2,padding:11,background:duplicaClassi.length?"linear-gradient(135deg,#f59e0b,#f97316)":"rgba(255,255,255,.06)",color:duplicaClassi.length?"#fff":"rgba(255,255,255,.40)",border:"none",borderRadius:11,fontSize:14,fontWeight:800,cursor:duplicaClassi.length?"pointer":"not-allowed"}},duplicaClassi.length?"📋 Duplica in "+duplicaClassi.length+" class"+(duplicaClassi.length===1?"e":"i"):"Seleziona almeno 1 classe")
+          h("button",{onClick:confermaDuplica,style:{flex:2,padding:11,background:duplicaClassi.length?"linear-gradient(135deg,#f59e0b,#f97316)":"rgba(255,255,255,.06)",color:duplicaClassi.length?"#fff":"rgba(255,255,255,.40)",border:"none",borderRadius:11,fontSize:14,fontWeight:800,cursor:duplicaClassi.length?"pointer":"not-allowed"}},duplicaClassi.length?"📋 Duplica in "+duplicaClassi.length+" class"+(duplicaClassi.length===1?"e":"i"):"Seleziona almeno 1 classe"),
+    showCopiaAnno&&h("div",{style:{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",backdropFilter:"blur(3px)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20},onClick:function(){setShowCopiaAnno(null);setCopiaAnnoTarget("");}},
+      h("div",{style:{background:"rgba(20,20,40,.97)",border:"1px solid rgba(99,102,241,.3)",borderRadius:20,padding:26,width:"100%",maxWidth:360,boxShadow:"0 24px 60px rgba(0,0,0,.5)"},onClick:function(e){e.stopPropagation();}},
+        h("h3",{style:{margin:"0 0 4px",color:"#f1f5f9",fontSize:16,fontWeight:800,textAlign:"center"}},"🗓️ Copia in altro anno"),
+        h("p",{style:{color:"rgba(255,255,255,.58)",fontSize:12,marginBottom:4,textAlign:"center"}},'"'+( showCopiaAnno?showCopiaAnno.titolo:"")+'"'),
+        h("p",{style:{color:"rgba(255,255,255,.45)",fontSize:11,marginBottom:16,textAlign:"center"}},"Copia solo i contenuti — commenti e voti non vengono copiati."),
+        h("div",{style:{display:"flex",flexDirection:"column",gap:6,marginBottom:18}},
+          ANNI_DISPONIBILI.filter(function(a){return a!==annoScolastico;}).map(function(anno){
+            var sel=anno===copiaAnnoTarget;
+            return h("button",{key:anno,type:"button",onClick:function(){setCopiaAnnoTarget(anno);},style:{padding:"9px 14px",borderRadius:10,border:"1px solid "+(sel?"#6366f1":"rgba(255,255,255,.15)"),background:sel?"rgba(99,102,241,.3)":"rgba(255,255,255,.05)",color:sel?"#e0e7ff":"rgba(255,255,255,.7)",fontSize:13,fontWeight:sel?800:500,cursor:"pointer",display:"flex",alignItems:"center",gap:8,textAlign:"left"}},
+            h("span",{style:{fontSize:12}},sel?"✓":"○"),anno,(anno>annoScolastico?h("span",{style:{fontSize:10,color:"rgba(255,255,255,.35)",marginLeft:"auto"}},"futuro"):h("span",{style:{fontSize:10,color:"rgba(255,255,255,.35)",marginLeft:"auto"}},"archivio")));
+          })
+        ),
+        h("div",{style:{display:"flex",gap:8}},
+          h("button",{onClick:function(){setShowCopiaAnno(null);setCopiaAnnoTarget("");},style:{flex:1,padding:11,background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.6)",border:"none",borderRadius:11,fontSize:14,fontWeight:700,cursor:"pointer"}},"Annulla"),
+          h("button",{onClick:confermaCopiaAnno,style:{flex:2,padding:11,background:copiaAnnoTarget?"linear-gradient(135deg,#6366f1,#8b5cf6)":"rgba(255,255,255,.06)",color:copiaAnnoTarget?"#fff":"rgba(255,255,255,.4)",border:"none",borderRadius:11,fontSize:14,fontWeight:800,cursor:copiaAnnoTarget?"pointer":"not-allowed"}},copiaAnnoTarget?"🗓️ Copia in "+copiaAnnoTarget:"Seleziona un anno")
+        )
+      )
+    )
         )
       )
     ),
