@@ -120,7 +120,9 @@ firebase.initializeApp({
   appId:"1:249372381209:web:737697d4d10b3ae06eda88"
 });
 var db=firebase.firestore(),auth=firebase.auth();
-var h=React.createElement,useState=React.useState,useEffect=React.useEffect,useRef=React.useRef,Fragment=React.Fragment;
+// Abilita persistence per cache offline (ottimizzazione #1)
+db.enablePersistence().catch(function(err){console.log("Persistence non disponibile:",err.code);});
+var h=React.createElement,useState=React.useState,useEffect=React.useEffect,useRef=React.useRef,Fragment=React.Fragment,useMemo=React.useMemo;
 var CLASSI_COLORS=["#f59e0b","#22c55e","#3b82f6","#ec4899","#8b5cf6","#ef4444","#06b6d4","#f97316","#84cc16","#a855f7"];
 function classeColor(nome,lista){var idx=lista.indexOf(nome);return CLASSI_COLORS[idx%CLASSI_COLORS.length]||"#f59e0b";}
 var CLASSI_DEFAULT=["1AO","1AI","1BO","1CO","2AO","2AI","2BO","2CO","3AO","3AI","3BO","4AO","4AI","4BO","5AO","5AA","5AI","5BO"];
@@ -215,12 +217,13 @@ function compressImage(file,maxW,maxH,quality){
       var canvas=document.createElement("canvas");
       canvas.width=cw;canvas.height=ch;
       var ctx=canvas.getContext("2d");
+      // Ottimizzazione #6: qualità ridotta a 0.75 e rimozione EXIF (già implicita in canvas)
       ctx.drawImage(img,0,0,cw,ch);
-      var TARGET_KB=90;
-      var b64=canvas.toDataURL("image/jpeg",quality);
+      var TARGET_KB=70; // Ridotto da 90 a 70 KB per ottimizzare
+      var b64=canvas.toDataURL("image/jpeg",0.75); // Qualità fissa a 0.75
       var kb=Math.round(b64.length*0.75/1024);
-      if(kb>TARGET_KB){b64=canvas.toDataURL("image/jpeg",quality*0.65);kb=Math.round(b64.length*0.75/1024);}
-      if(kb>TARGET_KB*2){var c2=document.createElement("canvas");c2.width=Math.round(cw*0.75);c2.height=Math.round(ch*0.75);c2.getContext("2d").drawImage(canvas,0,0,c2.width,c2.height);b64=c2.toDataURL("image/jpeg",0.6);}
+      if(kb>TARGET_KB){b64=canvas.toDataURL("image/jpeg",0.6);kb=Math.round(b64.length*0.75/1024);}
+      if(kb>TARGET_KB*2){var c2=document.createElement("canvas");c2.width=Math.round(cw*0.7);c2.height=Math.round(ch*0.7);c2.getContext("2d").drawImage(canvas,0,0,c2.width,c2.height);b64=c2.toDataURL("image/jpeg",0.55);}
       if(kb>TARGET_KB*3){b64=canvas.toDataURL("image/jpeg",0.4);}
       resolve(b64);
     };
@@ -265,8 +268,20 @@ function quizListenRisposte(cardId,cb){
 }
 
 var GROQ_MODELS=["openai/gpt-oss-120b","llama-3.3-70b-versatile","llama3-70b-8192"];
-function callGroqJSON(k,prompt,mx){return _groq(k,prompt,mx||700,0,true);}
-function callGroqText(k,prompt,mx){return _groq(k,prompt,mx||600,0,false);}
+// Ottimizzazione #3: Debouncing per chiamate AI
+var _groqDebounceTimers={};
+function callGroqJSON(k,prompt,mx){return _groqWithDebounce(k,prompt,mx||700,0,true);}
+function callGroqText(k,prompt,mx){return _groqWithDebounce(k,prompt,mx||600,0,false);}
+function _groqWithDebounce(k,prompt,mx,mi,json){
+  var key=prompt.slice(0,50); // Usa inizio prompt come chiave debounce
+  if(_groqDebounceTimers[key]){clearTimeout(_groqDebounceTimers[key]);}
+  return new Promise(function(resolve,reject){
+    _groqDebounceTimers[key]=setTimeout(function(){
+      _groq(k,prompt,mx,mi,json).then(resolve).catch(reject);
+      delete _groqDebounceTimers[key];
+    },300); // Delay di 300ms per evitare chiamate duplicate
+  });
+}
 function _groq(k,prompt,mx,mi,json){
   if(mi>=GROQ_MODELS.length)return Promise.reject(new Error("Nessun modello disponibile."));
   return fetch("https://api.groq.com/openai/v1/chat/completions",{
@@ -865,11 +880,14 @@ function App(){
   }
 
   var totC=cards.reduce(function(a,c){return a+(c.commenti||[]).length;},0);
-  var proposte=cards.filter(function(c){return c.proposta===true;});
+  // Ottimizzazione #2: Memoizzazione per evitare filter/find ripetuti su cards
+  var cardsById=useMemo(function(){var m={};cards.forEach(function(c){m[c.id]=c;});return m;},[cards]);
+  var proposte=useMemo(function(){return cards.filter(function(c){return c.proposta===true;});},[cards]);
   var isProf=user&&user.role==="prof";
   var simulaSt=isProf&&previewSt;
 
-  var visible=cards.filter(function(c){
+  var visible=useMemo(function(){
+    return cards.filter(function(c){
     if(undoDelete&&String(c.id)===String(undoDelete.card.id))return false;
     if(simulaSt||!isProf){
       if(c.proposta||c.visibile===false)return false;
@@ -885,7 +903,7 @@ function App(){
       else{if(cc.indexOf("TUTTE")<0&&cc.indexOf(filterClasse)<0)return false;}
     }
     return true;
-  });
+  });},[cards,undoDelete,simulaSt,isProf,previewClasse,user?user.classe:null,filterClasse]);
 
   var visibleSorted=visible.slice().sort(function(a,b){
     if(a.pinned&&!b.pinned)return -1;
@@ -3266,6 +3284,15 @@ function App(){
 }
 ReactDOM.createRoot(document.getElementById("root")).render(h(App,null));
 })();
+<script>
+// Ottimizzazione #7: Service Worker per cache risorse statiche
+if('serviceWorker' in navigator){
+  window.addEventListener('load',function(){
+    navigator.serviceWorker.register('./sw.js').then(function(reg){
+      console.log('[SW] Registrato con successo:',reg.scope);
+    }).catch(function(err){console.log('[SW] Registrazione fallita:',err);});
+  });
+}
 </script>
 </body>
 </html>
