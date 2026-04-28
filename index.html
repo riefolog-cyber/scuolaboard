@@ -722,7 +722,7 @@ function App(){
       }
     }catch(e){console.warn("[ScuolaBoard]",e);}
   },[newCardsBanner.length]);
-  var CLASSI_LIST=useMemo(function(){return CLASSI_DEFAULT.concat(classiCustom.filter(function(c){return CLASSI_DEFAULT!.includes(c);}));},[classiCustom]);
+  var CLASSI_LIST=useMemo(function(){return CLASSI_DEFAULT.concat(classiCustom.filter(function(c){return !CLASSI_DEFAULT.includes(c);}));},[classiCustom]);
   var addClasseCustom=useCallback(function(){
     var v=newClasseInput.trim().toUpperCase();
     if(!v)return;
@@ -750,7 +750,7 @@ function App(){
   var togglePreferito=useCallback(function(cardId){
     var id=String(cardId);
     var next=preferiti.includes(id)?preferiti.filter(function(x){return x!==id;}):[].concat(preferiti,[id]);
-    var adding=preferiti!.includes(id);
+    var adding=!preferiti.includes(id);
     setPreferiti(next);fbFavSave(user.uid,next);
     showToast(adding?"Aggiunto ai preferiti ★":"Rimosso dai preferiti","ok");
   },[preferiti,user]);
@@ -835,8 +835,8 @@ function App(){
             if(c.proposta||c.visibile===false)return false;
             var cc=c.classi||["TUTTE"];if(cc.length===0)return false;
             var stC=user&&user.classe;
-            if(stC){if(cc!.includes("TUTTE")&&cc!.includes(stC))return false;}
-            else{if(cc!.includes("TUTTE"))return false;}
+            if(stC){if(!cc.includes("TUTTE")&&!cc.includes(stC))return false;}
+            else{if(!cc.includes("TUTTE"))return false;}
             return!seenRef.current.has(String(c.id));
           });
           if(nuove.length>0){setNewCardsBanner(nuove);setShowBanner(true);}
@@ -1063,7 +1063,7 @@ function App(){
     if(filterClasse!=="tutte"){
       var cc=c.classi||[];
       if(filterClasse==="_solo"){if(cc.length!==0)return false;}
-      else{if(cc!.includes("TUTTE")&&cc!.includes(filterClasse))return false;}
+      else{if(!cc.includes("TUTTE")&&!cc.includes(filterClasse))return false;}
     }
     return true;
   });},[cards,undoDelete,simulaSt,isProf,filterClasse,user,previewClasse]);
@@ -1737,7 +1737,7 @@ function App(){
         
         CLASSI_DEFAULT.map(function(cl){return h("button",{key:cl,onClick:function(){setFilterClasse(cl);},style:S.filterBtn(filterClasse===cl)},cl);}),
         h("button",{onClick:function(){setFilterClasse("_solo");},style:S.filterBtn(filterClasse==="_solo")},"Solo prof"),
-        CLASSI_LIST.filter(function(cl){return CLASSI_DEFAULT!.includes(cl);}).map(function(cl){
+        CLASSI_LIST.filter(function(cl){return !CLASSI_DEFAULT.includes(cl);}).map(function(cl){
           var sel=filterClasse===cl;
           var cc=classeColor(cl,classiCustom);
           return h("span",{key:"custom-"+cl,style:{display:"flex",alignItems:"center",gap:0,borderRadius:20,overflow:"hidden",border:"1px solid "+(sel?cc:"rgba(255,255,255,.15)"),background:sel?cc+"33":"rgba(255,255,255,.04)"}},
@@ -1885,8 +1885,8 @@ function App(){
                     h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6,gap:4}},
                       h("div",{style:{display:"flex",gap:4,alignItems:"center",flexWrap:"wrap"}},
                         h("span",{style:{background:badgeBg(c.tipo),color:"#fff",borderRadius:7,padding:"3px 9px",fontSize:11,fontWeight:800,letterSpacing:.5,boxShadow:"0 2px 8px "+badgeBg(c.tipo)+"55"}},tipoIcon(c.tipo)+" "+c.tipo.toUpperCase()),
-                        isProf&&cc!.includes("TUTTE")&&cc.length>0&&h("span",{style:{display:"inline-flex",alignItems:"center",gap:3,background:"rgba(255,255,255,.07)",borderRadius:6,padding:"2px 7px",fontSize:11,fontWeight:700,color:"rgba(255,255,255,.7)"}},
-                          cc.slice(0,3).map(function(cl,i){var isCustom=CLASSI_DEFAULT!.includes(cl);var ccc=isCustom?classeColor(cl,classiCustom):"#fb923c";return h("span",{key:i,style:{display:"inline-flex",alignItems:"center",gap:3}},h("span",{style:{width:6,height:6,borderRadius:"50%",background:ccc,display:"inline-block"}}),cl,(i<Math.min(cc.length,3)-1?", ":""));}),
+                        isProf&&!cc.includes("TUTTE")&&cc.length>0&&h("span",{style:{display:"inline-flex",alignItems:"center",gap:3,background:"rgba(255,255,255,.07)",borderRadius:6,padding:"2px 7px",fontSize:11,fontWeight:700,color:"rgba(255,255,255,.7)"}},
+                          cc.slice(0,3).map(function(cl,i){var isCustom=!CLASSI_DEFAULT.includes(cl);var ccc=isCustom?classeColor(cl,classiCustom):"#fb923c";return h("span",{key:i,style:{display:"inline-flex",alignItems:"center",gap:3}},h("span",{style:{width:6,height:6,borderRadius:"50%",background:ccc,display:"inline-block"}}),cl,(i<Math.min(cc.length,3)-1?", ":""));}),
                           cc.length>3&&"…"
                         ),
                         isProf&&cc.length===0&&h("span",{style:{background:"rgba(239,68,68,.2)",color:"#f87171",borderRadius:6,padding:"2px 7px",fontSize:11,fontWeight:700}},"Solo prof"),
@@ -2070,7 +2070,7 @@ function App(){
           return h("div",{key:s.uid,style:{background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)",borderRadius:12,padding:"10px 14px",marginBottom:8,display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}},
             h("div",{style:{flex:1,minWidth:140}},h("div",{style:{fontWeight:700,color:"#f1f5f9",fontSize:13}},(s.nome||"")+" "+(s.cognome||"")),h("div",{style:{fontSize:11,color:"rgba(255,255,255,.52)"}},s.email),s.classe&&h("span",{style:{background:"rgba(251,146,60,.2)",color:"#fb923c",borderRadius:6,padding:"1px 7px",fontSize:11,fontWeight:700}},s.classe)),
             h("select",{value:s.classe||"",onChange:function(e){var v=e.target.value;aggiornaClasseStudenteDebounced(s.uid,v);},style:{background:"#1c1a2e",color:"#f1f5f9",border:"1px solid rgba(255,255,255,.15)",borderRadius:8,padding:"4px 8px",fontSize:12,cursor:"pointer"}},
-              h("option",{value:""},"-- nessuna --"),CLASSI_LIST.map(function(cl){return h("option",{key:cl,value:cl},(CLASSI_DEFAULT!.includes(cl)?"★ ":"")+cl);})),
+              h("option",{value:""},"-- nessuna --"),CLASSI_LIST.map(function(cl){return h("option",{key:cl,value:cl},(!CLASSI_DEFAULT.includes(cl)?"★ ":"")+cl);})),
             confirmRimuovi===s.uid
               ?h("div",{style:{display:"flex",gap:5,alignItems:"center"}},
                   h("span",{style:{fontSize:11,color:"#f87171",fontWeight:700}},"Sicuro?"),
@@ -2147,7 +2147,7 @@ function App(){
         h("p",{style:{color:"rgba(255,255,255,.45)",fontSize:12,marginBottom:18,textAlign:"center"}},"Vedrai solo i contenuti a te destinati."),
         h("div",{style:{display:"flex",flexWrap:"wrap",gap:7,marginBottom:18,justifyContent:"center"}},
           CLASSI_LIST.map(function(cl){
-            var isCustom=CLASSI_DEFAULT!.includes(cl);
+            var isCustom=!CLASSI_DEFAULT.includes(cl);
             var cc=isCustom?classeColor(cl,classiCustom):null;
             var sel=classeInput===cl;
             return h("button",{key:cl,type:"button",onClick:function(){setClasseInput(cl);},style:{padding:"7px 13px",borderRadius:9,border:"1px solid "+(sel?(cc||"#6366f1"):"rgba(255,255,255,.15)"),background:sel?(cc||"#6366f1")+"33":"rgba(255,255,255,.05)",color:sel?"#fff":"rgba(255,255,255,.6)",fontSize:13,fontWeight:700,cursor:"pointer",display:"inline-flex",alignItems:"center",gap:5}},
@@ -2995,7 +2995,7 @@ function App(){
           h("p",{style:{fontSize:11,color:"rgba(255,255,255,.45)",marginBottom:8}},"Nessuna selezione = visibile solo al prof."),
           h("div",{style:{display:"flex",flexWrap:"wrap",gap:5}},
             h("button",{type:"button",onClick:function(){setForm(function(f){var isAll=f.classi&&f.classi.includes("TUTTE");return {...f,classi:isAll?[]:["TUTTE"]};});},style:Object.assign({},S.filterBtn(form.classi&&form.classi.includes("TUTTE")),{fontSize:11,padding:"3px 9px"})},(form.classi&&form.classi.includes("TUTTE")?"✓ ":"")+"TUTTE LE CLASSI"),
-            CLASSI_LIST.map(function(cl){var sel=form.classi&&form.classi.includes(cl)&&form.classi!.includes("TUTTE");return h("button",{type:"button",key:cl,onClick:function(){setForm(function(f){var cur=(f.classi||[]).filter(function(x){return x!=="TUTTE";});var idx=cur.indexOf(cl);var next=idx>=0?cur.filter(function(x){return x!==cl;}):[].concat(cur,[cl]);return {...f,classi:next};});},style:Object.assign({},S.filterBtn(sel),{fontSize:11,padding:"3px 9px"})},(sel?"✓ ":"")+cl);})
+            CLASSI_LIST.map(function(cl){var sel=form.classi&&form.classi.includes(cl)&&!form.classi.includes("TUTTE");return h("button",{type:"button",key:cl,onClick:function(){setForm(function(f){var cur=(f.classi||[]).filter(function(x){return x!=="TUTTE";});var idx=cur.indexOf(cl);var next=idx>=0?cur.filter(function(x){return x!==cl;}):[].concat(cur,[cl]);return {...f,classi:next};});},style:Object.assign({},S.filterBtn(sel),{fontSize:11,padding:"3px 9px"})},(sel?"✓ ":"")+cl);})
           ),
           form.classi&&form.classi.length===0&&h("div",{style:{marginTop:6,fontSize:11,color:"#f87171",background:"rgba(239,68,68,.1)",padding:"4px 8px",borderRadius:6}},"⚠️ Nessuna classe: visibile solo al prof")
         ),
@@ -3286,7 +3286,7 @@ function App(){
         (function(){
           var cardObj=cards.find(function(c){return String(c.id)===String(showMsgPrivato.cardId);});
           var autori=[];
-          if(cardObj)(cardObj.commenti||[]).forEach(function(cm){if(autori!.includes(cm.autore)&&cm.autore!=="Prof")autori.push(cm.autore);});
+          if(cardObj)(cardObj.commenti||[]).forEach(function(cm){if(!autori.includes(cm.autore)&&cm.autore!=="Prof")autori.push(cm.autore);});
           var msgPerCard=msgPrivatiMap[String(showMsgPrivato.cardId)]||{};
           return h(Fragment,null,
             h("div",{style:{display:"flex",flexWrap:"wrap",gap:5,marginBottom:12}},
