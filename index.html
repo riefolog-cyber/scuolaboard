@@ -660,7 +660,7 @@ function App(){
   var [annoScolastico,setAnnoScolastico]=useState(annoDefault);
   // ── MODAL STATE via useReducer ─────────────────────────────────────────
   var MODALS0={showAnnoMenu:false,showModal:false,showQR:false,showReset:false,showResetOpt:false,viewStudenti:false,addingClasse:false,showAiQuizGen:false,showWordCloud:false,showMsgInbox:false,showBanner:false,showProfilo:false,showTimerModal:false,showPrivacy:false,filtroBarOpen:false,previewSt:false,rinominaConferma:false,askKey:false};
-  function modalsReducer(s,a){return{...s,[a.k]:a.v};}
+  function modalsReducer(s,a){return{...s,[a.k]:typeof a.v==="function"?a.v(s[a.k]):a.v};}
   var [modals,dispatchModal]=useReducer(modalsReducer,MODALS0);
   var showAnnoMenu=modals.showAnnoMenu;var setShowAnnoMenu=useCallback(function(v){dispatchModal({k:"showAnnoMenu",v:v});},[]);
   var showModal=modals.showModal;var setSM=useCallback(function(v){dispatchModal({k:"showModal",v:v});},[]);
