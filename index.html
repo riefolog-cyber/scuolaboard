@@ -128,6 +128,59 @@ button:active{transform:scale(.96)}
 .u-muted{font-size:11px;color:rgba(255,255,255,.52)}
 .u-muted2{font-size:11px;color:rgba(255,255,255,.45)}
 .u-muted3{font-size:11px;color:rgba(255,255,255,.58)}
+
+/* ── TRANSIZIONI UNIFORMI ── */
+:root{
+  --t-fast:.15s ease;
+  --t-base:.25s cubic-bezier(.22,1,.36,1);
+  --t-slow:.4s ease;
+}
+
+/* ── FOCUS VISIBLE (accessibilità tastiera) ── */
+:focus-visible{
+  outline:2px solid var(--c-primary);
+  outline-offset:3px;
+  border-radius:6px;
+}
+button:focus-visible{
+  outline:2px solid var(--c-primary);
+  outline-offset:3px;
+}
+
+/* ── SKELETON CARD-SHAPED ── */
+.sk-card{
+  background:rgba(255,255,255,.035);
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.06);
+  border-top:3px solid rgba(99,102,241,.25);
+  padding:16px;
+  margin-bottom:16px;
+  break-inside:avoid;
+}
+.sk-badge{width:56px;height:20px;border-radius:6px}
+.sk-title{height:18px;width:75%;margin:10px 0 8px}
+.sk-body{height:13px;width:100%;margin-bottom:6px}
+.sk-body-short{height:13px;width:55%;margin-bottom:14px}
+.sk-footer{height:14px;width:40%;margin-top:4px}
+
+/* ── EMPTY STATE ── */
+.empty-state{
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:64px 24px;gap:16px;
+  opacity:.85;animation:fadein .4s ease;
+}
+.empty-state-icon{font-size:56px;line-height:1}
+.empty-state-title{font-size:17px;font-weight:700;color:#f1f5f9;margin:0}
+.empty-state-sub{font-size:13px;color:rgba(255,255,255,.45);margin:0;text-align:center;max-width:300px}
+.empty-state-btn{
+  margin-top:8px;padding:10px 24px;
+  background:linear-gradient(135deg,#6366f1,#8b5cf6);
+  border:none;border-radius:10px;color:#fff;
+  font-size:14px;font-weight:700;cursor:pointer;
+  transition:opacity var(--t-fast);
+}
+.empty-state-btn:hover{opacity:.85}
+
 </style>
 </head>
 <body>
@@ -152,6 +205,34 @@ var h=React.createElement,useState=React.useState,useEffect=React.useEffect,useR
 var CLASSI_COLORS=["#f59e0b","#22c55e","#3b82f6","#ec4899","#8b5cf6","#ef4444","#06b6d4","#f97316","#84cc16","#a855f7"];
 function classeColor(nome,lista){var idx=lista.indexOf(nome);return CLASSI_COLORS[idx%CLASSI_COLORS.length]||"#f59e0b";}
 var CLASSI_DEFAULT=["1AO","1AI","1BO","1CO","2AO","2AI","2BO","2CO","3AO","3AI","3BO","4AO","4AI","4BO","5AO","5AA","5AI","5BO"];
+// ── DESIGN TOKENS ───────────────────────────────────────────────────
+var C={
+  primary:"#6366f1",pLight:"#a5b4fc",pDeep:"#8b5cf6",
+  success:"#4ade80",successDk:"#22c55e",
+  warn:"#fbbf24",warnDk:"#f59e0b",
+  danger:"#f87171",dangerDk:"#ef4444",
+  text:"#f1f5f9",
+  m1:"rgba(255,255,255,.65)",m2:"rgba(255,255,255,.58)",
+  m3:"rgba(255,255,255,.45)",m4:"rgba(255,255,255,.6)",
+  surf:"rgba(255,255,255,.055)",surfDim:"rgba(255,255,255,.02)",
+  bord:"rgba(255,255,255,.09)",bordDim:"rgba(255,255,255,.05)",
+  bg:"#1a1a2e",bgDeep:"#1c1a2e",
+  cyan:"#06b6d4",pink:"#ec4899",purple:"#a855f7",
+  orange:"#f97316",blue:"#60a5fa",white:"#fff"
+};
+var FS={xs:10,sm:11,base:13,md:15,lg:18,xl:22,h:28};
+var S={
+  muted:{fontSize:11,color:"rgba(255,255,255,.52)"},
+  muted2:{fontSize:11,color:"rgba(255,255,255,.45)"},
+  muted3:{fontSize:11,color:"rgba(255,255,255,.58)"},
+  flex6:{display:"flex",gap:6},
+  flex8:{display:"flex",gap:8},
+  flex10:{display:"flex",gap:10},
+  mb8:{marginBottom:8},
+  mb10:{marginBottom:10},
+  center:{display:"flex",alignItems:"center",justifyContent:"center"}
+};
+
 function fbClassiSave(arr){return db.collection("config").doc("classi_custom").set({lista:arr,aggiornato:new Date().toISOString()});}
 function fbFavSave(uid,ids){return db.collection("preferiti").doc(uid).set({ids:ids,aggiornato:new Date().toISOString()});}
 function fbFavListen(uid,cb){return db.collection("preferiti").doc(uid).onSnapshot(function(doc){cb(doc.exists&&doc.data().ids?doc.data().ids:[]);});}
@@ -571,13 +652,31 @@ function App(){
     showToast("📥 CSV esportato ("+cards.length+" card)","ok");
   },[cards,annoScolastico]);
 
-  var [cardAiLoad,setCardAIL]=useState(null);
-  var [cardAiOpen,setCardAiOpen]=useState(null);
-  var [cardAiErr,setCardAiErr]=useState(null);
-  var [cardQ,setCardQ]=useState("");
-  var [cardQLoad,setCardQLoad]=useState(false);
-  var [cardQErr,setCardQErr]=useState("");
-  var [cardQOpen,setCardQOpen]=useState({});
+  // ── CARD AI STATE via useReducer ────────────────────────────────────────
+  var CAI0={load:null,open:null,err:null,q:"",qLoad:false,qErr:"",qOpen:{}};
+  function cardAiReducer(s,a){
+    switch(a.type){
+      case"CAI_LOAD":return{...s,load:a.v};
+      case"CAI_OPEN":return{...s,open:a.v};
+      case"CAI_ERR":return{...s,err:a.v};
+      case"CAI_Q":return{...s,q:a.v};
+      case"CAI_QLOAD":return{...s,qLoad:a.v};
+      case"CAI_QERR":return{...s,qErr:a.v};
+      case"CAI_QOPEN":return{...s,qOpen:typeof a.v==="function"?a.v(s.qOpen):a.v};
+      case"CAI_RESET":return{...s,q:"",qLoad:false,qErr:"",qOpen:{}};
+      default:return s;
+    }
+  }
+  var [cardAiState,dispatchCAI]=useReducer(cardAiReducer,CAI0);
+  var cardAiLoad=cardAiState.load,cardAiOpen=cardAiState.open,cardAiErr=cardAiState.err;
+  var cardQ=cardAiState.q,cardQLoad=cardAiState.qLoad,cardQErr=cardAiState.qErr,cardQOpen=cardAiState.qOpen;
+  var setCardAIL=useCallback(function(v){dispatchCAI({type:"CAI_LOAD",v:v});},[]);
+  var setCardAiOpen=useCallback(function(v){dispatchCAI({type:"CAI_OPEN",v:v});},[]);
+  var setCardAiErr=useCallback(function(v){dispatchCAI({type:"CAI_ERR",v:v});},[]);
+  var setCardQ=useCallback(function(v){dispatchCAI({type:"CAI_Q",v:v});},[]);
+  var setCardQLoad=useCallback(function(v){dispatchCAI({type:"CAI_QLOAD",v:v});},[]);
+  var setCardQErr=useCallback(function(v){dispatchCAI({type:"CAI_QERR",v:v});},[]);
+  var setCardQOpen=useCallback(function(v){dispatchCAI({type:"CAI_QOPEN",v:v});},[]);
   var [showClasseModal,setShowClasseModal]=useState(false);
   var [classeInput,setClasseInput]=useState("");
   var [filterClasse,setFilterClasse]=useState("tutte");
@@ -1150,8 +1249,8 @@ function App(){
   function setDidascalia(id,val){
     setForm(function(p){return Object.assign({},p,{immagini:(p.immagini||[]).map(function(x){return x.id===id?{...x,didascalia:val}:x;})});});
   }
-  function delCard(id){setConfirmDel({type:"card",id:id});}
-  function delCardWithUndo(id){
+  var delCard=useCallback(function(id){setConfirmDel({type:"card",id:id});},[]);
+  var delCardWithUndo=useCallback(function(id){
     var card=cards.find(function(c){return c.id===id;});
     if(!card)return;
     setSC(null);
@@ -1159,15 +1258,15 @@ function App(){
     var timer=setTimeout(function(){fbDel(id);setUndoDelete(null);},5000);
     setUndoDelete({card:card,timer:timer,toastId:toastId});
     setToasts(function(p){return p.concat([{id:toastId,msg:"Card eliminata",type:"warn",undo:true}]);});
-  }
-  function undoDeleteCard(){
+  },[cards]);
+  var undoDeleteCard=useCallback(function(){
     if(!undoDelete)return;
     clearTimeout(undoDelete.timer);
     setToasts(function(p){return p.filter(function(t){return t.id!==undoDelete.toastId;});});
     setUndoDelete(null);
     showToast("Eliminazione annullata ✓","ok");
-  }
-  function appCard(id){var c=cards.find(function(x){return x.id===id;});if(c){fbSave({...c,proposta:false});showToast("Proposta approvata ✓","ok");}}
+  },[undoDelete]);
+  var appCard=useCallback(function(id){var c=cards.find(function(x){return x.id===id;});if(c){fbSave({...c,proposta:false});showToast("Proposta approvata ✓","ok");}},[]);
   function rifiutaConMot(id,mot){
     var c=cards.find(function(x){return x.id===id;});
     if(c)fbSave({...c,proposta:"rifiutata",motivazioneRifiuto:mot||""});
@@ -1186,13 +1285,13 @@ function App(){
     setBulkSelected([]);setBulkMode(false);
   }
   function bulkDelete(){bulkSelected.forEach(function(id){fbDel(id);});showToast(bulkSelected.length+" card eliminate","warn");setBulkSelected([]);setBulkMode(false);}
-  function showToast(msg,type){
+  var showToast=useCallback(function(msg,type){
     var id=Date.now();
     setToasts(function(p){return p.concat([{id:id,msg:msg,type:type||"ok"}]);});
     setTimeout(function(){setToasts(function(p){return p.filter(function(t){return t.id!==id;});});},2400);
-  }
+  },[]);
 
-  function toggleLike(cardId){
+  var toggleLike=useCallback(function(cardId){
     var card=cards.find(function(c){return c.id===cardId;});if(!card)return;
     setLikeAnimCard(cardId);setTimeout(function(){setLikeAnimCard(null);},400);
     var key=String(cardId),liked=myLikes.current.has(key);
@@ -1205,8 +1304,8 @@ function App(){
       likes:(card.likes||0)+(liked?-1:1),
       likesBy:likesBy
     }).catch(function(){fbSave({...card,likes:(card.likes||0)+(liked?-1:1),likesBy:likesBy});});
-  }
-  function toggleReazione(cardId,emoji){
+  },[user]);
+  var toggleReazione=useCallback(function(cardId,emoji){
     if(!user)return;
     var card=cards.find(function(c){return c.id===cardId;});if(!card)return;
     var vn=myName(user);
@@ -1217,8 +1316,8 @@ function App(){
     reaz[emoji]=lista;
     db.collection("cards").doc(String(cardId)).update({reazioni:reaz})
       .catch(function(){fbSave({...card,reazioni:reaz});});
-  }
-  function vote(cid,oid){
+  },[user]);
+  var vote=useCallback(function(cid,oid){
     if(!user)return;
     var card=cards.find(function(c){return c.id===cid;});if(!card)return;
     var vn=myName(user);
@@ -1226,14 +1325,14 @@ function App(){
     db.collection("cards").doc(String(cid)).update({opzioni:nuoveOpzioni})
       .catch(function(){fbSave({...card,opzioni:nuoveOpzioni});});
     showToast("Voto registrato ✓","ok");
-  }
-  function addCom(){
+  },[user]);
+  var addCom=useCallback(function(){
     if(!user||!nc.testo.trim())return;
     var card=cards.find(function(c){return String(c.id)===String(showCard.id);});if(!card)return;
     fbSave(Object.assign({},card,{commenti:(card.commenti||[]).concat([{id:Date.now(),autore:myName(user),testo:nc.testo.trim(),data:new Date().toISOString(),risposte:[]}])}));
     setNc({testo:""});
     showToast("Commento inviato ✓","ok");
-  }
+  },[user,showCard,nc]);
   function addReply(cmId){
     if(!user||!replyTesto.trim())return;
     var card=cards.find(function(c){return String(c.id)===String(showCard.id);});if(!card)return;
@@ -1801,11 +1900,13 @@ function App(){
               h("div",{className:"card-grid",style:{columns:"300px",columnGap:16}},
                 [1,2,3,4,5,6].map(function(i){
                   return h("div",{key:i,style:{breakInside:"avoid",marginBottom:16,borderRadius:18,overflow:"hidden",border:"1px solid rgba(255,255,255,.06)",background:"rgba(255,255,255,.03)",borderTop:"3px solid rgba(255,255,255,.06)"}},
-                    h("div",{style:{padding:"12px 14px 10px"}},
-                      h("div",{className:"skeleton",style:{height:14,width:"40%",marginBottom:10}}),
-                      h("div",{className:"skeleton",style:{height:16,width:"80%",marginBottom:8}}),
-                      h("div",{className:"skeleton",style:{height:11,width:"60%",marginBottom:4}}),
-                      h("div",{className:"skeleton",style:{height:11,width:"45%"}})
+                    h("div",{style:{padding:"14px 16px 12px"}},
+                      h("div",{className:"skeleton sk-badge"}),
+                      h("div",{className:"skeleton sk-title"}),
+                      h("div",{className:"skeleton sk-body"}),
+                      h("div",{className:"skeleton sk-body"}),
+                      h("div",{className:"skeleton sk-body-short"}),
+                      h("div",{className:"skeleton sk-footer"})
                     ),
                     h("div",{style:{padding:"8px 14px 10px",display:"flex",gap:8}},
                       h("div",{className:"skeleton",style:{height:26,width:52,borderRadius:20}}),
@@ -1834,8 +1935,14 @@ function App(){
                 filterClasse!=="tutte"?"Prova a selezionare un'altra classe":"Le card appariranno qui quando verranno pubblicate"
               ),
               filterClasse!=="tutte"&&h("button",{onClick:function(){setFilterClasse("tutte");},style:{background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.1)",color:"rgba(255,255,255,.58)",borderRadius:8,padding:"6px 16px",fontSize:12,fontWeight:700,cursor:"pointer"}},"Mostra tutte le classi"),
-              isProf&&h("button",{onClick:function(){setEditMode(null);setForm({...FORM0});setSM(true);},style:{background:"linear-gradient(135deg,#6366f1,#8b5cf6)",border:"none",color:"#fff",borderRadius:8,padding:"7px 18px",fontSize:12,fontWeight:700,cursor:"pointer"}},"+ Aggiungi la prima card")
-            )
+              h("div",{className:"empty-state"},
+              h("div",{className:"empty-state-icon"},cards.length===0?"🗒️":"🔍"),
+              h("h3",{className:"empty-state-title"},cards.length===0?"Nessuna card ancora":"Nessuna card trovata"),
+              h("p",{className:"empty-state-sub"},cards.length===0?"Crea la prima card per iniziare a lavorare con la classe":"Prova a cambiare il filtro o la classe selezionata"),
+              isProf&&cards.length===0&&h("button",{className:"empty-state-btn",onClick:function(){setEditMode(null);setForm({...FORM0});setSM(true);}},
+                "＋ Crea la prima card"
+              )
+            ))
           :h("div",{className:"card-grid",style:{columns:"300px",columnGap:16}},
             visibleSorted.map(function(c){
               var totV=c.opzioni?c.opzioni.reduce(function(a,o){return a+o.voti.length;},0):0;
