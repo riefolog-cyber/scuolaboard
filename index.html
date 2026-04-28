@@ -902,7 +902,7 @@ function App(){
     return function(){if(scalaUnsubRef.current){scalaUnsubRef.current();scalaUnsubRef.current=null;}};
   },[showCard?String(showCard.id):null]);
 
-  async var loginGoogle=useCallback(async function()try{
+  var loginGoogle=useCallback(async function(){try{
       var provider=new firebase.auth.GoogleAuthProvider();
       provider.setCustomParameters({prompt:"select_account"});
       var cr=await auth.signInWithPopup(provider);
