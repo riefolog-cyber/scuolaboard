@@ -896,6 +896,7 @@ function App(){
   var myLikes=useRef(new Set());
   var isProf=user&&user.role==="prof";
   var simulaSt=user&&user.simulaStudente===true;
+  var proposte=cards.filter(function(c){return c.proposta===true;});
 
   // Push notification setup
   useEffect(function(){
