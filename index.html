@@ -845,6 +845,9 @@ function App(){
   var [msgPrivatoTesto,setMsgPrivatoTesto]=useState("");
   var [msgPrivatiMap,setMsgPrivatiMap]=useState({});
   var [msgPrivatiStudente,setMsgPrivatiStudente]=useState([]);
+  var [msgAProf,setMsgAProf]=useState("");
+  var [inboxTab,setInboxTab]=useState("ricevuti");
+  var [msgsToProf,setMsgsToProf]=useState([]);
   // showMsgInbox gestito da modalsReducer
   var [pushEnabled,setPushEnabled]=useState(false);
   var [lightbox,setLightbox]=useState(null); // {url, didascalia}
