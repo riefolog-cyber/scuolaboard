@@ -1034,7 +1034,7 @@ function App(){
         if(!isFirstLoad&&user.role==="studente"){
           var nuove=remote.filter(function(c){
             if(c.proposta||c.visibile===false)return false;
-            var cc=c.classi||["TUTTE"];if(cc.length===0)return false;
+            var cc=(c.classi&&c.classi.length)?c.classi:["TUTTE"];
             var stC=user&&user.classe;
             if(stC){if(!cc.includes("TUTTE")&&!cc.includes(stC))return false;}
             else{if(!cc.includes("TUTTE"))return false;}
@@ -1256,7 +1256,7 @@ function App(){
     if(simulaSt||!isProf){
       if(c.proposta||c.visibile===false)return false;
       if(!isProf&&c.pubblicaIl&&new Date(c.pubblicaIl).getTime()>Date.now())return false;
-      var cc=c.classi||["TUTTE"];if(cc.length===0)return false;
+      var cc=(c.classi&&c.classi.length)?c.classi:["TUTTE"];
       var stC=simulaSt?previewClasse:(user&&user.classe);
       if(!stC||stC==="TUTTE")return cc.includes("TUTTE");
       return cc.includes("TUTTE")||cc.includes(stC);
@@ -1291,7 +1291,7 @@ function App(){
       return d;
     });
     var cleanLinks=(form.links||[]).filter(function(l){return l.url&&l.url.trim();}).map(function(l){return{url:l.url.trim(),label:(l.label||"").trim()};});
-    var classiSalvate=form.classi&&form.classi.length?form.classi:[];
+    var classiSalvate=form.classi&&form.classi.length?form.classi:["TUTTE"];
     var cleanImmagini=(form.immagini||[]).filter(function(x){return x.url;});
     if(editMode){
       var c={...editMode,tipo:form.tipo,titolo:form.titolo.trim(),testo:form.testo.trim(),links:cleanLinks,linkEsterno:null,classi:classiSalvate,immagini:cleanImmagini,copertina:form.copertina||null};
