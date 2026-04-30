@@ -1106,33 +1106,35 @@ function App(){
       }
     });
     var u7b=null;
+    var u7c=null;
     if(user.role==="studente"){
+      // Messaggi inviati dallo studente al prof
       u7b=db.collection("messaggi_privati")
-        .where("destinatario","==",myName(user))
-        .where("tipo","==","prof_risposta")
+        .where("mittente","==",myName(user))
+        .where("destinatario","==","PROF")
+        .orderBy("data","desc")
         .onSnapshot(function(snap){
-          var replies={};
-          snap.forEach(function(d){var r=d.data();if(r.replyToId)replies[r.replyToId]=r.testo;});
-          setMsgsToProf(function(prev){
-            return prev.map(function(m){return Object.assign({},m,{reply:replies[m.id]||null});});
+          var arr=[];
+          snap.forEach(function(d){arr.push(Object.assign({id:d.id},d.data()));});
+          setMsgsToProf(arr);
+        });
+      // Risposte del prof allo studente (destinatario==nomeStudente, no cardId)
+      u7c=db.collection("messaggi_privati")
+        .where("destinatario","==",myName(user))
+        .orderBy("data","desc")
+        .onSnapshot(function(snap){
+          var chatArr=[];
+          snap.forEach(function(d){
+            var d2=Object.assign({id:d.id},d.data());
+            if(!d2.cardId)chatArr.push(d2);
+          });
+          setMsgPrivatiStudente(function(prev){
+            var cardMsgs=(prev||[]).filter(function(m){return !!m.cardId;});
+            return cardMsgs.concat(chatArr).sort(function(a,b){return a.data>b.data?1:-1;});
           });
         });
-      loadMsgsToProf(myName(user),function(arr){setMsgsToProf(arr);});
     }
-    var u5=null;
-    if(user.role==="studente"){
-      u5=db.collection("ammonizioni").doc(myName(user)).onSnapshot(function(doc){
-        if(doc.exists){var d=doc.data();setAmmonizioni(d.lista||[]);}
-      });
-    }
-    // Ammonizioni globali: get() è sufficiente, non servono aggiornamenti real-time
-    db.collection("ammonizioni").get().then(function(snap){
-      var m={};snap.forEach(function(doc){m[doc.id]=doc.data().lista||[];});
-      setAmmonizioniMap(m);
-    }).catch(function(){});
-    var u6=function(){};
-    var u2=aiLoad(function(m){setAiMap(m);});
-    return function(){u1();if(u2)u2();u3();u4();if(u5)u5();u6();if(u7)u7();if(u7b)u7b();};
+return function(){u1();if(u2)u2();u3();u4();if(u5)u5();u6();if(u7)u7();if(u7b)u7b();if(u7c)u7c();};
   },[user]);
 
   useEffect(function(){
@@ -2237,7 +2239,7 @@ function App(){
                       h("div",{style:{position:"absolute",top:"100%",left:"50%",transform:"translateX(-50%)",width:0,height:0,borderLeft:"6px solid transparent",borderRight:"6px solid transparent",borderTop:"6px solid rgba(99,102,241,.4)"}})
                     )
                   ),
-                  h("div",{style:{display:"flex",gap:3}},["🤔","💡","🔥"].map(function(emoji){var lista=(c.reazioni&&c.reazioni[emoji])||[];var hasMe=lista.indexOf(myName(user))>=0;return h("button",{key:emoji,onClick:function(e){e.stopPropagation();toggleReazione(c.id,emoji);},title:lista.length>0?lista.join(", "):emoji,style:{background:hasMe?"rgba(99,102,241,.25)":"rgba(255,255,255,.06)",border:"1px solid "+(hasMe?"rgba(99,102,241,.4)":"rgba(255,255,255,.1)"),borderRadius:20,padding:"3px 7px",cursor:"pointer",fontSize:12,color:hasMe?"#a5b4fc":"rgba(255,255,255,.65)",display:"flex",alignItems:"center",gap:3}},emoji,lista.length>0&&h("span",{style:{fontSize:11,fontWeight:700}},lista.length));})),
+                  h("div",{style:{display:"flex",gap:3}},REACTIONS.map(function(emoji){var lista=(c.reazioni&&c.reazioni[emoji])||[];var hasMe=lista.indexOf(myName(user))>=0;return h("button",{key:emoji,onClick:function(e){e.stopPropagation();toggleReazione(c.id,emoji);},title:lista.length>0?lista.join(", "):emoji,style:{background:hasMe?"rgba(99,102,241,.25)":"rgba(255,255,255,.06)",border:"1px solid "+(hasMe?"rgba(99,102,241,.4)":"rgba(255,255,255,.1)"),borderRadius:20,padding:"3px 7px",cursor:"pointer",fontSize:12,color:hasMe?"#a5b4fc":"rgba(255,255,255,.65)",display:"flex",alignItems:"center",gap:3}},emoji,lista.length>0&&h("span",{style:{fontSize:11,fontWeight:700}},lista.length));})),
                   h("button",{"aria-label":"Apri commenti","data-tip-down":"Commenta",onClick:function(e){e.stopPropagation();setSC(c);setQRisposte({});setQInviato(false);setQLoading(false);markSeen(c.id);setNc({testo:""});setEditingCm(null);setCardQErr("");setCardQ("");setTimeout(function(){var ta=document.getElementById("cm-textarea");if(ta){ta.scrollIntoView({behavior:"smooth",block:"center"});ta.focus();}},150);},style:{background:"rgba(99,102,241,.15)",border:"1px solid rgba(99,102,241,.3)",borderRadius:20,padding:"3px 10px",cursor:"pointer",fontSize:12,color:"#a5b4fc",display:"flex",alignItems:"center",gap:4,fontWeight:700}},"💬 Commenta",h("span",{style:{fontSize:11,background:"rgba(99,102,241,.3)",borderRadius:10,padding:"0 5px",marginLeft:2}},(c.commenti||[]).length||"0")),
                   isProf&&!simulaSt&&(c.commenti||[]).length>=3&&h("button",{onClick:function(e){e.stopPropagation();setShowSommario(c.id);if(!sommarioResult[c.id])riassuntiCommentiRun(c);},style:{background:"rgba(34,197,94,.12)",border:"1px solid rgba(34,197,94,.3)",borderRadius:20,padding:"3px 9px",cursor:"pointer",fontSize:11,color:"#4ade80",fontWeight:700,display:"flex",alignItems:"center",gap:3}},"📝",h("span",null,"Riassumi")),
                   isProf&&!simulaSt&&h("button",{onClick:function(e){e.stopPropagation();setShowMsgPrivato({cardId:c.id,cardTitolo:c.titolo,studenteName:null});setMsgPrivatoTesto("");},style:{background:"rgba(245,158,11,.12)",border:"1px solid rgba(245,158,11,.3)",borderRadius:20,padding:"3px 9px",cursor:"pointer",fontSize:11,color:"#fbbf24",fontWeight:700}},"✉️"),
