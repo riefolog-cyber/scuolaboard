@@ -894,6 +894,8 @@ function App(){
   var [rifiutaInput,setRifiutaInput]=useState("");
   var [duplicaClassi,setDuplicaClassi]=useState([]);
   var myLikes=useRef(new Set());
+  var isProf=user&&user.role==="prof";
+  var simulaSt=user&&user.simulaStudente===true;
 
   // Push notification setup
   useEffect(function(){
