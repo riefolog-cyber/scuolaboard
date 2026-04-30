@@ -357,6 +357,14 @@ function loadMsgsToProf(mittente,cb){
     .where("tipo","==","studente_prof").orderBy("data","desc")
     .onSnapshot(function(s){var arr=[];s.forEach(function(d){arr.push(Object.assign({id:d.id},d.data()));});cb(arr);});
 }
+function replyToMsg(replyToId,mittente,destinatario,testo,tipo,cb){
+  var id="reply_"+mittente.replace(/\s+/g,"_")+"_"+Date.now();
+  return db.collection("messaggi_privati").doc(id).set({
+    tipo:tipo,mittente:mittente,destinatario:destinatario,
+    replyToId:replyToId,testo:testo,
+    data:new Date().toISOString(),letto:false
+  }).then(cb);
+}
 function msgPrivatiListen(profMode,nameOrUid,cb){
   if(profMode){
     return db.collection("messaggi_privati").onSnapshot(function(s){var arr=[];s.forEach(function(d){arr.push(Object.assign({id:d.id},d.data()));});cb(arr);});
@@ -846,6 +854,7 @@ function App(){
   var [msgPrivatiMap,setMsgPrivatiMap]=useState({});
   var [msgPrivatiStudente,setMsgPrivatiStudente]=useState([]);
   var [msgAProf,setMsgAProf]=useState("");
+  var [replyDraft,setReplyDraft]=useState({}); // {msgId: testo}
   var [inboxTab,setInboxTab]=useState("ricevuti");
   var [msgsToProf,setMsgsToProf]=useState([]);
   // showMsgInbox gestito da modalsReducer
@@ -1088,7 +1097,19 @@ function App(){
       }
     });
     var u7b=null;
-    if(user.role==="studente"){u7b=loadMsgsToProf(myName(user),function(arr){setMsgsToProf(arr);});}
+    if(user.role==="studente"){
+      u7b=db.collection("messaggi_privati")
+        .where("destinatario","==",myName(user))
+        .where("tipo","==","prof_risposta")
+        .onSnapshot(function(snap){
+          var replies={};
+          snap.forEach(function(d){var r=d.data();if(r.replyToId)replies[r.replyToId]=r.testo;});
+          setMsgsToProf(function(prev){
+            return prev.map(function(m){return Object.assign({},m,{reply:replies[m.id]||null});});
+          });
+        });
+      loadMsgsToProf(myName(user),function(arr){setMsgsToProf(arr);});
+    }
     var u5=null;
     if(user.role==="studente"){
       u5=db.collection("ammonizioni").doc(myName(user)).onSnapshot(function(doc){
@@ -1691,6 +1712,7 @@ function App(){
       .then(function(r){
         if(r&&!r.error){
           var data={sintesi:r.sintesi||"",dinamica:r.dinamica||"",spunto:r.spunto||"",domande_stimolo:r.domande_stimolo||[],data:new Date().toISOString(),cardTitolo:freshCard.titolo};
+          setAiMap(function(prev){var next={...prev};next[String(freshCard.id)]=Object.assign({},prev[String(freshCard.id)]||{},{analisi:data});return next;});
           return db.collection("cards").doc(String(freshCard.id)).update({aiAnalisi:data})
             .then(function(){return aiSave(freshCard.id,{analisi:data}).then(refreshAiMap);})
             .catch(function(err){setCardAiErr("Salvataggio fallito: "+err.message);});
@@ -3591,7 +3613,32 @@ function App(){
                   isNew&&h("span",{style:{background:"#6366f1",color:"#fff",borderRadius:20,padding:"1px 7px",fontSize:11,fontWeight:800,marginBottom:6,display:"inline-block"}},"NUOVO"),
                   h("div",{style:{fontSize:11,color:"rgba(255,255,255,.58)",marginBottom:4,fontWeight:700}},"👤 "+msg.mittente),
                   h("div",{style:{fontSize:13,color:"rgba(255,255,255,.9)",lineHeight:1.7,whiteSpace:"pre-wrap",marginBottom:6}},msg.testo),
-                  h("div",{style:{fontSize:10,color:"rgba(255,255,255,.38)"}},fmtDT(msg.data))
+                  h("div",{style:{fontSize:10,color:"rgba(255,255,255,.38)"}},fmtDT(msg.data)),
+                  h("div",{style:{marginTop:8,borderTop:"1px solid rgba(255,255,255,.08)",paddingTop:8}},
+                    h("textarea",{
+                      value:replyDraft[msg.id]||"",
+                      onInput:function(e){
+                        var v=e.target.value;
+                        setReplyDraft(function(p){var n={...p};n[msg.id]=v;return n;});
+                      },
+                      rows:2,placeholder:"Rispondi a "+msg.mittente+"…",
+                      style:Object.assign({},S.input,{resize:"none",fontSize:12,padding:"6px 10px",marginBottom:6})
+                    }),
+                    h("button",{
+                      disabled:!(replyDraft[msg.id]||"").trim(),
+                      onClick:function(){
+                        var testo=(replyDraft[msg.id]||"").trim();
+                        if(!testo)return;
+                        replyToMsg(msg.id,myName(user),msg.mittente,testo,"prof_risposta",function(){
+                          showToast("Risposta inviata a "+msg.mittente+" ✓","ok");
+                          setReplyDraft(function(p){var n={...p};delete n[msg.id];return n;});
+                        });
+                      },
+                      style:{fontSize:11,fontWeight:700,padding:"4px 12px",border:"none",borderRadius:8,cursor:"pointer",
+                        background:(replyDraft[msg.id]||"").trim()?"linear-gradient(135deg,#f59e0b,#f97316)":"rgba(255,255,255,.08)",
+                        color:(replyDraft[msg.id]||"").trim()?"#1a1a2e":"rgba(255,255,255,.3)"}
+                    },"↩️ Rispondi a "+msg.mittente)
+                  )
                 );
               })),
           h("button",{onClick:function(){setShowStudentMsgs(false);},style:{width:"100%",marginTop:10,padding:11,background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.6)",border:"none",borderRadius:11,fontSize:13,fontWeight:700,cursor:"pointer"}},"Chiudi")
@@ -3621,7 +3668,32 @@ showMsgInbox&&!isProf&&h("div",{onClick:function(){setShowMsgInbox(false);},styl
               !msg.letto&&h("span",{style:{background:"#f59e0b",color:"#1a1a2e",borderRadius:20,padding:"1px 7px",fontSize:11,fontWeight:800,marginBottom:6,display:"inline-block"}},"NUOVO"),
               card&&h("div",{style:{fontSize:11,color:"rgba(255,255,255,.58)",marginBottom:6,fontWeight:700}},"📌 "+card.titolo),
               h("div",{style:{fontSize:13,color:"rgba(255,255,255,.9)",lineHeight:1.7,whiteSpace:"pre-wrap"}},msg.testo),
-              h("div",{style:{fontSize:11,color:"rgba(255,255,255,.45)",marginTop:6}},"✍️ "+msg.prof+" · "+fmtDT(msg.data))
+              h("div",{style:{fontSize:11,color:"rgba(255,255,255,.45)",marginTop:6}},"✍️ "+msg.prof+" · "+fmtDT(msg.data)),
+              h("div",{style:{marginTop:8,borderTop:"1px solid rgba(255,255,255,.08)",paddingTop:8}},
+                h("textarea",{
+                  value:replyDraft[msg.id]||"",
+                  onInput:function(e){
+                    var v=e.target.value;
+                    setReplyDraft(function(p){var n={...p};n[msg.id]=v;return n;});
+                  },
+                  rows:2,placeholder:"Rispondi al prof…",
+                  style:Object.assign({},S.input,{resize:"none",fontSize:12,padding:"6px 10px",marginBottom:6})
+                }),
+                h("button",{
+                  disabled:!(replyDraft[msg.id]||"").trim(),
+                  onClick:function(){
+                    var testo=(replyDraft[msg.id]||"").trim();
+                    if(!testo)return;
+                    replyToMsg(msg.id,myName(user),msg.prof,testo,"studente_prof",function(){
+                      showToast("Risposta inviata ✓","ok");
+                      setReplyDraft(function(p){var n={...p};delete n[msg.id];return n;});
+                    });
+                  },
+                  style:{fontSize:11,fontWeight:700,padding:"4px 12px",border:"none",borderRadius:8,cursor:"pointer",
+                    background:(replyDraft[msg.id]||"").trim()?"linear-gradient(135deg,#6366f1,#8b5cf6)":"rgba(255,255,255,.08)",
+                    color:(replyDraft[msg.id]||"").trim()?"#fff":"rgba(255,255,255,.3)"}
+                },"↩️ Rispondi")
+              )
             );
           }))
         ),
@@ -3634,7 +3706,11 @@ showMsgInbox&&!isProf&&h("div",{onClick:function(){setShowMsgInbox(false);},styl
             msgsToProf.slice(0,5).map(function(m){
               return h("div",{key:m.id,style:{background:"rgba(99,102,241,.08)",border:"1px solid rgba(99,102,241,.2)",borderRadius:10,padding:"8px 12px",marginBottom:6}},
                 h("div",{style:{fontSize:12,color:"rgba(255,255,255,.85)",whiteSpace:"pre-wrap",marginBottom:4}},m.testo),
-                h("div",{style:{fontSize:10,color:"rgba(255,255,255,.38)"}},fmtDT(m.data)+(m.letto?" · ✓ Letto":"")));
+                h("div",{style:{fontSize:10,color:"rgba(255,255,255,.38)",marginBottom:m.reply?6:0}},fmtDT(m.data)+(m.letto?" · ✓ Letto":"")),
+                m.reply&&h("div",{style:{borderTop:"1px solid rgba(255,255,255,.08)",paddingTop:6,marginTop:4}},
+                  h("div",{style:{fontSize:10,fontWeight:700,color:"#fbbf24",marginBottom:3}},"↩️ Risposta del Prof:"),
+                  h("div",{style:{fontSize:12,color:"rgba(255,255,255,.85)",whiteSpace:"pre-wrap"}},m.reply)
+                ));
             })
           ),
           h("button",{onClick:function(){
