@@ -345,25 +345,6 @@ function msgPrivatoSave(cardId,studenteName,testo,profName){
     prof:profName,data:new Date().toISOString(),letto:false
   },{merge:false});
 }
-function sendMsgAlProf(mittente,testo,cb){
-  var id="msg_"+Date.now()+"_"+Math.random().toString(36).slice(2,7);
-  return db.collection("messaggi_privati").doc(id).set({
-    mittente:mittente,destinatario:"PROF",
-    testo:testo,data:new Date().toISOString(),letto:false
-  }).then(cb);
-}
-function sendMsgAStudente(profName,nomeStudente,testo,cb){
-  var id="msg_"+Date.now()+"_"+Math.random().toString(36).slice(2,7);
-  return db.collection("messaggi_privati").doc(id).set({
-    mittente:profName,destinatario:nomeStudente,
-    testo:testo,data:new Date().toISOString(),letto:false
-  }).then(cb);
-}
-function loadMsgsToProf(mittente,cb){
-  return db.collection("messaggi_privati").where("mittente","==",mittente)
-    .where("destinatario","==","PROF").orderBy("data","desc")
-    .onSnapshot(function(s){var arr=[];s.forEach(function(d){arr.push(Object.assign({id:d.id},d.data()));});cb(arr);});
-}
 function replyToMsg(replyToId,mittente,destinatario,testo,tipo,cb){
   var id="reply_"+mittente.replace(/\s+/g,"_")+"_"+Date.now();
   return db.collection("messaggi_privati").doc(id).set({
@@ -691,7 +672,7 @@ function App(){
   var annoDefault=(function(){var s=null;try{s=sessionStorage.getItem("annoScolasticoAttivo");}catch(e){console.warn("[ScuolaBoard]",e);}return s||"2025/2026";})();
   var [annoScolastico,setAnnoScolastico]=useState(annoDefault);
   // ── MODAL STATE via useReducer ─────────────────────────────────────────
-  var MODALS0={showAnnoMenu:false,showModal:false,showQR:false,showReset:false,showResetOpt:false,viewStudenti:false,addingClasse:false,showAiQuizGen:false,showWordCloud:false,showMsgInbox:false,showStudentMsgs:false,showBanner:false,showProfilo:false,showTimerModal:false,showPrivacy:false,filtroBarOpen:false,previewSt:false,rinominaConferma:false,askKey:false};
+  var MODALS0={showAnnoMenu:false,showModal:false,showQR:false,showReset:false,showResetOpt:false,viewStudenti:false,addingClasse:false,showAiQuizGen:false,showWordCloud:false,showBanner:false,showProfilo:false,showTimerModal:false,showPrivacy:false,filtroBarOpen:false,previewSt:false,rinominaConferma:false,askKey:false};
   function modalsReducer(s,a){return{...s,[a.k]:typeof a.v==="function"?a.v(s[a.k]):a.v};}
   var [modals,dispatchModal]=useReducer(modalsReducer,MODALS0);
   var showAnnoMenu=modals.showAnnoMenu;var setShowAnnoMenu=useCallback(function(v){dispatchModal({k:"showAnnoMenu",v:v});},[]);
@@ -703,9 +684,6 @@ function App(){
   var addingClasse=modals.addingClasse;var setAddingClasse=useCallback(function(v){dispatchModal({k:"addingClasse",v:v});},[]);
   var showAiQuizGen=modals.showAiQuizGen;var setShowAiQuizGen=useCallback(function(v){dispatchModal({k:"showAiQuizGen",v:v});},[]);
   var showWordCloud=modals.showWordCloud;var setShowWordCloud=useCallback(function(v){dispatchModal({k:"showWordCloud",v:v});},[]);
-  var showMsgInbox=modals.showMsgInbox;var setShowMsgInbox=useCallback(function(v){dispatchModal({k:"showMsgInbox",v:v});},[]);
-  var showStudentMsgs=modals.showStudentMsgs;
-  var setShowStudentMsgs=useCallback(function(v){dispatchModal({k:"showStudentMsgs",v:v});},[]);
   var showBanner=modals.showBanner;var setShowBanner=useCallback(function(v){dispatchModal({k:"showBanner",v:v});},[]);
   var showProfilo=modals.showProfilo;var setShowProfilo=useCallback(function(v){dispatchModal({k:"showProfilo",v:v});},[]);
   var showTimerModal=modals.showTimerModal;var setShowTimerModal=useCallback(function(v){dispatchModal({k:"showTimerModal",v:v});},[]);
@@ -859,12 +837,7 @@ function App(){
   var [showMsgPrivato,setShowMsgPrivato]=useState(null); // {cardId, studenteName}
   var [msgPrivatoTesto,setMsgPrivatoTesto]=useState("");
   var [msgPrivatiMap,setMsgPrivatiMap]=useState({});
-  var [msgPrivatiStudente,setMsgPrivatiStudente]=useState([]);
-  var [msgAProf,setMsgAProf]=useState("");
-  var [replyDraft,setReplyDraft]=useState({}); // {msgId: testo}
-  var [inboxTab,setInboxTab]=useState("ricevuti");
-  var [msgsToProf,setMsgsToProf]=useState([]);
-  // showMsgInbox gestito da modalsReducer
+  
   var [pushEnabled,setPushEnabled]=useState(false);
   var [lightbox,setLightbox]=useState(null); // {url, didascalia}
   var prevProposteCount=React.useRef(0);
@@ -1005,7 +978,7 @@ function App(){
     function onKey(e){
       // Shortcut N = nuova card (solo prof, nessun modal aperto)
       if(e.key==="n"||e.key==="N"){
-        if(!isProf||showModal||showCard||showAiQuizGen||showSommario||showMsgInbox||showMsgPrivato||showWordCloud||e.target.tagName==="INPUT"||e.target.tagName==="TEXTAREA"){}
+        if(!isProf||showModal||showCard||showAiQuizGen||showSommario||showMsgPrivato||showWordCloud||e.target.tagName==="INPUT"||e.target.tagName==="TEXTAREA"){}
         else{e.preventDefault();setSM(true);return;}
       }
       if(e.key!=="Escape")return;
@@ -1016,7 +989,6 @@ function App(){
       if(showAiQuizGen){setShowAiQuizGen(false);return;}
       if(showSommario){setShowSommario(null);return;}
       if(showMsgPrivato){setShowMsgPrivato(null);setMsgPrivatoTesto("");return;}
-      if(showMsgInbox){setShowMsgInbox(false);return;}
       if(showWordCloud){setShowWordCloud(false);return;}
       if(askKey){setAskKey(false);setAkInput("");return;}
       if(showCopiaAnno){setShowCopiaAnno(null);setCopiaAnnoTarget("");return;}
@@ -1032,7 +1004,7 @@ function App(){
     }
     document.addEventListener("keydown",onKey);
     return function(){document.removeEventListener("keydown",onKey);};
-  },[lightbox,showCard,showModal,showAiQuizGen,showSommario,showMsgPrivato,showMsgInbox,showWordCloud,askKey,showDuplica,showCopiaAnno,confirmDel,showReset,showResetOpt,showAmm,showProfilo,showTimerModal,showClasseModal,rinominaClasse,user]);
+  },[lightbox,showCard,showModal,showAiQuizGen,showSommario,showMsgPrivato,showWordCloud,askKey,showDuplica,showCopiaAnno,confirmDel,showReset,showResetOpt,showAmm,showProfilo,showTimerModal,showClasseModal,rinominaClasse,user]);
 
   useEffect(function(){
     auth.getRedirectResult().then(function(cr){
@@ -1091,428 +1063,13 @@ function App(){
     var u4=fbFavListen(user.uid,function(ids){setPreferiti(ids);});
     // Messaggi privati
     var u7=msgPrivatiListen(user.role==="prof",myName(user),function(arr){
-      if(user.role==="prof"){
-        var m={};
-        arr.forEach(function(msg){
-          if(msg.cardId&&msg.studente){if(!m[msg.cardId])m[msg.cardId]={};m[msg.cardId][msg.studente]=msg;}
-        });
-        setMsgPrivatiMap(m);
-        var chat=arr.filter(function(msg){return msg.destinatario==="PROF";});
-        setMsgsToProf(chat);
-      } else {
-        setMsgPrivatiStudente(arr.filter(function(msg){
-          return msg.destinatario===myName(user)&&msg.mittente!==myName(user);
-        }));
-      }
+      var m={};
+      arr.forEach(function(msg){
+        if(msg.cardId&&msg.studente){if(!m[msg.cardId])m[msg.cardId]={};m[msg.cardId][msg.studente]=msg;}
+      });
+      setMsgPrivatiMap(m);
     });
-    var u7b=null;
-    var u7c=null;
-    if(user.role==="studente"){
-      // Messaggi inviati dallo studente al prof
-      u7b=db.collection("messaggi_privati")
-        .where("mittente","==",myName(user))
-        .where("destinatario","==","PROF")
-        .orderBy("data","desc")
-        .onSnapshot(function(snap){
-          var arr=[];
-          snap.forEach(function(d){arr.push(Object.assign({id:d.id},d.data()));});
-          setMsgsToProf(arr);
-        });
-      // Risposte del prof allo studente (destinatario==nomeStudente, no cardId)
-      u7c=db.collection("messaggi_privati")
-        .where("destinatario","==",myName(user))
-        .orderBy("data","desc")
-        .onSnapshot(function(snap){
-          var chatArr=[];
-          snap.forEach(function(d){
-            var d2=Object.assign({id:d.id},d.data());
-            if(!d2.cardId)chatArr.push(d2);
-          });
-          setMsgPrivatiStudente(function(prev){
-            var cardMsgs=(prev||[]).filter(function(m){return !!m.cardId;});
-            return cardMsgs.concat(chatArr).sort(function(a,b){return a.data>b.data?1:-1;});
-          });
-        });
-    }
-return function(){u1();if(u2)u2();u3();u4();if(u5)u5();u6();if(u7)u7();if(u7b)u7b();if(u7c)u7c();};
-  },[user]);
-
-  useEffect(function(){
-    if(!allCards.length)return;
-    var filtered=allCards.filter(function(c){return (c.annoScolastico||"2025/2026")===annoScolastico;});
-    setCards(filtered);setSC(null);
-  },[annoScolastico]);
-
-  useEffect(function(){
-    if(!showAnnoMenu)return;
-    function handleOutside(){setShowAnnoMenu(false);}
-    var t=setTimeout(function(){document.addEventListener("click",handleOutside);},50);
-    return function(){clearTimeout(t);document.removeEventListener("click",handleOutside);};
-  },[showAnnoMenu]);
-
-  useEffect(function(){
-    if(quizUnsubRef.current){quizUnsubRef.current();quizUnsubRef.current=null;}
-    if(!showCard||showCard.tipo!=="quiz"){setQuizRisposte([]);return;}
-    quizUnsubRef.current=quizListenRisposte(showCard.id,function(arr){setQuizRisposte(arr);});
-    return function(){if(quizUnsubRef.current){quizUnsubRef.current();quizUnsubRef.current=null;}};
-  },[showCard?String(showCard.id):null]);
-
-  useEffect(function(){
-    if(scalaUnsubRef.current){scalaUnsubRef.current();scalaUnsubRef.current=null;}
-    if(!showCard||showCard.tipo!=="scala"){setScalaRisposte([]);return;}
-    scalaUnsubRef.current=scalaListen(showCard.id,function(arr){setScalaRisposte(arr);});
-    return function(){if(scalaUnsubRef.current){scalaUnsubRef.current();scalaUnsubRef.current=null;}};
-  },[showCard?String(showCard.id):null]);
-
-  var loginGoogle=useCallback(async function(){try{
-      var provider=new firebase.auth.GoogleAuthProvider();
-      provider.setCustomParameters({prompt:"select_account"});
-      var cr=await auth.signInWithPopup(provider);
-      var fu=cr.user,ud=await db.collection("users").doc(fu.uid).get();
-      if(!ud.exists){var np=(fu.displayName||"").split(" ");await db.collection("users").doc(fu.uid).set({nome:np[0]||"Utente",cognome:np.slice(1).join(" ")||"",email:fu.email,role:"studente",provider:"google"});}
-    }catch(e){if(e.code==="auth/popup-blocked"){try{await auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider());}catch(e2){}}}
-  },[]);
-  var logout=useCallback(function(){auth.signOut();setUser(null);localStorage.removeItem("groq_key");},[]);
-
-  // Warn before closing tab if form has unsaved content
-  useEffect(function(){
-    function onBeforeUnload(e){
-      if(showModal&&(form.titolo.trim()||form.testo.trim())){
-        e.preventDefault();e.returnValue="";
-      }
-    }
-    window.addEventListener("beforeunload",onBeforeUnload);
-    return function(){window.removeEventListener("beforeunload",onBeforeUnload);};
-  },[showModal,form.titolo,form.testo]);
-
-  var saveClasse=useCallback(function(){
-    if(!classeInput)return;
-    db.collection("users").doc(user.uid).update({classe:classeInput}).then(function(){
-      setUser(function(u){return {...u,classe:classeInput};});
-      setShowClasseModal(false);
-    });
-  },[classeInput,user]);
-  var loadStudenti=useCallback(function(){
-    db.collection("users").where("role","==","studente").get().then(function(snap){
-      var arr=[];snap.forEach(function(d){arr.push(Object.assign({uid:d.id},d.data()));});
-      arr.sort(function(a,b){return(a.cognome||"").localeCompare(b.cognome||"","it");});
-      setStudenti(arr);
-    });
-  },[]);
-  var aggiornaClasseStudente=useCallback(function(uid,cl){
-    db.collection("users").doc(uid).set({classe:cl||null},{merge:true}).then(function(){
-      setStudenti(function(prev){return prev.map(function(s){return s.uid===uid?{...s,classe:cl||null}:s;});});
-    }).catch(function(e){showToast("Errore aggiornamento classe","err");});
-  },[]);
-  var aggiornaClasseStudenteDebounced=useMemo(function(){
-    return debounce(function(uid,cl){
-      aggiornaClasseStudente(uid,cl);
-    },400);
-  },[aggiornaClasseStudente]);
-
-  var rimuoviStudente=useCallback(function(uid){
-    db.collection("users").doc(uid).set({classe:null,rimosso:true},{merge:true}).then(function(){
-      setStudenti(function(prev){return prev.filter(function(s){return s.uid!==uid;});});
-    }).catch(function(e){showToast("Errore rimozione studente","err");});
-  },[]);
-
-  var toggleVisibile=useCallback(function(card,e){e.stopPropagation();fbSave({...card,visibile:card.visibile===false});},[]);
-  var onDragStart=useCallback(function(e,id){dragId.current=id;e.dataTransfer.effectAllowed="move";setTimeout(function(){var el=document.getElementById("card-"+id);if(el)el.classList.add("dragging");},0);},[]);
-  var onDragEnd=useCallback(function(e,id){var el=document.getElementById("card-"+id);if(el)el.classList.remove("dragging");document.querySelectorAll(".drag-over").forEach(function(el){el.classList.remove("drag-over");});},[]);
-  var onDragOver=useCallback(function(e,id){e.preventDefault();if(String(dragId.current)===String(id))return;var el=document.getElementById("card-"+id);if(el)el.classList.add("drag-over");},[]);
-  var onDragLeave=useCallback(function(e,id){var el=document.getElementById("card-"+id);if(el)el.classList.remove("drag-over");},[]);
-  var onDrop=useCallback(function(e,targetId){
-    e.preventDefault();document.querySelectorAll(".drag-over").forEach(function(el){el.classList.remove("drag-over");});
-    var fromId=dragId.current;if(!fromId||String(fromId)===String(targetId))return;
-    var arr=cards.slice().sort(function(a,b){return(a.ordine||0)-(b.ordine||0);});
-    var fi=arr.findIndex(function(c){return String(c.id)===String(fromId);});
-    var ti=arr.findIndex(function(c){return String(c.id)===String(targetId);});
-    if(fi<0||ti<0)return;
-    var moved=arr.splice(fi,1)[0];arr.splice(ti,0,moved);
-    arr.forEach(function(c,i){fbSave({...c,ordine:i+1});});
-    dragId.current=null;
-  },[cards]);
-  // ── TOUCH DRAG & DROP ──────────────────────────────────────────────────────
-  var touchDragId=useRef(null);
-  var touchClone=useRef(null);
-  var touchOffsetX=useRef(0);
-  var touchOffsetY=useRef(0);
-  var onTouchStartDrag=useCallback(function(e,id){
-    if(!isProf||bulkMode)return;
-    var touch=e.touches[0];
-    var el=document.getElementById("card-"+id);
-    if(!el)return;
-    touchDragId.current=id;
-    var rect=el.getBoundingClientRect();
-    touchOffsetX.current=touch.clientX-rect.left;
-    touchOffsetY.current=touch.clientY-rect.top;
-    var clone=el.cloneNode(true);
-    clone.id="touch-drag-clone";
-    clone.style.cssText="position:fixed;pointer-events:none;z-index:9999;opacity:.75;width:"+rect.width+"px;top:"+(touch.clientY-touchOffsetY.current)+"px;left:"+(touch.clientX-touchOffsetX.current)+"px;transition:none;";
-    document.body.appendChild(clone);
-    touchClone.current=clone;
-    el.style.opacity="0.3";
-  },[isProf,bulkMode]);
-  var onTouchMoveDrag=useCallback(function(e){
-    if(!touchDragId.current||!touchClone.current)return;
-    e.preventDefault();
-    var touch=e.touches[0];
-    touchClone.current.style.top=(touch.clientY-touchOffsetY.current)+"px";
-    touchClone.current.style.left=(touch.clientX-touchOffsetX.current)+"px";
-    var target=document.elementFromPoint(touch.clientX,touch.clientY);
-    var cardEl=target&&target.closest&&target.closest("[id^='card-']");
-    document.querySelectorAll(".drag-over").forEach(function(el){el.classList.remove("drag-over");});
-    if(cardEl&&cardEl.id!=="card-"+touchDragId.current)cardEl.classList.add("drag-over");
-  },[]);
-  var onTouchEndDrag=useCallback(function(e){
-    if(!touchDragId.current)return;
-    var touch=e.changedTouches[0];
-    var fromId=touchDragId.current;
-    if(touchClone.current){touchClone.current.remove();touchClone.current=null;}
-    var fromEl=document.getElementById("card-"+fromId);
-    if(fromEl)fromEl.style.opacity="";
-    document.querySelectorAll(".drag-over").forEach(function(el){el.classList.remove("drag-over");});
-    var target=document.elementFromPoint(touch.clientX,touch.clientY);
-    var cardEl=target&&target.closest&&target.closest("[id^='card-']");
-    if(cardEl){var targetId=cardEl.id.replace("card-","");if(String(targetId)!==String(fromId))onDrop({preventDefault:function(){}},targetId);}
-    touchDragId.current=null;
-  },[onDrop]);
-
-
-  var apriDuplica=useCallback(function(card,e){e.stopPropagation();setShowDuplica(card);setDuplicaClassi([]);},[]);
-  var apriCopiaAnno=useCallback(function(card,e){e.stopPropagation();setShowCopiaAnno(card);setCopiaAnnoTarget("");},[]);
-  var confermaCopiaAnno=useCallback(function(){
-    if(!showCopiaAnno||!copiaAnnoTarget)return;
-    var newId=Date.now()+"_ca_"+Math.random().toString(36).slice(2,5);
-    var copia=Object.assign({},showCopiaAnno,{id:newId,ordine:nextOrd.current++,commenti:[],likes:0,likesBy:[],reazioni:{},alzate:[],idee:[],data:new Date().toISOString().slice(0,10),annoScolastico:copiaAnnoTarget,visibile:false});
-    delete copia.proposta;delete copia.motivazioneRifiuto;
-    if(Array.isArray(showCopiaAnno.opzioni)){copia.opzioni=showCopiaAnno.opzioni.map(function(o){return {...o,voti:[]};});}
-    try{
-      fbSave(copia);
-      showToast("✅ Card copiata in "+copiaAnnoTarget+" (solo prof)","ok");
-    }catch(err){
-      showToast("❌ Errore copia: "+(err&&err.message?err.message:err),"err");
-    }
-    setShowCopiaAnno(null);setCopiaAnnoTarget("");
-  },[showCopiaAnno,copiaAnnoTarget]);
-  var confermaDuplica=useCallback(function(){
-    if(!showDuplica||!duplicaClassi.length)return;
-    duplicaClassi.forEach(function(cl){
-      var newId=Date.now()+"_"+Math.random().toString(36).slice(2,7);
-      var copia={...showDuplica,id:newId,classi:[cl],ordine:nextOrd.current++,commenti:[],likes:0,data:new Date().toISOString().slice(0,10),titolo:showDuplica.titolo+" ["+cl+"]"};
-      if(showDuplica.opzioni&&Array.isArray(showDuplica.opzioni)){copia.opzioni=showDuplica.opzioni.map(function(o){return {...o,voti:[]};});}
-      else{delete copia.opzioni;}
-      fbSave(copia);
-    });
-    setShowDuplica(null);setDuplicaClassi([]);
-  },[showDuplica,duplicaClassi]);
-
-  var totC=useMemo(function(){return cards.reduce(function(a,c){return a+(c.commenti||[]).length;},0);},[cards]);
-  var proposte=useMemo(function(){return cards.filter(function(c){return c.proposta===true;});},[cards]);
-  var isProf=useMemo(function(){return !!(user&&user.role==="prof");},[user]);
-  var simulaSt=isProf&&previewSt;
-
-  var visible=useMemo(function(){return cards.filter(function(c){
-    if(undoDelete&&String(c.id)===String(undoDelete.card.id))return false;
-    if(simulaSt||!isProf){
-      if(c.proposta||c.visibile===false)return false;
-      if(!isProf&&c.pubblicaIl&&new Date(c.pubblicaIl).getTime()>Date.now())return false;
-      var cc=c.classi!=null?c.classi:["TUTTE"];if(!cc.length)return false;
-      var stC=simulaSt?previewClasse:(user&&user.classe);
-      if(!stC||stC==="TUTTE")return cc.includes("TUTTE");
-      return cc.includes("TUTTE")||cc.includes(stC);
-    }
-    if(filterClasse!=="tutte"){
-      var cc=c.classi||[];
-      if(filterClasse==="_solo"){if(cc.length!==0)return false;}
-      else{if(!cc.includes("TUTTE")&&!cc.includes(filterClasse))return false;}
-    }
-    return true;
-  });},[cards,undoDelete,simulaSt,isProf,filterClasse,user,previewClasse]);
-
-  var visibleSorted=useMemo(function(){return visible.slice().sort(function(a,b){
-    if(a.pinned&&!b.pinned)return -1;
-    if(b.pinned&&!a.pinned)return 1;
-    if(a.tipo==="annuncio"&&b.tipo!=="annuncio")return -1;
-    if(b.tipo==="annuncio"&&a.tipo!=="annuncio")return 1;
-    return(a.ordine||0)-(b.ordine||0);
-  });},[visible]);
-
-  var addCard=useCallback(function(){
-    if(!form.titolo.trim()||!user)return;
-    var opzioni=null;
-    if(form.tipo==="sondaggio")opzioni=form.opzioni.filter(function(o){return o.trim();}).map(function(o,i){return{id:"o"+Date.now()+"_"+i,testo:o,voti:[]};});
-    var quizDomande=null;
-    if(form.tipo==="quiz"&&form.quizDomande&&form.quizDomande.length)quizDomande=form.quizDomande.filter(function(d){
-      if(!d.testo||!d.testo.trim())return false;
-      if(d.tipo==="multipla"){var ops=(d.opzioni||[]).filter(function(o){return o&&o.trim();});return ops.length>=2;}
-      return true;
-    }).map(function(d){
-      if(d.tipo==="multipla")return Object.assign({},d,{opzioni:(d.opzioni||[]).filter(function(o){return o&&o.trim();})});
-      return d;
-    });
-    var cleanLinks=(form.links||[]).filter(function(l){return l.url&&l.url.trim();}).map(function(l){return{url:l.url.trim(),label:(l.label||"").trim()};});
-    var classiSalvate=form.classi&&form.classi.length?form.classi:["TUTTE"];
-    var cleanImmagini=(form.immagini||[]).filter(function(x){return x.url;});
-    if(editMode){
-      var c={...editMode,tipo:form.tipo,titolo:form.titolo.trim(),testo:form.testo.trim(),links:cleanLinks,linkEsterno:null,classi:classiSalvate,immagini:cleanImmagini,copertina:form.copertina||null};
-      if(opzioni)c.opzioni=opzioni;
-      if(quizDomande)c.quizDomande=quizDomande;
-      if(form.tipo==="quiz")c.quizTimer=form.quizTimer||10;
-      fbSave(c);setEditMode(null);
-      showToast("Card aggiornata ✓","ok");
-    } else {
-      var c={id:Date.now(),tipo:form.tipo,titolo:form.titolo.trim(),testo:form.testo.trim(),data:new Date().toISOString().slice(0,10),autore:myName(user),likes:0,commenti:[],ordine:nextOrd.current++,links:cleanLinks,linkEsterno:null,visibile:true,classi:classiSalvate,pubblicaIl:form.pubblicaIl||null,immagini:cleanImmagini,copertina:form.copertina||null,annoScolastico:annoScolastico};
-      if(opzioni)c.opzioni=opzioni;
-      if(quizDomande)c.quizDomande=quizDomande;
-      if(form.tipo==="quiz")c.quizTimer=form.quizTimer||10;
-      if(form.tipo==="scala"){c.scalaMin=form.scalaMin||"Per niente";c.scalaMax=form.scalaMax||"Completamente";}
-      if(form.tipo==="brainstorm"){c.brainstormAnonimo=form.brainstormAnonimo!==false;c.idee=[];}
-      if(!isProf){c.proposta=true;if(user.classe)c.classi=[user.classe];}
-      fbSave(c);
-      if(isProf)showToast("Card pubblicata ✓","ok");
-      else showToast("Proposta inviata al prof ✓","ok");
-    }
-    setSM(false);setForm({...FORM0});
-  },[form,editMode,user,isProf,annoScolastico]);
-  var editCard=useCallback(function(card){
-    setEditMode(card);
-    var links=normalizeLinks(card);
-    setForm({tipo:card.tipo,titolo:card.titolo,testo:card.testo||"",opzioni:card.opzioni?card.opzioni.map(function(o){return o.testo;}):["",""],links:links.length?links:[{url:"",label:""}],classi:card.classi||["TUTTE"],quizDomande:card.quizDomande||[],quizTimer:card.quizTimer||10,immagini:card.immagini||[],copertina:card.copertina||null});
-    setSM(true);
-  },[]);
-
-  async function handleImgUpload(e,isCover){
-    var files=Array.from(e.target.files);
-    if(!files.length)return;
-    setImgUploading(true);
-    try{
-      for(var fi=0;fi<files.length;fi++){
-        var file=files[fi];
-        if(!file.type.startsWith("image/"))continue;
-        if(file.size>5*1024*1024){showToast("Immagine troppo grande (max 5MB)","warn");continue;}
-        var b64=await compressImage(file,isCover?900:900,isCover?900:900,0.72);
-        if(isCover){
-          setForm(function(p){return {...p,copertina:b64};});
-        } else {
-          setForm(function(p){
-            if((p.immagini||[]).length>=5)return p;
-            return Object.assign({},p,{immagini:(p.immagini||[]).concat([{id:Date.now()+"_"+Math.random().toString(36).slice(2,6),url:b64,didascalia:""}])});
-          });
-        }
-      }
-    }catch(err){showToast("Errore caricamento immagine","err");}
-    setImgUploading(false);
-    e.target.value="";
-  }
-
-  var rimuoviImmagine=useCallback(function(id){
-    setForm(function(p){return Object.assign({},p,{immagini:(p.immagini||[]).filter(function(x){return x.id!==id;})});});
-  },[form]);
-  var setDidascalia=useCallback(function(id,val){
-    setForm(function(p){return Object.assign({},p,{immagini:(p.immagini||[]).map(function(x){return x.id===id?{...x,didascalia:val}:x;})});});
-  },[form]);
-  var delCard=useCallback(function(id){setConfirmDel({type:"card",id:id});},[]);
-  var delCardWithUndo=useCallback(function(id){
-    var card=cards.find(function(c){return c.id===id;});
-    if(!card)return;
-    setSC(null);
-    var toastId=Date.now();
-    var timer=setTimeout(function(){fbDel(id);setUndoDelete(null);},5000);
-    setUndoDelete({card:card,timer:timer,toastId:toastId});
-    setToasts(function(p){return p.concat([{id:toastId,msg:"Card eliminata",type:"warn",undo:true}]);});
-  },[cards]);
-  var undoDeleteCard=useCallback(function(){
-    if(!undoDelete)return;
-    clearTimeout(undoDelete.timer);
-    setToasts(function(p){return p.filter(function(t){return t.id!==undoDelete.toastId;});});
-    setUndoDelete(null);
-    showToast("Eliminazione annullata ✓","ok");
-  },[undoDelete]);
-  var appCard=useCallback(function(id){var c=cards.find(function(x){return x.id===id;});if(c){fbSave({...c,proposta:false});showToast("Proposta approvata ✓","ok");}},[]);
-  var rifiutaConMot=useCallback(function(id,mot){
-    var c=cards.find(function(x){return x.id===id;});
-    if(c)fbSave({...c,proposta:"rifiutata",motivazioneRifiuto:mot||""});
-    setShowRifiutaModal(null);setRifiutaInput("");
-    showToast("Proposta rifiutata","warn");
-  },[cards]);
-  // ── TOAST ──────────────────────────────────────────────────
-  var [toasts,setToasts]=useState([]);
-  var [undoDelete,setUndoDelete]=useState(null);
-  var [bulkMode,setBulkMode]=useState(false);
-  var [bulkSelected,setBulkSelected]=useState([]);
-  var toggleBulkSelect=useCallback(function(id){var sid=String(id);setBulkSelected(function(p){return p.includes(sid)?p.filter(function(x){return x!==sid;}):[].concat(p,[sid]);});},[bulkSelected]);
-  var bulkHide=useCallback(function(vis){
-    bulkSelected.forEach(function(id){db.collection("cards").doc(id).update({visibile:vis}).catch(function(){var card=cards.find(function(c){return String(c.id)===id;});if(card)fbSave({...card,visibile:vis});});});
-    showToast(bulkSelected.length+" card "+(vis?"visibili":"nascoste"),"ok");
-    setBulkSelected([]);setBulkMode(false);
-  },[bulkSelected,cards]);
-  var bulkDelete=useCallback(function(){bulkSelected.forEach(function(id){fbDel(id);});showToast(bulkSelected.length+" card eliminate","warn");setBulkSelected([]);setBulkMode(false);},[bulkSelected,cards]);
-  var showToast=useCallback(function(msg,type){
-    var id=Date.now();
-    setToasts(function(p){return p.concat([{id:id,msg:msg,type:type||"ok"}]);});
-    setTimeout(function(){setToasts(function(p){return p.filter(function(t){return t.id!==id;});});},2400);
-  },[]);
-
-  var toggleLike=useCallback(function(cardId){
-    var card=cards.find(function(c){return c.id===cardId;});if(!card)return;
-    setLikeAnimCard(cardId);setTimeout(function(){setLikeAnimCard(null);},400);
-    var key=String(cardId),liked=myLikes.current.has(key);
-    liked?myLikes.current.delete(key):myLikes.current.add(key);
-    var vn=myName(user);
-    var likesBy=(card.likesBy||[]).filter(function(n){return n!==vn;});
-    if(!liked)likesBy=likesBy.concat([vn]);
-    // update() invece di set() completo — più efficiente e sicuro
-    db.collection("cards").doc(String(cardId)).update({
-      likes:(card.likes||0)+(liked?-1:1),
-      likesBy:likesBy
-    }).catch(function(){fbSave({...card,likes:(card.likes||0)+(liked?-1:1),likesBy:likesBy});});
-  },[user]);
-  var toggleReazione=useCallback(function(cardId,emoji){
-    if(!user)return;
-    var card=cards.find(function(c){return c.id===cardId;});if(!card)return;
-    var vn=myName(user);
-    var reaz=card.reazioni?Object.assign({},card.reazioni):{};
-    var lista=reaz[emoji]?reaz[emoji].slice():[];
-    var idx=lista.indexOf(vn);
-    if(idx>=0)lista.splice(idx,1);else lista.push(vn);
-    reaz[emoji]=lista;
-    db.collection("cards").doc(String(cardId)).update({reazioni:reaz})
-      .catch(function(){fbSave({...card,reazioni:reaz});});
-  },[user]);
-  var vote=useCallback(function(cid,oid){
-    if(!user)return;
-    var card=cards.find(function(c){return c.id===cid;});if(!card)return;
-    var vn=myName(user);
-    var nuoveOpzioni=card.opzioni.map(function(o){var voti=o.voti.filter(function(v){return v!==vn;});if(o.id===oid)voti=voti.concat([vn]);return {...o,voti:voti};});
-    db.collection("cards").doc(String(cid)).update({opzioni:nuoveOpzioni})
-      .catch(function(){fbSave({...card,opzioni:nuoveOpzioni});});
-    showToast("Voto registrato ✓","ok");
-  },[user]);
-  var addCom=useCallback(function(){
-    if(!user||!nc.testo.trim())return;
-    var card=cards.find(function(c){return String(c.id)===String(showCard.id);});if(!card)return;
-    fbSave(Object.assign({},card,{commenti:(card.commenti||[]).concat([{id:Date.now(),autore:myName(user),testo:nc.testo.trim(),data:new Date().toISOString(),risposte:[]}])}));
-    setNc({testo:""});
-    showToast("Commento inviato ✓","ok");
-  },[user,showCard,nc]);
-  var addReply=useCallback(function(cmId){
-    if(!user||!replyTesto.trim())return;
-    var card=cards.find(function(c){return String(c.id)===String(showCard.id);});if(!card)return;
-    var nuova={id:Date.now(),autore:myName(user),testo:replyTesto.trim(),data:new Date().toISOString(),risposte:[]};
-    function ins(lista){return lista.map(function(item){if(String(item.id)===String(cmId))return {...item,risposte:(item.risposte||[]).concat([nuova])};if(item.risposte&&item.risposte.length)return {...item,risposte:ins(item.risposte)};return item;});}
-    fbSave({...card,commenti:ins(card.commenti)});
-    setReplyTo(null);setReplyTesto("");
-    showToast("Risposta inviata ✓","ok");
-  },[showCard,replyTesto]);
-  var executeDelReply=useCallback(function(cmId,rId,cardId){
-    var card=cards.find(function(c){return String(c.id)===String(cardId);});if(!card)return;
-    function rem(lista){return lista.map(function(item){if(String(item.id)===String(cmId))return Object.assign({},item,{risposte:(item.risposte||[]).filter(function(r){return String(r.id)!==String(rId);})});if(item.risposte&&item.risposte.length)return {...item,risposte:rem(item.risposte)};return item;});}
-    fbSave({...card,commenti:rem(card.commenti)});
-  },[showCard]);
-  var executeDelCom=useCallback(function(cid,cmid){var card=cards.find(function(c){return c.id===cid;});if(!card)return;fbSave(Object.assign({},card,{commenti:card.commenti.filter(function(cm){return cm.id!==cmid;})}));},[showCard]);
-  var ammonisci=useCallback(function(cardId,cmId,autore,motivazione){
-    var nuova={id:Date.now(),cardId:String(cardId),cmId:String(cmId),motivazione:motivazione,data:new Date().toISOString()};
+    
     db.collection("ammonizioni").doc(autore).set({
       lista:firebase.firestore.FieldValue.arrayUnion(nuova),
       aggiornato:new Date().toISOString()
@@ -1593,7 +1150,7 @@ return function(){u1();if(u2)u2();u3();u4();if(u5)u5();u6();if(u7)u7();if(u7b)u7
             "}\n\n"+
             "Scala voto: 0.75-1.0=risposta completa e argomentata; 0.4-0.74=parziale ma pertinente; 0-0.39=assente o fuori tema.\n"+
             "Sii diretto e specifico su QUESTA risposta. Zero frasi generiche valide per qualsiasi studente.";
-          return callGroqJSON(orKey,prompt,600)
+          return callGroqJSON(currentKey,prompt,600)
             .then(function(res){return{idx:item.i,res:res};})
             .catch(function(){return null;});
         });
@@ -1701,13 +1258,14 @@ return function(){u1();if(u2)u2();u3();u4();if(u5)u5();u6();if(u7)u7();if(u7b)u7
 
 
   var runAI=useCallback(function(){
-    if(!orKey){setAskKey(true);return;}
+    var currentKey=localStorage.getItem("groq_key")||orKey;
+    if(!currentKey){setAskKey(true);return;}
     setAiRunning(true);setAiR(null);setAiErr("");
     var target=aiTarget==="tutte"?cards.filter(function(c){return !c.proposta;}):[cards.find(function(c){return String(c.id)===String(aiTarget);})].filter(Boolean);
     if(!target.length){setAiErr("Nessuna card.");setAiRunning(false);return;}
     var det=target.map(function(c){return "CARD: \""+c.titolo+"\" (tipo:"+c.tipo+", like:"+(c.likes||0)+")\n"+cardContext(c);}).join("\n\n---\n\n");
     var prompt='Sei un docente esperto in una scuola secondaria di II grado.\nHai accesso ai dati reali della bacheca digitale della tua classe. Analizza SOLO ciò che è effettivamente presente.\n\nRispondi ESCLUSIVAMENTE con questo JSON:\n{\n  "riepilogo": "Max 2 frasi: quale argomento ha generato più partecipazione e perché, con dati numerici reali (es. \'7 commenti su X contro 2 su Y\').",\n  "dibattito": "Max 2 frasi: la polarizzazione o convergenza reale emersa. Se ci sono posizioni opposte, citale. Se la partecipazione è stata superficiale, dillo.",\n  "punti_chiave": ["Osservazione concreta su un tema emerso, con riferimento a commenti reali", "Pattern comportamentale o di pensiero rilevato nella classe", "Aspetto didattico da monitorare o valorizzare"],\n  "spunti_dibattito": ["Attività specifica da fare nella prossima lezione basata su ciò che è emerso", "Domanda provocatoria da lanciare alla classe sul tema più discusso", "Connessione con il programma da sviluppare"]\n}\n\nREGOLE FERREE: riepilogo e dibattito MAX 2 frasi. punti_chiave e spunti: 3 voci brevi e concrete, niente genericità.\n\nDATI BACHECA:\n'+det.slice(0,3000);
-    callGroqJSON(orKey,prompt,1200)
+    callGroqJSON(currentKey,prompt,1200)
       .then(function(r){if(r&&(r.riepilogo||r.dibattito))setAiR(r);else setAiErr("Risposta non valida.");})
       .catch(function(e){setAiErr(e.message||"Errore AI.");})
       .then(function(){setAiRunning(false);});
@@ -1715,11 +1273,12 @@ return function(){u1();if(u2)u2();u3();u4();if(u5)u5();u6();if(u7)u7();if(u7b)u7
 
   var runCardAI=useCallback(function(card,e){
     e.stopPropagation();
-    if(!orKey){setAskKey(true);return;}
+    var currentKey=localStorage.getItem("groq_key")||orKey;
+    if(!currentKey){setAskKey(true);return;}
     var freshCard=cards.find(function(c){return String(c.id)===String(card.id);})||card;
     setCardAIL(String(freshCard.id));setCardAiOpen(String(freshCard.id));setCardAiErr(null);
     var prompt='Sei un docente esperto in una scuola secondaria di II grado.\nAnalizza la card didattica basandoti SOLO sui dati reali forniti. Non inventare nulla.\n\nRispondi ESCLUSIVAMENTE con questo JSON (nessun testo fuori dal JSON):\n{\n  "sintesi": "Max 2 frasi: tema e partecipazione reale con numeri concreti.",\n  "dinamica": "Max 2 frasi: posizioni emerse, studenti significativi.",\n  "spunto": "1 azione concreta e immediatamente applicabile per il prof.",\n  "domande_stimolo": ["domanda sul punto più discusso","domanda che sfida un presupposto","domanda che aggancia alla vita reale"]\n}\n\nREGOLE FERREE: sintesi e dinamica MAX 2 frasi. spunto MAX 1 frase. domande_stimolo: 3 domande brevi.\n\nDATI CARD:\n'+cardContext(freshCard);
-    callGroqJSON(orKey,prompt,700)
+    callGroqJSON(currentKey,prompt,700)
       .then(function(r){
         if(r&&!r.error){
           var data={sintesi:r.sintesi||"",dinamica:r.dinamica||"",spunto:r.spunto||"",domande_stimolo:r.domande_stimolo||[],data:new Date().toISOString(),cardTitolo:freshCard.titolo};
@@ -1735,11 +1294,12 @@ return function(){u1();if(u2)u2();u3();u4();if(u5)u5();u6();if(u7)u7();if(u7b)u7
 
   var runCardQ=useCallback(function(){
     if(!cardQ.trim()||!showCard)return;
-    if(!orKey){setAskKey(true);return;}
+    var currentKey=localStorage.getItem("groq_key")||orKey;
+    if(!currentKey){setAskKey(true);return;}
     setCardQLoad(true);setCardQErr("");
     var card=showCard;
     var prompt='Sei un consulente didattico per una scuola secondaria di II grado.\nRispondi alla domanda del prof basandoti ESCLUSIVAMENTE sui dati reali della card. Non inventare nulla.\nSe i dati non bastano, dillo in una frase e indica cosa osservare per trovare la risposta.\n\nDATI CARD:\n'+cardContext(card)+'\n\nDOMANDA DEL PROF:\n'+cardQ.trim()+'\n\nRispondi in max 4 frasi, stile diretto: niente preamboli, vai subito al punto.';
-    callGroqText(orKey,prompt,400)
+    callGroqText(currentKey,prompt,400)
       .then(function(txt){
         var aiD=aiMap[String(card.id)];
         var esistenti=aiD&&Array.isArray(aiD.domande)?aiD.domande:(aiD&&aiD.domanda?[aiD.domanda]:[]);
@@ -1755,7 +1315,7 @@ return function(){u1();if(u2)u2();u3();u4();if(u5)u5();u6();if(u7)u7();if(u7b)u7
         aiSave(card.id,{domande:aggiornate,domanda:null});
         setCardQ("");
       })
-      .catch(function(e){setCardQErr(e.message||"Errore di rete.");})
+      .catch(function(e){console.error("[AI-Card]",e);setCardQErr(e.message||"Errore AI: "+String(e));})
       .finally(function(){setCardQLoad(false);});
   },[showCard,cardQ,orKey]);
 
@@ -1776,7 +1336,7 @@ return function(){u1();if(u2)u2();u3();u4();if(u5)u5();u6();if(u7)u7();if(u7b)u7
     setAiQuizGenLoading(true);setAiQuizGenErr("");
     var prompt=buildQuizPrompt(aiQuizGenTesto,aiQuizGenNumDom,aiQuizGenTipo,aiQuizGenTesto.slice(0,60));
     try{
-      var r=await callGroqJSON(orKey,prompt,1800);
+      var r=await callGroqJSON(currentKey,prompt,1800);
       if(r&&Array.isArray(r.domande)&&r.domande.length){
         var domande=r.domande.map(function(d){
           if(d.tipo==="verofalso")return{tipo:"verofalso",testo:d.testo||"",opzioni:["Vero","Falso"],corretta:d.corretta||"Vero"};
@@ -1795,7 +1355,7 @@ return function(){u1();if(u2)u2();u3();u4();if(u5)u5();u6();if(u7)u7();if(u7b)u7
     var d=aiQuizGenAnteprima[idx];
     var prompt=buildQuizPrompt(aiQuizGenTesto,1,d.tipo==="multipla"?"multipla":d.tipo==="verofalso"?"verofalso":"aperta",aiQuizGenTesto.slice(0,60));
     try{
-      var r=await callGroqJSON(orKey,prompt,600);
+      var r=await callGroqJSON(currentKey,prompt,600);
       if(r&&Array.isArray(r.domande)&&r.domande.length){
         var nd=r.domande[0];
         var nuova;
@@ -1874,7 +1434,7 @@ return function(){u1();if(u2)u2();u3();u4();if(u5)u5();u6();if(u7)u7();if(u7b)u7
       "Card più discusse: "+topCard.map(function(c){return c.titolo+" ("+((c.commenti||[]).length)+"comm)";}).join(", ");
     var prompt='Sei un docente di scuola secondaria. Genera un report settimanale operativo basato sui dati reali della tua bacheca digitale.\n\n'+contesto+'\n\nRispondi SOLO con questo JSON:\n{\n"panoramica":"1 frase: andamento generale della settimana con dati concreti (card pubblicate, partecipazione, trend rispetto atteso)",\n"punto_forza":"1 frase: l\'aspetto didattico più positivo emerso questa settimana, con riferimento specifico",\n"da_migliorare":"1 frase: il problema o gap didattico principale da affrontare, con riferimento ai dati",\n"prossima_settimana":["Azione concreta 1 da fare lunedì","Argomento da sviluppare basato su ciò che è emerso","Card o attività specifica da proporre"],\n"domanda_classe":"1 domanda aperta da lanciare come prima card della prossima settimana, basata su ciò che è rimasto irrisolto"\n}';
     try{
-      var res=await callGroqJSON(orKey,prompt,600);
+      var res=await callGroqJSON(currentKey,prompt,600);
       setReportSett(res);
     }catch(e){showToast("Errore report: "+e.message,"err");}
     setReportSettLoading(false);
@@ -1954,82 +1514,7 @@ return function(){u1();if(u2)u2();u3();u4();if(u5)u5();u6();if(u7)u7();if(u7b)u7
       h("div",{style:{flex:1}}),
       isProf&&h("button",{"aria-label":"Imposta chiave API Groq","data-tip-down":"API Groq",onClick:function(){setAskKey(true);},style:{background:orKey?"rgba(34,197,94,.15)":"rgba(249,115,22,.15)",border:"1px solid "+(orKey?"rgba(34,197,94,.3)":"rgba(249,115,22,.3)"),borderRadius:8,padding:"5px 9px",cursor:"pointer",fontSize:12,color:orKey?"#4ade80":"#fb923c"}},orKey?"🔑":"⚠️"),
       isProf&&h("button",{"aria-label":"Opzioni reset","data-tip-down":"Reset bacheca",onClick:function(){setShowResetOpt(true);},style:{background:"rgba(255,255,255,.06)",border:"1px solid rgba(239,68,68,.3)",borderRadius:8,padding:"5px 9px",cursor:"pointer",fontSize:14,color:"#f87171"}},"🗑️"),
-      isProf&&!simulaSt&&msgsToProf.filter(function(m){return !m.letto;}).length>0&&h("button",{
-        "aria-label":"Messaggi studenti","data-tip-down":"Messaggi dagli studenti",
-        onClick:function(){setShowStudentMsgs(function(v){return !v;});},
-        style:{position:"relative",background:"rgba(99,102,241,.2)",border:"1px solid rgba(99,102,241,.45)",
-          borderRadius:8,padding:"5px 10px",cursor:"pointer",fontSize:12,fontWeight:700,color:"#a5b4fc"}},
-        "📬 "+msgsToProf.filter(function(m){return !m.letto;}).length
-      ),
-      isProf&&!simulaSt&&h("button",{"aria-label":"Ammonizioni","data-tip-down":"Ammonizioni",onClick:function(){setShowAmm({autore:null,cardId:null,cmId:null});},style:{background:"rgba(245,158,11,.12)",border:"1px solid rgba(245,158,11,.3)",borderRadius:8,padding:"5px 9px",cursor:"pointer",fontSize:14,color:"#fbbf24"}},"⚠️"),
-      h("button",{"aria-label":"QR Code bacheca","data-tip-down":"QR Code",onClick:function(){setSQR(true);},style:{background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.1)",borderRadius:8,padding:"5px 9px",cursor:"pointer",fontSize:14,color:"rgba(255,255,255,.7)"}},"◆"),
-      isProf&&h("button",{onClick:function(){setPreviewSt(function(v){return !v;});},style:{background:simulaSt?"rgba(249,115,22,.3)":"rgba(255,255,255,.07)",border:"1px solid "+(simulaSt?"rgba(249,115,22,.6)":"rgba(255,255,255,.15)"),borderRadius:8,padding:"5px 10px",cursor:"pointer",fontSize:12,fontWeight:700,color:simulaSt?"#fb923c":"rgba(255,255,255,.6)"}},simulaSt?"🔙 Prof":"👁️ Studente"),
-      isProf&&!simulaSt&&h("div",{style:{display:"flex",gap:2,background:"rgba(255,255,255,.05)",borderRadius:9,padding:3,border:"1px solid rgba(255,255,255,.08)"}},
-        [{k:"bacheca",i:"📌"},{k:"analisi",i:"🤖"},{k:"studenti",i:"👥"}].map(function(t){
-          return h("button",{key:t.k,onClick:function(){setView(t.k);setViewStudenti(t.k==="studenti");},style:{padding:"4px 11px",borderRadius:7,border:"none",background:view===t.k?"rgba(99,102,241,.4)":"transparent",color:view===t.k?"#fff":"rgba(255,255,255,.58)",fontWeight:700,cursor:"pointer",fontSize:13}},t.i);
-        })
-      ),
-      isProf&&!simulaSt&&h("button",{"aria-label":"Selezione multipla","data-tip-down":"Selezione multipla",onClick:function(){setBulkMode(function(v){if(v)setBulkSelected([]);return !v;});},style:{background:bulkMode?"rgba(99,102,241,.4)":"rgba(255,255,255,.07)",border:"1px solid "+(bulkMode?"rgba(99,102,241,.6)":"rgba(255,255,255,.15)"),borderRadius:8,padding:"5px 9px",cursor:"pointer",fontSize:13,color:bulkMode?"#a5b4fc":"rgba(255,255,255,.52)",fontWeight:700}},"☑"),
-      isProf&&!simulaSt&&h("button",{onClick:function(){setEditMode(null);setForm({...FORM0,classi:filterClasse&&filterClasse!=="tutte"?[filterClasse]:["TUTTE"]});setSM(true);},style:{background:"linear-gradient(135deg,#6366f1,#8b5cf6)",border:"none",borderRadius:20,width:34,height:34,cursor:"pointer",color:"#fff",fontSize:20,display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800}},"+"),
-      !isProf&&!simulaSt&&(function(){
-        var nonLette=visibleSorted.filter(function(card){return !seenRef.current.has(String(card.id));}).length;
-        return nonLette>0?h("span",{style:{background:"rgba(239,68,68,.25)",color:"#f87171",border:"1px solid rgba(239,68,68,.4)",borderRadius:20,padding:"2px 9px",fontSize:11,fontWeight:800,display:"flex",alignItems:"center",gap:4}},h("span",{style:{width:6,height:6,borderRadius:"50%",background:"#ef4444",display:"inline-block",animation:"pulse 2s infinite"}}),nonLette+" nuov"+(nonLette===1?"a":"e")):null;
-      })(),
-      !isProf&&!simulaSt&&h("button",{onClick:function(){setEditMode(null);setForm({...FORM0,classi:filterClasse&&filterClasse!=="tutte"?[filterClasse]:["TUTTE"]});setSM(true);},style:{background:"linear-gradient(135deg,#7c3aed,#a855f7)",border:"1px solid rgba(167,139,250,.4)",borderRadius:20,padding:"0 14px",height:34,cursor:"pointer",color:"#fff",fontSize:12,fontWeight:700,display:"flex",alignItems:"center",gap:5,whiteSpace:"nowrap"}},"\ud83d\udca1 Proponi una card"),
-      !isProf&&!simulaSt&&h("button",{onClick:function(){setShowProfilo(true);},style:{background:"rgba(99,102,241,.15)",border:"1px solid rgba(99,102,241,.3)",borderRadius:8,padding:"4px 9px",cursor:"pointer",fontSize:12,color:"#a5b4fc",fontWeight:700}},"📊 Il mio profilo"),
-      !isProf&&!simulaSt&&h("button",{onClick:function(){setShowMsgInbox(true);msgPrivatiStudente.forEach(function(m){if(!m.letto)db.collection("messaggi_privati").doc(m.id).update({letto:true}).catch(function(){});});},style:{position:"relative",background:msgPrivatiStudente.filter(function(m){return !m.letto;}).length?"rgba(245,158,11,.25)":"rgba(255,255,255,.06)",border:"1px solid "+(msgPrivatiStudente.filter(function(m){return !m.letto;}).length?"rgba(245,158,11,.5)":"rgba(255,255,255,.1)"),borderRadius:8,padding:"4px 9px",cursor:"pointer",fontSize:12,color:msgPrivatiStudente.filter(function(m){return !m.letto;}).length?"#fbbf24":"rgba(255,255,255,.58)",fontWeight:700}},
-        "✉️",msgPrivatiStudente.filter(function(m){return !m.letto;}).length>0&&h("span",{style:{position:"absolute",top:-4,right:-4,background:"#ef4444",color:"#fff",borderRadius:"50%",width:14,height:14,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800}},msgPrivatiStudente.filter(function(m){return !m.letto;}).length)
-      ),
       
-      h("button",{onClick:logout,style:{background:"none",border:"1px solid rgba(255,255,255,.1)",borderRadius:7,padding:"4px 9px",cursor:"pointer",fontSize:11,color:"rgba(255,255,255,.45)"}},"Esci")
-    ),
-
-    // BACHECA
-    (view==="bacheca"||simulaSt)&&h(Fragment,null,
-      h("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",gap:8,padding:"7px 14px",background:"linear-gradient(90deg,rgba(99,102,241,.06) 0%,rgba(255,255,255,.03) 40%,rgba(34,197,94,.05) 100%)",borderBottom:"1px solid rgba(255,255,255,.07)",flexWrap:"wrap"}},
-        h("span",{className:"pulse",style:{width:7,height:7,background:"#22c55e",borderRadius:"50%",display:"inline-block"}}),
-        h("span",{style:{fontSize:11,fontWeight:800,letterSpacing:3,color:"rgba(255,255,255,.65)"}},"LIVE"),
-        h("span",{style:{fontSize:11,color:"rgba(255,255,255,.45)"}},"•"),
-        h("span",{style:{fontSize:11,color:"rgba(255,255,255,.58)"}},cards.filter(function(c){return !c.proposta;}).length+" card"),
-        h("span",{style:{fontSize:11,color:"rgba(255,255,255,.45)"}},"•"),
-        h("span",{style:{fontSize:11,color:"rgba(255,255,255,.58)"}},totC+" commenti"),
-        isProf&&!simulaSt&&proposte.length>0&&h("span",{style:{background:"rgba(239,68,68,.2)",color:"#f87171",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:800,border:"1px solid rgba(239,68,68,.3)"}},"⏳ "+proposte.length+" in attesa")
-      ),
-      isProf&&!simulaSt&&view==="bacheca"&&h("div",{style:{background:"rgba(255,255,255,.02)",borderBottom:"1px solid rgba(255,255,255,.06)"}},
-        h("div",{style:{display:"flex",alignItems:"center",gap:8,padding:"6px 14px",cursor:"pointer"},onClick:function(){setFiltroBarOpen(function(v){return !v;});}},
-          h("span",{style:{fontSize:11,fontWeight:800,color:"rgba(255,255,255,.52)",letterSpacing:1}},filterClasse==="tutte"?"🏫 FILTRA PER CLASSE":"🏫 CLASSE: "+filterClasse),
-          filterClasse!=="tutte"&&h("span",{style:{background:"#6366f1",color:"#fff",borderRadius:20,padding:"1px 8px",fontSize:11,fontWeight:800}},filterClasse),
-          filterClasse!=="tutte"&&h("button",{onClick:function(e){e.stopPropagation();setFilterClasse("tutte");},style:{background:"none",border:"none",color:"rgba(255,255,255,.58)",cursor:"pointer",fontSize:12,lineHeight:1,padding:"0 2px"}},"×"),
-          h("span",{style:{fontSize:11,color:"rgba(255,255,255,.40)",marginLeft:"auto"}},filtroBarOpen?"▲":"▼")
-        ),
-        filtroBarOpen&&h("div",{style:{display:"flex",gap:6,padding:"6px 14px 10px",flexWrap:"wrap",alignItems:"center"}},
-
-        h("span",{style:{fontSize:11,color:"rgba(255,255,255,.52)",fontWeight:700,letterSpacing:1}},"CLASSE:"),
-        
-        CLASSI_DEFAULT.map(function(cl){return h("button",{key:cl,onClick:function(){setFilterClasse(cl);},style:S.filterBtn(filterClasse===cl)},cl);}),
-        h("button",{onClick:function(){setFilterClasse("_solo");},style:S.filterBtn(filterClasse==="_solo")},"Solo prof"),
-        CLASSI_LIST.filter(function(cl){return !CLASSI_DEFAULT.includes(cl);}).map(function(cl){
-          var sel=filterClasse===cl;
-          var cc=classeColor(cl,classiCustom);
-          return h("span",{key:"custom-"+cl,style:{display:"flex",alignItems:"center",gap:0,borderRadius:20,overflow:"hidden",border:"1px solid "+(sel?cc:"rgba(255,255,255,.15)"),background:sel?cc+"33":"rgba(255,255,255,.04)"}},
-            h("button",{onClick:function(){setFilterClasse(cl);},style:{padding:"3px 2px 3px 9px",background:"none",border:"none",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5},onDoubleClick:function(e){e.stopPropagation();apriRinomina(cl);}},
-              h("span",{style:{width:8,height:8,borderRadius:"50%",background:cc,display:"inline-block",flexShrink:0}}),
-              h("span",{style:{color:sel?"#fff":"rgba(255,255,255,.7)"}},cl)
-            ),
-            h("button",{onClick:function(e){e.stopPropagation();apriRinomina(cl);},style:{padding:"3px 5px",background:"none",border:"none",color:"rgba(255,255,255,.45)",fontSize:11,cursor:"pointer",lineHeight:1}},"✏️"),
-            h("button",{onClick:function(e){e.stopPropagation();removeClasseCustom(cl);if(filterClasse===cl)setFilterClasse("tutte");},style:{padding:"3px 7px 3px 2px",background:"none",border:"none",color:"rgba(255,255,255,.45)",fontSize:11,cursor:"pointer",lineHeight:1}},"×")
-          );
-        }),
-        addingClasse
-          ?h("div",{style:{display:"flex",gap:4,alignItems:"center"}},
-              h("input",{value:newClasseInput,onInput:function(e){setNewClasseInput(e.target.value.toUpperCase());},onKeyDown:function(e){if(e.key==="Enter")addClasseCustom();if(e.key==="Escape"){setAddingClasse(false);setNewClasseInput("");}},placeholder:"es. 1AX",autoFocus:true,maxLength:20,style:{width:120,padding:"3px 8px",border:"1px solid #6366f1",borderRadius:8,fontSize:12,background:"rgba(255,255,255,.1)",color:"#f1f5f9"}}),
-              h("button",{onClick:addClasseCustom,style:{background:"#6366f1",color:"#fff",border:"none",borderRadius:8,padding:"3px 9px",cursor:"pointer",fontSize:12,fontWeight:700}},"✓"),
-              h("button",{onClick:function(){setAddingClasse(false);setNewClasseInput("");},style:{background:"rgba(255,255,255,.07)",color:"rgba(255,255,255,.58)",border:"none",borderRadius:8,padding:"3px 9px",cursor:"pointer",fontSize:12}},"✕")
-            )
-          :h("button",{onClick:function(){setAddingClasse(true);},style:{display:"flex",alignItems:"center",gap:4,padding:"3px 10px",borderRadius:20,border:"1px dashed rgba(99,102,241,.5)",background:"rgba(99,102,241,.08)",color:"#a5b4fc",fontSize:12,fontWeight:700,cursor:"pointer"}},"+")
-        )
-      ),
-      !isProf&&!simulaSt&&cards.filter(function(c){return c.proposta===true&&user&&c.autore===myName(user);}).length>0&&h("div",{style:{padding:"10px 14px",background:"rgba(139,92,246,.06)",borderBottom:"1px solid rgba(139,92,246,.15)"}},h("div",{style:{fontWeight:700,color:"#a78bfa",fontSize:11,marginBottom:7,letterSpacing:1}},"\u23f3 LE TUE PROPOSTE IN ATTESA"),h("div",null,cards.filter(function(c){return c.proposta===true&&user&&c.autore===myName(user);}).map(function(c){return h("div",{key:c.id,style:{background:"rgba(255,255,255,.04)",border:"1px solid rgba(139,92,246,.2)",borderRadius:9,padding:"8px 12px",marginBottom:5,display:"flex",alignItems:"center",gap:8}},h("span",{style:{flex:1,fontSize:13,color:"rgba(255,255,255,.8)",fontWeight:600}},c.titolo),h("span",{style:{background:"rgba(139,92,246,.2)",color:"#a78bfa",borderRadius:20,padding:"2px 8px",fontSize:11,fontWeight:700,border:"1px solid rgba(139,92,246,.3)"}},"\u23f3 In attesa del prof"));}))),
       !isProf&&!simulaSt&&cards.filter(function(c){return c.proposta==="rifiutata"&&user&&c.autore===myName(user);}).length>0&&h("div",{style:{padding:"10px 14px",background:"rgba(239,68,68,.06)",borderBottom:"1px solid rgba(239,68,68,.15)"}},h("div",{style:{fontWeight:700,color:"#f87171",fontSize:11,marginBottom:7,letterSpacing:1}},"\u274c PROPOSTE RIFIUTATE"),h("div",null,cards.filter(function(c){return c.proposta==="rifiutata"&&user&&c.autore===myName(user);}).map(function(c){return h("div",{key:c.id,style:{background:"rgba(255,255,255,.04)",border:"1px solid rgba(239,68,68,.2)",borderRadius:9,padding:"8px 12px",marginBottom:5}},h("div",{style:{display:"flex",alignItems:"center",gap:8,marginBottom:c.motivazioneRifiuto?6:0}},h("span",{style:{flex:1,fontSize:13,color:"rgba(255,255,255,.55)",fontWeight:600,textDecoration:"line-through"}},c.titolo),h("button",{onClick:function(){fbDel(c.id);},style:{background:"rgba(239,68,68,.2)",color:"#f87171",border:"none",borderRadius:7,padding:"3px 9px",cursor:"pointer",fontSize:11,fontWeight:700}},"\u2715 Ho capito")),c.motivazioneRifiuto&&h("div",{style:{fontSize:11,color:"rgba(255,255,255,.65)",fontStyle:"italic",background:"rgba(255,255,255,.03)",borderRadius:6,padding:"5px 8px"}},"\ud83d\udcac "+c.motivazioneRifiuto));}))),
       isProf&&!simulaSt&&proposte.length>0&&h("div",{style:{padding:"10px 14px",background:"rgba(249,115,22,.06)",borderBottom:"1px solid rgba(249,115,22,.15)"}},
         h("div",{style:{fontWeight:700,color:"#fb923c",fontSize:11,marginBottom:7,letterSpacing:1}},"⏳ PROPOSTE IN ATTESA"),
@@ -3608,153 +3093,7 @@ return function(){u1();if(u2)u2();u3();u4();if(u5)u5();u6();if(u7)u7();if(u7b)u7
       )
     ),
 
-    // ── INBOX MESSAGGI PRIVATI (STUDENTE) ──
-    showStudentMsgs&&isProf&&h("div",{onClick:function(){setShowStudentMsgs(false);},style:{
-        position:"fixed",inset:0,background:"rgba(0,0,0,.75)",backdropFilter:"blur(3px)",
-        zIndex:500,display:"flex",alignItems:"center",justifyContent:"center",padding:16}},
-      h("div",{style:{background:"linear-gradient(145deg,#1e1b4b,#1e1e3a)",
-        border:"1px solid rgba(99,102,241,.4)",borderRadius:20,padding:24,
-        maxWidth:500,width:"100%",maxHeight:"85vh",display:"flex",flexDirection:"column",gap:12},
-        onClick:function(e){e.stopPropagation();}},
-        h("div",{},
-          h("h3",{style:{margin:"0 0 2px",color:"#f1f5f9",fontSize:16,fontWeight:800}},"\uD83D\uDCEC Messaggi dagli Studenti"),
-          h("p",{style:{margin:0,color:"rgba(255,255,255,.5)",fontSize:11}},msgsToProf.length+" messaggio"+(msgsToProf.length===1?"":"i"))
-        ),
-        h("div",{style:{flex:1,overflowY:"auto",display:"flex",flexDirection:"column",gap:10}},
-          msgsToProf.length===0
-            ?h("div",{style:{textAlign:"center",color:"rgba(255,255,255,.35)",padding:"24px 0",fontSize:13}},"Nessun messaggio ricevuto")
-            :(function(){
-                var byStudent={};
-                msgsToProf.forEach(function(m){if(!byStudent[m.mittente])byStudent[m.mittente]=[];byStudent[m.mittente].push(m);});
-                return h(Fragment,null,Object.keys(byStudent).map(function(nome){
-                  var msgs=byStudent[nome];
-                  var nonLetti=msgs.filter(function(m){return !m.letto;}).length;
-                  var isOpen=replyDraft["__open_"+nome];
-                  return h("div",{key:nome,style:{background:"rgba(255,255,255,.04)",
-                    border:"1px solid rgba(99,102,241,"+(nonLetti>0?".4":".15")+")",
-                    borderRadius:14,overflow:"hidden"}},
-                    h("div",{onClick:function(){
-                        setReplyDraft(function(p){var n={...p};n["__open_"+nome]=!n["__open_"+nome];return n;});
-                        if(!isOpen)msgs.forEach(function(m){if(!m.letto)db.collection("messaggi_privati").doc(m.id).update({letto:true});});
-                      },style:{display:"flex",justifyContent:"space-between",alignItems:"center",
-                        padding:"10px 14px",cursor:"pointer",userSelect:"none"}},
-                      h("div",{style:{display:"flex",alignItems:"center",gap:8}},
-                        h("span",{style:{fontSize:14,fontWeight:700,color:"#e0e7ff"}},nome),
-                        nonLetti>0&&h("span",{style:{background:"#6366f1",color:"#fff",
-                          borderRadius:20,padding:"1px 7px",fontSize:10,fontWeight:800}},nonLetti+" nuov"+(nonLetti===1?"o":"i"))
-                      ),
-                      h("span",{style:{color:"rgba(255,255,255,.4)",fontSize:12}},isOpen?"\u25B2":"\u25BC")
-                    ),
-                    isOpen&&h("div",{style:{borderTop:"1px solid rgba(255,255,255,.08)",padding:"10px 14px",
-                      display:"flex",flexDirection:"column",gap:8}},
-                      msgs.slice().sort(function(a,b){return a.data>b.data?1:-1;}).map(function(msg){
-                        return h("div",{key:msg.id,style:{background:"rgba(99,102,241,.1)",
-                          borderRadius:10,padding:"8px 12px"}},
-                          h("div",{style:{fontSize:13,color:"rgba(255,255,255,.9)",whiteSpace:"pre-wrap",lineHeight:1.6}},msg.testo),
-                          h("div",{style:{fontSize:10,color:"rgba(255,255,255,.4)",marginTop:4}},fmtDT(msg.data))
-                        );
-                      }),
-                      h("div",{style:{borderTop:"1px solid rgba(255,255,255,.08)",paddingTop:8,marginTop:4}},
-                        h("textarea",{
-                          value:replyDraft["reply_"+nome]||"",
-                          onInput:function(e){var v=e.target.value;setReplyDraft(function(p){var n={...p};n["reply_"+nome]=v;return n;});},
-                          rows:2,placeholder:"Rispondi a "+nome+"\u2026",
-                          style:Object.assign({},S.input,{resize:"none",fontSize:12,padding:"6px 10px",marginBottom:6})
-                        }),
-                        h("button",{
-                          disabled:!(replyDraft["reply_"+nome]||"").trim(),
-                          onClick:function(){
-                            var testo=(replyDraft["reply_"+nome]||"").trim();if(!testo)return;
-                            sendMsgAStudente(myName(user),nome,testo,function(){
-                              showToast("Risposta inviata a "+nome+" \u2713","ok");
-                              setReplyDraft(function(p){var n={...p};delete n["reply_"+nome];return n;});
-                            });
-                          },
-                          style:{width:"100%",padding:"7px 0",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",
-                            background:(replyDraft["reply_"+nome]||"").trim()?"linear-gradient(135deg,#f59e0b,#f97316)":"rgba(255,255,255,.07)",
-                            color:(replyDraft["reply_"+nome]||"").trim()?"#1a1a2e":"rgba(255,255,255,.3)"}
-                        },"\u21A9\uFE0F Rispondi a "+nome)
-                      )
-                    )
-                  );
-                }));
-              })()
-        ),
-        h("button",{onClick:function(){setShowStudentMsgs(false);},
-          style:{padding:10,background:"rgba(255,255,255,.07)",color:"rgba(255,255,255,.6)",
-            border:"none",borderRadius:10,fontSize:13,fontWeight:700,cursor:"pointer"}},
-          "Chiudi")
-      )
-    ),
-showMsgInbox&&!isProf&&h("div",{onClick:function(){setShowMsgInbox(false);},style:{
-        position:"fixed",inset:0,background:"rgba(0,0,0,.75)",backdropFilter:"blur(3px)",
-        zIndex:500,display:"flex",alignItems:"center",justifyContent:"center",padding:16}},
-      h("div",{style:{background:"linear-gradient(145deg,#1e1b4b,#1e1e3a)",
-        border:"1px solid rgba(245,158,11,.35)",borderRadius:20,padding:24,
-        maxWidth:460,width:"100%",maxHeight:"85vh",display:"flex",flexDirection:"column",gap:10},
-        onClick:function(e){e.stopPropagation();}},
-        h("div",{},
-          h("h3",{style:{margin:"0 0 2px",color:"#f1f5f9",fontSize:16,fontWeight:800}},"\uD83D\uDCAC Messaggi col Professore"),
-          h("p",{style:{margin:0,color:"rgba(255,255,255,.5)",fontSize:11}},"Messaggi ricevuti e inviati")
-        ),
-        h("div",{style:{flex:1,overflowY:"auto",display:"flex",flexDirection:"column",gap:8,minHeight:60}},
-          (msgPrivatiStudente.length+msgsToProf.length)===0
-            ?h("div",{style:{textAlign:"center",color:"rgba(255,255,255,.35)",padding:"20px 0",fontSize:13}},"Nessun messaggio")
-            :h(Fragment,null,
-              msgPrivatiStudente.slice().sort(function(a,b){return a.data>b.data?1:-1;}).map(function(msg){
-                var card=cards.find(function(c){return String(c.id)===String(msg.cardId);});
-                return h("div",{key:msg.id,style:{display:"flex",flexDirection:"column",alignItems:"flex-start"}},
-                  h("div",{style:{maxWidth:"82%",background:"rgba(245,158,11,.14)",
-                    border:"1px solid rgba(245,158,11,"+(msg.letto?".18":".45")+")",
-                    borderRadius:"4px 14px 14px 14px",padding:"9px 13px"}},
-                    !msg.letto&&h("div",{style:{background:"#f59e0b",color:"#1a1a2e",borderRadius:20,
-                      padding:"1px 6px",fontSize:9,fontWeight:800,marginBottom:4,display:"inline-block"}},"NUOVO"),
-                    card&&h("div",{style:{fontSize:10,color:"rgba(255,255,255,.5)",marginBottom:3,fontWeight:700}},"\uD83D\uDCCC "+card.titolo),
-                    h("div",{style:{fontSize:13,color:"rgba(255,255,255,.9)",lineHeight:1.7,whiteSpace:"pre-wrap"}},msg.testo),
-                    h("div",{style:{fontSize:10,color:"rgba(255,255,255,.38)",marginTop:4}},msg.prof+" \u00B7 "+fmtDT(msg.data))
-                  )
-                );
-              }),
-              msgsToProf.slice().sort(function(a,b){return a.data>b.data?1:-1;}).map(function(msg){
-                return h("div",{key:msg.id,style:{display:"flex",flexDirection:"column",alignItems:"flex-end"}},
-                  h("div",{style:{maxWidth:"82%",background:"rgba(99,102,241,.18)",
-                    border:"1px solid rgba(99,102,241,.3)",
-                    borderRadius:"14px 4px 14px 14px",padding:"9px 13px"}},
-                    h("div",{style:{fontSize:13,color:"rgba(255,255,255,.9)",lineHeight:1.7,whiteSpace:"pre-wrap"}},msg.testo),
-                    h("div",{style:{fontSize:10,color:"rgba(255,255,255,.38)",marginTop:4,textAlign:"right"}},
-                      fmtDT(msg.data)+(msg.letto?" \u00B7 \u2713":""))
-                  )
-                );
-              })
-            )
-        ),
-        h("div",{style:{borderTop:"1px solid rgba(255,255,255,.08)",paddingTop:10}},
-          h("textarea",{value:msgAProf,onInput:function(e){setMsgAProf(e.target.value);},
-            rows:3,placeholder:"Scrivi un messaggio al professore\u2026",
-            style:Object.assign({},S.input,{resize:"none",fontSize:13,marginBottom:8})}),
-          h("div",{style:{display:"flex",gap:8}},
-            h("button",{onClick:function(){setShowMsgInbox(false);},
-              style:{flex:1,padding:10,background:"rgba(255,255,255,.07)",color:"rgba(255,255,255,.6)",
-                border:"none",borderRadius:10,fontSize:13,fontWeight:700,cursor:"pointer"}},
-              "Chiudi"),
-            h("button",{disabled:!msgAProf.trim(),
-              onClick:function(){
-                var testo=msgAProf.trim();if(!testo)return;
-                sendMsgAlProf(myName(user),testo,function(){
-                  showToast("Messaggio inviato \u2713","ok");
-                  setMsgAProf("");
-                });
-              },
-              style:{flex:2,padding:10,border:"none",borderRadius:10,fontSize:13,fontWeight:700,
-                cursor:msgAProf.trim()?"pointer":"not-allowed",
-                background:msgAProf.trim()?"linear-gradient(135deg,#6366f1,#8b5cf6)":"rgba(255,255,255,.07)",
-                color:msgAProf.trim()?"#fff":"rgba(255,255,255,.3)"}},
-              "\uD83D\uDCE4 Invia al Prof")
-          )
-        )
-      )
-    ),
-// ── TOAST CONTAINER ──
+    // ── TOAST CONTAINER ──
     toasts.length>0&&h("div",{className:"toast-container"},
       toasts.map(function(t){
         var icon=t.type==="ok"?"✅":t.type==="warn"?"⚠️":"❌";
