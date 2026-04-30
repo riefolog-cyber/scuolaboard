@@ -346,15 +346,22 @@ function msgPrivatoSave(cardId,studenteName,testo,profName){
   },{merge:false});
 }
 function sendMsgAlProf(mittente,testo,cb){
-  var id="sp_"+mittente.replace(/\s+/g,"_")+"_"+Date.now();
+  var id="msg_"+Date.now()+"_"+Math.random().toString(36).slice(2,7);
   return db.collection("messaggi_privati").doc(id).set({
-    tipo:"studente_prof",mittente:mittente,destinatario:"prof",
+    mittente:mittente,destinatario:"PROF",
+    testo:testo,data:new Date().toISOString(),letto:false
+  }).then(cb);
+}
+function sendMsgAStudente(profName,nomeStudente,testo,cb){
+  var id="msg_"+Date.now()+"_"+Math.random().toString(36).slice(2,7);
+  return db.collection("messaggi_privati").doc(id).set({
+    mittente:profName,destinatario:nomeStudente,
     testo:testo,data:new Date().toISOString(),letto:false
   }).then(cb);
 }
 function loadMsgsToProf(mittente,cb){
   return db.collection("messaggi_privati").where("mittente","==",mittente)
-    .where("tipo","==","studente_prof").orderBy("data","desc")
+    .where("destinatario","==","PROF").orderBy("data","desc")
     .onSnapshot(function(s){var arr=[];s.forEach(function(d){arr.push(Object.assign({id:d.id},d.data()));});cb(arr);});
 }
 function replyToMsg(replyToId,mittente,destinatario,testo,tipo,cb){
@@ -908,7 +915,7 @@ function App(){
     },1000);
     return function(){clearInterval(t);};
   },[cards]);
-  var REACTIONS=["👍","❤️","🤔"];
+  var REACTIONS=["👍"];
   var [showDuplica,setShowDuplica]=useState(null);
   var [showRifiutaModal,setShowRifiutaModal]=useState(null);
   var [rifiutaInput,setRifiutaInput]=useState("");
@@ -1085,15 +1092,17 @@ function App(){
     // Messaggi privati
     var u7=msgPrivatiListen(user.role==="prof",myName(user),function(arr){
       if(user.role==="prof"){
-        var m={};var sp=[];
+        var m={};
         arr.forEach(function(msg){
-          if(msg.tipo==="studente_prof"){sp.push(msg);return;}
-          if(!m[msg.cardId])m[msg.cardId]={};
-          m[msg.cardId][msg.studente]=msg;
+          if(msg.cardId&&msg.studente){if(!m[msg.cardId])m[msg.cardId]={};m[msg.cardId][msg.studente]=msg;}
         });
-        setMsgPrivatiMap(m);setMsgsToProf(sp);
+        setMsgPrivatiMap(m);
+        var chat=arr.filter(function(msg){return msg.destinatario==="PROF";});
+        setMsgsToProf(chat);
       } else {
-        setMsgPrivatiStudente(arr.filter(function(m){return !m.tipo||m.tipo!=="studente_prof";}));
+        setMsgPrivatiStudente(arr.filter(function(msg){
+          return msg.destinatario===myName(user)&&msg.mittente!==myName(user);
+        }));
       }
     });
     var u7b=null;
@@ -1740,6 +1749,7 @@ function App(){
           next[String(card.id)]=Object.assign({},prev[String(card.id)]||{},{domande:aggiornate,domanda:null});
           return next;
         });
+        setCardQOpen(function(prev){var n={...prev};n[nuova.id]=true;return n;});
         aiSave(card.id,{domande:aggiornate,domanda:null});
         setCardQ("");
       })
@@ -3597,140 +3607,152 @@ function App(){
     ),
 
     // ── INBOX MESSAGGI PRIVATI (STUDENTE) ──
-    showStudentMsgs&&isProf&&h("div",{onClick:function(){setShowStudentMsgs(false);},style:{position:"fixed",
-        inset:0,background:"rgba(0,0,0,.75)",backdropFilter:"blur(3px)",zIndex:500,display:"flex",alignItems:"center",justifyContent:"center",padding:16}},
-        h("div",{style:{background:"linear-gradient(145deg,#1e1b4b,#1e1e3a)",border:"1px solid rgba(99,102,241,.4)",borderRadius:20,padding:26,maxWidth:480,width:"100%",maxHeight:"85vh",overflowY:"auto"},onClick:function(e){e.stopPropagation();}},
-          h("div",{style:{marginBottom:14}},
-            h("h3",{style:{margin:"0 0 4px",color:"#f1f5f9",fontSize:16,fontWeight:800}},"📬 Messaggi dagli Studenti"),
-            h("p",{style:{margin:0,color:"rgba(255,255,255,.58)",fontSize:12}},"Messaggi ricevuti dagli studenti")
-          ),
+    showStudentMsgs&&isProf&&h("div",{onClick:function(){setShowStudentMsgs(false);},style:{
+        position:"fixed",inset:0,background:"rgba(0,0,0,.75)",backdropFilter:"blur(3px)",
+        zIndex:500,display:"flex",alignItems:"center",justifyContent:"center",padding:16}},
+      h("div",{style:{background:"linear-gradient(145deg,#1e1b4b,#1e1e3a)",
+        border:"1px solid rgba(99,102,241,.4)",borderRadius:20,padding:24,
+        maxWidth:500,width:"100%",maxHeight:"85vh",display:"flex",flexDirection:"column",gap:12},
+        onClick:function(e){e.stopPropagation();}},
+        h("div",{},
+          h("h3",{style:{margin:"0 0 2px",color:"#f1f5f9",fontSize:16,fontWeight:800}},"\uD83D\uDCEC Messaggi dagli Studenti"),
+          h("p",{style:{margin:0,color:"rgba(255,255,255,.5)",fontSize:11}},msgsToProf.length+" messaggio"+(msgsToProf.length===1?"":"i"))
+        ),
+        h("div",{style:{flex:1,overflowY:"auto",display:"flex",flexDirection:"column",gap:10}},
           msgsToProf.length===0
-            ?h("div",{style:{textAlign:"center",color:"rgba(255,255,255,.40)",padding:"30px 0",fontSize:13}},"Nessun messaggio ricevuto")
-            :h(Fragment,null,msgsToProf.map(function(msg){
-                var isNew=!msg.letto;
-                if(isNew)db.collection("messaggi_privati").doc(msg.id).update({letto:true});
-                return h("div",{key:msg.id,style:{background:"rgba(99,102,241,.08)",border:"1px solid rgba(99,102,241,"+(isNew?".4":".15")+")",borderRadius:12,padding:"12px 14px",marginBottom:8}},
-                  isNew&&h("span",{style:{background:"#6366f1",color:"#fff",borderRadius:20,padding:"1px 7px",fontSize:11,fontWeight:800,marginBottom:6,display:"inline-block"}},"NUOVO"),
-                  h("div",{style:{fontSize:11,color:"rgba(255,255,255,.58)",marginBottom:4,fontWeight:700}},"👤 "+msg.mittente),
-                  h("div",{style:{fontSize:13,color:"rgba(255,255,255,.9)",lineHeight:1.7,whiteSpace:"pre-wrap",marginBottom:6}},msg.testo),
-                  h("div",{style:{fontSize:10,color:"rgba(255,255,255,.38)"}},fmtDT(msg.data)),
-                  h("div",{style:{marginTop:8,borderTop:"1px solid rgba(255,255,255,.08)",paddingTop:8}},
-                    h("textarea",{
-                      value:replyDraft[msg.id]||"",
-                      onInput:function(e){
-                        var v=e.target.value;
-                        setReplyDraft(function(p){var n={...p};n[msg.id]=v;return n;});
-                      },
-                      rows:2,placeholder:"Rispondi a "+msg.mittente+"…",
-                      style:Object.assign({},S.input,{resize:"none",fontSize:12,padding:"6px 10px",marginBottom:6})
-                    }),
-                    h("button",{
-                      disabled:!(replyDraft[msg.id]||"").trim(),
-                      onClick:function(){
-                        var testo=(replyDraft[msg.id]||"").trim();
-                        if(!testo)return;
-                        replyToMsg(msg.id,myName(user),msg.mittente,testo,"prof_risposta",function(){
-                          showToast("Risposta inviata a "+msg.mittente+" ✓","ok");
-                          setReplyDraft(function(p){var n={...p};delete n[msg.id];return n;});
-                        });
-                      },
-                      style:{fontSize:11,fontWeight:700,padding:"4px 12px",border:"none",borderRadius:8,cursor:"pointer",
-                        background:(replyDraft[msg.id]||"").trim()?"linear-gradient(135deg,#f59e0b,#f97316)":"rgba(255,255,255,.08)",
-                        color:(replyDraft[msg.id]||"").trim()?"#1a1a2e":"rgba(255,255,255,.3)"}
-                    },"↩️ Rispondi a "+msg.mittente)
-                  )
-                );
-              })),
-          h("button",{onClick:function(){setShowStudentMsgs(false);},style:{width:"100%",marginTop:10,padding:11,background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.6)",border:"none",borderRadius:11,fontSize:13,fontWeight:700,cursor:"pointer"}},"Chiudi")
-        )
-      ),
-showMsgInbox&&!isProf&&h("div",{onClick:function(){setShowMsgInbox(false);},style:{position:"fixed",inset:0,background:"rgba(0,0,0,.8)",backdropFilter:"blur(4px)",zIndex:600,display:"flex",alignItems:"center",justifyContent:"center",padding:20}},
-      h("div",{style:{background:"#1c1a2e",border:"1px solid rgba(245,158,11,.35)",borderRadius:20,padding:26,maxWidth:480,width:"100%",maxHeight:"85vh",overflowY:"auto"},onClick:function(e){e.stopPropagation();}},
-        h("div",{style:{marginBottom:14}},
-          h("h3",{style:{margin:"0 0 10px",color:"#f1f5f9",fontSize:16,fontWeight:800}},"✉️ Messaggi"),
-          h("div",{style:{display:"flex",gap:6,background:"rgba(255,255,255,.06)",borderRadius:10,padding:3}},
-            h("button",{onClick:function(){setInboxTab("ricevuti");},style:{flex:1,padding:"6px 0",fontSize:12,fontWeight:700,border:"none",borderRadius:8,cursor:"pointer",
-              background:inboxTab==="ricevuti"?"rgba(245,158,11,.25)":"transparent",
-              color:inboxTab==="ricevuti"?"#fbbf24":"rgba(255,255,255,.5)"}},
-              "📩 Dal Prof"+(msgPrivatiStudente.filter(function(m){return !m.letto;}).length?"  "+msgPrivatiStudente.filter(function(m){return !m.letto;}).length:"")),
-            h("button",{onClick:function(){setInboxTab("scrivi");},style:{flex:1,padding:"6px 0",fontSize:12,fontWeight:700,border:"none",borderRadius:8,cursor:"pointer",
-              background:inboxTab==="scrivi"?"rgba(99,102,241,.25)":"transparent",
-              color:inboxTab==="scrivi"?"#a5b4fc":"rgba(255,255,255,.5)"}},
-              "✏️ Scrivi al Prof")
-          )
+            ?h("div",{style:{textAlign:"center",color:"rgba(255,255,255,.35)",padding:"24px 0",fontSize:13}},"Nessun messaggio ricevuto")
+            :(function(){
+                var byStudent={};
+                msgsToProf.forEach(function(m){if(!byStudent[m.mittente])byStudent[m.mittente]=[];byStudent[m.mittente].push(m);});
+                return h(Fragment,null,Object.keys(byStudent).map(function(nome){
+                  var msgs=byStudent[nome];
+                  var nonLetti=msgs.filter(function(m){return !m.letto;}).length;
+                  var isOpen=replyDraft["__open_"+nome];
+                  return h("div",{key:nome,style:{background:"rgba(255,255,255,.04)",
+                    border:"1px solid rgba(99,102,241,"+(nonLetti>0?".4":".15")+")",
+                    borderRadius:14,overflow:"hidden"}},
+                    h("div",{onClick:function(){
+                        setReplyDraft(function(p){var n={...p};n["__open_"+nome]=!n["__open_"+nome];return n;});
+                        if(!isOpen)msgs.forEach(function(m){if(!m.letto)db.collection("messaggi_privati").doc(m.id).update({letto:true});});
+                      },style:{display:"flex",justifyContent:"space-between",alignItems:"center",
+                        padding:"10px 14px",cursor:"pointer",userSelect:"none"}},
+                      h("div",{style:{display:"flex",alignItems:"center",gap:8}},
+                        h("span",{style:{fontSize:14,fontWeight:700,color:"#e0e7ff"}},nome),
+                        nonLetti>0&&h("span",{style:{background:"#6366f1",color:"#fff",
+                          borderRadius:20,padding:"1px 7px",fontSize:10,fontWeight:800}},nonLetti+" nuov"+(nonLetti===1?"o":"i"))
+                      ),
+                      h("span",{style:{color:"rgba(255,255,255,.4)",fontSize:12}},isOpen?"\u25B2":"\u25BC")
+                    ),
+                    isOpen&&h("div",{style:{borderTop:"1px solid rgba(255,255,255,.08)",padding:"10px 14px",
+                      display:"flex",flexDirection:"column",gap:8}},
+                      msgs.slice().sort(function(a,b){return a.data>b.data?1:-1;}).map(function(msg){
+                        return h("div",{key:msg.id,style:{background:"rgba(99,102,241,.1)",
+                          borderRadius:10,padding:"8px 12px"}},
+                          h("div",{style:{fontSize:13,color:"rgba(255,255,255,.9)",whiteSpace:"pre-wrap",lineHeight:1.6}},msg.testo),
+                          h("div",{style:{fontSize:10,color:"rgba(255,255,255,.4)",marginTop:4}},fmtDT(msg.data))
+                        );
+                      }),
+                      h("div",{style:{borderTop:"1px solid rgba(255,255,255,.08)",paddingTop:8,marginTop:4}},
+                        h("textarea",{
+                          value:replyDraft["reply_"+nome]||"",
+                          onInput:function(e){var v=e.target.value;setReplyDraft(function(p){var n={...p};n["reply_"+nome]=v;return n;});},
+                          rows:2,placeholder:"Rispondi a "+nome+"\u2026",
+                          style:Object.assign({},S.input,{resize:"none",fontSize:12,padding:"6px 10px",marginBottom:6})
+                        }),
+                        h("button",{
+                          disabled:!(replyDraft["reply_"+nome]||"").trim(),
+                          onClick:function(){
+                            var testo=(replyDraft["reply_"+nome]||"").trim();if(!testo)return;
+                            sendMsgAStudente(myName(user),nome,testo,function(){
+                              showToast("Risposta inviata a "+nome+" \u2713","ok");
+                              setReplyDraft(function(p){var n={...p};delete n["reply_"+nome];return n;});
+                            });
+                          },
+                          style:{width:"100%",padding:"7px 0",border:"none",borderRadius:8,fontSize:12,fontWeight:700,cursor:"pointer",
+                            background:(replyDraft["reply_"+nome]||"").trim()?"linear-gradient(135deg,#f59e0b,#f97316)":"rgba(255,255,255,.07)",
+                            color:(replyDraft["reply_"+nome]||"").trim()?"#1a1a2e":"rgba(255,255,255,.3)"}
+                        },"\u21A9\uFE0F Rispondi a "+nome)
+                      )
+                    )
+                  );
+                }));
+              })()
         ),
-        inboxTab==="ricevuti"&&(
-          msgPrivatiStudente.length===0
-          ?h("div",{style:{textAlign:"center",color:"rgba(255,255,255,.40)",padding:"30px 0",fontSize:13}},"Nessun messaggio ricevuto")
-          :h(Fragment,null,msgPrivatiStudente.map(function(msg){
-            var card=cards.find(function(c){return String(c.id)===String(msg.cardId);});
-            return h("div",{key:msg.id,style:{background:"rgba(245,158,11,.08)",border:"1px solid rgba(245,158,11,"+(msg.letto?".15":".4")+")",borderRadius:12,padding:"12px 14px",marginBottom:8}},
-              !msg.letto&&h("span",{style:{background:"#f59e0b",color:"#1a1a2e",borderRadius:20,padding:"1px 7px",fontSize:11,fontWeight:800,marginBottom:6,display:"inline-block"}},"NUOVO"),
-              card&&h("div",{style:{fontSize:11,color:"rgba(255,255,255,.58)",marginBottom:6,fontWeight:700}},"📌 "+card.titolo),
-              h("div",{style:{fontSize:13,color:"rgba(255,255,255,.9)",lineHeight:1.7,whiteSpace:"pre-wrap"}},msg.testo),
-              h("div",{style:{fontSize:11,color:"rgba(255,255,255,.45)",marginTop:6}},"✍️ "+msg.prof+" · "+fmtDT(msg.data)),
-              h("div",{style:{marginTop:8,borderTop:"1px solid rgba(255,255,255,.08)",paddingTop:8}},
-                h("textarea",{
-                  value:replyDraft[msg.id]||"",
-                  onInput:function(e){
-                    var v=e.target.value;
-                    setReplyDraft(function(p){var n={...p};n[msg.id]=v;return n;});
-                  },
-                  rows:2,placeholder:"Rispondi al prof…",
-                  style:Object.assign({},S.input,{resize:"none",fontSize:12,padding:"6px 10px",marginBottom:6})
-                }),
-                h("button",{
-                  disabled:!(replyDraft[msg.id]||"").trim(),
-                  onClick:function(){
-                    var testo=(replyDraft[msg.id]||"").trim();
-                    if(!testo)return;
-                    replyToMsg(msg.id,myName(user),msg.prof,testo,"studente_prof",function(){
-                      showToast("Risposta inviata ✓","ok");
-                      setReplyDraft(function(p){var n={...p};delete n[msg.id];return n;});
-                    });
-                  },
-                  style:{fontSize:11,fontWeight:700,padding:"4px 12px",border:"none",borderRadius:8,cursor:"pointer",
-                    background:(replyDraft[msg.id]||"").trim()?"linear-gradient(135deg,#6366f1,#8b5cf6)":"rgba(255,255,255,.08)",
-                    color:(replyDraft[msg.id]||"").trim()?"#fff":"rgba(255,255,255,.3)"}
-                },"↩️ Rispondi")
-              )
-            );
-          }))
-        ),
-        inboxTab==="scrivi"&&h(Fragment,null,
-          h("textarea",{value:msgAProf,onInput:function(e){setMsgAProf(e.target.value);},
-            rows:5,placeholder:"Scrivi un messaggio al professore…",
-            style:Object.assign({},S.input,{resize:"none",marginBottom:8,fontSize:13})}),
-          msgsToProf.length>0&&h("div",{style:{marginBottom:10}},
-            h("div",{style:{fontSize:11,fontWeight:700,color:"rgba(255,255,255,.45)",marginBottom:6,letterSpacing:.5}},"MESSAGGI INVIATI"),
-            msgsToProf.slice(0,5).map(function(m){
-              return h("div",{key:m.id,style:{background:"rgba(99,102,241,.08)",border:"1px solid rgba(99,102,241,.2)",borderRadius:10,padding:"8px 12px",marginBottom:6}},
-                h("div",{style:{fontSize:12,color:"rgba(255,255,255,.85)",whiteSpace:"pre-wrap",marginBottom:4}},m.testo),
-                h("div",{style:{fontSize:10,color:"rgba(255,255,255,.38)",marginBottom:m.reply?6:0}},fmtDT(m.data)+(m.letto?" · ✓ Letto":"")),
-                m.reply&&h("div",{style:{borderTop:"1px solid rgba(255,255,255,.08)",paddingTop:6,marginTop:4}},
-                  h("div",{style:{fontSize:10,fontWeight:700,color:"#fbbf24",marginBottom:3}},"↩️ Risposta del Prof:"),
-                  h("div",{style:{fontSize:12,color:"rgba(255,255,255,.85)",whiteSpace:"pre-wrap"}},m.reply)
-                ));
-            })
-          ),
-          h("button",{onClick:function(){
-            if(!msgAProf.trim())return;
-            sendMsgAlProf(myName(user),msgAProf.trim(),function(){
-              showToast("Messaggio inviato al prof ✓","ok");
-              setMsgAProf("");
-            });
-          },disabled:!msgAProf.trim(),
-          style:{width:"100%",padding:11,background:msgAProf.trim()?"linear-gradient(135deg,#6366f1,#8b5cf6)":"rgba(255,255,255,.06)",
-            color:msgAProf.trim()?"#fff":"rgba(255,255,255,.3)",border:"none",borderRadius:11,fontSize:13,fontWeight:700,
-            cursor:msgAProf.trim()?"pointer":"not-allowed"}},"📤 Invia al Professore")
-        ),
-        h("button",{onClick:function(){setShowMsgInbox(false);setInboxTab("ricevuti");},style:{width:"100%",marginTop:10,padding:11,background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.6)",border:"none",borderRadius:11,fontSize:13,fontWeight:700,cursor:"pointer"}},"Chiudi")
+        h("button",{onClick:function(){setShowStudentMsgs(false);},
+          style:{padding:10,background:"rgba(255,255,255,.07)",color:"rgba(255,255,255,.6)",
+            border:"none",borderRadius:10,fontSize:13,fontWeight:700,cursor:"pointer"}},
+          "Chiudi")
       )
     ),
-
-
-
-    // ── TOAST CONTAINER ──
+showMsgInbox&&!isProf&&h("div",{onClick:function(){setShowMsgInbox(false);},style:{
+        position:"fixed",inset:0,background:"rgba(0,0,0,.75)",backdropFilter:"blur(3px)",
+        zIndex:500,display:"flex",alignItems:"center",justifyContent:"center",padding:16}},
+      h("div",{style:{background:"linear-gradient(145deg,#1e1b4b,#1e1e3a)",
+        border:"1px solid rgba(245,158,11,.35)",borderRadius:20,padding:24,
+        maxWidth:460,width:"100%",maxHeight:"85vh",display:"flex",flexDirection:"column",gap:10},
+        onClick:function(e){e.stopPropagation();}},
+        h("div",{},
+          h("h3",{style:{margin:"0 0 2px",color:"#f1f5f9",fontSize:16,fontWeight:800}},"\uD83D\uDCAC Messaggi col Professore"),
+          h("p",{style:{margin:0,color:"rgba(255,255,255,.5)",fontSize:11}},"Messaggi ricevuti e inviati")
+        ),
+        h("div",{style:{flex:1,overflowY:"auto",display:"flex",flexDirection:"column",gap:8,minHeight:60}},
+          (msgPrivatiStudente.length+msgsToProf.length)===0
+            ?h("div",{style:{textAlign:"center",color:"rgba(255,255,255,.35)",padding:"20px 0",fontSize:13}},"Nessun messaggio")
+            :h(Fragment,null,
+              msgPrivatiStudente.slice().sort(function(a,b){return a.data>b.data?1:-1;}).map(function(msg){
+                var card=cards.find(function(c){return String(c.id)===String(msg.cardId);});
+                return h("div",{key:msg.id,style:{display:"flex",flexDirection:"column",alignItems:"flex-start"}},
+                  h("div",{style:{maxWidth:"82%",background:"rgba(245,158,11,.14)",
+                    border:"1px solid rgba(245,158,11,"+(msg.letto?".18":".45")+")",
+                    borderRadius:"4px 14px 14px 14px",padding:"9px 13px"}},
+                    !msg.letto&&h("div",{style:{background:"#f59e0b",color:"#1a1a2e",borderRadius:20,
+                      padding:"1px 6px",fontSize:9,fontWeight:800,marginBottom:4,display:"inline-block"}},"NUOVO"),
+                    card&&h("div",{style:{fontSize:10,color:"rgba(255,255,255,.5)",marginBottom:3,fontWeight:700}},"\uD83D\uDCCC "+card.titolo),
+                    h("div",{style:{fontSize:13,color:"rgba(255,255,255,.9)",lineHeight:1.7,whiteSpace:"pre-wrap"}},msg.testo),
+                    h("div",{style:{fontSize:10,color:"rgba(255,255,255,.38)",marginTop:4}},msg.prof+" \u00B7 "+fmtDT(msg.data))
+                  )
+                );
+              }),
+              msgsToProf.slice().sort(function(a,b){return a.data>b.data?1:-1;}).map(function(msg){
+                return h("div",{key:msg.id,style:{display:"flex",flexDirection:"column",alignItems:"flex-end"}},
+                  h("div",{style:{maxWidth:"82%",background:"rgba(99,102,241,.18)",
+                    border:"1px solid rgba(99,102,241,.3)",
+                    borderRadius:"14px 4px 14px 14px",padding:"9px 13px"}},
+                    h("div",{style:{fontSize:13,color:"rgba(255,255,255,.9)",lineHeight:1.7,whiteSpace:"pre-wrap"}},msg.testo),
+                    h("div",{style:{fontSize:10,color:"rgba(255,255,255,.38)",marginTop:4,textAlign:"right"}},
+                      fmtDT(msg.data)+(msg.letto?" \u00B7 \u2713":""))
+                  )
+                );
+              })
+            )
+        ),
+        h("div",{style:{borderTop:"1px solid rgba(255,255,255,.08)",paddingTop:10}},
+          h("textarea",{value:msgAProf,onInput:function(e){setMsgAProf(e.target.value);},
+            rows:3,placeholder:"Scrivi un messaggio al professore\u2026",
+            style:Object.assign({},S.input,{resize:"none",fontSize:13,marginBottom:8})}),
+          h("div",{style:{display:"flex",gap:8}},
+            h("button",{onClick:function(){setShowMsgInbox(false);},
+              style:{flex:1,padding:10,background:"rgba(255,255,255,.07)",color:"rgba(255,255,255,.6)",
+                border:"none",borderRadius:10,fontSize:13,fontWeight:700,cursor:"pointer"}},
+              "Chiudi"),
+            h("button",{disabled:!msgAProf.trim(),
+              onClick:function(){
+                var testo=msgAProf.trim();if(!testo)return;
+                sendMsgAlProf(myName(user),testo,function(){
+                  showToast("Messaggio inviato \u2713","ok");
+                  setMsgAProf("");
+                });
+              },
+              style:{flex:2,padding:10,border:"none",borderRadius:10,fontSize:13,fontWeight:700,
+                cursor:msgAProf.trim()?"pointer":"not-allowed",
+                background:msgAProf.trim()?"linear-gradient(135deg,#6366f1,#8b5cf6)":"rgba(255,255,255,.07)",
+                color:msgAProf.trim()?"#fff":"rgba(255,255,255,.3)"}},
+              "\uD83D\uDCE4 Invia al Prof")
+          )
+        )
+      )
+    ),
+// ── TOAST CONTAINER ──
     toasts.length>0&&h("div",{className:"toast-container"},
       toasts.map(function(t){
         var icon=t.type==="ok"?"✅":t.type==="warn"?"⚠️":"❌";
