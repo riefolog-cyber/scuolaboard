@@ -1,16 +1,4 @@
-<!function sendMsgAlProf(mittente,testo,cb){
-  var id="sp_"+mittente.replace(/\s+/g,"_")+"_"+Date.now();
-  return db.collection("messaggi_privati").doc(id).set({
-    tipo:"studente_prof",mittente:mittente,destinatario:"prof",
-    testo:testo,data:new Date().toISOString(),letto:false
-  }).then(cb);
-}
-function loadMsgsToProf(mittente,cb){
-  return db.collection("messaggi_privati").where("mittente","==",mittente)
-    .where("tipo","==","studente_prof").orderBy("data","desc")
-    .onSnapshot(function(s){var arr=[];s.forEach(function(d){arr.push(Object.assign({id:d.id},d.data()));});cb(arr);});
-}
-DOCTYPE html>
+<!DOCTYPE html>
 <html lang="it">
 <head>
 <meta charset="UTF-8"/>
@@ -356,6 +344,18 @@ function msgPrivatoSave(cardId,studenteName,testo,profName){
     cardId:String(cardId),studente:studenteName,testo:testo,
     prof:profName,data:new Date().toISOString(),letto:false
   },{merge:false});
+}
+function sendMsgAlProf(mittente,testo,cb){
+  var id="sp_"+mittente.replace(/\s+/g,"_")+"_"+Date.now();
+  return db.collection("messaggi_privati").doc(id).set({
+    tipo:"studente_prof",mittente:mittente,destinatario:"prof",
+    testo:testo,data:new Date().toISOString(),letto:false
+  }).then(cb);
+}
+function loadMsgsToProf(mittente,cb){
+  return db.collection("messaggi_privati").where("mittente","==",mittente)
+    .where("tipo","==","studente_prof").orderBy("data","desc")
+    .onSnapshot(function(s){var arr=[];s.forEach(function(d){arr.push(Object.assign({id:d.id},d.data()));});cb(arr);});
 }
 function msgPrivatiListen(profMode,nameOrUid,cb){
   if(profMode){
