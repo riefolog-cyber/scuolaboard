@@ -683,6 +683,7 @@ function App(){
     });
     var u3=fbClassiListen(function(lista){setClassiCustom(lista)});
     var u4=fbFavListen(user.uid,function(ids){setPreferiti(ids);});
+<<<<<<< HEAD
     // Messaggi privati
     var u7=msgPrivatiListen(user.role==="prof",myName(user),function(arr){
       if(user.role==="prof"){
@@ -692,6 +693,9 @@ function App(){
         });setMsgPrivatiMap(m);
       } else {setMsgPrivatiStudente(arr);}
     });
+=======
+  
+>>>>>>> 207cf4b78ea40cc3047e2ff19c2e568d4907b348
     var u5=null;
     if(user.role==="studente"){
       u5=db.collection("ammonizioni").doc(myName(user)).onSnapshot(function(doc){
