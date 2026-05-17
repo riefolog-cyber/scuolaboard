@@ -1768,7 +1768,7 @@ function App(){
          })
       ),
       h("div",{style:{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}},
-        h("button",{onClick:function(){undefined(true);},style:{background:"rgba(99,102,241,.15)",border:"1px solid rgba(99,102,241,.3)",borderRadius:9,padding:"8px 14px",cursor:"pointer",fontSize:12,fontWeight:700,color:"#a5b4fc"}},"☁️ Word Cloud commenti"),
+        h("button",{onClick:function(){undefined(true);},style:{background:"rgba(99,102,241,.15)",border:"1px solid rgba(99,102,241,.3)",borderRadius:9,padding:"8px 14px",cursor:"pointer",fontSize:12,fontWeight:700,color:"#a5b4fc"}},"☁️ "),
         h("button",{onClick:function(){undefined(true);if(!undefined)undefined();},style:{background:"rgba(139,92,246,.15)",border:"1px solid rgba(139,92,246,.3)",borderRadius:9,padding:"8px 14px",cursor:"pointer",fontSize:12,fontWeight:700,color:"#c4b5fd"}},"📋 Report settimanale AI"),
         !pushEnabled&&h("button",{onClick:requestPushPermission,style:{background:"rgba(34,197,94,.12)",border:"1px solid rgba(34,197,94,.3)",borderRadius:9,padding:"8px 14px",cursor:"pointer",fontSize:12,fontWeight:700,color:"#4ade80"}},"🔔 Attiva notifiche push"),
         pushEnabled&&h("span",{style:{background:"rgba(34,197,94,.15)",border:"1px solid rgba(34,197,94,.3)",borderRadius:9,padding:"8px 14px",fontSize:12,fontWeight:700,color:"#4ade80"}},"✅ Notifiche push attive")
@@ -3104,8 +3104,8 @@ function App(){
       h("div",{onClick:function(e){e.stopPropagation();},style:{background:"rgba(15,23,42,.95)",backdropFilter:"blur(24px)",border:"1px solid rgba(139,92,246,.3)",borderRadius:20,padding:26,maxWidth:500,width:"100%",maxHeight:"85vh",overflowY:"auto",boxShadow:"0 24px 60px rgba(0,0,0,.5)"}},
         h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}},
           h("div",null,
-            h("h3",{style:{margin:"0 0 3px",color:"#f1f5f9",fontSize:16,fontWeight:800}},"📋 Report Settimanale AI"),
-            h("p",{style:{margin:0,color:"rgba(255,255,255,.58)",fontSize:11}},"Basato sui dati reali della bacheca")
+            h("h3",{style:{margin:"0 0 3px",color:"#f1f5f9",fontSize:16,fontWeight:800}},"📋 "),
+            h("p",{style:{margin:0,color:"rgba(255,255,255,.58)",fontSize:11}},"")
           ),
           h("button",{onClick:function(){undefined();},disabled:undefinedLoading,style:{background:"rgba(139,92,246,.2)",border:"1px solid rgba(139,92,246,.3)",borderRadius:8,padding:"5px 10px",cursor:undefinedLoading?"not-allowed":"pointer",fontSize:11,fontWeight:700,color:"#c4b5fd"}},undefinedLoading?"⏳ Generando…":"↻ Rigenera")
         ),
