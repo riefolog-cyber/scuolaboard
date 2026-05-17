@@ -297,12 +297,7 @@ function App(){
     });
     var u3=fbClassiListen(function(lista){setClassiCustom(lista)});
     var u4=fbFavListen(user.uid,function(ids){setPreferiti(ids);});
-    // Messaggi privati
-          if(user.role==="prof"){
-        var m={};arr.forEach(function(msg){
-          if(!m[msg.cardId])m[msg.cardId]={};
-          m[msg.cardId][msg.studente]=msg;
-        });setMsgPrivatiMap(m);    });
+  
     var u5=null;
     if(user.role==="studente"){
       u5=db.collection("ammonizioni").doc(myName(user)).onSnapshot(function(doc){
