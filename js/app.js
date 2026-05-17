@@ -3114,9 +3114,9 @@ function App(){
           h("div",{style:{marginTop:10,color:"rgba(255,255,255,.58)",fontSize:13}},"Analisi in corso…")
         ),
         !undefinedLoading&&undefined&&h("div",{style:{display:"flex",flexDirection:"column",gap:12}},
-          undefined.panoramica&&h("div",{style:{background:"rgba(99,102,241,.1)",border:"1px solid rgba(99,102,241,.2)",borderRadius:10,padding:"12px 14px"}},
+          ""&&h("div",{style:{background:"rgba(99,102,241,.1)",border:"1px solid rgba(99,102,241,.2)",borderRadius:10,padding:"12px 14px"}},
             h("div",{style:{fontSize:11,fontWeight:800,color:"#a5b4fc",letterSpacing:1,marginBottom:6}},"📊 PANORAMICA SETTIMANA"),
-            h("div",{style:{fontSize:13,color:"rgba(255,255,255,.85)",lineHeight:1.6}},undefined.panoramica)
+            h("div",{style:{fontSize:13,color:"rgba(255,255,255,.85)",lineHeight:1.6}},"")
           ),
           h("div",{style:{display:"flex",gap:10,flexWrap:"wrap"}},
             undefined.punto_forza&&h("div",{style:{flex:1,minWidth:180,background:"rgba(34,197,94,.08)",border:"1px solid rgba(34,197,94,.2)",borderRadius:10,padding:"12px 14px"}},
