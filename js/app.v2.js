@@ -1,3 +1,4 @@
+// APP_VERSION=2026-05-17-definitive
 (function(){
 firebase.initializeApp({
   apiKey:"AIzaSyDIC39upI9VnY10MdP7__7l3omyGqspHNA",

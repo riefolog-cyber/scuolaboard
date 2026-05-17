@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ScuolaBoard - Fix definitivo</title>
+<style>
+body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.55;margin:0;background:#111827;color:#e5e7eb}
+main{max-width:900px;margin:0 auto;padding:32px 20px 60px}
+code,pre{background:#0b1220;border:1px solid #24324a;border-radius:10px;padding:2px 6px;color:#c7d2fe}
+pre{padding:16px;overflow:auto}
+h1,h2{line-height:1.2}
+.card{background:#0f172a;border:1px solid #24324a;border-radius:16px;padding:18px 18px;margin:16px 0}
+ul{padding-left:20px}
+.btn{display:inline-block;background:#6366f1;color:white;text-decoration:none;padding:10px 14px;border-radius:10px;font-weight:700}
+.small{color:#94a3b8;font-size:14px}
+.ok{color:#86efac}.bad{color:#fca5a5}
+</style>
+</head>
+<body>
+<main>
+<h1>Soluzione definitiva per il problema di cache / file pubblicato</h1>
+<p class="small">Questa pagina riassume il fix corretto per GitHub Pages quando il sito continua a mostrare il vecchio <code>app.js</code>.</p>
+<div class="card">
+<h2>1) Verifica il file caricato</h2>
+<p>Nel tuo <code>index.html</code> il file caricato è <code>js/app.js</code>, quindi devi aggiornare proprio quello.</p>
+<pre>&lt;script src="js/app.js"&gt;&lt;/script&gt;</pre>
+</div>
+<div class="card">
+<h2>2) Sintomo tipico</h2>
+<ul>
+<li>La pagina mostra ancora il vecchio popup o vecchi pulsanti.</li>
+<li>Il browser sembra ignorare il nuovo codice anche dopo il refresh.</li>
+<li>GitHub Pages potrebbe servire una build vecchia o un branch errato.</li>
+</ul>
+</div>
+<div class="card">
+<h2>3) Fix definitivo consigliato</h2>
+<ol>
+<li>Apri il repository su GitHub e sostituisci <code>js/app.js</code>.</li>
+<li>Fai un commit con un messaggio chiaro, ad esempio <code>fix: remove broken report modal</code>.</li>
+<li>Fai push sul branch pubblicato da GitHub Pages.</li>
+<li>In <strong>Settings → Pages</strong>, disattiva e riattiva GitHub Pages se la build resta bloccata.</li>
+<li>Fai <code>git commit --allow-empty -m "Trigger rebuild"</code> e pushalo per forzare una nuova build.</li>
+<li>Apri il sito in incognito oppure con DevTools aperti e <em>Disable cache</em>.</li>
+</ol>
+</div>
+<div class="card">
+<h2>4) Se vuoi evitare il problema in futuro</h2>
+<ul>
+<li>Rinomina il file con una versione, per esempio <code>js/app.v2.js</code>, e aggiorna l'<code>index.html</code>.</li>
+<li>Non usare più copie dello stesso file in percorsi diversi.</li>
+<li>Quando cambi una grossa porzione di logica, cambia anche il nome del file o aggiungi un query string tipo <code>js/app.js?v=2</code>.</li>
+</ul>
+</div>
+</main>
+</body>
+</html>
