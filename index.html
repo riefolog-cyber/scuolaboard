@@ -544,6 +544,27 @@ function buildWordCloud(cards,cardId){
   });
   return Object.entries(freq).filter(function(e){return e[1]>0;}).sort(function(a,b){return b[1]-a[1];}).slice(0,10);
 }
+function collectCloudStats(cards,cardId){
+  var filtered=cards.filter(function(c){
+    if(c.proposta)return false;
+    if(cardId==="tutte")return true;
+    if(String(cardId).indexOf("classe_")===0){
+      var classeName=cardId.slice(7);
+      return (c.classi||[]).indexOf(classeName)>=0;
+    }
+    return false;
+  });
+  var commentCount=0;
+  var studentSet=new Set();
+  filtered.forEach(function(c){
+    (c.commenti||[]).forEach(function(cm){
+      commentCount++;
+      if(cm.autore)studentSet.add(cm.autore);
+      if(cm.risposte)cm.risposte.forEach(function(r){commentCount++; if(r.autore)studentSet.add(r.autore);});
+    });
+  });
+  return {cardCount:filtered.length, commentCount:commentCount, studentCount:studentSet.size};
+}
 function renderLinks(card){
   var links=normalizeLinks(card);
   if(!links.length)return null;
@@ -1469,15 +1490,17 @@ function App(){
     if(!target.length){setAiErr("Nessuna card.");setAiRunning(false);return;}
     var cardSummary=target.map(function(c){return "- \""+c.titolo+"\" (tipo:"+c.tipo+", commenti:"+((c.commenti||[]).length)+", likes:"+(c.likes||0)+")";}).join("\n");
     var det=target.map(function(c){return "CARD: \""+c.titolo+"\" (tipo:"+c.tipo+", like:"+(c.likes||0)+")\n"+cardContext(c);}).join("\n\n---\n\n");
-    var prompt='Sei un docente esperto in una scuola secondaria di II grado.\nHai accesso ai dati reali della bacheca digitale della tua classe. Analizza SOLO ciò che è effettivamente presente.\nDevi produrre una sintesi critica e riassuntiva di tutte le card selezionate, basata sui temi, sugli argomenti e sulla qualità del dialogo, non solo sui numeri di partecipazione.';
-    if(aiTarget.indexOf("classe_")===0){
+    var prompt='Sei un docente esperto in una scuola secondaria di II grado. Analizza i dati della bacheca digitale con un focus didattico preciso sulla classe selezionata. Usa solo i contenuti reali: temi, commenti, partecipazione e tendenze emergenti.';
+    if(aiTarget==="tutte"){
+      prompt+='\nLa selezione include tutte le classi. Identifica eventuali differenze di coinvolgimento e temi tra le classi, ma mantieni il resoconto concentrato sulla qualità pedagogica complessiva del gruppo.';
+      prompt+='\nCita almeno una misura di partecipazione e un tema ricorrente, e suggerisci un punto di attenzione didattico generale.';
+    } else if(aiTarget.indexOf("classe_")===0){
       var classeName=aiTarget.slice(7);
-      prompt+='\nLa classe selezionata è '+classeName+' e ci sono '+target.length+' card da considerare. Devi valutare TUTTE le card di questa classe nella tua analisi, confrontando i temi principali e segnalando punti di forza e limiti del dialogo complessivo.';
-      prompt+='\nNon usare solo la card più partecipata come base dell’analisi: leggi criticamente tutte le card presenti, confronta almeno due temi diversi, individua eventuali aree poco sviluppate e descrivi il quadro complessivo della classe.';
-      prompt+='\nSe ci sono più temi, cita esplicitamente almeno due temi distinti, confrontali tra loro e indica quale sembra più solido o interessante.';
+      prompt+='\nLa classe selezionata è '+classeName+' e ci sono '+target.length+' card da considerare. Devi valutare tutte le card di questa classe nella tua analisi, segnalando i temi principali, la profondità del dialogo e gli aspetti da sviluppare.';
+      prompt+='\nNon limitarti ai numeri: confronta almeno due linee di contenuto, descrivi un punto di forza e un’area da migliorare per questa classe.';
       prompt+='\nElenco card da analizzare:\n'+cardSummary;
     }
-    prompt+='\n\nRispondi ESCLUSIVAMENTE con questo JSON:\n{\n  "riepilogo": "Max 2 frasi: sintesi critica complessiva della classe e dei temi emersi in tutte le card, con riferimenti concreti ai contenuti. Non limitarti ai numeri dei commenti.",\n  "dibattito": "Max 2 frasi: la polarizzazione o la convergenza reale emersa nella discussione. Se ci sono posizioni opposte o partecipazione superficiale, citale.",\n  "punti_chiave": ["Osservazione concreta su un tema emerso, con riferimento a contenuti o commenti reali", "Pattern comportamentale o di pensiero rilevato nella classe", "Aspetto didattico da monitorare o valorizzare"],\n  "spunti_dibattito": ["Attività specifica da fare nella prossima lezione basata su ciò che è emerso", "Domanda provocatoria da lanciare alla classe sul tema più discusso", "Connessione con il programma da sviluppare"]\n}\n\nREGOLE FERREE: riepilogo e dibattito MAX 2 frasi. punti_chiave e spunti: 3 voci brevi e concrete, niente genericità.\n\nDATI BACHECA:\n'+det.slice(0,3000);
+    prompt+='\n\nRispondi ESCLUSIVAMENTE con questo JSON:\n{\n  "riepilogo": "Max 2 frasi: sintesi didattica della classe o del gruppo, con riferimento a uno o due temi chiave.",\n  "dibattito": "Max 2 frasi: livello di confronto o partecipazione emerso nei commenti, con eventuali gruppi o posizioni diverse.",\n  "punti_chiave": ["Osservazione concreta su un tema emerso", "Pattern rilevato nella partecipazione", "Elemento didattico da valorizzare o correggere"],\n  "spunti_dibattito": ["Azione didattica concreta per la prossima lezione", "Domanda efficace per la classe", "Collegamento a un obiettivo del programma"]\n}\n\nREGOLE FERREE: riepilogo e dibattito MAX 2 frasi. punti_chiave e spunti: 3 voci brevi e concrete, niente genericità.\n\nDATI BACHECA:\n'+det.slice(0,3000);
     callGroqJSON(orKey,prompt,1200)
       .then(function(r){if(r&&(r.riepilogo||r.dibattito))setAiR(r);else setAiErr("Risposta non valida.");})
       .catch(function(e){setAiErr(e.message||"Errore AI.");})
@@ -2001,13 +2024,23 @@ function App(){
          })
       ),
       h("div",{style:{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}},
-        h("button",{onClick:function(){setShowWordCloud(true);},style:{background:"rgba(99,102,241,.15)",border:"1px solid rgba(99,102,241,.3)",borderRadius:9,padding:"8px 14px",cursor:"pointer",fontSize:12,fontWeight:700,color:"#a5b4fc"}},"☁️ Word Cloud commenti"),
+        h("button",{onClick:function(){setShowWordCloud(true);},style:{background:"rgba(99,102,241,.15)",border:"1px solid rgba(99,102,241,.3)",borderRadius:9,padding:"8px 14px",cursor:"pointer",fontSize:12,fontWeight:700,color:"#a5b4fc"}},"☁️ Analisi parole per classe"),
         !pushEnabled&&h("button",{onClick:requestPushPermission,style:{background:"rgba(34,197,94,.12)",border:"1px solid rgba(34,197,94,.3)",borderRadius:9,padding:"8px 14px",cursor:"pointer",fontSize:12,fontWeight:700,color:"#4ade80"}},"🔔 Attiva notifiche push"),
         pushEnabled&&h("span",{style:{background:"rgba(34,197,94,.15)",border:"1px solid rgba(34,197,94,.3)",borderRadius:9,padding:"8px 14px",fontSize:12,fontWeight:700,color:"#4ade80"}},"✅ Notifiche push attive")
       ),
+      (function(){
+        var targetLabel = aiTarget==="tutte"?"tutte le classi":aiTarget.slice(7);
+        var stats=collectCloudStats(cards,aiTarget);
+        return h("div",{style:{display:"flex",gap:12,flexWrap:"wrap",marginBottom:14,padding:"14px",borderRadius:12,background:"rgba(255,255,255,.04)",border:"1px solid rgba(255,255,255,.08)"}},
+          h("span",{style:{fontSize:12,color:"rgba(255,255,255,.7)"}},"Selezione: "+targetLabel),
+          h("span",{style:{fontSize:12,color:"rgba(255,255,255,.7)"}},"Card analizzate: "+stats.cardCount),
+          h("span",{style:{fontSize:12,color:"rgba(255,255,255,.7)"}},"Commenti totali: "+stats.commentCount),
+          h("span",{style:{fontSize:12,color:"rgba(255,255,255,.7)"}},"Studenti coinvolti: "+stats.studentCount)
+        );
+      })(),
       h("div",{style:{background:"rgba(255,255,255,.05)",borderRadius:11,padding:16,border:"1px solid rgba(255,255,255,.08)"}},
         h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}},
-          h("div",{style:{fontWeight:700,color:"#f1f5f9",fontSize:14}},"🤖 Analisi AI globale"),
+          h("div",{style:{fontWeight:700,color:"#f1f5f9",fontSize:14}},"🤖 Analisi per classe"),
           h("div",{style:{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}},
             h("select",{value:aiTarget,onChange:function(e){setAIT(e.target.value);setAiR(null);setAiErr("");},style:{padding:"5px 10px",border:"1px solid rgba(255,255,255,.15)",borderRadius:8,fontSize:12,color:"#f1f5f9",background:"rgba(30,41,59,1)",maxWidth:260}},
               h("option",{value:"tutte"},"📋 Tutte le card"),
@@ -3129,16 +3162,18 @@ function App(){
         h("div",{onClick:function(e){e.stopPropagation();},style:{background:"rgba(15,20,40,.97)",border:"1px solid rgba(99,102,241,.3)",borderRadius:20,padding:24,maxWidth:660,width:"100%",maxHeight:"85vh",overflowY:"auto",boxShadow:"0 24px 60px rgba(0,0,0,.6)"}},
           h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}},
             h("div",null,
-              h("h3",{style:{margin:0,color:"#f1f5f9",fontSize:16,fontWeight:800}},"☁️ Word Cloud"),
-              h("p",{style:{margin:"4px 0 0",color:"rgba(255,255,255,.45)",fontSize:11}},"Le 10 parole più usate nei commenti della classe")
+              h("h3",{style:{margin:0,color:"#f1f5f9",fontSize:16,fontWeight:800}},"☁️ Analisi parole per classe"),
+              h("p",{style:{margin:"4px 0 0",color:"rgba(255,255,255,.45)",fontSize:11}},"Esamina i commenti per classe e individua i termini più ricorrenti nella discussione.")
             ),
             h("button",{onClick:function(){setShowWordCloud(false);},style:{background:"rgba(255,255,255,.08)",border:"none",borderRadius:"50%",width:28,height:28,cursor:"pointer",fontSize:15,color:"rgba(255,255,255,.7)"}},"×")
           ),
           // Filtro classi
-          h("div",{style:{display:"flex",gap:5,flexWrap:"wrap",marginBottom:16}},
-            h("button",{onClick:function(){setWcTarget("tutte");},style:{padding:"3px 10px",borderRadius:20,border:"1px solid "+(wcTarget==="tutte"?"#6366f1":"rgba(255,255,255,.15)"),background:wcTarget==="tutte"?"rgba(99,102,241,.25)":"transparent",color:wcTarget==="tutte"?"#a5b4fc":"rgba(255,255,255,.55)",fontSize:11,fontWeight:700,cursor:"pointer"}},"Tutte le card"),
+          h("div",{style:{display:"flex",flexWrap:"wrap",gap:10,marginBottom:16,alignItems:"center"}},
+            h("div",{style:{fontSize:11,color:"rgba(255,255,255,.55)",fontWeight:700}},"Filtro classi:"),
+            h("button",{onClick:function(){setWcTarget("tutte");},style:{padding:"3px 10px",borderRadius:20,border:"1px solid "+(wcTarget==="tutte"?"#6366f1":"rgba(255,255,255,.15)"),background:wcTarget==="tutte"?"rgba(99,102,241,.25)":"transparent",color:wcTarget==="tutte"?"#a5b4fc":"rgba(255,255,255,.55)",fontSize:11,fontWeight:700,cursor:"pointer"}},"Tutte le classi"),
             aiCardClasses.map(function(cl){return h("button",{key:cl,onClick:function(){setWcTarget("classe_"+cl);},style:{padding:"3px 10px",borderRadius:20,border:"1px solid "+(wcTarget==="classe_"+cl?"#6366f1":"rgba(255,255,255,.1)"),background:wcTarget==="classe_"+cl?"rgba(99,102,241,.25)":"transparent",color:wcTarget==="classe_"+cl?"#a5b4fc":"rgba(255,255,255,.45)",fontSize:11,fontWeight:600,cursor:"pointer",maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},cl);})
           ),
+          (function(){var stats=collectCloudStats(cards,wcTarget);return h("div",{style:{display:"flex",flexWrap:"wrap",gap:10,marginBottom:16,padding:"12px 14px",borderRadius:12,background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.08)"}},h("span",{style:{fontSize:12,color:"rgba(255,255,255,.68)"}},"Card: "+stats.cardCount),h("span",{style:{fontSize:12,color:"rgba(255,255,255,.68)"}},"Commenti: "+stats.commentCount),h("span",{style:{fontSize:12,color:"rgba(255,255,255,.68)"}},"Studenti: "+stats.studentCount));})(),
           parole.length===0
             ?h("div",{style:{textAlign:"center",padding:"40px 20px",color:"rgba(255,255,255,.35)"}},
                 h("div",{style:{fontSize:40,marginBottom:8}},"💬"),
