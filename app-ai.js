@@ -2,7 +2,7 @@
 (function(){
   var db = window.SB && SB.db;
   var CFG = window.SB_CONFIG || { AI_CACHE_TTL_MS: 15*60*1000 };
-  var WORKER_URL = "https://scuolaboard-groq-proxy.scuolaboard.workers.dev/groq";
+  var WORKER_URL = 'https://scuolaboard-groq-proxy.scuolaboard.workers.dev';
   var K = "ai_results_cache", K_AT = "ai_results_cache_at";
 
   function cacheGet(){
@@ -16,26 +16,27 @@
   function cacheSetAll(m){ try{ sessionStorage.setItem(K,JSON.stringify(m)); sessionStorage.setItem(K_AT,String(Date.now())); }catch(e){} }
   function cacheInvalidate(){ try{ sessionStorage.removeItem(K); sessionStorage.removeItem(K_AT); }catch(e){} }
 
-  async function callWorker(prompt, max_tokens, json){
-    const resp = await fetch(WORKER_URL, {
+  async function chiamaAI(type, content, options){
+    options = options || {};
+    const res = await fetch(WORKER_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, max_tokens: max_tokens || 700, json: !!json })
+      body: JSON.stringify({ type, content, options })
     });
-    if(!resp.ok){
-      const txt = await resp.text();
-      throw new Error(txt || ('HTTP ' + resp.status));
-    }
-    const data = await resp.json();
-    return data.content || '';
+    
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Errore server');
+    if (!data.success) throw new Error('Risposta non valida');
+    
+    return data.data;
   }
 
   async function callGroqText(_ignoredKey, prompt, mx){
-    return callWorker(prompt, mx || 600, false);
+    return chiamaAI('text', prompt, { max_tokens: mx || 600 }).then(function(d){ return d.content || d || ''; });
   }
 
   async function callGroqJSON(_ignoredKey, prompt, mx){
-    const raw = await callWorker(prompt, mx || 700, true);
+    const raw = await chiamaAI('json', prompt, { max_tokens: mx || 700 }).then(function(d){ return d.content || d || ''; });
     const txt = String(raw).replace(/^```(?:json)?[\r\n]*/i,'').replace(/[\r\n]*```$/,'').trim();
     const m = txt.match(/\{[\s\S]*\}/);
     if(!m) throw new Error('JSON non valido');

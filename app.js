@@ -24,9 +24,6 @@
   var [replyTesto,setReplyTesto]=useState("");
   var [confirmDel,setConfirmDel]=useState(null);
   var [showResetOpt,setShowResetOpt]=useState(false);
-  var [orKey,setOrKey]=useState("");
-  var [askKey,setAskKey]=useState(false);
-  var [akInput,setAkInput]=useState("");
   var [aiRunning,setAiRunning]=useState(false);
   var [aiResult,setAiResult]=useState(null);
   var [aiTarget,setAiTarget]=useState("tutte");
@@ -233,7 +230,6 @@
       if(showAiQuizGen){setShowAiQuizGen(false);return;}
       if(showSommario){setShowSommario(null);return;}
       if(showWordCloud){setShowWordCloud(false);return;}
-      if(askKey){setAskKey(false);setAkInput("");return;}
       if(showCopiaAnno){setShowCopiaAnno(null);setCopiaAnnoTarget("");return;}
       if(showDuplica){setShowDuplica(null);return;}
       if(confirmDel){setConfirmDel(null);return;}
@@ -247,7 +243,7 @@
     }
     document.addEventListener("keydown",onKey);
     return function(){document.removeEventListener("keydown",onKey);};
-},[lightbox,showCard,showModal,showAiQuizGen,showSommario,showWordCloud,askKey,showDuplica,showCopiaAnno,confirmDel,showReset,showResetOpt,showAmm,showProfilo,showTimerModal,showClasseModal,rinominaClasse,user]);
+},[lightbox,showCard,showModal,showAiQuizGen,showSommario,showWordCloud,showDuplica,showCopiaAnno,confirmDel,showReset,showResetOpt,showAmm,showProfilo,showTimerModal,showClasseModal,rinominaClasse,user]);
 
   useEffect(function(){
     auth.getRedirectResult().then(function(cr){
@@ -349,7 +345,7 @@
       if(!ud.exists){var np=(fu.displayName||"").split(" ");await db.collection("users").doc(fu.uid).set({nome:np[0]||"Utente",cognome:np.slice(1).join(" ")||"",email:fu.email,role:"studente",provider:"google"});}
     }catch(e){if(e.code==="auth/popup-blocked"){try{await auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider());}catch(e2){}}}
   }
-  function logout(){auth.signOut();setUser(null);setOrKey("");}
+  function logout(){auth.signOut();setUser(null);}
 
   // Warn before closing tab if form has unsaved content
   useEffect(function(){
@@ -679,7 +675,6 @@
 
   // ── VALUTAZIONE AI STRUTTURATA: punti di forza / lacune / suggerimento ──
   async function valutaAperteProfAI(card,ris){
-    if(!orKey){setAskKey(true);return;}
     var dom=card.quizDomande||[];
     var domAI=dom.map(function(d,i){return{d:d,i:i};}).filter(function(x){return x.d.tipo==="aperta";});
     if(!domAI.length)return;
@@ -714,7 +709,7 @@
             "}\n\n"+
             "Regole di voto: 0.75-1.0=risposta completa e argomentata; 0.4-0.74=parziale ma pertinente; 0-0.39=assente o fuori tema.\n"+
             "Sii diretto e specifico su QUESTA risposta. Zero frasi generiche valide per qualsiasi studente.";
-          return callGroqJSON(orKey,prompt,600)
+          return callGroqJSON(null,prompt,600)
             .then(function(res){return{idx:item.i,res:res};})
             .catch(function(){return null;});
         });
@@ -778,7 +773,6 @@
   function resetComments(){cards.forEach(function(c){if(c.commenti&&c.commenti.length>0)fbSave(Object.assign({},c,{commenti:[]}));});setShowResetOpt(false);}
   function resetVotes(){cards.forEach(function(c){if(c.opzioni)fbSave(Object.assign({},c,{opzioni:c.opzioni.map(function(o){return Object.assign({},o,{voti:[]});})}));});setShowResetOpt(false);}
   function resetSondaggio(cardId){var card=cards.find(function(c){return String(c.id)===String(cardId);});if(!card)return;var u=Object.assign({},card,{commenti:[]});if(u.opzioni)u.opzioni=u.opzioni.map(function(o){return Object.assign({},o,{voti:[]});});fbSave(u);if(card.tipo==='quiz'){db.collection('quiz_risposte').where('cardId','==',String(cardId)).get().then(function(snap){var batch=db.batch();snap.forEach(function(doc){batch.delete(doc.ref);});return batch.commit();}).catch(function(e){showToast("Errore reset quiz","err");});}}
-  function saveAIKey(){setAskKey(false);setAkInput("");showToast("La chiave non si salva più nel browser: usa il Worker.","ok");}
 
   function cardPreviewForAI(card){
     var classi=(card.classi||[]).join(", ")||"TUTTE";
@@ -837,7 +831,6 @@
 
 
   function runAI(){
-    if(!orKey){setAskKey(true);return;}
     setAiRunning(true);setAiResult(null);setAiErr("");
     var target;
     if(aiTarget==="tutte"){
@@ -862,7 +855,7 @@
       prompt+='\nSegnala i temi principali, la profondità del dialogo e gli aspetti da sviluppare per questa classe.';
     }
     prompt+='\n\nRispondi ESCLUSIVAMENTE con questo JSON:\n{\n  "riepilogo": "Max 2 frasi: sintesi didattica della classe o del gruppo, con riferimento a uno o due temi chiave.",\n  "dibattito": "Max 2 frasi: livello di confronto o partecipazione emerso nei commenti, con eventuali gruppi o posizioni diverse.",\n  "punti_chiave": ["Osservazione concreta su un tema emerso", "Pattern rilevato nella partecipazione", "Elemento didattico da valorizzare o correggere"],\n  "spunti_dibattito": ["Azione didattica concreta per la prossima lezione", "Domanda efficace per la classe", "Collegamento a un obiettivo del programma"]\n}\n\nREGOLE FERREE: riepilogo e dibattito MAX 2 frasi. punti_chiave e spunti: 3 voci brevi e concrete, niente genericità.\n\nDATI BACHECA:\n'+det;
-    callGroqJSON(orKey,prompt,1200)
+    callGroqJSON(null,prompt,1200)
       .then(function(r){if(r&&(r.riepilogo||r.dibattito))setAiResult(r);else setAiErr("Risposta non valida.");})
       .catch(function(e){setAiErr(e.message||"Errore AI.");})
       .then(function(){setAiRunning(false);});
@@ -870,11 +863,10 @@
 
   function runCardAI(card,e){
     e.stopPropagation();
-    if(!orKey){setAskKey(true);return;}
     var freshCard=cards.find(function(c){return String(c.id)===String(card.id);})||card;
     setCardAiLoad(String(freshCard.id));setCardAiOpen(String(freshCard.id));setCardAiErr(null);
     var prompt='Sei un docente esperto in una scuola secondaria di II grado.\nAnalizza la card didattica basandoti SOLO sui dati reali forniti. Non inventare nulla.\n\nRispondi ESCLUSIVAMENTE con questo JSON (nessun testo fuori dal JSON):\n{\n  "sintesi": "Max 2 frasi: tema e partecipazione reale con numeri concreti.",\n  "dinamica": "Max 2 frasi: posizioni emerse, studenti significativi.",\n  "spunto": "1 azione concreta e immediatamente applicabile per il prof.",\n  "domande_stimolo": ["domanda sul punto più discusso","domanda che sfida un presupposto","domanda che aggancia alla vita reale"]\n}\n\nREGOLE FERREE: sintesi e dinamica MAX 2 frasi. spunto MAX 1 frase. domande_stimolo: 3 domande brevi.\n\nDATI CARD:\n'+cardContext(freshCard);
-    callGroqJSON(orKey,prompt,700)
+    callGroqJSON(null,prompt,700)
       .then(function(r){
         if(r&&!r.error){
           var data={sintesi:r.sintesi||"",dinamica:r.dinamica||"",spunto:r.spunto||"",domande_stimolo:r.domande_stimolo||[],data:new Date().toISOString(),cardTitolo:freshCard.titolo};
@@ -889,11 +881,10 @@
 
   function runCardQ(){
     if(!cardQ.trim()||!showCard)return;
-    if(!orKey){setAskKey(true);return;}
     setCardQLoad(true);setCardQErr("");
     var card=showCard;
     var prompt='Sei un consulente didattico per una scuola secondaria di II grado.\nRispondi alla domanda del prof basandoti ESCLUSIVAMENTE sui dati reali della card. Non inventare nulla.\nSe i dati non bastano, dillo in una frase e indica cosa osservare per trovare la risposta.\n\nDATI CARD:\n'+cardContext(card)+'\n\nDOMANDA DEL PROF:\n'+cardQ.trim()+'\n\nRispondi in max 4 frasi, stile diretto: niente preamboli, vai subito al punto.';
-    callGroqText(orKey,prompt,400)
+    callGroqText(null,prompt,400)
       .then(function(txt){
         var aiD=aiMap[String(card.id)];
         var esistenti=aiD&&Array.isArray(aiD.domande)?aiD.domande:(aiD&&aiD.domanda?[aiD.domanda]:[]);
@@ -925,11 +916,11 @@
   }
 
   async function aiGeneraQuiz(){
-    if(!aiQuizGenTesto.trim()||!orKey){return;}
+    if(!aiQuizGenTesto.trim()){return;}
     setAiQuizGenLoading(true);setAiQuizGenErr("");
     var prompt=buildQuizPrompt(aiQuizGenTesto,aiQuizGenNumDom,aiQuizGenTipo,aiQuizGenTesto.slice(0,60));
     try{
-      var r=await callGroqJSON(orKey,prompt,1800);
+      var r=await callGroqJSON(null,prompt,1800);
       if(r&&Array.isArray(r.domande)&&r.domande.length){
         var domande=r.domande.map(function(d){
           if(d.tipo==="verofalso")return{tipo:"verofalso",testo:d.testo||"",opzioni:["Vero","Falso"],corretta:d.corretta||"Vero"};
@@ -943,12 +934,12 @@
   }
 
   async function aiRigenDomanda(idx){
-    if(!aiQuizGenAnteprima||!orKey)return;
+    if(!aiQuizGenAnteprima)return;
     setAiQuizGenRegenIdx(idx);
     var d=aiQuizGenAnteprima[idx];
     var prompt=buildQuizPrompt(aiQuizGenTesto,1,d.tipo==="multipla"?"multipla":d.tipo==="verofalso"?"verofalso":"aperta",aiQuizGenTesto.slice(0,60));
     try{
-      var r=await callGroqJSON(orKey,prompt,600);
+      var r=await callGroqJSON(null,prompt,600);
       if(r&&Array.isArray(r.domande)&&r.domande.length){
         var nd=r.domande[0];
         var nuova;
@@ -969,14 +960,13 @@
 
   // ── Riassunto discussione ──
   async function riassuntiCommentiRun(card){
-    if(!orKey){setAskKey(true);return;}
     var commenti=(card.commenti||[]);
     if(commenti.length<2){setSommarioResult(function(p){return Object.assign({},p,{[card.id]:"Troppo pochi commenti per un riassunto significativo."});});return;}
     setSommarioLoading(card.id);
     var txt=commenti.map(function(c){var r=c.autore+": "+c.testo;if(c.risposte&&c.risposte.length)r+=c.risposte.map(function(x){return"\n  ↳ "+x.autore+": "+x.testo;}).join("");return r;}).join("\n");
     var prompt='Sei un docente di scuola secondaria.\nLeggi questa discussione tra studenti su una card della bacheca digitale e produci un riassunto operativo per il prof.\n\nDISCUSSIONE:\n'+txt.slice(0,3000)+'\n\nRispondi con ESATTAMENTE questo formato (niente altro):\n• [posizione o tema emerso — cita chi l\'ha sollevato se significativo]\n• [accordo o contrasto tra studenti — con riferimento concreto]\n• [lacuna concettuale o misconcezione da correggere in classe]\n• [spunto didattico diretto: cosa fare nella prossima lezione]\n\nMax 4 bullet, 1 frase ciascuno, linguaggio diretto da collega a collega.';
     try{
-      var res=await callGroqText(orKey,prompt,600);
+      var res=await callGroqText(null,prompt,600);
       setSommarioResult(function(p){return Object.assign({},p,{[card.id]:res});});
     }catch(e){setSommarioResult(function(p){return Object.assign({},p,{[card.id]:"Errore: "+e.message});});}
     setSommarioLoading(null);
@@ -986,7 +976,6 @@
   var [sondaggioAiResult,setSondaggioAiResult]=useState({});
   var [sondaggioAiLoading,setSondaggioAiLoading]=useState(null);
   async function aiAnalisiSondaggio(card){
-    if(!orKey){setAskKey(true);return;}
     if(!card.opzioni||!card.opzioni.length)return;
     setSondaggioAiLoading(card.id);
     var totV=card.opzioni.reduce(function(a,o){return a+o.voti.length;},0);
@@ -997,7 +986,7 @@
     }).join(', ');
     var prompt='Sei un docente di scuola secondaria.\nAnalizza i risultati di questo sondaggio della tua classe e fornisci una lettura didattica sintetica.\n\nDOMANDA SONDAGGIO: '+card.titolo+'\nRISULTATI ('+totV+' votanti): '+votiTxt+'\n\nRispondi con ESATTAMENTE questo formato (niente altro):\n• [lettura del risultato principale: cosa rivela sulla comprensione o posizione della classe]\n• [eventuali sorprese o distribuzioni inattese rispetto al percorso didattico]\n• [1 domanda da lanciare in classe per approfondire il dato più significativo]\n\nMax 3 bullet, 1 frase ciascuno. Stile diretto da collega a collega.';
     try{
-      var res=await callGroqText(orKey,prompt,350);
+      var res=await callGroqText(null,prompt,350);
       setSondaggioAiResult(function(p){return Object.assign({},p,{[card.id]:res});});
     }catch(e){setSondaggioAiResult(function(p){return Object.assign({},p,{[card.id]:"Errore: "+e.message});});}
     setSondaggioAiLoading(null);
@@ -1075,7 +1064,6 @@
         )
       ),
       h("div",{style:{flex:1}}),
-      isProf&&h("button",{"aria-label":"Imposta chiave API Groq","data-tip-down":"API Groq",onClick:function(){setAskKey(true);},style:{background:orKey?"rgba(34,197,94,.15)":"rgba(249,115,22,.15)",border:"1px solid "+(orKey?"rgba(34,197,94,.3)":"rgba(249,115,22,.3)"),borderRadius:8,padding:"5px 9px",cursor:"pointer",fontSize:12,color:orKey?"#4ade80":"#fb923c"}},orKey?"🔑":"⚠️"),
       isProf&&h("button",{"aria-label":"Opzioni reset","data-tip-down":"Reset bacheca",onClick:function(){setShowResetOpt(true);},style:{background:"rgba(255,255,255,.06)",border:"1px solid rgba(239,68,68,.3)",borderRadius:8,padding:"5px 9px",cursor:"pointer",fontSize:14,color:"#f87171"}},"🗑️"),
       isProf&&!simulaSt&&h("button",{"aria-label":"Ammonizioni","data-tip-down":"Ammonizioni",onClick:function(){setShowAmm({autore:null,cardId:null,cmId:null});},style:{background:"rgba(245,158,11,.12)",border:"1px solid rgba(245,158,11,.3)",borderRadius:8,padding:"5px 9px",cursor:"pointer",fontSize:14,color:"#fbbf24"}},"⚠️"),
       h("button",{"aria-label":"QR Code bacheca","data-tip-down":"QR Code",onClick:function(){setShowQR(true);},style:{background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.1)",borderRadius:8,padding:"5px 9px",cursor:"pointer",fontSize:14,color:"rgba(255,255,255,.7)"}},"◆"),
@@ -1608,19 +1596,7 @@
       )
     ),
 
-    askKey&&h("div",{style:{position:"fixed",inset:0,background:"rgba(0,0,0,.65)",backdropFilter:"blur(3px)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20},onClick:function(){setAskKey(false);}},
-      h("div",{style:{background:"rgba(15,23,42,.92)",backdropFilter:"blur(24px)",WebkitBackdropFilter:"blur(24px)",border:"1px solid rgba(255,255,255,.11)",borderRadius:20,boxShadow:"0 24px 60px rgba(0,0,0,.5)",padding:28,maxWidth:400,width:"100%"},onClick:function(e){e.stopPropagation();}},
-        h("div",{style:{fontSize:36,marginBottom:10}},"🔑"),
-        h("h3",{style:{margin:"0 0 8px",color:"#f1f5f9",fontSize:18,fontWeight:800}},"Chiave Groq"),
-        h("p",{style:{color:"rgba(255,255,255,.65)",fontSize:12,marginBottom:16,lineHeight:1.5}},"Gratuita (30 req/min). Ottienila su console.groq.com → API Keys"),
-        orKey&&h("div",{style:{background:"rgba(34,197,94,.1)",border:"1px solid rgba(34,197,94,.3)",borderRadius:8,padding:10,marginBottom:14}},h("div",{style:{color:"#4ade80",fontSize:11,fontWeight:700}},"✓ Chiave già impostata")),
-        h("input",{type:"password",value:akInput,onInput:function(e){setAkInput(e.target.value);},placeholder:"gsk_…",style:Object.assign({},S.input,{marginBottom:12})}),
-        h("div",{style:{display:"flex",gap:10}},
-          h("button",{onClick:function(){setAskKey(false);setAkInput("");},style:S.annullaBtn},"Annulla"),
-          h("button",{onClick:saveAIKey,style:{flex:1,padding:11,background:akInput.trim()?"linear-gradient(135deg,#6366f1,#8b5cf6)":"rgba(255,255,255,.06)",color:akInput.trim()?"#fff":"rgba(255,255,255,.40)",border:"none",borderRadius:11,fontSize:14,fontWeight:800,cursor:akInput.trim()?"pointer":"not-allowed"}},"Salva")
-        )
-      )
-    ),
+
 
     // ── DETTAGLIO CARD ──
     showCard&&h("div",{style:{position:"fixed",inset:0,background:"rgba(0,0,0,.7)",backdropFilter:"blur(6px)",zIndex:200,display:"flex",alignItems:"flex-end",justifyContent:"center",padding:"0"},onClick:closeCard},
@@ -2321,7 +2297,7 @@
           h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,flexWrap:"wrap",gap:6}},
             h("label",{style:{fontSize:11,fontWeight:700,color:"rgba(255,255,255,.58)",letterSpacing:1}},"🧩 DOMANDE QUIZ"),
             h("div",{style:{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}},
-              h("button",{onClick:function(){if(!orKey){setAskKey(true);return;}setAiQuizGenAnteprima(null);setAiQuizGenErr("");setShowAiQuizGen(true);},style:{background:"linear-gradient(135deg,rgba(99,102,241,.3),rgba(139,92,246,.25))",border:"1px solid rgba(99,102,241,.5)",borderRadius:7,padding:"4px 11px",cursor:"pointer",fontSize:11,color:"#c4b5fd",fontWeight:800,display:"flex",alignItems:"center",gap:4}},"✨ Genera con AI"),
+              h("button",{onClick:function(){setAiQuizGenAnteprima(null);setAiQuizGenErr("");setShowAiQuizGen(true);},style:{background:"linear-gradient(135deg,rgba(99,102,241,.3),rgba(139,92,246,.25))",border:"1px solid rgba(99,102,241,.5)",borderRadius:7,padding:"4px 11px",cursor:"pointer",fontSize:11,color:"#c4b5fd",fontWeight:800,display:"flex",alignItems:"center",gap:4}},"✨ Genera con AI"),
               h("label",{style:{fontSize:11,color:"rgba(255,255,255,.52)"}},"⏱ Timer (min):"),
               h("input",{type:"number",min:1,max:120,value:form.quizTimer||10,onInput:function(e){setForm(function(p){return Object.assign({},p,{quizTimer:parseInt(e.target.value)||10});});},style:Object.assign({},S.input,{width:54,textAlign:"center",padding:"3px 6px"})})
             )
