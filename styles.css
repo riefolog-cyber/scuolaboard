@@ -1,9 +1,14 @@
 :root{
-  --c-primary:var(--c-primary);
+  --c-primary:#6366f1;
   --c-primary-rgb:99,102,241;
-  --c-bg:var(--c-bg);
-  --c-surface:var(--c-surface);
-  --c-border:var(--c-border);
+  --c-bg:#1a1a2e;
+  --c-surface:rgba(255,255,255,.055);
+  --c-border:rgba(255,255,255,.09);
+  --c-text:#f1f5f9;
+  --c-muted:rgba(255,255,255,.52);
+  --c-danger:#f87171;
+  --c-success:#4ade80;
+  --c-warn:#fbbf24;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Inter','Segoe UI',sans-serif;background:var(--c-bg)}
@@ -16,8 +21,7 @@ textarea,input,select,button{font-family:inherit}
 .pulse{animation:pulse 2s infinite}
 .fadein{animation:fadein .35s cubic-bezier(.22,1,.36,1)}
 .slidedown{animation:slidedown .25s ease}
-.card-wrap{transition:transform .2s cubic-bezier(.22,1,.36,1),opacity .2s,box-shadow .2s}
-.card-wrap:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.35)}
+.card-wrap{cursor:pointer}
 .card-wrap button:hover{filter:brightness(1.15);transform:scale(1.04);}
 .bulk-card{cursor:pointer !important;}
 .bulk-selected{outline:2px solid var(--c-primary) !important;outline-offset:2px;background:rgba(var(--c-primary-rgb),.12) !important;}
@@ -29,10 +33,6 @@ textarea,input,select,button{font-family:inherit}
 .card-wrap a:hover{filter:brightness(1.2);}
 .card-wrap.dragging{opacity:.3;transform:scale(.96)}
 .card-wrap.drag-over{outline:2px dashed var(--c-primary);border-radius:16px;outline-offset:2px}
-::-webkit-scrollbar{width:5px}
-::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:3px}
-::-webkit-scrollbar-track{background:transparent}
-button:active{transform:scale(.96)}
 /* Confetti celebration */
 @keyframes confetti-fall{0%{transform:translateY(-20px) rotate(0deg);opacity:1}100%{transform:translateY(200px) rotate(720deg);opacity:0}}
 .confetti-piece{position:absolute;width:8px;height:8px;border-radius:2px;animation:confetti-fall 1.2s ease-out forwards;}

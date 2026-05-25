@@ -9,7 +9,9 @@ SB.useRef=React.useRef;
 SB.useCallback=React.useCallback;
 SB.useMemo=React.useMemo;
 SB.useReducer=React.useReducer;
+SB.useLayoutEffect=React.useLayoutEffect;
 SB.Fragment=React.Fragment;
+SB.memo=React.memo;
 SB.AI_LOADED=false;
 SB.AI_LOADING=null;
 SB.loadAiModule=function(cb){
@@ -33,7 +35,7 @@ SB.loadAiModule=function(cb){
   document.head.appendChild(s);
 };
 var db=SB.db,auth=SB.auth;
-var h=SB.h,useState=SB.useState,useEffect=SB.useEffect,useRef=SB.useRef,useCallback=SB.useCallback,useMemo=SB.useMemo,useReducer=SB.useReducer,Fragment=SB.Fragment;
+var h=SB.h,useState=SB.useState,useEffect=SB.useEffect,useRef=SB.useRef,useCallback=SB.useCallback,useMemo=SB.useMemo,useReducer=SB.useReducer,useLayoutEffect=SB.useLayoutEffect,Fragment=SB.Fragment,memo=SB.memo;
 var CLASSI_COLORS=["#f59e0b","#22c55e","#3b82f6","#ec4899","#8b5cf6","#ef4444","#06b6d4","#f97316","#84cc16","#a855f7"];
 function classeColor(nome,lista){var idx=lista.indexOf(nome);return CLASSI_COLORS[idx%CLASSI_COLORS.length]||"#f59e0b";}
 var CLASSI_DEFAULT=["1AO","1AI","1BO","1CO","2AO","2AI","2BO","2CO","3AO","3AI","3BO","4AO","4AI","4BO","5AO","5AA","5AI","5BO"];
@@ -73,6 +75,14 @@ function fbFavSave(uid,ids){return db.collection("preferiti").doc(uid).set({ids:
 function fbFavListen(uid,cb){return db.collection("preferiti").doc(uid).onSnapshot(function(doc){cb(doc.exists&&doc.data().ids?doc.data().ids:[]);});}
 function fbClassiListen(cb){return db.collection("config").doc("classi_custom").onSnapshot(function(doc){cb(doc.exists&&doc.data().lista?doc.data().lista:[]);});}
 var FORM0={tipo:"domanda",titolo:"",testo:"",opzioni:["",""],links:[{url:"",label:""}],classi:[],quizDomande:[],quizTimer:10,pubblicaIl:"",immagini:[],copertina:null};
+
+// ── CACHE DURATA: centralizzata ──
+var AI_CACHE_TTL=15*60*1000; // 15 minuti
+
+// ── ANNO DEFAULT: centralizzato ──
+var ANNI_DISPONIBILI=["2025/2026","2026/2027","2027/2028","2028/2029","2029/2030"];
+SB.ANNI_DISPONIBILI=ANNI_DISPONIBILI;
+SB.FORM0=FORM0;
 
 function fmt(d){return new Date(d).toLocaleDateString("it-IT",{day:"2-digit",month:"short",year:"numeric"});}
 function fmtDT(d){
@@ -314,6 +324,31 @@ function debounce(fn, ms){
   };
 }
 
+// ── useDebounce hook ─────────────────────────────────────────────────────────
+function useDebounce(value, delay){
+  var [debouncedValue, setDebouncedValue]=useState(value);
+  useEffect(function(){
+    var t=setTimeout(function(){setDebouncedValue(value);},delay);
+    return function(){clearTimeout(t);};
+  },[value,delay]);
+  return debouncedValue;
+}
+
+// ── Helper: unsubscribe sicuro da listener Firestore ─────────────────────────
+// Garantisce sempre una funzione valida anche se il listener non è stato inizializzato
+function safeUnsub(fn){return typeof fn==="function"?fn:function(){};}
+
+// ── quizListenRisposte ───────────────────────────────────────────────────────
+function quizListenRisposte(cardId,cb){
+  return db.collection("quiz_risposte")
+    .where("cardId","==",String(cardId))
+    .onSnapshot(function(snap){
+      var arr=[];
+      snap.forEach(function(d){arr.push(d.data());});
+      cb(arr);
+    });
+}
+
 // ── ERROR BOUNDARY ──────────────────────────────────────────────────────────
 var ErrorBoundary=(function(){
   function ErrorBoundary(props){React.Component.call(this,props);this.state={hasError:false,error:null};}
@@ -337,3 +372,16 @@ var ErrorBoundary=(function(){
   };
   return ErrorBoundary;
 }());
+
+// SB.LS — localStorage centralizzato (opt. #6)
+(function(){
+  if(window._SB_LS){SB.LS=window._SB_LS;SB.CFG=window.SB_CONFIG||null;return;}
+  SB.LS={
+    groqKey:{get:function(){return localStorage.getItem("groq_key")||"";},set:function(v){localStorage.setItem("groq_key",v);},rm:function(){localStorage.removeItem("groq_key");}},
+    seen:{get:function(){try{var s=localStorage.getItem("seen_cards");return new Set(s?JSON.parse(s):[]);}catch(e){return new Set();}},set:function(s){try{localStorage.setItem("seen_cards",JSON.stringify([...s]));}catch(e){}}},
+    push:{get:function(){return localStorage.getItem("push_enabled")==="true";},set:function(v){localStorage.setItem("push_enabled",v?"true":"false");}},
+    privacy:{get:function(uid){return localStorage.getItem("privacy_accepted_"+uid);},set:function(uid){localStorage.setItem("privacy_accepted_"+uid,"1");}},
+    anno:{get:function(){try{return sessionStorage.getItem("annoScolasticoAttivo")||"2025/2026";}catch(e){return "2025/2026";}},set:function(v){try{sessionStorage.setItem("annoScolasticoAttivo",v);}catch(e){}}}
+  };
+  SB.CFG=null;
+})();
