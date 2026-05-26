@@ -1003,13 +1003,14 @@
       if(!accepted)setShowPrivacy(true);
     }
   },[user]);
-  useEffect(function(){if(viewStudenti&&isProf)loadStudenti();},[viewStudenti]);
+  useEffect(function(){if(viewStudenti&&isProf)loadStudenti();},[viewStudenti, isProf]);
 
-  if(authLoad)return h("div",{style:{minHeight:"100vh",background:"linear-gradient(160deg,#12111a 0%,#161320 50%,#1a1528 100%)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16,position:"relative",overflow:"hidden"}},h("div",{style:{position:"absolute",top:"30%",left:"50%",transform:"translate(-50%,-50%)",width:600,height:600,borderRadius:"50%",background:"radial-gradient(circle,rgba(99,102,241,.12) 0%,transparent 65%)",pointerEvents:"none"}}),
-    h("div",{style:{width:52,height:52,border:"3px solid rgba(99,102,241,.2)",borderTop:"3px solid #6366f1",borderRight:"3px solid #a855f7",borderRadius:"50%",animation:"spin .9s linear infinite"}}),
-    h("div",{style:{color:"rgba(255,255,255,.8)",fontWeight:700,fontSize:16,letterSpacing:2}},"SCUOLABOARD")
-  );
-  if(!user)return h("div",{style:{minHeight:"100vh",background:"linear-gradient(160deg,#12111a 0%,#161320 50%,#1a1528 100%)",display:"flex",alignItems:"center",justifyContent:"center",padding:20,position:"relative",overflow:"hidden"}},
+  try {
+    if(authLoad)return h("div",{style:{minHeight:"100vh",background:"linear-gradient(160deg,#12111a 0%,#161320 50%,#1a1528 100%)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16,position:"relative",overflow:"hidden"}},h("div",{style:{position:"absolute",top:"30%",left:"50%",transform:"translate(-50%,-50%)",width:600,height:600,borderRadius:"50%",background:"radial-gradient(circle,rgba(99,102,241,.12) 0%,transparent 65%)",pointerEvents:"none"}}),
+      h("div",{style:{width:52,height:52,border:"3px solid rgba(99,102,241,.2)",borderTop:"3px solid #6366f1",borderRight:"3px solid #a855f7",borderRadius:"50%",animation:"spin .9s linear infinite"}}),
+      h("div",{style:{color:"rgba(255,255,255,.8)",fontWeight:700,fontSize:16,letterSpacing:2}},"SCUOLABOARD")
+    );
+    if(!user)return h("div",{style:{minHeight:"100vh",background:"linear-gradient(160deg,#12111a 0%,#161320 50%,#1a1528 100%)",display:"flex",alignItems:"center",justifyContent:"center",padding:20,position:"relative",overflow:"hidden"}},
     // Decorative blobs
     h("div",{style:{position:"absolute",top:"-20%",left:"-10%",width:500,height:500,borderRadius:"50%",background:"radial-gradient(circle,rgba(99,102,241,.18) 0%,transparent 70%)",pointerEvents:"none"}}),
     h("div",{style:{position:"absolute",bottom:"-15%",right:"-5%",width:400,height:400,borderRadius:"50%",background:"radial-gradient(circle,rgba(139,92,246,.14) 0%,transparent 70%)",pointerEvents:"none"}}),
