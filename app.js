@@ -1,4 +1,5 @@
 (function(){function App(){
+  console.log("✓ App component starting to load (FIXED VERSION)");
   var [user,setUser]=useState(null);
   // ANNI_DISPONIBILI definita in app-utils.js
   var annoDefault=(function(){var s=null;try{s=sessionStorage.getItem("annoScolasticoAttivo");}catch(e){}return s||"2025/2026";})();
@@ -217,7 +218,8 @@
 
   function myName(u){return u?(u.role==="prof"?"Prof":(u.nome+" "+u.cognome).trim()||u.email):"?";}
   function closeCard(){setShowCard(null);setQRisposte({});setQInviato(false);setQLoading(false);setEditingCm(null);setReplyTo(null);setCardQErr("");setCardQ("");}
-  var openCard=useCallback(function(c){openCard(c);},[]);
+  console.log("✓ Using FIXED openCard (v2)");
+  var openCard=useCallback(function(c){setShowCard(c);markSeen(c.id);},[]);
 
   // ── ESCAPE CHIUDE MODAL ─────────────────────────────────
   useEffect(function(){
