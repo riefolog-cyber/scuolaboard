@@ -1,6 +1,6 @@
 (function(){function App(){
   console.log("✓ App component starting to load (FIXED VERSION)");
-  var [user,setUser]=useState(null);
+    var [user,setUser]=useState(null);
   // ANNI_DISPONIBILI definita in app-utils.js
   var annoDefault=(function(){var s=null;try{s=sessionStorage.getItem("annoScolasticoAttivo");}catch(e){}return s||"2025/2026";})();
   var [annoScolastico,setAnnoScolastico]=useState(annoDefault);
@@ -1005,7 +1005,6 @@
   },[user]);
   useEffect(function(){if(viewStudenti&&isProf)loadStudenti();},[viewStudenti, isProf]);
 
-  try {
     if(authLoad)return h("div",{style:{minHeight:"100vh",background:"linear-gradient(160deg,#12111a 0%,#161320 50%,#1a1528 100%)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16,position:"relative",overflow:"hidden"}},h("div",{style:{position:"absolute",top:"30%",left:"50%",transform:"translate(-50%,-50%)",width:600,height:600,borderRadius:"50%",background:"radial-gradient(circle,rgba(99,102,241,.12) 0%,transparent 65%)",pointerEvents:"none"}}),
       h("div",{style:{width:52,height:52,border:"3px solid rgba(99,102,241,.2)",borderTop:"3px solid #6366f1",borderRight:"3px solid #a855f7",borderRadius:"50%",animation:"spin .9s linear infinite"}}),
       h("div",{style:{color:"rgba(255,255,255,.8)",fontWeight:700,fontSize:16,letterSpacing:2}},"SCUOLABOARD")
@@ -1459,7 +1458,11 @@
         ),
         h("div",{style:{display:"flex",gap:10}},
           h("button",{onClick:function(){setShowDuplica(null);},style:S.annullaBtn},"Annulla"),
-          h("button",{onClick:confermaDuplica,style:{flex:2,padding:11,background:duplicaClassi.length?"linear-gradient(135deg,#f59e0b,#f97316)":"rgba(255,255,255,.06)",color:duplicaClassi.length?"#fff":"rgba(255,255,255,.40)",border:"none",borderRadius:11,fontSize:14,fontWeight:800,cursor:duplicaClassi.length?"pointer":"not-allowed"}},duplicaClassi.length?"📋 Duplica in "+duplicaClassi.length+" class"+(duplicaClassi.length===1?"e":"i"):"Seleziona almeno 1 classe"),
+          h("button",{onClick:confermaDuplica,style:{flex:2,padding:11,background:duplicaClassi.length?"linear-gradient(135deg,#f59e0b,#f97316)":"rgba(255,255,255,.06)",color:duplicaClassi.length?"#fff":"rgba(255,255,255,.40)",border:"none",borderRadius:11,fontSize:14,fontWeight:800,cursor:duplicaClassi.length?"pointer":"not-allowed"}},duplicaClassi.length?"📋 Duplica in "+duplicaClassi.length+" class"+(duplicaClassi.length===1?"e":"i"):"Seleziona almeno 1 classe")
+        )
+      )
+    ),
+
     showCopiaAnno&&h("div",{style:{position:"fixed",inset:0,background:"rgba(0,0,0,.75)",backdropFilter:"blur(3px)",zIndex:800,display:"flex",alignItems:"center",justifyContent:"center",padding:20},onClick:function(){setShowCopiaAnno(null);setCopiaAnnoTarget("");}},
       h("div",{style:{background:"rgba(20,20,40,.97)",border:"1px solid rgba(99,102,241,.3)",borderRadius:20,padding:26,width:"100%",maxWidth:360,boxShadow:"0 24px 60px rgba(0,0,0,.5)"},onClick:function(e){e.stopPropagation();}},
         h("h3",{style:{margin:"0 0 4px",color:"#f1f5f9",fontSize:16,fontWeight:800,textAlign:"center"}},"🗓️ Copia in altro anno"),
@@ -1475,9 +1478,6 @@
         h("div",{style:{display:"flex",gap:8}},
           h("button",{onClick:function(){setShowCopiaAnno(null);setCopiaAnnoTarget("");},style:{flex:1,padding:11,background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.6)",border:"none",borderRadius:11,fontSize:14,fontWeight:700,cursor:"pointer"}},"Annulla"),
           h("button",{onClick:confermaCopiaAnno,style:{flex:2,padding:11,background:copiaAnnoTarget?"linear-gradient(135deg,#6366f1,#8b5cf6)":"rgba(255,255,255,.06)",color:copiaAnnoTarget?"#fff":"rgba(255,255,255,.4)",border:"none",borderRadius:11,fontSize:14,fontWeight:800,cursor:copiaAnnoTarget?"pointer":"not-allowed"}},copiaAnnoTarget?"🗓️ Copia in "+copiaAnnoTarget:"Seleziona un anno")
-        )
-      )
-    )
         )
       )
     ),
@@ -2540,7 +2540,6 @@
         )
       );
     })(),
-
   );
 }
 window.App = App;
