@@ -1,5 +1,5 @@
 (function(){function App(){
-  console.log("✓ App component starting to load (FIXED VERSION)");
+ 
     var [user,setUser]=useState(null);
   // ANNI_DISPONIBILI definita in app-utils.js
   var annoDefault=(function(){var s=null;try{s=sessionStorage.getItem("annoScolasticoAttivo");}catch(e){}return s||"2025/2026";})();
@@ -218,7 +218,7 @@
 
   function myName(u){return u?(u.role==="prof"?"Prof":(u.nome+" "+u.cognome).trim()||u.email):"?";}
   function closeCard(){setShowCard(null);setQRisposte({});setQInviato(false);setQLoading(false);setEditingCm(null);setReplyTo(null);setCardQErr("");setCardQ("");}
-  console.log("✓ Using FIXED openCard (v2)");
+ 
   var openCard=useCallback(function(c){setShowCard(c);markSeen(c.id);},[]);
 
   // ── ESCAPE CHIUDE MODAL ─────────────────────────────────
@@ -275,13 +275,15 @@
       {
         nextOrd.current=Math.max.apply(null,remote.map(function(c){return c.ordine||0;}).concat([0]))+1;
         // Auto-publish: se una card ha pubblicaIl nel passato ed è ancora nascosta, pubblicala
-        if(user.role==="prof"){
-          remote.forEach(function(card){
-            if(card.pubblicaIl&&card.visibile===false&&new Date(card.pubblicaIl).getTime()<=Date.now()){
-              fbSave(Object.assign({},card,{visibile:true}));
-            }
-          });
-        }
+/* ── DISABILITATO PER PREVENIRE INFINITE LOOP DI SCRITTURA ──
+if(user.role==="prof"){
+  remote.forEach(function(card){
+    if(card.pubblicaIl&&card.visibile===false&&new Date(card.pubblicaIl).getTime()<=Date.now()){
+      fbSave(Object.assign({},card,{visibile:true}));
+    }
+  });
+}
+──────────────────────────────────────────────────────────── */
         if(!isFirstLoad&&user.role==="studente"){
           var nuove=remote.filter(function(c){
             if(c.proposta||c.visibile===false)return false;

@@ -4,7 +4,7 @@ if(window._appVersionLoaded && window._appVersionLoaded !== "2026-05-26-FIX-v2")
   window.location.href = window.location.href.split('?')[0] + '?cache_bust=' + Date.now();
 }
 window._appVersionLoaded = "2026-05-26-FIX-v2";
-console.log("✓ App Bootstrap Loaded - Version: 2026-05-26-FIX-v2");
+ 
 
 // Prevent infinite error loops
 window._appRenderAttempts = (window._appRenderAttempts || 0) + 1;
