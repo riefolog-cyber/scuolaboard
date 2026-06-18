@@ -1,0 +1,264 @@
+:root{
+  --c-primary:#6366f1;
+  --c-primary-rgb:99,102,241;
+  --c-bg:#1a1a2e;
+  --c-surface:rgba(255,255,255,.055);
+  --c-border:rgba(255,255,255,.09);
+  --c-text:#f1f5f9;
+  --c-muted:rgba(255,255,255,.52);
+  --c-danger:#f87171;
+  --c-success:#4ade80;
+  --c-warn:#fbbf24;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter','Segoe UI',sans-serif;background:var(--c-bg)}
+textarea,input,select,button{font-family:inherit}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes fadein{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slidedown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes glow{0%,100%{box-shadow:0 0 8px rgba(var(--c-primary-rgb),.3)}50%{box-shadow:0 0 18px rgba(var(--c-primary-rgb),.6)}}
+.pulse{animation:pulse 2s infinite}
+.fadein{animation:fadein .35s cubic-bezier(.22,1,.36,1)}
+.slidedown{animation:slidedown .25s ease}
+.card-wrap{cursor:pointer}
+.card-wrap button:hover{filter:brightness(1.15);transform:scale(1.04);}
+.bulk-card{cursor:pointer !important;}
+.bulk-selected{outline:2px solid var(--c-primary) !important;outline-offset:2px;background:rgba(var(--c-primary-rgb),.12) !important;}
+@keyframes like-bounce{0%{transform:scale(1)}30%{transform:scale(1.45)}60%{transform:scale(.88)}100%{transform:scale(1)}}
+.like-btn-active{animation:like-bounce .35s cubic-bezier(.36,.07,.19,.97);}
+.ai-panel{overflow:hidden;transition:max-height .35s cubic-bezier(.4,0,.2,1),opacity .25s ease;max-height:0;opacity:0;}
+.ai-panel.open{max-height:600px;opacity:1;}
+.card-wrap button:active{transform:scale(.94);}
+.card-wrap a:hover{filter:brightness(1.2);}
+.card-wrap.dragging{opacity:.3;transform:scale(.96)}
+.card-wrap.drag-over{outline:2px dashed var(--c-primary);border-radius:16px;outline-offset:2px}
+/* Confetti celebration */
+@keyframes confetti-fall{0%{transform:translateY(-20px) rotate(0deg);opacity:1}100%{transform:translateY(200px) rotate(720deg);opacity:0}}
+.confetti-piece{position:absolute;width:8px;height:8px;border-radius:2px;animation:confetti-fall 1.2s ease-out forwards;}
+
+/* Skeleton loading */
+@keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
+.skeleton{background:linear-gradient(90deg,rgba(255,255,255,.04) 25%,rgba(255,255,255,.09) 50%,rgba(255,255,255,.04) 75%);background-size:800px 100%;animation:shimmer 1.6s infinite linear;border-radius:6px;}
+
+/* ── TOOLTIP ── */
+[data-tip]{position:relative;}
+[data-tip]::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:rgba(15,10,30,.95);color:#f1f5f9;border:1px solid rgba(255,255,255,.12);border-radius:7px;padding:4px 9px;font-size:11px;font-weight:600;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .15s;z-index:999;letter-spacing:.2px;}
+[data-tip]:hover::after{opacity:1;}
+[data-tip-down]{position:relative;}
+[data-tip-down]::after{content:attr(data-tip-down);position:absolute;top:calc(100% + 6px);left:50%;transform:translateX(-50%);background:rgba(15,10,30,.95);color:#f1f5f9;border:1px solid rgba(255,255,255,.12);border-radius:7px;padding:4px 9px;font-size:11px;font-weight:600;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .15s;z-index:999;letter-spacing:.2px;}
+[data-tip-down]:hover::after{opacity:1;}
+@media(hover:none){[data-tip]::after{display:none;}[data-tip-down]::after{display:none;}}
+
+/* ── MOBILE RESPONSIVENESS ── */
+@media (max-width: 480px) {
+  /* Header più compatto */
+  .scuola-header { padding: 5px 8px !important; gap: 4px !important; flex-wrap: wrap; }
+  /* Card grid: colonna singola sotto 480px */
+  .card-grid { columns: 1 !important; }
+  /* Modal full-width su mobile */
+  .modal-inner { border-radius: 16px 16px 0 0 !important; padding: 14px !important; margin: 0 !important; width: 100% !important; max-width: 100% !important; }
+  /* Testo minimo leggibile */
+  body { font-size: 14px; }
+  /* Touch targets minimi */
+  button { min-height: 38px; }
+  /* Padding ridotto nelle card */
+  .card-wrap { border-radius: 14px !important; }
+}
+@media (max-width: 360px) {
+  .card-grid { columns: 1 !important; }
+  body { font-size: 13px; }
+}
+@media (hover: none) and (pointer: coarse) {
+  /* Touch devices: rimuove hover effects che non funzionano */
+  button { min-height: 40px; }
+  .card-wrap:hover { transform: none; box-shadow: none; }
+  .card-wrap button:hover { filter: none; transform: none; }
+  /* Aumenta spaziatura tra bottoni azione nelle card */
+  .card-wrap > div:last-child { gap: 8px !important; padding: 8px 12px 12px !important; }
+}
+
+@keyframes slideup{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+.modal-inner{animation:slideup .28s cubic-bezier(.22,1,.36,1);}
+
+.toast-container{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none;}
+.toast{display:flex;align-items:center;gap:8px;padding:10px 16px;border-radius:12px;font-size:13px;font-weight:700;color:#fff;animation:fadein .3s cubic-bezier(.22,1,.36,1);box-shadow:0 4px 24px rgba(0,0,0,.4);backdrop-filter:blur(12px);}
+.toast.ok{background:rgba(34,197,94,.88);border:1px solid rgba(34,197,94,.4);}
+.toast.warn{background:rgba(245,158,11,.88);border:1px solid rgba(245,158,11,.4);}
+.toast.err{background:rgba(239,68,68,.88);border:1px solid rgba(239,68,68,.4);}
+
+/* ── ACCESSIBILITÀ: riduce animazioni su richiesta sistema ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── UTILITY CLASSES (da stili inline ripetuti) ── */
+.u-spin{display:inline-block;animation:spin 1s linear infinite}
+.u-flex6{display:flex;gap:6px}
+.u-flex8{display:flex;gap:8px}
+.u-flex10{display:flex;gap:10px}
+.u-mb8{margin-bottom:8px}
+.u-mb10{margin-bottom:10px}
+.u-muted{font-size:11px;color:rgba(255,255,255,.52)}
+.u-muted2{font-size:11px;color:rgba(255,255,255,.45)}
+.u-muted3{font-size:11px;color:rgba(255,255,255,.58)}
+
+/* ── TRANSIZIONI UNIFORMI ── */
+:root{
+  --t-fast:.15s ease;
+  --t-base:.25s cubic-bezier(.22,1,.36,1);
+  --t-slow:.4s ease;
+}
+
+/* ── FOCUS VISIBLE (accessibilità tastiera) ── */
+:focus-visible{
+  outline:2px solid var(--c-primary);
+  outline-offset:3px;
+  border-radius:6px;
+}
+button:focus-visible{
+  outline:2px solid var(--c-primary);
+  outline-offset:3px;
+}
+
+/* ── SKELETON CARD-SHAPED ── */
+.sk-card{
+  background:rgba(255,255,255,.035);
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.06);
+  border-top:3px solid rgba(99,102,241,.25);
+  padding:16px;
+  margin-bottom:16px;
+  break-inside:avoid;
+}
+.sk-badge{width:56px;height:20px;border-radius:6px}
+.sk-title{height:18px;width:75%;margin:10px 0 8px}
+.sk-body{height:13px;width:100%;margin-bottom:6px}
+.sk-body-short{height:13px;width:55%;margin-bottom:14px}
+.sk-footer{height:14px;width:40%;margin-top:4px}
+
+/* ── EMPTY STATE ── */
+.empty-state{
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:64px 24px;gap:16px;
+  opacity:.85;animation:fadein .4s ease;
+}
+.empty-state-icon{font-size:56px;line-height:1}
+.empty-state-title{font-size:17px;font-weight:700;color:#f1f5f9;margin:0}
+.empty-state-sub{font-size:13px;color:rgba(255,255,255,.45);margin:0;text-align:center;max-width:300px}
+.empty-state-btn{
+  margin-top:8px;padding:10px 24px;
+  background:linear-gradient(135deg,#6366f1,#8b5cf6);
+  border:none;border-radius:10px;color:#fff;
+  font-size:14px;font-weight:700;cursor:pointer;
+  transition:opacity var(--t-fast);
+}
+.empty-state-btn:hover{opacity:.85}
+
+
+/* ═══════════════════════════════════════════════════════
+   UPGRADE GRAFICO 90% — hover, scrollbar, bottoni, typo
+   ═══════════════════════════════════════════════════════ */
+
+/* ── CARD HOVER: lift + glow indaco ── */
+.card-wrap{
+  transition: transform .22s cubic-bezier(.22,1,.36,1),
+              box-shadow .22s cubic-bezier(.22,1,.36,1) !important;
+}
+.card-wrap:hover{
+  transform:translateY(-4px) scale(1.005);
+  box-shadow:0 12px 40px rgba(99,102,241,.22), 0 4px 16px rgba(0,0,0,.25) !important;
+  z-index:2;
+}
+.card-wrap:active{
+  transform:translateY(-1px) scale(1.002);
+}
+
+/* ── SCROLLBAR CUSTOM dark-indaco ── */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:rgba(255,255,255,.02);border-radius:3px}
+::-webkit-scrollbar-thumb{background:rgba(99,102,241,.35);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:rgba(99,102,241,.6)}
+*{scrollbar-width:thin;scrollbar-color:rgba(99,102,241,.35) transparent}
+
+/* ── SISTEMA BOTTONI: classi utility ── */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  border:none;border-radius:10px;font-weight:700;cursor:pointer;
+  font-family:inherit;transition:opacity .15s ease, transform .12s ease;
+  outline:none;
+}
+.btn:hover{opacity:.82}
+.btn:active{transform:scale(.96)}
+.btn:focus-visible{outline:2px solid #6366f1;outline-offset:3px}
+.btn-primary{
+  background:linear-gradient(135deg,#6366f1,#8b5cf6);
+  color:#fff;padding:9px 20px;font-size:14px;
+  box-shadow:0 4px 16px rgba(99,102,241,.35);
+}
+.btn-primary:hover{box-shadow:0 6px 24px rgba(99,102,241,.5)}
+.btn-sm{padding:6px 14px;font-size:12px;border-radius:8px}
+.btn-ghost{
+  background:rgba(255,255,255,.07);color:rgba(255,255,255,.82);
+  border:1px solid rgba(255,255,255,.12);padding:7px 14px;font-size:12px;
+}
+.btn-ghost:hover{background:rgba(255,255,255,.12)}
+.btn-danger{
+  background:rgba(248,113,113,.12);color:#f87171;
+  border:1px solid rgba(248,113,113,.28);padding:7px 14px;font-size:12px;
+}
+.btn-danger:hover{background:rgba(248,113,113,.2)}
+.btn-success{
+  background:rgba(74,222,128,.12);color:#4ade80;
+  border:1px solid rgba(74,222,128,.28);padding:7px 14px;font-size:12px;
+}
+.btn-success:hover{background:rgba(74,222,128,.2)}
+.btn-warn{
+  background:rgba(251,191,36,.12);color:#fbbf24;
+  border:1px solid rgba(251,191,36,.28);padding:7px 14px;font-size:12px;
+}
+
+/* ── TIPOGRAFIA: line-height coerente ── */
+body{line-height:1.5}
+h1,h2,h3{line-height:1.2}
+p{line-height:1.6}
+.modal-inner{scrollbar-width:thin;scrollbar-color:rgba(99,102,241,.35) transparent}
+
+/* ── HEADER: hover su pulsanti navigazione ── */
+.scuola-header button:hover{
+  background:rgba(255,255,255,.1) !important;
+}
+
+/* ── INPUT FOCUS: bordo indaco ── */
+input:focus,textarea:focus,select:focus{
+  outline:none;
+  border-color:rgba(99,102,241,.6) !important;
+  box-shadow:0 0 0 3px rgba(99,102,241,.15) !important;
+}
+
+/* ── BADGE tipo: microanimazione on hover ── */
+.card-wrap:hover .badge-tipo{
+  filter:brightness(1.15);
+}
+
+/* ── LINK stile ── */
+a{color:#a5b4fc;text-decoration:none}
+a:hover{text-decoration:underline;color:#c4b5fd}
+
+/* ── SELEZIONE testo ── */
+::selection{background:rgba(99,102,241,.35);color:#f1f5f9}
+
+
+/* ── BOTTONI GLOBALI: hover + active su tutti ── */
+button{
+  transition: opacity .15s ease, transform .12s ease, box-shadow .15s ease;
+}
+button:hover:not(:disabled){opacity:.88}
+button:active:not(:disabled){transform:scale(.97)}
+button:disabled{opacity:.4;cursor:not-allowed}
+

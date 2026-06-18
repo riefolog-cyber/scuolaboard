@@ -1,0 +1,10 @@
+(function(){
+  firebase.initializeApp({
+    apiKey:"AIzaSyDIC39upI9VnY10MdP7__7l3omyGqspHNA",
+    authDomain:"scuolaboard-874d4.firebaseapp.com",
+    projectId:"scuolaboard-874d4",
+    storageBucket:"scuolaboard-874d4.firebasestorage.app",
+    messagingSenderId:"249372381209",
+    appId:"1:249372381209:web:737697d4d10b3ae06eda88"
+  });
+})();
