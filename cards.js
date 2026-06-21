@@ -16,6 +16,7 @@
     var [filterClasse, setFilterClasse] = useState("tutte");
     var [filtroBarOpen, setFiltroBarOpen] = useState(true);
     var [classiCustom, setClassiCustom] = useState([]);
+    var [classiNascoste, setClassiNascoste] = useState([]);
     var [preferiti, setPreferiti] = useState([]);
     var [newCardsBanner, setNewCardsBanner] = useState([]);
     var [showBanner, setShowBanner] = useState(false);
@@ -76,7 +77,7 @@
         setCards(filtered);
       });
 
-      var u3 = fbClassiListen(function(lista){ setClassiCustom(lista); });
+      var u3 = fbClassiListen(function(lista, nascoste){ setClassiCustom(lista); setClassiNascoste(nascoste||[]); }, annoScolastico);
       var u4 = fbFavListen(user.uid, function(ids){ setPreferiti(ids); });
 
       return function() {
@@ -166,7 +167,9 @@
       addingClasse: addingClasse,
       setAddingClasse: setAddingClasse,
       newClasseInput: newClasseInput,
-      setNewClasseInput: setNewClasseInput
+      setNewClasseInput: setNewClasseInput,
+      classiNascoste: classiNascoste,
+      setClassiNascoste: setClassiNascoste
     };
   };
 })();

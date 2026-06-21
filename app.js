@@ -67,8 +67,11 @@
     var [ammonizioniMap, setAmmonizioniMap] = useState({});
 
     var CLASSI_LIST = useMemo(function(){
-      return SB.CLASSI_DEFAULT.concat(cardsHook.classiCustom.filter(function(c){ return SB.CLASSI_DEFAULT.indexOf(c) < 0; }));
-    }, [cardsHook.classiCustom]);
+      var nascoste = cardsHook.classiNascoste || [];
+      return SB.CLASSI_DEFAULT
+        .filter(function(c){ return nascoste.indexOf(c) < 0; })
+        .concat(cardsHook.classiCustom.filter(function(c){ return SB.CLASSI_DEFAULT.indexOf(c) < 0; }));
+    }, [cardsHook.classiCustom, cardsHook.classiNascoste]);
 
     function playAlarm(){
       try {
@@ -184,14 +187,20 @@
           get myName(){ return myName; },
           get CLASSI_LIST(){ return CLASSI_LIST; },
           get classiCustom(){ return cardsHook.classiCustom; },
+          get classiNascoste(){ return cardsHook.classiNascoste; },
           get newClasseInput(){ return cardsHook.newClasseInput; },
           get preferiti(){ return cardsHook.preferiti; },
           get showToast(){ return showToast; },
-          fbClassiSave: fbClassiSave,
+          get rinominaClasse(){ return rinominaClasse; },
+          get rinominaInput(){ return rinominaInput; },
+          get rinominaConferma(){ return rinominaConferma; },
+          fbClassiSave: function(arr){ return fbClassiSave(arr, annoScolastico); },
+          fbNascosteSave: function(arr){ return fbNascosteSave(arr, annoScolastico); },
           fbSave: fbSave,
           fbFavSave: fbFavSave,
           db: db,
           setClassiCustom: cardsHook.setClassiCustom,
+          setClassiNascoste: cardsHook.setClassiNascoste,
           setAddingClasse: cardsHook.setAddingClasse,
           setNewClasseInput: cardsHook.setNewClasseInput,
           setRinominaClasse: setRinominaClasse,
@@ -456,19 +465,6 @@
       fbSave(Object.assign({}, card, { scadenza: isoDeadline || null }));
     }
 
-    function resetAll(){ cardsHook.cards.forEach(function(c){ fbDel(c.id); }); ai.setAiResult(null); modals.setShowReset(false); }
-    function resetComments(){ cardsHook.cards.forEach(function(c){ if(c.commenti && c.commenti.length > 0) fbSave(Object.assign({}, c, { commenti: [] })); }); modals.setShowResetOpt(false); }
-    function resetVotes(){ cardsHook.cards.forEach(function(c){ if(c.opzioni) fbSave(Object.assign({}, c, { opzioni: c.opzioni.map(function(o){ return Object.assign({}, o, { voti: [] }); }) })); }); modals.setShowResetOpt(false); }
-    function resetSondaggio(cardId){
-      var card = cardsHook.cards.find(function(c){ return String(c.id) === String(cardId); }); if(!card) return;
-      var u = Object.assign({}, card, { commenti: [] }); if(u.opzioni) u.opzioni = u.opzioni.map(function(o){ return Object.assign({}, o, { voti: [] }); });
-      fbSave(u);
-      if(card.tipo === 'quiz'){
-        db.collection('quiz_risposte').where('cardId', '==', String(cardId)).get().then(function(snap){
-          var batch = db.batch(); snap.forEach(function(doc){ batch.delete(doc.ref); }); return batch.commit();
-        });
-      }
-    }
 
     // Gestione classi custom studenti
     function saveClasse(){
@@ -575,12 +571,6 @@
       setBulkSelected([]); setBulkMode(false);
     }
 
-    function bulkDelete(){
-      bulkSelected.forEach(function(id){ fbDel(id); });
-      showToast(bulkSelected.length + " card eliminate", "warn");
-      setBulkSelected([]); setBulkMode(false);
-    }
-
     function showToast(msg, type){
       var id = Date.now();
       setToasts(function(p){ return p.concat([{ id: id, msg: msg, type: type || "ok" }]); });
@@ -632,7 +622,6 @@
       aqg: ai.aqg,
       authLoad: auth.authLoad,
       buildQuizPrompt: function(testo, num, tipo, titolo){ return ""; },
-      bulkDelete: bulkDelete,
       bulkHide: bulkHide,
       bulkMode: bulkMode,
       bulkSelected: bulkSelected,
@@ -648,6 +637,7 @@
       cards: cardsHook.cards,
       classeInput: classeInput,
       classiCustom: cardsHook.classiCustom,
+      classiNascoste: cardsHook.classiNascoste,
       closeCard: closeCard,
       confermaCopiaAnno: confermaCopiaAnno,
       confermaDuplica: confermaDuplica,
@@ -713,10 +703,6 @@
       replyTesto: replyTesto,
       replyTo: replyTo,
       requestPushPermission: auth.requestPushPermission,
-      resetAll: resetAll,
-      resetComments: resetComments,
-      resetSondaggio: resetSondaggio,
-      resetVotes: resetVotes,
       riassuntiCommentiRun: ai.riassuntiCommentiRun,
       rifiutaConMot: rifiutaConMot,
       rifiutaInput: rifiutaInput,
@@ -763,6 +749,7 @@
       setCards: cardsHook.setCards,
       setClasseInput: setClasseInput,
       setClassiCustom: cardsHook.setClassiCustom,
+      setClassiNascoste: cardsHook.setClassiNascoste,
       setConfirmDel: modals.setConfirmDel,
       setConfirmRimuovi: cardsHook.setConfirmRimuovi,
       setCopiaAnnoTarget: setCopiaAnnoTarget,
@@ -808,8 +795,6 @@
       setShowPrivacy: modals.setShowPrivacy,
       setShowProfilo: modals.setShowProfilo,
       setShowQR: modals.setShowQR,
-      setShowReset: modals.setShowReset,
-      setShowResetOpt: modals.setShowResetOpt,
       setShowRifiutaModal: modals.setShowRifiutaModal,
       setShowSommario: ai.setShowSommario,
       setShowTimerModal: modals.setShowTimerModal,
@@ -838,8 +823,6 @@
       showPrivacy: modals.showPrivacy,
       showProfilo: modals.showProfilo,
       showQR: modals.showQR,
-      showReset: modals.showReset,
-      showResetOpt: modals.showResetOpt,
       showRifiutaModal: modals.showRifiutaModal,
       showSommario: ai.showSommario,
       showTimerModal: modals.showTimerModal,

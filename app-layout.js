@@ -69,7 +69,6 @@ var [wcTarget, setWcTarget] = React.useState('tutte');
         )
       ),
       h("div",{style:{flex:1}}),
-      isProf&&h("button",{"aria-label":"Opzioni reset",onClick:function(){setShowResetOpt(true);},style:{background:"rgba(255,255,255,.06)",border:"1px solid rgba(239,68,68,.3)",borderRadius:8,padding:"5px 9px",cursor:"pointer",fontSize:14,color:"#f87171"}},"🗑️"),
       isProf&&!simulaSt&&h("button",{"aria-label":"Ammonizioni",onClick:function(){setShowAmm({autore:null,cardId:null,cmId:null});},style:{background:"rgba(245,158,11,.12)",border:"1px solid rgba(245,158,11,.3)",borderRadius:8,padding:"5px 9px",cursor:"pointer",fontSize:14,color:"#fbbf24"}},"⚠️"),
       h("button",{"aria-label":"QR Code bacheca",onClick:function(){setShowQR(true);},style:{background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.1)",borderRadius:8,padding:"5px 9px",cursor:"pointer",fontSize:14,color:"rgba(255,255,255,.7)"}},"◆"),
       isProf&&h("button",{onClick:function(){setPreviewSt(function(v){return !v;});},style:{background:simulaSt?"rgba(249,115,22,.3)":"rgba(255,255,255,.07)",border:"1px solid "+(simulaSt?"rgba(249,115,22,.6)":"rgba(255,255,255,.15)"),borderRadius:8,padding:"5px 10px",cursor:"pointer",fontSize:12,fontWeight:700,color:simulaSt?"#fb923c":"rgba(255,255,255,.6)"}},simulaSt?"🔙 Prof":"👁️ Studente"),
@@ -78,7 +77,6 @@ var [wcTarget, setWcTarget] = React.useState('tutte');
           return h("button",{key:t.k,onClick:function(){setView(t.k);setViewStudenti(t.k==="studenti");},style:{padding:"4px 11px",borderRadius:7,border:"none",background:view===t.k?"rgba(99,102,241,.4)":"transparent",color:view===t.k?"#fff":"rgba(255,255,255,.58)",fontWeight:700,cursor:"pointer",fontSize:13}},t.i);
         })
       ),
-      isProf&&!simulaSt&&h("button",{"aria-label":"Selezione multipla",onClick:function(){setBulkMode(function(v){if(v)setBulkSelected([]);return !v;});},style:{background:bulkMode?"rgba(99,102,241,.4)":"rgba(255,255,255,.07)",border:"1px solid "+(bulkMode?"rgba(99,102,241,.6)":"rgba(255,255,255,.15)"),borderRadius:8,padding:"5px 9px",cursor:"pointer",fontSize:13,color:bulkMode?"#a5b4fc":"rgba(255,255,255,.52)",fontWeight:700}},"☑"),
       !isProf&&!simulaSt&&h("button",{onClick:function(){setShowProfilo(true);},style:{background:"rgba(99,102,241,.15)",border:"1px solid rgba(99,102,241,.3)",borderRadius:8,padding:"4px 9px",cursor:"pointer",fontSize:12,color:"#a5b4fc",fontWeight:700}},"📊 Il mio profilo"),
 
       h("button",{onClick:logout,style:{background:"none",border:"1px solid rgba(255,255,255,.1)",borderRadius:7,padding:"4px 9px",cursor:"pointer",fontSize:11,color:"rgba(255,255,255,.45)"}},"Esci")
@@ -106,20 +104,20 @@ var [wcTarget, setWcTarget] = React.useState('tutte');
 
         h("span",{style:{fontSize:11,color:"rgba(255,255,255,.52)",fontWeight:700,letterSpacing:1}},"CLASSE:"),
         
-        CLASSI_DEFAULT.map(function(cl){return h("button",{key:cl,onClick:function(){setFilterClasse(cl);},style:S.filterBtn(filterClasse===cl)},cl);}),
-        h("button",{onClick:function(){setFilterClasse("_solo");},style:S.filterBtn(filterClasse==="_solo")},"Solo prof"),
-        CLASSI_LIST.filter(function(cl){return CLASSI_DEFAULT.indexOf(cl)<0;}).map(function(cl){
+        CLASSI_LIST.map(function(cl){
           var sel=filterClasse===cl;
-          var cc=classeColor(cl,classiCustom);
-          return h("span",{key:"custom-"+cl,style:{display:"flex",alignItems:"center",gap:0,borderRadius:20,overflow:"hidden",border:"1px solid "+(sel?cc:"rgba(255,255,255,.15)"),background:sel?cc+"33":"rgba(255,255,255,.04)"}},
-            h("button",{onClick:function(){setFilterClasse(cl);},style:{padding:"3px 2px 3px 9px",background:"none",border:"none",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5},onDoubleClick:function(e){e.stopPropagation();apriRinomina(cl);}},
-              h("span",{style:{width:8,height:8,borderRadius:"50%",background:cc,display:"inline-block",flexShrink:0}}),
-              h("span",{style:{color:sel?"#fff":"rgba(255,255,255,.7)"}},cl)
-            ),
-            h("button",{onClick:function(e){e.stopPropagation();apriRinomina(cl);},style:{padding:"3px 5px",background:"none",border:"none",color:"rgba(255,255,255,.45)",fontSize:11,cursor:"pointer",lineHeight:1}},"✏️"),
-            h("button",{onClick:function(e){e.stopPropagation();removeClasseCustom(cl);if(filterClasse===cl)setFilterClasse("tutte");},style:{padding:"3px 7px 3px 2px",background:"none",border:"none",color:"rgba(255,255,255,.45)",fontSize:11,cursor:"pointer",lineHeight:1}},"×")
+          var isCustom=CLASSI_DEFAULT.indexOf(cl)<0;
+          var cc=isCustom?classeColor(cl,classiCustom):"#fb923c";
+          return h("span",{key:cl,style:{display:"flex",alignItems:"center",gap:0,borderRadius:20,border:"1px solid "+(sel?cc:"rgba(255,255,255,.15)"),background:sel?cc+"33":"rgba(255,255,255,.04)"}},
+             h("button",{onClick:function(){setFilterClasse(cl);},style:{padding:"3px 8px",background:"none",border:"none",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:5}},
+               isCustom&&h("span",{style:{width:8,height:8,borderRadius:"50%",background:cc,display:"inline-block",flexShrink:0}}),
+               h("span",{style:{color:sel?"#fff":"rgba(255,255,255,.7)"}},cl)
+             ),
+             h("button",{onClick:function(e){e.stopPropagation();apriRinomina(cl);},style:{padding:"3px 6px",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:12,cursor:"pointer",lineHeight:1}},"✏️"),
+             h("button",{onClick:function(e){e.stopPropagation();if(confirm("Eliminare la classe '"+cl+"'?\n\n"+(isCustom?"La classe verrà rimossa dall'elenco.":"La classe predefinita verrà nascosta. Puoi aggiungerla di nuovo come classe personalizzata."))) { removeClasseCustom(cl); if(filterClasse===cl)setFilterClasse("tutte"); }},style:{padding:"3px 8px",background:"none",border:"none",color:"rgba(255,255,255,.8)",fontSize:12,cursor:"pointer",lineHeight:1}},"×")
           );
         }),
+        h("button",{onClick:function(){setFilterClasse("_solo");},style:S.filterBtn(filterClasse==="_solo")},"Solo prof"),
         addingClasse
           ?h("div",{style:{display:"flex",gap:4,alignItems:"center"}},
               h("input",{value:newClasseInput,onInput:function(e){setNewClasseInput(e.target.value.toUpperCase());},onKeyDown:function(e){if(e.key==="Enter")addClasseCustom();if(e.key==="Escape"){setAddingClasse(false);setNewClasseInput("");}},placeholder:"es. 1AX",autoFocus:true,maxLength:20,style:{width:120,padding:"3px 8px",border:"1px solid #6366f1",borderRadius:8,fontSize:12,background:"rgba(255,255,255,.1)",color:"#f1f5f9"}}),
@@ -156,15 +154,6 @@ var [wcTarget, setWcTarget] = React.useState('tutte');
           h("div",{style:{fontSize:11,color:"rgba(255,255,255,.65)"}},newCardsBanner.map(function(c){return c.titolo;}).join(" · "))
         ),
         h("button",{onClick:function(){newCardsBanner.forEach(function(c){markSeen(c.id);});setShowBanner(false);setNewCardsBanner([]);},style:{background:"rgba(255,255,255,.1)",border:"none",borderRadius:8,padding:"4px 10px",cursor:"pointer",fontSize:11,color:"rgba(255,255,255,.6)",fontWeight:700}},"✓ Visto")
-      ),
-      bulkMode&&isProf&&!simulaSt&&h("div",{style:{padding:"8px 14px",background:"rgba(99,102,241,.08)",borderBottom:"1px solid rgba(99,102,241,.2)",display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}},
-        h("span",{style:{fontSize:12,fontWeight:700,color:"#a5b4fc"}},bulkSelected.length>0?bulkSelected.length+" selezionate":"Tocca le card per selezionarle"),
-        bulkSelected.length>0&&h(Fragment,null,
-          h("button",{onClick:function(){bulkHide(false);},style:{background:"rgba(239,68,68,.15)",border:"1px solid rgba(239,68,68,.3)",borderRadius:8,padding:"4px 10px",cursor:"pointer",fontSize:11,fontWeight:700,color:"#f87171"}},"👁 Nascondi"),
-          h("button",{onClick:function(){bulkHide(true);},style:{background:"rgba(34,197,94,.12)",border:"1px solid rgba(34,197,94,.3)",borderRadius:8,padding:"4px 10px",cursor:"pointer",fontSize:11,fontWeight:700,color:"#4ade80"}},"👁 Mostra"),
-          h("button",{onClick:bulkDelete,style:{background:"rgba(239,68,68,.2)",border:"1px solid rgba(239,68,68,.4)",borderRadius:8,padding:"4px 10px",cursor:"pointer",fontSize:11,fontWeight:700,color:"#f87171"}},"🗑️ Elimina "+bulkSelected.length)
-        ),
-        h("button",{onClick:function(){setBulkMode(false);setBulkSelected([]);},style:{marginLeft:"auto",background:"none",border:"none",color:"rgba(255,255,255,.45)",cursor:"pointer",fontSize:12,fontWeight:700}},"✕")
       ),
       h("div",{style:{flex:1,padding:"10px 14px 18px"}},
         cards.length===0
@@ -606,49 +595,6 @@ var [wcTarget, setWcTarget] = React.useState('tutte');
       )
     ),
 
-    // RESET OPZIONI
-    showResetOpt&&h("div",{style:{position:"fixed",inset:0,background:"rgba(0,0,0,.65)",backdropFilter:"blur(3px)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20},onClick:function(){setShowResetOpt(false);}},
-      h("div",{style:{background:"rgba(15,23,42,.92)",backdropFilter:"blur(24px)",WebkitBackdropFilter:"blur(24px)",border:"1px solid rgba(255,255,255,.11)",borderRadius:20,boxShadow:"0 24px 60px rgba(0,0,0,.5)",padding:28,maxWidth:360,width:"100%"},onClick:function(e){e.stopPropagation();}},
-        h("div",{style:{fontSize:44,marginBottom:10,textAlign:"center"}},"🗑️"),
-        h("h3",{style:{margin:"0 0 8px",color:"#f1f5f9",fontSize:18,fontWeight:800,textAlign:"center"}},"Opzioni Reset"),
-        h("div",{style:{display:"flex",flexDirection:"column",gap:10,marginBottom:16}},
-          h("button",{onClick:resetComments,style:{padding:14,background:"rgba(239,68,68,.15)",color:"#f87171",border:"1px solid rgba(239,68,68,.3)",borderRadius:11,fontSize:14,fontWeight:700,cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:10}},h("span",{style:{fontSize:20}},"💬"),h("div",{style:{flex:1}},h("div",{style:{fontWeight:800}},"Reset commenti"),h("div",{style:{fontSize:11,color:"rgba(255,255,255,.58)",fontWeight:400}},"Rimuove tutti i commenti"))),
-          h("button",{onClick:resetVotes,style:{padding:14,background:"rgba(245,158,11,.15)",color:"#fbbf24",border:"1px solid rgba(245,158,11,.3)",borderRadius:11,fontSize:14,fontWeight:700,cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:10}},h("span",{style:{fontSize:20}},"🗳️"),h("div",{style:{flex:1}},h("div",{style:{fontWeight:800}},"Reset voti"),h("div",{style:{fontSize:11,color:"rgba(255,255,255,.58)",fontWeight:400}},"Azzera i voti dei sondaggi"))),
-          h("button",{onClick:function(){setShowResetOpt(false);setShowReset(true);},style:{padding:14,background:"rgba(239,68,68,.2)",color:"#f87171",border:"1px solid rgba(239,68,68,.4)",borderRadius:11,fontSize:14,fontWeight:700,cursor:"pointer",textAlign:"left",display:"flex",alignItems:"center",gap:10}},h("span",{style:{fontSize:20}},"🔥"),h("div",{style:{flex:1}},h("div",{style:{fontWeight:800}},"Reset completo"),h("div",{style:{fontSize:11,color:"rgba(255,255,255,.58)",fontWeight:400}},"Elimina tutte le card")))
-        ),
-        h("button",{onClick:function(){setShowResetOpt(false);},style:{width:"100%",padding:11,background:"rgba(255,255,255,.08)",color:"rgba(255,255,255,.6)",border:"none",borderRadius:11,fontSize:14,fontWeight:700,cursor:"pointer"}},"Annulla")
-      )
-    ),
-
-    showReset&&h("div",{style:{position:"fixed",inset:0,background:"rgba(0,0,0,.65)",backdropFilter:"blur(3px)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20},onClick:function(){setShowReset(false);}},
-      h("div",{style:{background:"rgba(15,23,42,.92)",backdropFilter:"blur(24px)",WebkitBackdropFilter:"blur(24px)",border:"1px solid rgba(255,255,255,.11)",borderRadius:20,boxShadow:"0 24px 60px rgba(0,0,0,.5)",padding:28,maxWidth:320,width:"100%",textAlign:"center"},onClick:function(e){e.stopPropagation();}},
-        h("div",{style:{fontSize:44,marginBottom:10}},"🗑️"),
-        h("h3",{style:{margin:"0 0 8px",color:"#f1f5f9",fontSize:18,fontWeight:800}},"Reset bacheca"),
-        h("p",{style:{color:"rgba(255,255,255,.58)",fontSize:13,marginBottom:24}},"Elimina tutte le card. Azione irreversibile."),
-        h("div",{style:{display:"flex",gap:10}},
-          h("button",{onClick:function(){setShowReset(false);},style:S.annullaBtn},"Annulla"),
-          h("button",{onClick:resetAll,style:{flex:1,padding:11,background:"#ef4444",color:"#fff",border:"none",borderRadius:11,fontSize:14,fontWeight:800,cursor:"pointer"}},"Sì, resetta")
-        )
-      )
-    ),
-
-    confirmDel&&h("div",{style:{position:"fixed",inset:0,background:"rgba(0,0,0,.7)",zIndex:350,display:"flex",alignItems:"center",justifyContent:"center",padding:20},onClick:function(){setConfirmDel(null);}},
-      h("div",{style:{background:"rgba(15,23,42,.92)",backdropFilter:"blur(24px)",WebkitBackdropFilter:"blur(24px)",border:"1px solid rgba(255,255,255,.11)",borderRadius:20,boxShadow:"0 24px 60px rgba(0,0,0,.5)",padding:28,maxWidth:340,width:"100%",textAlign:"center"},onClick:function(e){e.stopPropagation();}},
-        h("div",{style:{fontSize:48,marginBottom:10}},confirmDel.type==="resetCard"?"🔄":"⚠️"),
-        h("h3",{style:{margin:"0 0 8px",color:"#f1f5f9",fontSize:18,fontWeight:800}},confirmDel.type==="resetCard"?"Reset card":"Conferma eliminazione"),
-        h("p",{style:{color:"rgba(255,255,255,.58)",fontSize:13,marginBottom:24,lineHeight:1.5}},confirmDel.type==="card"?"Eliminare questa card?":confirmDel.type==="comment"?"Eliminare questo commento?":confirmDel.type==="resetCard"?"Azzerare commenti e voti di questa card?":"Eliminare questa risposta?"),
-        h("div",{style:{display:"flex",gap:10}},
-          h("button",{onClick:function(){setConfirmDel(null);},style:S.annullaBtn},"Annulla"),
-          h("button",{onClick:function(){
-            if(confirmDel.type==="card"){delCardWithUndo(confirmDel.id);setQRisposte({});setQInviato(false);setQLoading(false);}
-            else if(confirmDel.type==="comment")executeDelCom(confirmDel.cardId,confirmDel.id);
-            else if(confirmDel.type==="reply")executeDelReply(confirmDel.cmId,confirmDel.id,confirmDel.cardId);
-            else if(confirmDel.type==="resetCard")resetSondaggio(confirmDel.cardId);
-            setConfirmDel(null);
-          },style:{flex:1,padding:11,background:confirmDel.type==="resetCard"?"#f97316":"#ef4444",color:"#fff",border:"none",borderRadius:11,fontSize:14,fontWeight:800,cursor:"pointer"}},confirmDel.type==="resetCard"?"🔄 Resetta":"Elimina")
-        )
-      )
-    ),
 
 
 
@@ -1027,8 +973,7 @@ var [wcTarget, setWcTarget] = React.useState('tutte');
             h("button",{onClick:function(){apriDuplica(showCard,{stopPropagation:function(){}});setShowCard(null);setQRisposte({});setQInviato(false);setQLoading(false);},style:{background:"rgba(245,158,11,.2)",color:"#fbbf24",border:"1px solid rgba(245,158,11,.3)",borderRadius:7,padding:"3px 10px",cursor:"pointer",fontSize:11,fontWeight:700}},"📋 Duplica"),
             h("button",{type:"button",onClick:function(){setShowCopiaAnno(showCard);setCopiaAnnoTarget("");setShowCard(null);},style:{background:"rgba(99,102,241,.2)",color:"#a5b4fc",border:"1px solid rgba(99,102,241,.3)",borderRadius:7,padding:"3px 10px",cursor:"pointer",fontSize:11,fontWeight:700}},"🗓️ Copia anno"),
             h("button",{onClick:function(){delCard(showCard.id);},style:{background:"rgba(239,68,68,.12)",color:"#f87171",border:"none",borderRadius:7,padding:"3px 9px",cursor:"pointer",fontSize:11,fontWeight:700}},"🗑️ Elimina"),
-            h("button",{onClick:function(e){toggleVisibile(showCard,e);},style:{background:showCard.visibile===false?"rgba(34,197,94,.15)":"rgba(255,255,255,.08)",color:showCard.visibile===false?"#4ade80":"rgba(255,255,255,.65)",border:"1px solid "+(showCard.visibile===false?"rgba(34,197,94,.3)":"rgba(255,255,255,.1)"),borderRadius:7,padding:"3px 10px",cursor:"pointer",fontSize:11,fontWeight:700}},showCard.visibile===false?"👁️ Mostra":"🚫 Nascondi"),
-            h("button",{onClick:function(){setConfirmDel({type:"resetCard",cardId:showCard.id});},style:{background:"rgba(249,115,22,.15)",color:"#fb923c",border:"1px solid rgba(249,115,22,.35)",borderRadius:7,padding:"3px 10px",cursor:"pointer",fontSize:11,fontWeight:700}},"🔄 Reset")
+            h("button",{onClick:function(e){toggleVisibile(showCard,e);},style:{background:showCard.visibile===false?"rgba(34,197,94,.15)":"rgba(255,255,255,.08)",color:showCard.visibile===false?"#4ade80":"rgba(255,255,255,.65)",border:"1px solid "+(showCard.visibile===false?"rgba(34,197,94,.3)":"rgba(255,255,255,.1)"),borderRadius:7,padding:"3px 10px",cursor:"pointer",fontSize:11,fontWeight:700}},showCard.visibile===false?"👁️ Mostra":"🚫 Nascondi")
           )
         ),
 

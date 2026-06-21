@@ -70,10 +70,11 @@ var S_BASE={
   center:{display:"flex",alignItems:"center",justifyContent:"center"}
 };
 
-function fbClassiSave(arr){return db.collection("config").doc("classi_custom").set({lista:arr,aggiornato:new Date().toISOString()});}
+function fbClassiSave(arr, anno){return db.collection("config").doc("classi_custom_"+anno.replace("/","_")).set({lista:arr,aggiornato:new Date().toISOString()},{merge:true});}
+function fbNascosteSave(arr, anno){return db.collection("config").doc("classi_custom_"+anno.replace("/","_")).set({nascoste:arr,aggiornato:new Date().toISOString()},{merge:true});}
 function fbFavSave(uid,ids){return db.collection("preferiti").doc(uid).set({ids:ids,aggiornato:new Date().toISOString()});}
 function fbFavListen(uid,cb){return db.collection("preferiti").doc(uid).onSnapshot(function(doc){cb(doc.exists&&doc.data().ids?doc.data().ids:[]);});}
-function fbClassiListen(cb){return db.collection("config").doc("classi_custom").onSnapshot(function(doc){cb(doc.exists&&doc.data().lista?doc.data().lista:[]);});}
+function fbClassiListen(cb, anno){return db.collection("config").doc("classi_custom_"+anno.replace("/","_")).onSnapshot(function(doc){var d=doc.exists?doc.data():{};cb(d.lista||[],d.nascoste||[]);});}
 var FORM0={tipo:"domanda",titolo:"",testo:"",opzioni:["",""],links:[{url:"",label:""}],classi:[],quizDomande:[],quizTimer:10,pubblicaIl:"",immagini:[],copertina:null};
 
 // ── CACHE DURATA: centralizzata ──

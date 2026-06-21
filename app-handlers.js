@@ -47,18 +47,43 @@
         if(ctx.setNewClasseInput) ctx.setNewClasseInput("");
       },
       removeClasseCustom: function(cl){
-        var next = (ctx.classiCustom||[]).filter(function(c){return c!==cl;});
-        if(ctx.setClassiCustom) ctx.setClassiCustom(next);
-        if(fbClassiSave) try{ fbClassiSave(next); }catch(e){}
+        var isDefault = (window.SB && SB.CLASSI_DEFAULT || []).indexOf(cl) >= 0;
+        if(isDefault){
+          // Classe di default: la nasconde aggiungendola a nascoste
+          var nextNascoste = (ctx.classiNascoste||[]).concat([cl]);
+          if(ctx.setClassiNascoste) ctx.setClassiNascoste(nextNascoste);
+          try{ if(ctx.fbNascosteSave) ctx.fbNascosteSave(nextNascoste); }catch(e){}
+        } else {
+          // Classe custom: la rimuove da classiCustom
+          var next = (ctx.classiCustom||[]).filter(function(c){return c!==cl;});
+          if(ctx.setClassiCustom) ctx.setClassiCustom(next);
+          if(fbClassiSave) try{ fbClassiSave(next); }catch(e){}
+        }
       },
       apriRinomina: function(cl){ if(ctx.setRinominaClasse) ctx.setRinominaClasse(cl); if(ctx.setRinominaInput) ctx.setRinominaInput(cl); if(ctx.setRinominaConferma) ctx.setRinominaConferma(false); },
       eseguiRinomina: function(){
         var oldN = ctx.rinominaClasse; var newN = String((ctx.rinominaInput||"").trim()).toUpperCase();
         if(!newN || newN===oldN){ if(ctx.setRinominaClasse) ctx.setRinominaClasse(null); return; }
         if(!ctx.rinominaConferma){ if(ctx.setRinominaConferma) ctx.setRinominaConferma(true); return; }
-        var next = (ctx.classiCustom||[]).map(function(c){ return c===oldN?newN:c; });
-        if(ctx.setClassiCustom) ctx.setClassiCustom(next);
-        if(fbClassiSave) try{ fbClassiSave(next); }catch(e){}
+
+        var isDefault = (window.SB && SB.CLASSI_DEFAULT || []).indexOf(oldN) >= 0;
+
+        if(isDefault){
+          // Classe di default: nasconde il vecchio nome, aggiunge il nuovo come custom
+          var nextNascoste = (ctx.classiNascoste||[]).filter(function(c){return c!==oldN;}).concat([oldN]);
+          var nextCustom = (ctx.classiCustom||[]).filter(function(c){return c!==newN;}).concat([newN]);
+          if(ctx.setClassiNascoste) ctx.setClassiNascoste(nextNascoste);
+          if(ctx.setClassiCustom) ctx.setClassiCustom(nextCustom);
+          try{ if(ctx.fbNascosteSave) ctx.fbNascosteSave(nextNascoste); }catch(e){}
+          if(fbClassiSave) try{ fbClassiSave(nextCustom); }catch(e){}
+        } else {
+          // Classe custom: aggiorna il nome in classiCustom
+          var next = (ctx.classiCustom||[]).map(function(c){ return c===oldN?newN:c; });
+          if(ctx.setClassiCustom) ctx.setClassiCustom(next);
+          if(fbClassiSave) try{ fbClassiSave(next); }catch(e){}
+        }
+
+        // Aggiorna tutte le card che usano il vecchio nome classe
         var toUpdate = (getCards()||[]).filter(function(c){ return (c.classi||[]).indexOf(oldN)>=0; });
         toUpdate.forEach(function(c){ if(fbSave) try{ fbSave(Object.assign({}, c, { classi: c.classi.map(function(x){ return x===oldN?newN:x; }) })); }catch(e){} });
         try{ if(db && db.collection){ db.collection("users").where("classe","==",oldN).get().then(function(snap){ snap.forEach(function(d){ try{ d.ref.update({classe:newN}); }catch(e){} }); }); } }catch(e){}

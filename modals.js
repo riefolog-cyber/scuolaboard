@@ -8,8 +8,6 @@
   SB.useModals = function() {
     var [showModal, setShowModal] = useState(false);
     var [showQR, setShowQR] = useState(false);
-    var [showReset, setShowReset] = useState(false);
-    var [showResetOpt, setShowResetOpt] = useState(false);
     var [showClasseModal, setShowClasseModal] = useState(false);
     var [showAmm, setShowAmm] = useState(null);
     var [editAmm, setEditAmm] = useState(null);
@@ -26,8 +24,6 @@
     var closeAll = useCallback(function() {
       setShowModal(false);
       setShowQR(false);
-      setShowReset(false);
-      setShowResetOpt(false);
       setShowClasseModal(false);
       setShowAmm(null);
       setEditAmm(null);
@@ -47,10 +43,6 @@
       setShowModal: setShowModal,
       showQR: showQR,
       setShowQR: setShowQR,
-      showReset: showReset,
-      setShowReset: setShowReset,
-      showResetOpt: showResetOpt,
-      setShowResetOpt: setShowResetOpt,
       showClasseModal: showClasseModal,
       setShowClasseModal: setShowClasseModal,
       showAmm: showAmm,
