@@ -321,7 +321,7 @@ var [wcTarget, setWcTarget] = React.useState('tutte');
                         })(),
                         h("button",{onClick:function(e){runCardAI(c,e);},style:{background:"none",border:"1px solid rgba(99,102,241,.3)",borderRadius:6,padding:"1px 8px",cursor:"pointer",fontSize:11,color:"rgba(99,102,241,.7)",fontWeight:700}},"↻ Rigenera")
                       ),
-                      cRes.sintesi&&h("div",{style:{marginBottom:8}},h("div",{style:{fontSize:11,fontWeight:800,color:"#a5b4fc",letterSpacing:1,marginBottom:3}},"📋 SINTESI"),h("div",{style:{fontSize:11,color:"rgba(255,255,255,.8)",lineHeight:1.6,whiteSpace:"pre-wrap"}},cRes.sintesi)),
+                      cRes.sintesi&&h("div",{style:{marginBottom:8}},h("div",{style:{fontSize:11,fontWeight:800,color:"#a5b4fc",letterSpacing:1,marginBottom:3}},"📋 SINTESI"),h("div",{dangerouslySetInnerHTML:{__html:cRes.sintesi},style:{fontSize:11,color:"rgba(255,255,255,.8)",lineHeight:1.6}})),
                       cRes.dinamica&&h("div",{style:{marginBottom:8}},h("div",{style:{fontSize:11,fontWeight:800,color:"#93c5fd",letterSpacing:1,marginBottom:3}},"💬 DINAMICA"),h("div",{style:{fontSize:11,color:"rgba(255,255,255,.75)",lineHeight:1.6}},cRes.dinamica)),
                       cRes.spunto&&h("div",{style:{background:"rgba(34,197,94,.08)",borderRadius:7,padding:"7px 10px",border:"1px solid rgba(34,197,94,.15)",marginBottom:8}},h("div",{style:{fontSize:11,fontWeight:800,color:"#4ade80",letterSpacing:1,marginBottom:3}},"💡 SPUNTO DIDATTICO"),h("div",{style:{fontSize:11,color:"rgba(255,255,255,.8)",lineHeight:1.6,fontStyle:"italic"}},cRes.spunto))
                     ),

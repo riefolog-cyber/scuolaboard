@@ -136,8 +136,27 @@
       if(!cardQ.trim() || !showCard) return;
       setCardQLoad(true); setCardQErr("");
       
-      var prompt = 'Rispondi alla domanda del prof basandoti sui dati della card.\n' +
-        'TITOLO: ' + showCard.titolo + '\nDOMANDA DEL PROF:\n' + cardQ.trim() + '\n\nRispondi in max 4 frasi, vai subito al punto.';
+      // Costruiamo un prompt completo che include anche il testo della lezione e i commenti
+      var prompt = 'Rispondi alla domanda del prof basandoti sui dati della card.\n\n';
+      prompt += 'TITOLO: ' + showCard.titolo + '\n';
+      
+      if (showCard.testo) {
+        prompt += 'TESTO LEZIONE: ' + showCard.testo + '\n\n';
+      }
+
+      // Se ci sono commenti, li attacchiamo al prompt informando l'AI
+      if (showCard.commenti && showCard.commenti.length > 0) {
+        prompt += '--- ATTENZIONE: ELENCO COMMENTI E PARTECIPANTI REALI ---\n';
+        prompt += 'I seguenti sono i commenti lasciati dagli studenti reali. Usali per rispondere a domande sulla partecipazione, sui concetti emersi o su chi ha argomentato meglio.\n';
+        showCard.commenti.forEach(function(c) {
+          var nome = c.autore || c.authorName || c.name || "Studente";
+          var testoCommento = c.testo || c.content || "";
+          prompt += "- " + nome + " ha commentato: \"" + testoCommento + "\"\n";
+        });
+        prompt += '--------------------------------------------------------\n\n';
+      }
+
+      prompt += 'DOMANDA DEL PROF:\n' + cardQ.trim() + '\n\nRispondi in max 4 frasi, vai subito al punto.';
 
       try {
         var txt = await callGroqText(null, prompt, 400);
@@ -217,7 +236,7 @@
       }
       setSommarioLoading(card.id);
       var txt = commenti.map(function(c){ return c.autore + ": " + c.testo; }).join("\n");
-      var prompt = 'Riassumi questa discussione scolastica per punti di accordo/disaccordo e idee chiave:\n' + txt;
+      var prompt = 'Riassumi questa discussione scolastica per punti di accordo/disaccordo e idee chiave, formattando il risultato in HTML:\n' + txt;
 
       try {
         var res = await callGroqText(null, prompt, 600);

@@ -2,175 +2,213 @@
 (function(){
   var db = window.SB && SB.db;
   var CFG = window.SB_CONFIG || { AI_CACHE_TTL_MS: 15*60*1000 };
+  
+  // URL del tuo Cloudflare Worker che fa da Proxy sicuro
   var WORKER_URL = 'https://scuolaboard-groq-proxy.scuolaboard.workers.dev';
-  var K = "ai_results_cache", K_AT = "ai_results_cache_at"; // These are now just identifiers, actual access via SB.LS
 
   function cacheGet(){
-    try{
+    try {
       var at = SB.LS.aiCacheAt.get();
       if(!at || Date.now() - Number(at) > CFG.AI_CACHE_TTL_MS) return null;
       var raw = SB.LS.aiCache.get();
       return raw ? JSON.parse(raw) : null;
-    }catch(e){ return null; }
+    } catch(e) { 
+      return null; 
+    }
   }
+
   function cacheSetAll(m){
     SB.LS.aiCache.set(JSON.stringify(m));
     SB.LS.aiCacheAt.set(String(Date.now()));
   }
+
   function cacheInvalidate(){
     SB.LS.aiCache.rm();
     SB.LS.aiCacheAt.rm();
   }
 
+  /**
+   * Pulisce interamente il testo dell'AI rimuovendo asterischi, cancelletti,
+   * tabelle e altri caratteri speciali markdown, lasciando un testo semplice,
+   * pulito ed estremamente leggibile in plain text.
+   */
+  function cleanMarkdownText(txt) {
+    if (!txt) return '';
+    var lines = String(txt).split('\n');
+    var cleanLines = [];
+    
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i];
+      
+      // Ignora le righe di separazione delle tabelle markdown (es: |---|---|)
+      if (line.match(/^[\s|:-]+$/)) {
+        continue;
+      }
+      
+      // Se è presente una riga di tabella, rimuove i bordi "|" e unisce i dati in modo pulito
+      if (line.indexOf('|') !== -1) {
+        var parts = line.split('|').map(function(p) { return p.trim(); }).filter(Boolean);
+        if (parts.length > 0) {
+          line = parts.join('  ·  ');
+        }
+      }
+      
+      // Rimuove i titoli Markdown (#, ##, ###) lasciando solo il testo
+      line = line.replace(/^#+\s+/, '');
+      
+      // Rimuove l'indicatore di citazione (>)
+      line = line.replace(/^>\s+/, '');
+
+      cleanLines.push(line);
+    }
+    
+    var cleanTxt = cleanLines.join('\n');
+    
+    // Rimuove gli asterischi di grassetto/corsivo e trattini bassi senza rovinare il testo
+    cleanTxt = cleanTxt.replace(/\*\*([^*]+)\*\*/g, '$1');
+    cleanTxt = cleanTxt.replace(/\*([^*]+)\*/g, '$1');
+    cleanTxt = cleanTxt.replace(/__([^_]+)__/g, '$1');
+    cleanTxt = cleanTxt.replace(/_([^_]+)_/g, '$1');
+    
+    // Rimuove eventuali apici di codice rimasti (sostituito \` con backtick reale senza escape per pulizia JS)
+    cleanTxt = cleanTxt.replace(/[`]{1,3}/g, '');
+    
+    return cleanTxt.trim();
+  }
+
+  /**
+   * Pulisce ricorsivamente tutte le stringhe di testo all'interno di un oggetto JSON
+   * (utile per rimuovere simboli strani dalle spiegazioni o domande dei quiz).
+   */
+  function cleanJsonStrings(obj) {
+    if (!obj) return obj;
+    if (Array.isArray(obj)) {
+      return obj.map(cleanJsonStrings);
+    } else if (typeof obj === 'object') {
+      for (var key in obj) {
+        if (obj.hasOwnProperty(key)) {
+          if (typeof obj[key] === 'string') {
+            obj[key] = cleanMarkdownText(obj[key]);
+          } else {
+            obj[key] = cleanJsonStrings(obj[key]);
+          }
+        }
+      }
+    }
+    return obj;
+  }
+
+  /**
+   * Unica funzione di comunicazione con l'AI.
+   * Invia la richiesta al Cloudflare Worker.
+   */
   async function chiamaAI(type, content, options){
     options = options || {};
-    if(!type || !content) throw new Error('Parametri chiamata AI mancanti (type=' + type + ', content=' + String(content).slice(0,50) + ')');
+    if(!type || !content) throw new Error('Parametri chiamata AI mancanti (type=' + type + ')');
     
-    // Truncate content to avoid 400 Bad Request (Worker limit 6000 chars)
+    // TRONCAMENTO PORTATO A 60.000 CARATTERI
+    // Garantisce che la lezione lunghissima e tutti i commenti passino integri
     var safeContent = String(content);
-    if(safeContent.length > 5000) safeContent = safeContent.slice(0, 5000);
+    if(safeContent.length > 60000) {
+      safeContent = safeContent.slice(0, 60000);
+    }
     
-    const body = JSON.stringify({ type: type, content: safeContent, options: options });
-    console.log('[ScuolaBoard] chiamaAI', type, String(content).slice(0,80));
-    const res = await fetch(WORKER_URL, {
+    var body = JSON.stringify({ 
+      type: type, 
+      content: safeContent, 
+      options: options 
+    });
+    
+    console.log('[ScuolaBoard] chiamaAI - Inizio payload:', String(safeContent).slice(0, 100));
+    // DEBUG: Stampa la fine del testo per verificare se i commenti ci sono davvero!
+    console.log('[ScuolaBoard] chiamaAI - Fine payload:', String(safeContent).slice(-200));
+    
+    var res = await fetch(WORKER_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: body
     });
     
-    let data;
+    var data;
     try {
       data = await res.json();
     } catch (e) {
-      console.warn('[ScuolaBoard] chiamaAI response not JSON', e, res.status);
-      throw new Error('Risposta server non JSON (status ' + res.status + ')');
+      console.warn('[ScuolaBoard] chiamaAI risorsa non JSON', e, res.status);
+      throw new Error('Risposta del server non valida (status ' + res.status + ')');
     }
+
     if (!res.ok) {
-      console.warn('[ScuolaBoard] chiamaAI error', res.status, data);
-      throw new Error((data && data.error) || 'Errore server ' + res.status);
+      console.warn('[ScuolaBoard] chiamaAI errore server', res.status, data);
+      throw new Error((data && data.error) || 'Errore del server AI (status ' + res.status + ')');
     }
+
     if (!data.success) {
-      console.warn('[ScuolaBoard] chiamaAI !success', data);
-      throw new Error('Risposta non valida');
+      console.warn('[ScuolaBoard] chiamaAI fallito', data);
+      throw new Error('Risposta dell\'AI non riuscita');
     }
     
     return data.data;
   }
 
-  async function callOpenRouterText(key, prompt, mx){
-    const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-    const headers = {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + key,
-      'HTTP-Referer': window.location.origin,
-      'X-Title': 'ScuolaBoard'
-    };
-    const body = JSON.stringify({
-      model: 'google/gemini-2.0-flash-thinking-exp-01-21',
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: mx || 600
-    });
-
-    console.log('[ScuolaBoard] callOpenRouterText', prompt.slice(0,80));
-    const res = await fetch(OPENROUTER_URL, { method: 'POST', headers: headers, body: body });
-    let data;
-    try {
-      data = await res.json();
-    } catch (e) {
-      console.warn('[ScuolaBoard] callOpenRouterText response not JSON', e, res.status);
-      throw new Error('Risposta OpenRouter non JSON (status ' + res.status + ')');
-    }
-    if (!res.ok) {
-      console.warn('[ScuolaBoard] callOpenRouterText error', res.status, data);
-      throw new Error((data && data.error && data.error.message) || 'Errore OpenRouter ' + res.status);
-    }
-    return data.choices[0].message.content;
-  }
-
-  async function callOpenRouterJSON(key, prompt, mx){
-    const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-    const headers = {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + key,
-      'HTTP-Referer': window.location.origin,
-      'X-Title': 'ScuolaBoard'
-    };
-    const body = JSON.stringify({
-      model: 'google/gemini-2.0-flash-thinking-exp-01-21',
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: mx || 700,
-      response_format: { type: "json_object" }
-    });
-
-    console.log('[ScuolaBoard] callOpenRouterJSON', prompt.slice(0,80));
-    const res = await fetch(OPENROUTER_URL, { method: 'POST', headers: headers, body: body });
-    let data;
-    try {
-      data = await res.json();
-    } catch (e) {
-      console.warn('[ScuolaBoard] callOpenRouterJSON response not JSON', e, res.status);
-      throw new Error('Risposta OpenRouter non JSON (status ' + res.status + ')');
-    }
-    if (!res.ok) {
-      console.warn('[ScuolaBoard] callOpenRouterJSON error', res.status, data);
-      throw new Error((data && data.error && data.error.message) || 'Errore OpenRouter ' + res.status);
-    }
-    const raw = data.choices[0].message.content;
-    const txt = String(raw).replace(/^```(?:json)?[\r\n]*/i,'').replace(/[\r\n]*```$/,'').trim();
-    try {
-      return JSON.parse(txt);
-    } catch (e) {
-      const m = txt.match(/\{[\s\S]*\}/);
-      if(!m) throw new Error('JSON non valido da OpenRouter');
-      return JSON.parse(m[0]);
-    }
-  }
-
+  // Chiamata AI testuale
   async function callGroqText(_ignoredKey, prompt, mx){
-    try {
-      return await chiamaAI('text', prompt, { max_tokens: mx || 600 }).then(function(d){ return d.content || d || ''; });
-    } catch (groqError) {
-      console.warn('[ScuolaBoard] Groq text call failed, trying OpenRouter fallback:', groqError);
-      const openrouterKey = SB.LS.openrouterKey.get();
-      if (openrouterKey) {
-        return await callOpenRouterText(openrouterKey, prompt, mx);
-      }
-      throw groqError;
-    }
+    return await chiamaAI('text', prompt, { max_tokens: mx || 2000 })
+      .then(function(d){ 
+        var rawText = d.content || d || ''; 
+        return cleanMarkdownText(rawText);
+      });
   }
 
+  // Chiamata AI JSON
   async function callGroqJSON(_ignoredKey, prompt, mx){
+    var raw = await chiamaAI('json', prompt, { max_tokens: mx || 1500 })
+      .then(function(d){ 
+        return d.content || d || ''; 
+      });
+    
+    var txt = String(raw).replace(/^[`]{3}(?:json)?[\r\n]*/i, '').replace(/[\r\n]*[`]{3}$/, '').trim();
     try {
-      const raw = await chiamaAI('json', prompt, { max_tokens: mx || 700 }).then(function(d){ return d.content || d || ''; });
-      const txt = String(raw).replace(/^```(?:json)?[\r\n]*/i,'').replace(/[\r\n]*```$/,'').trim();
-      try {
-        return JSON.parse(txt);
-      } catch (e) {
-        const m = txt.match(/\{[\s\S]*\}/);
-        if(!m) throw new Error('JSON non valido');
-        return JSON.parse(m[0]);
-      }
-    } catch (groqError) {
-      console.warn('[ScuolaBoard] Groq JSON call failed, trying OpenRouter fallback:', groqError);
-      const openrouterKey = SB.LS.openrouterKey.get();
-      if (openrouterKey) {
-        return await callOpenRouterJSON(openrouterKey, prompt, mx);
-      }
-      throw groqError;
+      var obj = JSON.parse(txt);
+      return cleanJsonStrings(obj);
+    } catch (e) {
+      var m = txt.match(/\{[\s\S]*\}/);
+      if(!m) throw new Error('Formato JSON non valido ricevuto dall\'AI');
+      var obj = JSON.parse(m[0]);
+      return cleanJsonStrings(obj);
     }
   }
 
   function aiLoad(cb){
-    var cached = cacheGet(); if(cached){ if(cb)cb(cached); return function(){}; }
-    if(!db){ if(cb)cb({}); return function(){}; }
+    var cached = cacheGet(); 
+    if(cached){ 
+      if(cb) cb(cached); 
+      return function(){}; 
+    }
+    if(!db){ 
+      if(cb) cb({}); 
+      return function(){}; 
+    }
     db.collection('ai_results').get()
-      .then(function(s){ var m={}; s.forEach(function(d){ m[d.id]=d.data(); }); cacheSetAll(m); if(cb)cb(m); })
-      .catch(function(err){ console.warn('[ScuolaBoard] aiLoad:', err); if(cb)cb({}); });
+      .then(function(s){ 
+        var m={}; 
+        s.forEach(function(d){ m[d.id]=d.data(); }); 
+        cacheSetAll(m); 
+        if(cb) cb(m); 
+      })
+      .catch(function(err){ 
+        console.warn('[ScuolaBoard] aiLoad:', err); 
+        if(cb) cb({}); 
+      });
     return function(){};
   }
 
-  function aiSave(cardId, data){ cacheInvalidate(); if(!db) return Promise.resolve(); return db.collection('ai_results').doc(String(cardId)).set(data,{merge:true}); }
+  function aiSave(cardId, data){ 
+    cacheInvalidate(); 
+    if(!db) return Promise.resolve(); 
+    return db.collection('ai_results').doc(String(cardId)).set(data, { merge: true }); 
+  }
 
+  // Registrazione sul window scope per compatibilità retroattiva
   window.callGroqJSON = callGroqJSON;
   window.callGroqText = callGroqText;
   window.aiLoad = aiLoad;
@@ -179,6 +217,7 @@
   window.aiCacheGet = cacheGet;
   window.aiCacheSetAll = cacheSetAll;
 
+  // Integrazione nel sistema ScuolaBoard
   if(window.SB){
     SB.callGroqJSON = callGroqJSON;
     SB.callGroqText = callGroqText;
@@ -188,7 +227,12 @@
     SB.aiCacheGet = cacheGet;
     SB.aiCacheSetAll = cacheSetAll;
     SB.AI_LOADED = true;
-    var cbs = SB.AI_LOADING; SB.AI_LOADING = null;
-    if(cbs) cbs.forEach(function(f){ try{f(null);}catch(e){} });
+    var cbs = SB.AI_LOADING; 
+    SB.AI_LOADING = null;
+    if(cbs) {
+      cbs.forEach(function(f){ 
+        try{ f(null); } catch(e){} 
+      });
+    }
   }
 })();
