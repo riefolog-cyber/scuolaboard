@@ -71,8 +71,14 @@
         isFirstLoad = false;
         setAllCards(remote);
         
+        function annoScolasticoDefault() {
+          var now = new Date();
+          var y = now.getFullYear();
+          var m = now.getMonth() + 1;
+          return m >= 9 ? (y + '/' + (y + 1)) : ((y - 1) + '/' + y);
+        }
         var filtered = remote.filter(function(c){
-          return (c.annoScolastico || "2025/2026") === annoScolastico;
+          return (c.annoScolastico || annoScolasticoDefault()) === annoScolastico;
         });
         setCards(filtered);
       });

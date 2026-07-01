@@ -204,6 +204,11 @@
 
   function aiSave(cardId, data){ 
     cacheInvalidate(); 
+    // Invalida anche eventuali cache sessionStorage legacy
+    try {
+      sessionStorage.removeItem('airesultscache');
+      sessionStorage.removeItem('airesultscacheat');
+    } catch(e) {}
     if(!db) return Promise.resolve(); 
     return db.collection('ai_results').doc(String(cardId)).set(data, { merge: true }); 
   }

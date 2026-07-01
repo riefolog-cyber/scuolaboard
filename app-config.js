@@ -5,22 +5,12 @@
     IMG_MAX_BYTES:5*1024*1024,IMG_MAX_COUNT:5,IMG_COVER_SIZE:900,IMG_QUALITY:0.72,
     QUIZ_EVAL_CHUNK:4,UNDO_TIMEOUT_MS:5000,TOAST_TIMEOUT_MS:2400,ALARM_WINDOW_MS:2000,
     GROQ_MODELS:["llama-3.1-8b-instant","llama-3.3-70b-versatile","openai/gpt-oss-20b","openai/gpt-oss-120b"],
-    LS_KEYS:{groqKey:"groq_key",openaiKey:"openai_key",seen:"seen_cards",push:"push_enabled",anno:"annoScolasticoAttivo",
+    LS_KEYS:{seen:"seen_cards",push:"push_enabled",anno:"annoScolasticoAttivo",
              aiCache:"ai_results_cache",aiCacheAt:"ai_results_cache_at",
              privacy:function(uid){return "privacy_accepted_"+uid;}}
   };
   window.SB_CONFIG=CFG;
   window._SB_LS={
-    groqKey:{
-      get:function(){return (typeof localStorage!=="undefined"?localStorage.getItem(CFG.LS_KEYS.groqKey):null)||"";},
-      set:function(v){try{if(typeof localStorage!=="undefined")localStorage.setItem(CFG.LS_KEYS.groqKey,v);}catch(e){}},
-      rm:function(){try{if(typeof localStorage!=="undefined")localStorage.removeItem(CFG.LS_KEYS.groqKey);}catch(e){}}
-    },
-    openaiKey:{
-      get:function(){return (typeof localStorage!=="undefined"?localStorage.getItem(CFG.LS_KEYS.openaiKey):null)||"";},
-      set:function(v){try{if(typeof localStorage!=="undefined")localStorage.setItem(CFG.LS_KEYS.openaiKey,v);}catch(e){}},
-      rm:function(){try{if(typeof localStorage!=="undefined")localStorage.removeItem(CFG.LS_KEYS.openaiKey);}catch(e){}}
-    },
     seen:{
       get:function(){try{var s=typeof localStorage!=="undefined"?localStorage.getItem(CFG.LS_KEYS.seen):null;return new Set(s?JSON.parse(s):[]);}catch(e){return new Set();}},
       set:function(s){try{if(typeof localStorage!=="undefined")localStorage.setItem(CFG.LS_KEYS.seen,JSON.stringify([...s]));}catch(e){}},

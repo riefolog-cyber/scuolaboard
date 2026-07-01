@@ -7,6 +7,7 @@ var h = SB.h || React.createElement;
 var [showWordCloud, setShowWordCloud] = React.useState(false);
 var [wcTarget, setWcTarget] = React.useState('tutte');
     var Fragment = SB.Fragment || React.Fragment;
+    var useMemo = SB.useMemo || React.useMemo; // PATCH #7
     with(props){
       if(authLoad)return h("div",{style:{minHeight:"100vh",background:"linear-gradient(160deg,#12111a 0%,#161320 50%,#1a1528 100%)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16,position:"relative",overflow:"hidden"}},h("div",{style:{position:"absolute",top:"30%",left:"50%",transform:"translate(-50%,-50%)",width:600,height:600,borderRadius:"50%",background:"radial-gradient(circle,rgba(99,102,241,.12) 0%,transparent 65%)",pointerEvents:"none"}}),
       h("div",{style:{width:52,height:52,border:"3px solid rgba(99,102,241,.2)",borderTop:"3px solid #6366f1",borderRight:"3px solid #a855f7",borderRadius:"50%",animation:"spin .9s linear infinite"}}),
@@ -312,16 +313,16 @@ var [wcTarget, setWcTarget] = React.useState('tutte');
                     isProf&&!simulaSt&&h(Fragment,null,
                       h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}},
                         (function(){
-                          var lastAnalisi=cRes.data?new Date(cRes.data).getTime():0;
-                          var newCount=(c.commenti||[]).filter(function(cm){return new Date(cm.data||0).getTime()>lastAnalisi;}).length;
-                          return h("div",{style:{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}},
-                            h("span",{style:{fontSize:11,color:"rgba(255,255,255,.40)"}},"Aggiornata il "+fmtDT(cRes.data)),
-                            newCount>0&&h("span",{style:{background:"rgba(245,158,11,.2)",color:"#fbbf24",borderRadius:20,padding:"1px 7px",fontSize:11,fontWeight:800,border:"1px solid rgba(245,158,11,.3)"}},"⚠️ "+newCount+" nuovi comm.")
-                          );
+          var lastAnalisi=cRes.data?new Date(cRes.data).getTime():0;
+          var newCount=(c.commenti||[]).filter(function(cm){return new Date(cm.data||0).getTime()>lastAnalisi;}).length;
+          return h("div",{style:{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}},
+            h("span",{style:{fontSize:11,color:"rgba(255,255,255,.40)"}},"Aggiornata il "+fmtDT(cRes.data)),
+            newCount>0&&h("span",{style:{background:"rgba(245,158,11,.2)",color:"#fbbf24",borderRadius:20,padding:"1px 7px",fontSize:11,fontWeight:800,border:"1px solid rgba(245,158,11,.3)"}},"⚠️ "+newCount+" nuovi comm.")
+          );
                         })(),
                         h("button",{onClick:function(e){runCardAI(c,e);},style:{background:"none",border:"1px solid rgba(99,102,241,.3)",borderRadius:6,padding:"1px 8px",cursor:"pointer",fontSize:11,color:"rgba(99,102,241,.7)",fontWeight:700}},"↻ Rigenera")
                       ),
-                      cRes.sintesi&&h("div",{style:{marginBottom:8}},h("div",{style:{fontSize:11,fontWeight:800,color:"#a5b4fc",letterSpacing:1,marginBottom:3}},"📋 SINTESI"),h("div",{dangerouslySetInnerHTML:{__html:cRes.sintesi},style:{fontSize:11,color:"rgba(255,255,255,.8)",lineHeight:1.6}})),
+cRes.sintesi&&h("div",{style:{marginBottom:8}},h("div",{style:{fontSize:11,fontWeight:800,color:"#a5b4fc",letterSpacing:1,marginBottom:3}},"📋 SINTESI"),h("div",{style:{fontSize:11,color:"rgba(255,255,255,.8)",lineHeight:1.6}},cleanMarkdownText(cRes.sintesi))),
                       cRes.dinamica&&h("div",{style:{marginBottom:8}},h("div",{style:{fontSize:11,fontWeight:800,color:"#93c5fd",letterSpacing:1,marginBottom:3}},"💬 DINAMICA"),h("div",{style:{fontSize:11,color:"rgba(255,255,255,.75)",lineHeight:1.6}},cRes.dinamica)),
                       cRes.spunto&&h("div",{style:{background:"rgba(34,197,94,.08)",borderRadius:7,padding:"7px 10px",border:"1px solid rgba(34,197,94,.15)",marginBottom:8}},h("div",{style:{fontSize:11,fontWeight:800,color:"#4ade80",letterSpacing:1,marginBottom:3}},"💡 SPUNTO DIDATTICO"),h("div",{style:{fontSize:11,color:"rgba(255,255,255,.8)",lineHeight:1.6,fontStyle:"italic"}},cRes.spunto))
                     ),
@@ -920,7 +921,8 @@ var [wcTarget, setWcTarget] = React.useState('tutte');
               )
             ),
             showCard.scadenza&&(function(){
-              var ms=new Date(showCard.scadenza).getTime()-now;
+              var sD=typeof showCard.scadenza.toDate==='function'?showCard.scadenza.toDate():showCard.scadenza;
+              var ms=new Date(sD).getTime()-now;
               var expired=ms<=0;
               var secs=Math.floor(ms/1000),mins=Math.floor(secs/60),hrs=Math.floor(mins/60),days=Math.floor(hrs/24);
               var str=expired?"Scaduta!":(days>0?days+"g "+(hrs%24)+"h":hrs>0?(hrs%24)+"h "+(mins%60)+"m":(mins>0?(mins%60)+"m "+(secs%60)+"s":(secs%60)+"s"));
@@ -1401,52 +1403,7 @@ var [wcTarget, setWcTarget] = React.useState('tutte');
       title:isProf?"Nuova card":"Proponi card"
     },"+"),
 
-    showWordCloud&&isProf&&(function(){
-      var parole=buildWordCloud(cards,wcTarget);
-      var maxFreq=parole.length>0?parole[0][1]:1;
-      var WCCOLORS=["#a5b4fc","#c084fc","#67e8f9","#4ade80","#fbbf24","#f87171","#fb923c","#e879f9","#34d399","#60a5fa"];
-      return h("div",{onClick:function(){setShowWordCloud(false);},style:{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",backdropFilter:"blur(6px)",zIndex:600,display:"flex",alignItems:"center",justifyContent:"center",padding:20}},
-        h("div",{onClick:function(e){e.stopPropagation();},style:{background:"rgba(15,20,40,.97)",border:"1px solid rgba(99,102,241,.3)",borderRadius:20,padding:24,maxWidth:660,width:"100%",maxHeight:"85vh",overflowY:"auto",boxShadow:"0 24px 60px rgba(0,0,0,.6)"}},
-          h("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}},
-            h("div",null,
-              h("h3",{style:{margin:0,color:"#f1f5f9",fontSize:16,fontWeight:800}},"☁️ Analisi parole per classe"),
-              h("p",{style:{margin:"4px 0 0",color:"rgba(255,255,255,.45)",fontSize:11}},"Esamina i commenti per classe e individua i termini più ricorrenti nella discussione.")
-            ),
-            h("button",{onClick:function(){setShowWordCloud(false);},style:{background:"rgba(255,255,255,.08)",border:"none",borderRadius:"50%",width:28,height:28,cursor:"pointer",fontSize:15,color:"rgba(255,255,255,.7)"}},"×")
-          ),
-          // Filtro classi
-          h("div",{style:{display:"flex",flexWrap:"wrap",gap:10,marginBottom:16,alignItems:"center"}},
-            h("div",{style:{fontSize:11,color:"rgba(255,255,255,.55)",fontWeight:700}},"Filtro classi:"),
-            h("button",{onClick:function(){setWcTarget("tutte");},style:{padding:"3px 10px",borderRadius:20,border:"1px solid "+(wcTarget==="tutte"?"#6366f1":"rgba(255,255,255,.15)"),background:wcTarget==="tutte"?"rgba(99,102,241,.25)":"transparent",color:wcTarget==="tutte"?"#a5b4fc":"rgba(255,255,255,.55)",fontSize:11,fontWeight:700,cursor:"pointer"}},"Tutte le classi"),
-            aiCardClasses.map(function(cl){return h("button",{key:cl,onClick:function(){setWcTarget("classe_"+cl);},style:{padding:"3px 10px",borderRadius:20,border:"1px solid "+(wcTarget==="classe_"+cl?"#6366f1":"rgba(255,255,255,.1)"),background:wcTarget==="classe_"+cl?"rgba(99,102,241,.25)":"transparent",color:wcTarget==="classe_"+cl?"#a5b4fc":"rgba(255,255,255,.45)",fontSize:11,fontWeight:600,cursor:"pointer",maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},cl);})
-          ),
-          (function(){var stats=collectCloudStats(cards,wcTarget);return h("div",{style:{display:"flex",flexWrap:"wrap",gap:10,marginBottom:16,padding:"12px 14px",borderRadius:12,background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.08)"}},h("span",{style:{fontSize:12,color:"rgba(255,255,255,.68)"}},"Card: "+stats.cardCount),h("span",{style:{fontSize:12,color:"rgba(255,255,255,.68)"}},"Commenti: "+stats.commentCount),h("span",{style:{fontSize:12,color:"rgba(255,255,255,.68)"}},"Studenti: "+stats.studentCount));})(),
-          parole.length===0
-            ?h("div",{style:{textAlign:"center",padding:"40px 20px",color:"rgba(255,255,255,.35)"}},
-                h("div",{style:{fontSize:40,marginBottom:8}},"💬"),
-                h("div",{style:{fontSize:13}},"Nessun commento ancora. Le parole appariranno qui man mano che gli studenti commentano.")
-              )
-            :h("div",{style:{display:"flex",flexWrap:"wrap",gap:8,justifyContent:"center",alignItems:"center",padding:"12px 0",minHeight:200}},
-                parole.map(function(entry,i){
-                  var parola=entry[0],freq=entry[1];
-                  var size=Math.round(12+(freq/maxFreq)*28);
-                  var opacity=0.45+((freq/maxFreq)*0.55);
-                  var color=WCCOLORS[i%WCCOLORS.length];
-                  return h("span",{key:parola,title:freq+" occorrenze",className:"fadein",style:{
-                    fontSize:size,fontWeight:freq/maxFreq>0.5?800:600,color:color,
-                    opacity:opacity,lineHeight:1.2,cursor:"default",
-                    transition:"all .2s",padding:"2px 4px",borderRadius:4,
-                    animationDelay:(i*0.02)+"s"
-                  }},parola);
-                })
-              ),
-          parole.length>0&&h("div",{style:{marginTop:16,paddingTop:12,borderTop:"1px solid rgba(255,255,255,.06)",display:"flex",gap:12,flexWrap:"wrap"}},
-            h("span",{style:{fontSize:11,color:"rgba(255,255,255,.35)"}},"Parole analizzate: "+parole.length),
-            h("span",{style:{fontSize:11,color:"rgba(255,255,255,.35)"}},"Parola più usata: "+parole[0][0]+" ("+parole[0][1]+"x)")
-          )
-        )
-      );
-    })(),
+    // Word cloud rimosso — ora gestito da SB.WordCloudModal (app-modals.js)
   );
 }
 

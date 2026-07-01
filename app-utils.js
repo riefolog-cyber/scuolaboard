@@ -86,11 +86,17 @@ SB.ANNI_DISPONIBILI=ANNI_DISPONIBILI;
 SB.FORM0=FORM0;
 
 function fmt(d){return new Date(d).toLocaleDateString("it-IT",{day:"2-digit",month:"short",year:"numeric"});}
-function fmtDT(d){
+ function fmtDT(d){
   if(!d)return"";
-  if(typeof d==="string"&&d.length===10)return new Date(d+"T12:00:00").toLocaleDateString("it-IT",{day:"2-digit",month:"short",year:"numeric"});
+  // Gestione Firestore Timestamp (oggetto con metodo toDate)
+  if(d && typeof d.toDate === 'function'){
+    try { d = d.toDate(); } catch(e) { return ''; }
+  }
+  if(typeof d==="string"&&d.length===10){
+    return new Date(d+"T12:00:00").toLocaleDateString("it-IT",{day:"2-digit",month:"short",year:"numeric"});
+  }
   var dt=new Date(d);
-  if(isNaN(dt.getTime()))return d;
+  if(isNaN(dt.getTime()))return "";  // fallback string vuota, non oggetto raw
   return dt.toLocaleDateString("it-IT",{day:"2-digit",month:"short",year:"numeric"})+" "+dt.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"});
 }
 function isNew(d){return Date.now()-new Date(d).getTime()<86400000;}
@@ -171,11 +177,9 @@ function compressImage(file,maxW,maxH,quality){
   });
 }
 
-function aiSave(cardId,data){
-  // Invalida cache sessionStorage prima di salvare
-  try{sessionStorage.removeItem("ai_results_cache");sessionStorage.removeItem("ai_results_cache_at");}catch(e){console.warn("[ScuolaBoard]",e);}
-  return db.collection("ai_results").doc(String(cardId)).set(data,{merge:true});
-}
+// aiSave è definita canonicamente in app-ai.js (con invalidazione cache SB.LS).
+// NON ridefinire qui per evitare conflitti di override su window.SB.aiSave.
+// Se serve chiamarla qui, usare: SB.aiSave(cardId, data)
 function quizSalvaRisposta(cardId,studenteName,risposte,punteggio,tempoUsato){
   return db.collection("quiz_risposte").doc(String(cardId)+"_"+studenteName).set({
     cardId:String(cardId),studente:studenteName,risposte:risposte,
@@ -340,16 +344,6 @@ function useDebounce(value, delay){
 // Garantisce sempre una funzione valida anche se il listener non è stato inizializzato
 function safeUnsub(fn){return typeof fn==="function"?fn:function(){};}
 
-// ── quizListenRisposte ───────────────────────────────────────────────────────
-function quizListenRisposte(cardId,cb){
-  return db.collection("quiz_risposte")
-    .where("cardId","==",String(cardId))
-    .onSnapshot(function(snap){
-      var arr=[];
-      snap.forEach(function(d){arr.push(d.data());});
-      cb(arr);
-    });
-}
 
 // ── ERROR BOUNDARY ──────────────────────────────────────────────────────────
 var ErrorBoundary=(function(){
@@ -397,11 +391,6 @@ var ErrorBoundary=(function(){
   }
 
   SB.LS={
-    groqKey:{
-      get:function(){return _safeGetItem(localStorage, "groq_key")||"";},
-      set:function(v){_safeSetItem(localStorage, "groq_key", v);},
-      rm:function(){_safeRemoveItem(localStorage, "groq_key");}
-    },
     seen:{
       get:function(){
         try{

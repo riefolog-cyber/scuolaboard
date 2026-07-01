@@ -113,11 +113,28 @@
     }, [showAnnoMenu]);
 
     // Listener risposte quiz real-time
-    useEffect(function(){
-      if(quizUnsubRef.current){ quizUnsubRef.current(); quizUnsubRef.current = null; }
-      if(!showCard || showCard.tipo !== "quiz"){ setQuizRisposte([]); return; }
-      quizUnsubRef.current = quizListenRisposte(showCard.id, function(arr){ setQuizRisposte(arr); });
-      return function(){ if(quizUnsubRef.current){ quizUnsubRef.current(); quizUnsubRef.current = null; }};
+    useEffect(function() {
+      // Chiude sempre il listener precedente prima di aprirne uno nuovo
+      if (quizUnsubRef.current) {
+        quizUnsubRef.current();
+        quizUnsubRef.current = null;
+      }
+      if (!showCard || showCard.tipo !== 'quiz') {
+        setQuizRisposte([]);
+        return function() {};  // cleanup vuoto ma esplicito
+      }
+      var cardIdSnapshot = String(showCard.id); // cattura il valore al momento
+      var active = true; // flag per evitare setState dopo unmount
+      quizUnsubRef.current = quizListenRisposte(cardIdSnapshot, function(arr) {
+        if (active) setQuizRisposte(arr);
+      });
+      return function() {
+        active = false; // impedisce setState su componente smontato
+        if (quizUnsubRef.current) {
+          quizUnsubRef.current();
+          quizUnsubRef.current = null;
+        }
+      };
     }, [showCard ? String(showCard.id) : null]);
 
     // Listener ammonizioni real-time
@@ -237,7 +254,7 @@
       duplicaClassi.forEach(function(cl){
         var newId = Date.now() + "_" + Math.random().toString(36).slice(2, 7);
         var copia = Object.assign({}, modals.showDuplica, { id: newId, classi: [cl], ordine: cardsHook.nextOrd.current++, commenti: [], likes: 0, data: new Date().toISOString().slice(0, 10), titolo: modals.showDuplica.titolo + " [" + cl + "]" });
-        if(modals.showDuplica.opzioni && Array.isArray(modals.showDuplica.opzioni)){ copia.opzioni = modals.showDuplica.opzioni.map(function(o){ return Object.assign({}, o, { voti: [] }); }); }
+      if(Array.isArray(modals.showDuplica.opzioni) && modals.showDuplica.opzioni.length > 0){ copia.opzioni = modals.showDuplica.opzioni.map(function(o){ return Object.assign({}, o, { voti: [] }); }); }
         fbSave(copia);
       });
       modals.setShowDuplica(null); setDuplicaClassi([]);
@@ -419,8 +436,9 @@
             punteggio: { score: Math.round(score * 10) / 10, totale: totale, pct: pct }
           });
         }
-        for(var ci=0; ci<pending.length; ci+=CHUNK){
-          await Promise.all(pending.slice(ci, ci+CHUNK).map(evalOne));
+        var CHUNK_AI = 3;
+        for(var ci=0; ci<pending.length; ci+=CHUNK_AI){
+          await Promise.all(pending.slice(ci, ci+CHUNK_AI).map(evalOne));
         }
       } catch(e){ showToast("Errore analisi risposte aperte", "err"); }
       setQLoading(false);
@@ -462,6 +480,7 @@
 
     function setCardTimer(cardId, isoDeadline){
       var card = cardsHook.cards.find(function(c){ return String(c.id) === String(cardId); }); if(!card) return;
+      alarmFiredRef.current.delete(String(cardId));
       fbSave(Object.assign({}, card, { scadenza: isoDeadline || null }));
     }
 
@@ -653,7 +672,14 @@
       editMode: editMode,
       editingCm: editingCm,
       eliminaAmm: function(nome, id){ if(confirm("Eliminare?")) { var lista = (ammonizioniMap[nome] || []).filter(function(a){ return a.id !== id; }); db.collection("ammonizioni").doc(nome).set({ lista: lista }); } },
-      escHtml: function(s){ return String(s || ""); },
+      escHtml: function(s) {
+        return String(s)
+          .replace(/&/g, '&')
+          .replace(/</g, '<')
+          .replace(/>/g, '>')
+          .replace(/"/g, '"')
+          .replace(/'/g, '&#39;');
+      },
       eseguiRinomina: __handlers ? __handlers.eseguiRinomina : function(){},
       executeDelCom: executeDelCom,
       executeDelReply: executeDelReply,
