@@ -1,0 +1,363 @@
+export default {
+  async fetch(request, env, ctx) {
+    const allowedOrigin = env.ALLOWED_ORIGIN || 'https://scuolaboard.app';
+    const allowedOrigins = (env.ALLOWED_ORIGINS || allowedOrigin)
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
+
+    const origin = request.headers.get('Origin');
+
+    const makeCorsHeaders = (origin) => ({
+      'Access-Control-Allow-Origin': origin || allowedOrigin,
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Vary': 'Origin'
+    });
+
+    if (request.method === 'OPTIONS') {
+      return new Response(null, { headers: makeCorsHeaders(origin) });
+    }
+
+    if (request.method !== 'POST') {
+      return new Response('Solo POST consentito', { status: 405, headers: makeCorsHeaders(origin) });
+    }
+
+    if (!origin || !allowedOrigins.includes(origin)) {
+      return new Response(JSON.stringify({ error: 'Origine non autorizzata' }), {
+        status: 403, headers: { ...makeCorsHeaders(origin), 'Content-Type': 'application/json' }
+      });
+    }
+
+    const authResult = await verifyFirebaseToken(request, env);
+    if (!authResult.ok) {
+      console.error('[worker] Auth failed:', authResult.code, authResult.message);
+      return new Response(JSON.stringify({ error: 'Autenticazione richiesta o non valida', code: authResult.code }), {
+        status: 401, headers: { ...makeCorsHeaders(origin), 'Content-Type': 'application/json' }
+      });
+    }
+    const uid = authResult.uid;
+
+    let groqDiagnostics = { status: null, error: null };
+    let openrouterDiagnostics = { status: null, error: null };
+
+    try {
+      const body = await request.json();
+      const { type, content, options = {} } = body;
+
+      if (!content || typeof content !== 'string') {
+        return new Response(JSON.stringify({ error: 'Campo "content" obbligatorio e deve essere testo.' }), {
+          status: 400, headers: { ...makeCorsHeaders(origin), 'Content-Type': 'application/json' }
+        });
+      }
+
+      if (content.length > 60000) {
+        return new Response(JSON.stringify({ error: 'Testo in ingresso troppo lungo (supera i 60000 caratteri).' }), {
+          status: 400, headers: { ...makeCorsHeaders(origin), 'Content-Type': 'application/json' }
+        });
+      }
+
+      const now = Date.now();
+      const limitKey = `${uid}:${type || 'default'}`;
+      if (!globalThis._rateLimit) globalThis._rateLimit = new Map();
+      const last = globalThis._rateLimit.get(limitKey) || 0;
+      if (now - last < 10000) {
+        return new Response(JSON.stringify({ error: 'Troppe richieste. Riprova tra qualche secondo.' }), {
+          status: 429, headers: { ...makeCorsHeaders(origin), 'Content-Type': 'application/json' }
+        });
+      }
+      globalThis._rateLimit.set(limitKey, now);
+
+      // Cleanup periodico per evitare crescita indefinita della mappa (rate limit)
+      if (globalThis._rateLimit.size % 100 === 0) {
+        const cutoff = now - 60000;
+        for (const [key, ts] of globalThis._rateLimit) {
+          if (ts < cutoff) globalThis._rateLimit.delete(key);
+        }
+      }
+
+      const prompts = {
+        quiz: `Sei un assistente didattico. Genera esattamente 3 domande a risposta multipla basandoti sul testo fornito. Restituisci RIGIDAMENTE un oggetto JSON con questa identica struttura: { "questions": [ { "question": "Testo della domanda...", "options": ["Opzione A","Opzione B","Opzione C","Opzione D"], "correctIndex": 0, "explanation": "Spiegazione della risposta..." } ] }. Livello: ${options.level || 'medio'}. Materia: ${options.subject || 'Generale'}.`,
+
+        summary: `Sei un assistente didattico esperto. Riassumi il testo fornito dall'utente in esattamente 3 punti chiave essenziali, chiari e ben distanziati, ideali per studenti delle scuole superiori.
+Regole di formattazione tassative (NON USARE ASSOLUTAMENTE TAG HTML O TABELLE):
+- Inizia ogni punto chiave direttamente con una riga vuota di separazione dal precedente (doppio invio).
+- Non usare asterischi per i grassetti, cancelletti per i titoli o barre verticali per le tabelle. Scrivi in testo semplice e pulito.
+- Evita introduzioni e conclusioni.`,
+
+        explanation: `Sei un assistente didattico. Spiega il concetto o il testo fornito dall'utente in modo semplice per studenti delle scuole superiori, con un esempio pratico della vita quotidiana.
+Regole di formattazione tassative (NON USARE TAG HTML O TABELLE):
+- Dividi la spiegazione in 2 o al massimo 3 brevi paragrafi separati da una riga vuota.
+- Limita l'output a un massimo di 150 parole.
+- Non usare liste puntate, elenchi, asterischi o blocchi di codice. Solo testo narrativo fluido ed elegante.`,
+
+        json: `Sei un assistente didattico specializzato nella generazione di risposte JSON strutturate.
+Devi analizzare l'input dell'utente ed eseguire ESCLUSIVAMENTE la specifica richiesta descritta nel suo messaggio.
+ATTENZIONE MASSIMA: Se l'utente ti chiede di analizzare i commenti, i dubbi o la discussione degli studenti, devi dare priorità assoluta e totale ai commenti reali forniti dagli studenti. Basa l'analisi unicamente sulle reali esigenze, dubbi, o risposte emersi dai commenti, ignorando la lezione generica principale se non strettamente pertinente.
+Restituisci il risultato ESCLUSIVAMENTE sotto forma di oggetto JSON valido e strutturato, seguendo la struttura richiesta dall'utente, senza aggiungere alcuna spiegazione testuale prima o dopo, e senza usare blocchi di codice.`,
+
+        text: `Sei un assistente didattico esperto, preciso e disponibile. Rispondi alle richieste dell'utente in modo strutturato.
+ATTENZIONE RIGIDISSIMA:
+Se il messaggio dell'utente contiene alla fine la sezione "Chi ha commentato:" e un elenco di "COMMENTI" e ti viene chiesta l'analisi della partecipazione (es. "Chi ha partecipato di più?", "Quali concetti emergono maggiormente?", "Ci sono errori concettuali?"), devi IGNORARE le statistiche contenute nella lezione. Devi analizzare ESCLUSIVAMENTE l'elenco dei nomi e dei commenti degli studenti reali che trovi in fondo al messaggio per formulare la tua risposta.
+Regole di formattazione tassative (NON USARE TAG HTML O TABELLE):
+- Organizza le spiegazioni in paragrafi brevi e separali sempre con una riga vuota (doppio invio).
+- Usa esclusivamente trattini semplici per gli elenchi. Non usare asterischi per evidenziare i testi.
+- Rendi la risposta visivamente leggera, pulita e immediata. Non inserire blocchi di codice con tre backtick.`
+      };
+
+      const systemPrompt = prompts[type] || prompts.summary;
+      const isStructured = (type === 'quiz' || type === 'json');
+      const temperature = isStructured ? 0.2 : 0.6;
+      const maxTokens = options.max_tokens || (type === 'quiz' ? 1200 : (type === 'json' ? 1500 : 2000));
+
+      let aiSuccess = false;
+      let aiText = null;
+
+      // 1. Prova prima l'accesso GROQ (se fornita l'API Key)
+      if (env.GROQ_API_KEY) {
+        try {
+          const groqModelSelected = env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+          let responseFormatParam = isStructured ? { type: 'json_object' } : undefined;
+
+          let groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${env.GROQ_API_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              model: groqModelSelected,
+              messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: content }
+              ],
+              temperature: temperature,
+              response_format: responseFormatParam,
+              max_tokens: maxTokens
+            })
+          });
+
+          // Groq retry logico in caso di errore 400 da response format
+          if (!groqRes.ok && responseFormatParam && groqRes.status === 400) {
+            groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${env.GROQ_API_KEY}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                model: groqModelSelected,
+                messages: [
+                  { role: 'system', content: systemPrompt },
+                  { role: 'user', content: content }
+                ],
+                temperature: temperature,
+                max_tokens: maxTokens
+              })
+            });
+          }
+
+          if (groqRes.ok) {
+            const data = await groqRes.json();
+            aiText = data.choices[0]?.message?.content;
+            aiSuccess = true;
+          } else {
+            groqDiagnostics.status = groqRes.status;
+          }
+        } catch (err) {
+          groqDiagnostics.error = err.message || String(err);
+        }
+      }
+
+      // 2. OpenRouter Fallback
+      if (!aiSuccess && env.OPENROUTER_API_KEY) {
+        try {
+          const orModelSelected = env.OPENROUTER_MODEL || 'mistralai/mistral-7b-instruct';
+          let responseFormatParam = isStructured ? { type: 'json_object' } : undefined;
+
+          let orRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${env.OPENROUTER_API_KEY}`,
+              'Content-Type': 'application/json',
+              'HTTP-Referer': allowedOrigin,
+              'X-Title': 'ScuolaBoard'
+            },
+            body: JSON.stringify({
+              model: orModelSelected,
+              messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: content }
+              ],
+              temperature: temperature,
+              response_format: responseFormatParam,
+              max_tokens: maxTokens
+            })
+          });
+
+          if (orRes.ok) {
+            const data = await orRes.json();
+            aiText = data.choices[0]?.message?.content;
+            aiSuccess = true;
+          } else {
+            openrouterDiagnostics.status = orRes.status;
+          }
+        } catch (err) {
+          openrouterDiagnostics.error = err.message || String(err);
+        }
+      }
+
+      // Controllo finale di disponibilità
+      if (!aiSuccess || !aiText) {
+        return new Response(JSON.stringify({ error: 'Servizio di AI momentaneamente non disponibile, riprova più tardi.' }), {
+          status: 503, headers: { ...makeCorsHeaders(origin), 'Content-Type': 'application/json' }
+        });
+      }
+
+      // Rimuovi eventuali delimitatori markdown dalla risposta strutturata
+      if (isStructured) {
+        aiText = aiText.trim();
+        if (aiText.startsWith('```json')) aiText = aiText.replace(/^```json/, '');
+        else if (aiText.startsWith('```')) aiText = aiText.replace(/^```/, '');
+        if (aiText.endsWith('```')) aiText = aiText.replace(/```$/, '');
+        aiText = aiText.trim();
+      }
+
+      // Mantieni il formato di risposta atteso dal client: {success: true, data: ...}
+      return new Response(JSON.stringify({ success: true, data: aiText }), {
+        status: 200, headers: { ...makeCorsHeaders(origin), 'Content-Type': 'application/json' }
+      });
+
+    } catch (err) {
+      return new Response(JSON.stringify({ error: 'Operazione non riuscita o errore generico' }), {
+        status: 500, headers: { ...makeCorsHeaders(origin), 'Content-Type': 'application/json' }
+      });
+    }
+  }
+};
+
+/**
+ * Verifica il Firebase ID Token JWT in un Cloudflare Worker.
+ * ORA verifica la firma crittografica RS256 contro le chiavi pubbliche Google
+ * (JWKS da https://www.googleapis.com/oauth2/v3/certs) PRIMA di accettare
+ * qualsiasi claim. Cache JWKS con TTL 1 ora + skew tolerance 60s sull'exp.
+ *
+ * Sicurezza: chiunque può forgiare un JWT con i claim corretti, ma solo uno
+ * firmato da Google (con la chiave privata del progetto Firebase) supera
+ * la verifica. Questo elimina l'impersonazione arbitraria di UID.
+ */
+async function verifyFirebaseToken(request, env) {
+  const authHeader = request.headers.get('Authorization');
+  if (!authHeader) {
+    return { ok: false, code: 'AUTH_NO_HEADER', message: 'Header Authorization mancante' };
+  }
+  if (!authHeader.startsWith('Bearer ')) {
+    return { ok: false, code: 'AUTH_BAD_FORMAT', message: 'Formato header authorization errato' };
+  }
+
+  const token = authHeader.substring(7);
+  const parts = token.split('.');
+  if (parts.length !== 3) {
+    return { ok: false, code: 'AUTH_JWT_MALFORMED', message: 'Token JWT non valido' };
+  }
+
+  // Util: base64url → bytes / stringa
+  const b64UrlToBytes = (s) => {
+    let b64 = s.replace(/-/g, '+').replace(/_/g, '/');
+    while (b64.length % 4) b64 += '=';
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return bytes;
+  };
+  const b64UrlToStr = (s) => {
+    let b64 = s.replace(/-/g, '+').replace(/_/g, '/');
+    while (b64.length % 4) b64 += '=';
+    return atob(b64);
+  };
+
+  // 1. Ottieni/aggiorna cache JWKS (TTL 1h)
+  const nowMs = Date.now();
+  if (!globalThis._jwksCache || (nowMs - globalThis._jwksCache.ts) > 3600000) {
+    try {
+      const jwksRes = await fetch('https://www.googleapis.com/oauth2/v3/certs');
+      if (!jwksRes.ok) {
+        return { ok: false, code: 'JWKS_FETCH_FAILED', message: 'Impossibile recuperare chiavi pubbliche Google (HTTP ' + jwksRes.status + ')' };
+      }
+      const jwks = await jwksRes.json();
+      globalThis._jwksCache = { keys: jwks.keys || [], ts: nowMs };
+    } catch (e) {
+      return { ok: false, code: 'JWKS_FETCH_FAILED', message: 'Errore fetch JWKS: ' + (e.message || String(e)) };
+    }
+  }
+  const jwksKeys = globalThis._jwksCache.keys;
+
+  // 2. Decodifica header e forza RS256 (rifiuta altri alg → sicurezza)
+  let header;
+  try {
+    header = JSON.parse(b64UrlToStr(parts[0]));
+  } catch (e) {
+    return { ok: false, code: 'AUTH_DECODE_ERROR', message: 'Header JWT non decodificabile' };
+  }
+  if (header.alg !== 'RS256') {
+    return { ok: false, code: 'AUTH_BAD_ALG', message: 'Algoritmo non supportato (solo RS256 accettato)' };
+  }
+
+  const jwk = jwksKeys.find((k) => k.kid === header.kid);
+  if (!jwk) {
+    return { ok: false, code: 'JWKS_NO_KID_MATCH', message: 'Nessuna chiave pubblica corrispondente al kid del token' };
+  }
+
+  // 3. Verifica firma RS256 via Web Crypto API
+  let signatureValid = false;
+  try {
+    const pubKey = await crypto.subtle.importKey(
+      'jwk', jwk,
+      { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+      false, ['verify']
+    );
+    const signature = b64UrlToBytes(parts[2]);
+    const signedData = new TextEncoder().encode(parts[0] + '.' + parts[1]);
+    signatureValid = await crypto.subtle.verify(
+      'RSASSA-PKCS1-v1_5', pubKey, signature, signedData
+    );
+  } catch (e) {
+    return { ok: false, code: 'JWKS_BAD_SIGNATURE', message: 'Errore verifica firma: ' + (e.message || String(e)) };
+  }
+  if (!signatureValid) {
+    return { ok: false, code: 'JWKS_BAD_SIGNATURE', message: 'Firma JWT non valida (rifiutato)' };
+  }
+
+  // 4. Payload + claim check (SOLO DOPO firma valida)
+  let payload;
+  try {
+    payload = JSON.parse(b64UrlToStr(parts[1]));
+  } catch (e) {
+    return { ok: false, code: 'AUTH_DECODE_ERROR', message: 'Payload JWT non decodificabile' };
+  }
+
+  // Skew 60s tollerato per clock drift server/client
+  const nowSec = Math.floor(nowMs / 1000);
+  if (!payload.exp || nowSec > (payload.exp + 60)) {
+    return { ok: false, code: 'AUTH_TOKEN_EXPIRED', message: 'Token scaduto' };
+  }
+  // iat opzionale: se presente, non deve essere nel futuro (skew 60s)
+  if (payload.iat && (payload.iat - 60) > nowSec) {
+    return { ok: false, code: 'AUTH_BAD_IAT', message: 'iat nel futuro' };
+  }
+
+  // projectId ancora da env (rimossa la nota "fallback hardcoded" perché la
+  // verifica firma copre già l'autenticità del progetto).
+  const projectId = env.FIREBASE_PROJECT_ID || 'scuolaboard-874d4';
+  if (payload.aud !== projectId) {
+    return { ok: false, code: 'AUTH_BAD_AUDIENCE', message: 'Audience non valido' };
+  }
+  if (payload.iss !== `https://securetoken.google.com/${projectId}`) {
+    return { ok: false, code: 'AUTH_BAD_ISSUER', message: 'Issuer non valido' };
+  }
+  if (!payload.sub || typeof payload.sub !== 'string' || payload.sub.length > 128) {
+    return { ok: false, code: 'AUTH_NO_SUB', message: 'Manca identificativo sub/uid (o troppo lungo)' };
+  }
+
+  return { ok: true, uid: payload.sub };
+}

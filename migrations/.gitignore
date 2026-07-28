@@ -1,0 +1,12 @@
+# Service account Firebase (NON committare MAI!)
+service-account.json
+*.key.json
+*-key.json
+
+# Node modules se npm install viene eseguito in questa cartella
+node_modules/
+package-lock.json
+
+# Logs
+*.log
+npm-debug.log*

@@ -1,0 +1,214 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── HELPERS ──
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    function isProf() {
+      return isAuth()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "prof";
+    }
+
+    function isStudente() {
+      return isAuth()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "studente";
+    }
+
+    // ── USERS ──
+    // Cambio rispetto a prima: allow read era isAuth() quindi CHIUNQUE autenticato poteva
+    // scaricare tutti i profili (nome, cognome, email, classe). Ora:
+    // - Lo studente legge SOLO il proprio profilo
+    // - Il prof legge tutti (serve per gestire classi/visualizzare studenti)
+    match /users/{uid} {
+      allow read: if isAuth() && (request.auth.uid == uid || isProf());
+
+      // Create: lo studente PUÒ creare il proprio profilo, ma SOLO con role "studente"
+      allow create: if isAuth()
+        && request.auth.uid == uid
+        && request.resource.data.role == "studente";
+
+      // Update: ognuno aggiorna il proprio profilo, ma NON può modificare role, uid o email
+      allow update: if isAuth()
+        && request.auth.uid == uid
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'uid', 'email'])
+        && (!request.resource.data.keys().hasAny(['role']) || request.resource.data.role == resource.data.role);
+
+      allow delete: if isAuth() && request.auth.uid == uid;
+    }
+
+    // ── CARDS ──
+    // Stesse regole di prima: prof vede tutto, studente vede solo pubblicate e non-proposte.
+    // Nota: il filtro per classe è gestito lato client perché la classe non è una custom claim.
+    match /cards/{cardId} {
+      allow read: if isAuth() && (
+        isProf()
+        || (
+          resource.data.visibile == true
+          && resource.data.proposta != true
+        )
+      );
+
+      // Create: prof tutto; studente solo proposta e senza campi privilegiati
+      allow create: if isAuth() && (
+        isProf()
+        || (
+          isStudente()
+          && request.resource.data.proposta == true
+          && !request.resource.data.keys().hasAny(['likes', 'likesBy', 'reazioni', 'visibile', 'pinned'])
+        )
+      );
+
+      // Update: prof tutto; studente solo campi consentiti (commenti, like, reazioni, voti, visto)
+      allow update: if isAuth() && (
+        isProf()
+        || (isStudente() && (
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['commenti', 'likes', 'likesBy', 'reazioni', 'opzioni', 'visto'])
+        ))
+      );
+
+      allow delete: if isProf();
+    }
+
+    // ── QUIZ RISPOSTE ──
+    // Le regole precedenti permettevano a QUALSIASI utente autenticato di leggere TUTTE le
+    // risposte quiz di tutti. Ora:
+    // - Studente legge/scrive SOLO le proprie
+    // - Prof legge/scrive tutte (serve per visualizzare statistiche e valutare AI)
+    // Backward-compatibility: i doc scritti prima di queste nuove rules avevano
+    // studente = nome + cognome (dal Firestore users profile). Le rule attuali
+    // accettano sia il formato nuovo (displayName == token.name) sia quello legacy
+    // (displayName OR nome+' '+cognome del users/{uid}).
+    // NOTA sicurezza: request.auth.token.name arriva dal profilo Google dell'utente. È
+    // modificabile dall'utente stesso nel suo account Google, ma ciò richiede un re-login.
+    match /quiz_risposte/{docId} {
+      // Helper: controlla se lo studente autenticato è il proprietario del doc.
+      // Usa lookahead-style matching contro token.name oppure contro il profilo utente.
+      function isOwnQuizDoc() {
+        return resource.data.studente == request.auth.token.name
+          || (isStudente() && (
+              resource.data.studente == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.displayName
+              || resource.data.studente == (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.nome + " " + get(/databases/$(database)/documents/users/$(request.auth.uid)).data.cognome)
+          ));
+      }
+
+      // Read: prof tutto, studente solo i propri docs (vecchi o nuovi)
+      allow read: if isAuth() && (isProf() || isOwnQuizDoc());
+
+      // Create: solo il proprietario può creare la propria risposta, e i nuovi doc devono
+      // usare il formato displayName. Il campo cardId deve essere presente.
+      allow create: if isAuth() && (
+        isProf()
+        || (isStudente()
+            && request.resource.data.studente == request.auth.token.name
+            && request.resource.data.cardId is string)
+      );
+
+      // Update: prof aggiunge valutazione AI; studente aggiorna solo campi consentiti.
+      allow update: if isAuth() && (
+        isProf()
+        || (isOwnQuizDoc()
+            && request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['risposte', 'tempoUsato']))
+      );
+
+      allow delete: if isProf();
+    }
+
+    // ── AMMONIZIONI ──
+    // docId = nome studente (può essere displayName o legacy nome+cognome).
+    // Backward-compatible con doc scritti prima del presente refactor.
+    match /ammonizioni/{docId} {
+      // Helper: docId appartiene allo studente autenticato?
+      function isOwnAmmDoc() {
+        return docId == request.auth.token.name
+          || (isStudente() && (
+              docId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.displayName
+              || docId == (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.nome + " " + get(/databases/$(database)/documents/users/$(request.auth.uid)).data.cognome)
+          ));
+      }
+
+      // Read: prof tutto, studente solo il proprio (vecchio o nuovo formato)
+      allow read: if isAuth() && (isProf() || isOwnAmmDoc());
+
+      // Create & delete: solo prof (uno studente non può auto-ammonirsi o cancellare)
+      allow create, delete: if isProf();
+
+      // Update: prof può fare tutto; studente può aggiornare SOLO il flag 'letta' sui propri
+      // ammonimenti (tramite set({lista: listaConLettaTrue, aggiornato: ISO}) sulla UI).
+      // Limitazione: affectedKeys deve essere esattamente ['lista', 'aggiornato']. Niente
+      // aggiunta/rimozione di ammonizioni o modifica delle motivazioni da parte dello studente.
+      // EXTRA: ogni item della lista deve avere esattamente le 6 chiavi note
+      // (id, cardId, cmId, motivazione, data, letta). Impedisce di nascondere campi
+      // extra dentro la lista (es. secret_admin_pwn:true) pur restando "letta:true".
+      allow update: if isAuth() && (
+        isProf()
+        || (
+          isOwnAmmDoc()
+          && request.resource.data.aggiornato is string
+          && request.resource.data.lista.size() == resource.data.lista.size()
+          && request.resource.data.lista.all(newItem, idx,
+              resource.data.lista[idx].id == newItem.id
+              && resource.data.lista[idx].cardId == newItem.cardId
+              && resource.data.lista[idx].cmId == newItem.cmId
+              && resource.data.lista[idx].motivazione == newItem.motivazione
+              && resource.data.lista[idx].data == newItem.data
+              && newItem.letta == true
+              && newItem.keys().hasOnly(['id', 'cardId', 'cmId', 'motivazione', 'data', 'autore', 'letta'])
+            )
+        )
+      );
+    }
+
+    // ── CONFIG (classi custom, nascoste) ──
+    match /config/{docId} {
+      allow read: if isAuth();
+      // Solo prof può modificare la config classi
+      allow write: if isProf();
+    }
+
+    // ── PREFERITI ──
+    match /preferiti/{uid} {
+      allow read, write: if isAuth() && request.auth.uid == uid;
+    }
+
+    // ── AI RESULTS ──
+    // Cache di valutazioni AI per il docente. Era allow read: isAuth() ma contiene analisi
+    // di testi/carte che potrebbero essere sensibili. Ora solo prof.
+    match /ai_results/{docId} {
+      allow read, write: if isProf();
+    }
+
+    // ── COUNTERS (internal: nextCardOrder) ──
+    // Lo studente può causare transazioni su _internal_/counters indirettamente
+    // tramite saveCard → createCardWithOrder (es. quando modifica una card legacy
+    // senza campo ordine). Consentiamo scrittura a prof e studente, ma:
+    // - Solo il campo nextCardOrder può essere modificato (controllo sui campi toccati dalla richiesta)
+    // - Incremento monotonico: non può azzerare o diminuire il valore
+    // NOTA: usiamo affectedKeys() (non keys().hasOnly()) perché getNewCardOrder chiama
+    // set(..., {merge: true}); con merge, request.resource.data riflette lo stato MERGED finale,
+    // non i soli campi inviati. affectedKeys() confronta solo i campi modificati.
+    match /_internal_/{docId} {
+      allow read: if isAuth();
+      allow create: if (isProf() || isStudente())
+        && request.resource.data.keys().hasOnly(['nextCardOrder'])
+        && request.resource.data.nextCardOrder is number
+        && request.resource.data.nextCardOrder >= 1;
+      allow update: if (isProf() || isStudente())
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nextCardOrder'])
+        && request.resource.data.nextCardOrder is number
+        && request.resource.data.nextCardOrder > resource.data.nextCardOrder;
+      allow delete: if isProf();
+    }
+
+    // ── DEFAULT deny-all su tutto ciò che non è esplicitamente allow-listato ──
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,63 @@
+# ── ScuolaBoard .gitignore ────────────────────────────────────────────────
+# Esclude file locali/IDE/segreti. Mantiene `dist/` perche serve
+# direttamente a GitHub Pages (index.html -> dist/app.min.js).
+
+# ── Dependencies (rigenerate via npm install) ──
+node_modules/
+
+# ── Logs ──
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ── OS metadata ──
+.DS_Store            # macOS Finder
+Thumbs.db            # Windows thumbnail cache
+desktop.ini          # Windows folder config
+
+# ── IDE / editor ──
+.vscode/             # VSCode workspace settings (user-specific)
+.idea/               # JetBrains
+*.swp                # Vim swap
+*.swo
+*~                   # Backup files di vari editor
+*.bak
+
+# ── Secrets (mai committare) ──
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+service-account.json
+
+# ── Temp / patch artifacts ──
+*.tmp
+*.orig
+*.rej
+
+# ── Build artifacts ──
+# dist/ e INTENZIONALMENTE committato: index.html referenzia
+# dist/app.min.js e dist/styles.css, GitHub Pages serve la root + cartella dist/.
+# NON aggiungere `dist/` qui a meno di passare a GH Actions build.
+
+# ── Firebase Admin SDK (migrations/) ──
+# migrations/.gitignore gia gestisce service-account.json.
+# Escludo anche eventuali dump/export locali:
+migrations/exports/
+migrations/*.csv
+
+
+# ── Firebase SDK logs (sviluppo locale) ──
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+firebase-functions-debug.log
+*.firebase.log
+
+# ── Firebase CLI cache ──
+.firebase/
+.firebasehosting.cache

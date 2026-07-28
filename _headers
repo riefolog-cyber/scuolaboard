@@ -1,0 +1,32 @@
+# Cloudflare Pages security headers.
+#
+# Perche servono (in aggiunta ai <meta> in index.html):
+# - X-Frame-Options, frame-ancestors (blocco clickjacking) e Permissions-Policy
+#   sono IGNORATI dai browser quando arrivano via <meta>. Solo HTTP header funziona.
+# - X-Content-Type-Options e Referrer-Policy funzionano anche via meta, ma
+#   metterli come HTTP header e piu affidabile e li applica anche a sotto-risorse.
+#
+# Docs: https://developers.cloudflare.com/pages/configuration/headers/
+
+/*
+  # Blocco clickjacking (SAMEORIGIN permette embed same-origin, DENY blocca tutto).
+  X-Frame-Options: SAMEORIGIN
+
+  # Blocco MIME sniffing: forza browser a rispettare Content-Type dichiarato.
+  X-Content-Type-Options: nosniff
+
+  # Referrer: URL completo solo same-origin, origine cross-origin, niente a HTTP downgrade.
+  Referrer-Policy: strict-origin-when-cross-origin
+
+  # Permessi negati di default: () = nessun origin puo usare queste API.
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), accelerometer=(), gyroscope=(), magnetometer=()
+
+  # CSP via HTTP header: UNICA via per cui i browser rispettano frame-ancestors.
+  # unsafe-inline in script-src solo perche bundle IIFE + React 18 production min.
+  # unsafe-eval NON presente (bundle eval-free, verificato con grep).
+  Content-Security-Policy: default-src 'self' https://cdn.jsdelivr.net https://www.gstatic.com https://apis.google.com https://*.firebaseio.com https://*.googleapis.com https://*.workers.dev; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.gstatic.com https://apis.google.com https://*.firebaseapp.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com https://fonts.gstatic.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://*; frame-src 'self' https://*.firebaseapp.com https://*.google.com https://accounts.google.com; frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self' https://*.firebaseapp.com https://accounts.google.com; manifest-src 'self' data:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com https://*.gstatic.com https://*.googleusercontent.com https://accounts.google.com https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/ wss://*.firebaseio.com wss://*.firestore.googleapis.com https://api.groq.com https://openrouter.ai
+
+  # COOP/COEP/CORP: riducono superficie d'attacco cross-origin (tab-nabbing, ecc).
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Embedder-Policy: require-corp
+  Cross-Origin-Resource-Policy: same-origin
