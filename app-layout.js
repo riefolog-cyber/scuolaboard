@@ -200,7 +200,7 @@ var [wcTarget, setWcTarget] = React.useState('tutte');
                 h("path",{d:"M56 52h8M60 48v8",stroke:"rgba(99,102,241,.6)",strokeWidth:2,strokeLinecap:"round"})
               ),
               h("div",{style:{fontWeight:700,fontSize:15,marginBottom:6,color:"rgba(255,255,255,.5)"}},
-                $.filterClasse!=="tutte"?"Nessuna card per la classe "+filterClasse
+                $.filterClasse!=="tutte"?"Nessuna card per la classe "+$.filterClasse
                 :"Nessun contenuto visibile"
               ),
               h("div",{style:{fontSize:12,color:"rgba(255,255,255,.3)",marginBottom:16}},

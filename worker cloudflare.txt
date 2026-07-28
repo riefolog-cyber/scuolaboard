@@ -277,10 +277,16 @@ async function verifyFirebaseToken(request, env) {
   };
 
   // 1. Ottieni/aggiorna cache JWKS (TTL 1h)
+  // IMPORTANTE: per i Firebase ID Token (iss: securetoken.google.com/<project>)
+  // le chiavi pubbliche NON stanno su oauth2/v3/certs (che serve i Google Account
+  // ID Tokens di "Sign in with Google"), bensi sull'endpoint Secure Token Service:
+  //   https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com
+  // (Firebase Admin SDK usa la variante x509 allo stesso URL: robot/v1/metadata/x509/...)
+  const FIREBASE_JWKS_URL = 'https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com';
   const nowMs = Date.now();
   if (!globalThis._jwksCache || (nowMs - globalThis._jwksCache.ts) > 3600000) {
     try {
-      const jwksRes = await fetch('https://www.googleapis.com/oauth2/v3/certs');
+      const jwksRes = await fetch(FIREBASE_JWKS_URL);
       if (!jwksRes.ok) {
         return { ok: false, code: 'JWKS_FETCH_FAILED', message: 'Impossibile recuperare chiavi pubbliche Google (HTTP ' + jwksRes.status + ')' };
       }

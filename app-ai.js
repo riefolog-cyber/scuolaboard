@@ -181,6 +181,9 @@
           var clone = res.clone();
           var errData = await clone.json();
           if (errData && errData.code) {
+            // Sempre visibile (non gated da debug_ai) perche diagnosticare auth 401 senza
+            // dover attivare manualmente ?debug_ai=1. Rimuovibile una volta risolto.
+            console.warn('[ScuolaBoard] Worker auth code:', errData.code, '-', errData.error || '');
             aiLog('[ScuolaBoard] Worker auth code:', errData.code);
             var recoverableCodes = ['AUTH_TOKEN_EXPIRED', 'AUTH_KID_NOT_FOUND'];
             shouldRetry = recoverableCodes.indexOf(errData.code) !== -1;
