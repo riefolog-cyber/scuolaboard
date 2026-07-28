@@ -27,7 +27,6 @@
   } catch(e){
     SB.storage = null;
     window.storage = null;
-    console.info("[ScuolaBoard] Storage non disponibile (probabilmente piano Spark/free). Upload disabilitato.");
   }
 
   // Firestore instance

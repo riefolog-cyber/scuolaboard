@@ -197,7 +197,7 @@
     function markSeen(id){
       if(!seenRef.current.has(String(id))){
         seenRef.current.add(String(id));
-        try { SB.LS.seen.set(seenRef.current); } catch(e){ console.error(e); }
+        try { SB.LS.seen.set(seenRef.current); } catch(e){ console.error('[ScuolaBoard] markSeen: errore salvataggio localStorage', e); }
       }
     }
 
@@ -263,7 +263,7 @@
         var handleAllegatiUpload = __handlers.handleAllegatiUpload;
         var handleRimuoviAllegato = __handlers.handleRimuoviAllegato;
       }
-    } catch(e){ console.error(e); }
+    } catch(e){ console.error('[ScuolaBoard] createAppHandlers: errore inizializzazione', e); }
 
     // ── ALTRE OPERAZIONI LOCALI DI MODIFICA, COPIA ED ELIMINAZIONE ──
     function toggleVisibile(card, e){ e.stopPropagation(); fbSave(Object.assign({}, card, { visibile: card.visibile === false })); }
@@ -565,7 +565,7 @@
         });
         
         cardsHook.setStudenti(arr);
-      }).catch(function(e){ console.error(e); showToast("Errore caricamento studenti", "err"); });
+      }).catch(function(e){ console.error('[ScuolaBoard] loadStudenti: errore fetch', e); showToast("Errore caricamento studenti", "err"); });
     }
 
     function aggiornaClasseStudente(uid, cl){
@@ -575,7 +575,7 @@
           var newClassiPerAnno = Object.assign({}, studentData.classiPerAnno || {}, { [annoScolastico]: cl || null });
           db.collection("users").doc(uid).update({ classiPerAnno: newClassiPerAnno }).then(function(){
             cardsHook.setStudenti(function(prev){ return prev.map(function(s){ return s.uid === uid ? Object.assign({}, s, { classiPerAnno: newClassiPerAnno, classe: cl || null }) : s; }); });
-          }).catch(function(e){ console.error(e); showToast("Errore aggiornamento classe", "err"); });
+          }).catch(function(e){ console.error('[ScuolaBoard] aggiornaClasseStudente: errore update', e); showToast("Errore aggiornamento classe", "err"); });
         }
       });
     }
@@ -583,7 +583,7 @@
     function rimuoviStudente(uid){
       db.collection("users").doc(uid).set({ classe: null, rimosso: true }, { merge: true }).then(function(){
         cardsHook.setStudenti(function(prev){ return prev.filter(function(s){ return s.uid !== uid; }); });
-      }).catch(function(e){ console.error(e); showToast("Errore rimozione studente", "err"); });
+      }).catch(function(e){ console.error('[ScuolaBoard] rimuoviStudente: errore delete', e); showToast("Errore rimozione studente", "err"); });
     }
 
     // Drag & drop handlers
