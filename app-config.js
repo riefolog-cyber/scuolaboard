@@ -10,7 +10,6 @@
              privacy:function(uid){return "privacy_accepted_"+uid;}}
   };
 window.SB_CONFIG=CFG;
-window.SB_CONFIG.APP_CHECK_RECAPTCHA_KEY = 'YOUR_RECAPTCHA_SITE_KEY';
   window._SB_LS={
     seen:{
       get:function(){try{var s=typeof localStorage!=="undefined"?localStorage.getItem(CFG.LS_KEYS.seen):null;return new Set(s?JSON.parse(s):[]);}catch(e){return new Set();}},
