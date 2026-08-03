@@ -16,6 +16,10 @@ export default defineConfig({
     headless: true,
     viewport: { width: 1280, height: 800 },
     locale: "it-IT",
+    // Necessario per il test "Copia link": senza clipboard-write il Chromium
+    // headless di CI rifiuta navigator.clipboard.writeText → il toast di
+    // conferma non appare mai (fallisce il test, che in locale passa).
+    permissions: ["clipboard-read", "clipboard-write"],
     baseURL: "http://localhost:5173",
     trace: "retain-on-failure",
   },
