@@ -1,0 +1,69 @@
+# CI · ScuolaBoard
+# Validazione automatica a ogni push/PR su main: lint, typecheck, test unit,
+# build di produzione e test E2E. Il deploy su GitHub Pages resta automatico:
+# Pages serve la cartella /docs committata su main (Settings → Pages → branch
+# main, folder /docs). Questo workflow blocca push che non superano i controlli.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Lint + Typecheck + Unit test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Unit & integration tests
+        run: npm test
+
+  build:
+    name: Build di produzione (docs/)
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Verifica output (docs/index.html)
+        run: test -f docs/index.html && test -f docs/manifest.webmanifest && test -f docs/sw.js && echo "Build OK"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: docs-build
+          path: docs/
+          retention-days: 7
+
+  e2e:
+    name: Test E2E (Playwright)
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Installa browser (Chromium)
+        run: npx playwright install --with-deps chromium
+      # Serve la build di produzione su 4173 (test "PROD 4173"):
+      # il preview (vite preview) serve la cartella docs/ appena generata.
+      - name: Build di produzione (per il test PROD 4173)
+        run: npm run build
+      - name: Esegui E2E
+        run: npm run test:e2e

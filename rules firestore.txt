@@ -32,11 +32,22 @@ service cloud.firestore {
         && request.auth.uid == uid
         && request.resource.data.role == "studente";
 
-      // Update: ognuno aggiorna il proprio profilo, ma NON può modificare role, uid o email
-      allow update: if isAuth()
-        && request.auth.uid == uid
-        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'uid', 'email'])
-        && (!request.resource.data.keys().hasAny(['role']) || request.resource.data.role == resource.data.role);
+      // Update: ognuno aggiorna il proprio profilo, ma NON può modificare role, uid o email.
+      // Il prof può aggiornare SOLO i campi di gestione classe degli studenti
+      // (classe, classiPerAnno, rimosso) — serve per rinominare una classe,
+      // spostare uno studente e rimuoverlo dall'elenco. affectedKeys() garantisce
+      // che il prof non possa toccare role/uid/email né altri campi del profilo.
+      allow update: if isAuth() && (
+        (
+          request.auth.uid == uid
+          && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'uid', 'email'])
+          && (!request.resource.data.keys().hasAny(['role']) || request.resource.data.role == resource.data.role)
+        )
+        || (
+          isProf()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['classe', 'classiPerAnno', 'rimosso'])
+        )
+      );
 
       allow delete: if isAuth() && request.auth.uid == uid;
     }

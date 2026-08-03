@@ -1,0 +1,4 @@
+dist/
+dist-vite/
+node_modules/
+*.min.js

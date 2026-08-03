@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ScuolaBoard — Harness E2E</title>
+    <!-- Evita la richiesta 404 a /favicon.ico (sarebbe un errore console nel test) -->
+    <link rel="icon" href="data:," />
+    <style>
+      body {
+        margin: 0;
+        background: #1a1a2e;
+        font-family: Inter, sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- L'app vera viene montata qui da harness-boot.ts con Firebase finto -->
+    <div id="root"></div>
+    <script type="module" src="./harness-boot.ts"></script>
+  </body>
+</html>

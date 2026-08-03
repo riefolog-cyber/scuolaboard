@@ -1,0 +1,26 @@
+{
+  "name": "ScuolaBoard — Bacheca digitale della classe",
+  "short_name": "ScuolaBoard",
+  "description": "La bacheca digitale della classe: avvisi, lezioni, quiz, sondaggi, commenti e assistente AI.",
+  "lang": "it",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#12111a",
+  "theme_color": "#6366f1",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

@@ -5,7 +5,9 @@
   "private": true,
   "scripts": {
     "migrate-legacy": "node migrate-legacy-displayname.js",
-    "dry-run": "node migrate-legacy-displayname.js --dry-run"
+    "dry-run": "node migrate-legacy-displayname.js --dry-run",
+    "migrate-anno": "node migrate-card-annoscolastico.js",
+    "dry-run-anno": "node migrate-card-annoscolastico.js --dry-run"
   },
   "dependencies": {
     "firebase-admin": "^12.0.0"

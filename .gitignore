@@ -1,6 +1,6 @@
 # ── ScuolaBoard .gitignore ────────────────────────────────────────────────
-# Esclude file locali/IDE/segreti. Mantiene `dist/` perche serve
-# direttamente a GitHub Pages (index.html -> dist/app.min.js).
+# Esclude file locali/IDE/segreti/artefatti generati.
+# La build di produzione va in docs/ (GitHub Pages), NON in dist/.
 
 # ── Dependencies (rigenerate via npm install) ──
 node_modules/
@@ -40,9 +40,8 @@ service-account.json
 *.rej
 
 # ── Build artifacts ──
-# dist/ e INTENZIONALMENTE committato: index.html referenzia
-# dist/app.min.js e dist/styles.css, GitHub Pages serve la root + cartella dist/.
-# NON aggiungere `dist/` qui a meno di passare a GH Actions build.
+# La build di produzione va in docs/ (GitHub Pages: Settings → Pages → folder
+# /docs), NON in dist/. `docs/` è INTENZIONALMENTE committato (vedi fondo file).
 
 # ── Firebase Admin SDK (migrations/) ──
 # migrations/.gitignore gia gestisce service-account.json.
@@ -61,3 +60,16 @@ firebase-functions-debug.log
 # ── Firebase CLI cache ──
 .firebase/
 .firebasehosting.cache
+
+# Vite build output (dist/ generato da `vite build` locale — NON committato)
+dist/
+
+# Coverage vitest (artefatti generati)
+coverage/
+
+# Playwright
+/test-results/
+/playwright-report/
+/playwright/.cache/
+
+# docs/ INTENZIONALMENTE committato per GitHub Pages

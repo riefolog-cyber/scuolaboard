@@ -1,7 +1,9 @@
 export default {
   async fetch(request, env, ctx) {
-    const allowedOrigin = env.ALLOWED_ORIGIN || 'https://scuolaboard.app';
-    const allowedOrigins = (env.ALLOWED_ORIGINS || allowedOrigin)
+    // Hosting su GitHub Pages (dominio default) + localhost per lo sviluppo locale.
+    // In produzione impostare comunque ALLOWED_ORIGINS con i domini reali.
+    const allowedOrigin = env.ALLOWED_ORIGIN || 'https://riefolog-cyber.github.io';
+    const allowedOrigins = (env.ALLOWED_ORIGINS || allowedOrigin + ',http://localhost:5173')
       .split(',')
       .map(s => s.trim())
       .filter(Boolean);
@@ -24,7 +26,13 @@ export default {
     }
 
     if (!origin || !allowedOrigins.includes(origin)) {
-      return new Response(JSON.stringify({ error: 'Origine non autorizzata' }), {
+      return new Response(JSON.stringify({
+        error: 'Origine non autorizzata',
+        // Lista degli origin attualmente consentiti: utile per diagnosticare
+        // subito i 403 senza dover aprire la console Cloudflare.
+        allowedOrigins: allowedOrigins,
+        hint: 'Aggiungi questa origine alla variabile ALLOWED_ORIGINS del Worker.'
+      }), {
         status: 403, headers: { ...makeCorsHeaders(origin), 'Content-Type': 'application/json' }
       });
     }
@@ -37,6 +45,19 @@ export default {
       });
     }
     const uid = authResult.uid;
+
+    // Verifica server-side che l'utente sia un docente (prof).
+    // L'accesso AI è riservato esclusivamente al ruolo prof.
+    // IMPORTANTE: checkIsProf deve autenticarsi a Firestore col Firebase ID
+    // Token del richiedente (Bearer): Firestore REST accetta i Firebase ID
+    // Token e valuta le rules con request.auth corretto. Senza token Firestore
+    // risponde PERMISSION_DENIED (le rules richiedono isAuth()) e il ruolo
+    // risulterebbe sempre non-prof, anche per il docente legittimo.
+    if (!(await checkIsProf(uid, request, env))) {
+      return new Response(JSON.stringify({ error: 'Accesso AI riservato ai docenti.' }), {
+        status: 403, headers: { ...makeCorsHeaders(origin), 'Content-Type': 'application/json' }
+      });
+    }
 
     let groqDiagnostics = { status: null, error: null };
     let openrouterDiagnostics = { status: null, error: null };
@@ -366,4 +387,39 @@ async function verifyFirebaseToken(request, env) {
   }
 
   return { ok: true, uid: payload.sub };
+}
+
+/**
+ * Verifica se l'utente con il dato uid ha ruolo "prof" in Firestore.
+ * Utilizzato per il gating server-side dell'accesso AI.
+ *
+ * Passa il Firebase ID Token del richiedente come Bearer: senza di esso
+ * Firestore REST risponde 403 PERMISSION_DENIED (le rules richiedono
+ * isAuth()) e checkIsProf fallirebbe sempre. Con il token, la rule
+ * `allow read: if isAuth() && (request.auth.uid == uid || isProf())`
+ * consente all'utente di leggere il PROPRIO profilo e leggere il ruolo.
+ */
+async function checkIsProf(uid, request, env) {
+  const projectId = env.FIREBASE_PROJECT_ID || 'scuolaboard-874d4';
+  const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/(default)/documents/users/${uid}`;
+  const authHeader = request.headers.get('Authorization');
+  try {
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        // Firebase ID Token del richiedente (già verificato prima da verifyFirebaseToken)
+        ...(authHeader ? { 'Authorization': authHeader } : {})
+      }
+    });
+    if (!res.ok) {
+      console.error('[worker] checkIsProf Firestore HTTP', res.status, (await res.text()).slice(0, 200));
+      return false;
+    }
+    const doc = await res.json();
+    return doc.fields?.role?.stringValue === 'prof';
+  } catch (e) {
+    console.error('[worker] checkIsProf error:', e.message);
+    return false;
+  }
 }
