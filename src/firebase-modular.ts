@@ -17,7 +17,7 @@ import {
   GoogleAuthProvider,
 } from 'firebase/auth';
 import {
-  getFirestore,
+  initializeFirestore,
   collection,
   doc,
   query,
@@ -102,7 +102,7 @@ function compatCollection(db: any, name: string) {
 // si romperebbe l'identità tra le istanze.
 function compatDb() {
   if (!_db) {
-    const fs = getFirestore(_app);
+    const fs = initializeFirestore(_app, { experimentalAutoDetectLongPolling: true });
     _db = {
       collection: (name: string) => compatCollection(fs, name),
       runTransaction: (fn: any) =>

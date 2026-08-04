@@ -410,6 +410,7 @@ function AppProvider({ children }) {
   }
 
   function editCard(card) {
+    setShowCard(null);
     setEditMode(card);
     setForm(buildEditForm(card, normalizeLinks));
     modals.setShowModal(true);
