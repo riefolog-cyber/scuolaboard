@@ -73,3 +73,6 @@ coverage/
 /playwright/.cache/
 
 # docs/ INTENZIONALMENTE committato per GitHub Pages
+
+# Backup locale del codice (non committare)
+backup/
