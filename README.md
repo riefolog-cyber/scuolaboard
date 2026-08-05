@@ -45,8 +45,12 @@ A ogni push/PR su `main` il workflow `.github/workflows/ci.yml` esegue in automa
 **lint + typecheck + test unit/integrazione**, poi la **build** di produzione e i **test E2E**
 (Playwright). Un push che non supera i controlli viene bloccato.
 
-- Il deploy su GitHub Pages resta quello esistente: Pages serve la cartella **`docs/`**
-  committata su `main`. Il workflow non fa deploy, valida soltanto.
+- **Deploy automatico di `docs/`**: a ogni push su `main` che supera tutti i controlli, il job
+  `deploy-docs` rigenera la build (`npm run build`) e **committa e pusha da solo la cartella
+  `docs/`** (messaggio con `[skip ci]`, nessun loop). Non serve più eseguire `npm run build`
+  a mano prima del push: la CI lo fa al posto tuo.
+- GitHub Pages serve la cartella **`docs/`** committata su `main` (Settings → Pages → branch
+  `main`, folder `/docs`).
 - In locale gli E2E usano il Chrome di sistema; in CI usano il Chromium bundle di Playwright.
 
 ## PWA / Offline
@@ -87,6 +91,8 @@ Le regole permettono le scritture (creare/duplicare/copiare/eliminare card) **so
    ```bash
    bash scripts/deploy.sh "messaggio commit"
    ```
+   > La build di `docs/` viene rigenerata e committata **automaticamente dalla CI**
+   > (job `deploy-docs`) quando i controlli passano: non serve `npm run build` a mano.
 
 3. **⚠️ IMPORTANTE:** Vai su **Settings → Pages** del repo e imposta:
    - **Source:** Deploy from a branch

@@ -113,6 +113,11 @@ Da ora `.github/workflows/ci.yml` esegue a ogni push su `main`: **lint + typeche
 unit + build + E2E**. Se un commit non supera i controlli, il push viene bloccato prima
 che il sito si rompa. Il deploy resta quello descritto sopra (Pages → `main` → `/docs`).
 
+**Novità — build automatica di `docs/`**: se tutti i controlli passano, il job
+`deploy-docs` rigenera da solo la build (`npm run build`) e **committa e pusha `docs/`**
+con messaggio `[skip ci]` (niente loop di CI). Da ora non serve più eseguire
+`npm run build` a mano prima del push: basta il commit dei sorgenti.
+
 ## Avvertenze
 
 - **Downtime breve**: tra il push (Passo 1) e il Save (Passo 2) il sito è irraggiungibile

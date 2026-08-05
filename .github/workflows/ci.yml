@@ -2,7 +2,9 @@
 # Validazione automatica a ogni push/PR su main: lint, typecheck, test unit,
 # build di produzione e test E2E. Il deploy su GitHub Pages resta automatico:
 # Pages serve la cartella /docs committata su main (Settings → Pages → branch
-# main, folder /docs). Questo workflow blocca push che non superano i controlli.
+# main, folder /docs).
+# Il job "deploy-docs" rigenera e committa automaticamente docs/ a ogni push su
+# main che supera tutti i controlli: nessun "npm run build" manuale.
 name: CI
 
 on:
@@ -10,6 +12,13 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+
+# Serializza i run sullo stesso ramo: evita che due push ravvicinati facciano
+# competere tra loro i commit automatici di docs/ (il run più vecchio finisce,
+# i successivi restano in coda).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   test:
@@ -67,3 +76,38 @@ jobs:
         run: npm run build
       - name: Esegui E2E
         run: npm run test:e2e
+
+  deploy-docs:
+    name: Rigenera e committa docs/ (deploy Pages)
+    runs-on: ubuntu-latest
+    needs: [test, build, e2e]
+    # Solo su push a main, mai su PR. Il commit automatico usa il token del
+    # workflow (github-actions[bot]); i push fatti con GITHUB_TOKEN non
+    # ri-triggerano altri run, quindi niente loop.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Rigenera docs/ (build di produzione)
+        run: npm run build
+      - name: Committa e pusha docs/ se modificata
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/
+          if git diff --cached --quiet; then
+            echo "✓ docs/ già aggiornata: nessun commit necessario"
+          else
+            git commit -m "build(docs): rigenerazione automatica da CI [skip ci]"
+            # Se nel frattempo è arrivato un push diretto su main, rebase locale
+            # prima di pushare (come fa scripts/deploy.sh): evita non-fast-forward.
+            git pull --rebase origin main
+            git push origin main
+            echo "✓ docs/ rigenerata e pushatta su main"
+          fi

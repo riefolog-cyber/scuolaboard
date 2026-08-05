@@ -32,6 +32,10 @@
 
 ## IL DEPLOY (ordine rigoroso — durata ~2 minuti)
 
+> **Novità**: la CI ora rigenera e committa `docs/` automaticamente (job `deploy-docs`)
+> quando lint/typecheck/test/build/E2E passano. Il passaggio manuale `npm run build`
+> prima del push non serve più: basta il commit dei sorgenti.
+
 ### Passo 1 — Commit + push
 bash scripts/deploy.sh "refactor: migrazione Vite/TS + pulizia dead code + PWA + CI"
 
