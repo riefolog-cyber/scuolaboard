@@ -137,7 +137,7 @@ Regole di formattazione tassative (NON USARE TAG HTML O TABELLE):
       // 1. Prova prima l'accesso GROQ (se fornita l'API Key)
       if (env.GROQ_API_KEY) {
         try {
-          const groqModelSelected = env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+          const groqModelSelected = await pickBestModel('groq', env, 'llama-3.3-70b-versatile');
           let responseFormatParam = isStructured ? { type: 'json_object' } : undefined;
 
           let groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -193,7 +193,7 @@ Regole di formattazione tassative (NON USARE TAG HTML O TABELLE):
       // 2. OpenRouter Fallback
       if (!aiSuccess && env.OPENROUTER_API_KEY) {
         try {
-          const orModelSelected = env.OPENROUTER_MODEL || 'mistralai/mistral-7b-instruct';
+          const orModelSelected = await pickBestModel('openrouter', env, 'openrouter/free');
           let responseFormatParam = isStructured ? { type: 'json_object' } : undefined;
 
           let orRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -256,6 +256,109 @@ Regole di formattazione tassative (NON USARE TAG HTML O TABELLE):
     }
   }
 };
+
+/**
+ * ── SELEZIONE DINAMICA DEL MODELLO AI ───────────────────────────────────────
+ * Il worker sceglie AUTOMATICAMENTE il miglior modello gratuito disponibile
+ * interrogando i cataloghi di Groq/OpenRouter, con cache di 24h.
+ *
+ * Come funziona:
+ *  - Se imposti GROQ_MODEL / OPENROUTER_MODEL nelle env vars, quello vince
+ *    (override esplicito, nessuna chiamata al catalogo).
+ *  - Altrimenti il worker scarica il catalogo modelli e usa il primo modello
+ *    della lista prioritaria che risulta disponibile → se il provider aggiunge
+ *    un modello migliore (es. nuova versione di Llama/GPT-OSS), viene adottato
+ *    da solo entro 24h, senza toccare nulla.
+ *  - Se il catalogo non è raggiungibile si ripiega sul fallback passato.
+ */
+const MODEL_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24h: i cataloghi cambiano raramente
+const MODEL_FAIL_TTL_MS = 10 * 60 * 1000; // cache negativa: 10min dopo un errore catalogo
+
+// Modelli Groq gratuiti ordinati per capacità (il primo disponibile vince).
+// Riordina questa lista se la qualità percepita di un modello cambia.
+const GROQ_PRIORITY = [
+  'openai/gpt-oss-120b',
+  'llama-4-scout',
+  'llama-3.3-70b-versatile',
+  'openai/gpt-oss-20b',
+  'llama-3.1-8b-instant',
+];
+
+// Modelli OpenRouter gratuiti (:free) ordinati per capacità.
+const OPENROUTER_PRIORITY = [
+  'deepseek/deepseek-v3.1:free',
+  'deepseek/deepseek-v3:free',
+  'meta-llama/llama-4-scout:free',
+  'google/gemini-flash:free',
+  'qwen/qwen3-235b-a22b:free',
+  'meta-llama/llama-3.3-70b-instruct:free',
+  'mistralai/mistral-7b-instruct:free',
+];
+
+// Scarica l'elenco dei modelli dal provider. Per OpenRouter filtra SOLO i
+// modelli gratuiti (pricing 0/0) per non finire mai su un modello a pagamento.
+async function getModelCatalog(provider, env) {
+  if (provider === 'groq') {
+    const res = await fetch('https://api.groq.com/openai/v1/models', {
+      headers: { 'Authorization': `Bearer ${env.GROQ_API_KEY}` }
+    });
+    if (!res.ok) throw new Error('catalogo Groq HTTP ' + res.status);
+    const data = await res.json();
+    return (data.data || []).map((m) => m.id);
+  }
+  const res = await fetch('https://openrouter.ai/api/v1/models');
+  if (!res.ok) throw new Error('catalogo OpenRouter HTTP ' + res.status);
+  const data = await res.json();
+  return (data.data || [])
+    .filter((m) => {
+      const p = m.pricing || {};
+      return p.prompt === '0' && p.completion === '0';
+    })
+    .map((m) => m.id);
+}
+
+function pickFromCatalog(catalog, priority) {
+  if (!Array.isArray(catalog) || !catalog.length) return null;
+  for (const id of priority) {
+    if (catalog.includes(id)) return id;
+  }
+  // Nessun match in lista: ripiega su un modello chat con prefisso noto.
+  // NB: NON usare catalog[0] — il catalogo Groq include modelli non-chat
+  // (es. whisper STT): una chiamata chat a quelli fallirebbe.
+  const known = catalog.find((id) => /^(llama|openai\/gpt-oss|qwen|deepseek|gemma|mistral)/.test(id));
+  return known || null;
+}
+
+async function pickBestModel(provider, env, fallback) {
+  // Override esplicito via env var: nessuna chiamata al catalogo
+  const explicit = provider === 'groq' ? env.GROQ_MODEL : env.OPENROUTER_MODEL;
+  if (explicit) return explicit;
+
+  const cache = globalThis._modelCache;
+  // Gli errori usano una cache negativa breve: un'eventuale indisponibilità
+  // del catalogo NON deve far riprovare la fetch a ogni singola richiesta.
+  const ttl = cache && cache[provider] && cache[provider].failed ? MODEL_FAIL_TTL_MS : MODEL_CACHE_TTL_MS;
+  if (cache && cache[provider] && Date.now() - cache[provider].ts < ttl) {
+    return cache[provider].model;
+  }
+
+  try {
+    const catalog = await getModelCatalog(provider, env);
+    const priority = provider === 'groq' ? GROQ_PRIORITY : OPENROUTER_PRIORITY;
+    const model = pickFromCatalog(catalog, priority);
+    if (model) {
+      globalThis._modelCache = globalThis._modelCache || {};
+      globalThis._modelCache[provider] = { model: model, ts: Date.now(), failed: false };
+      console.log('[worker] Modello dinamico ' + provider + ': ' + model);
+      return model;
+    }
+  } catch (err) {
+    console.error('[worker] Catalogo ' + provider + ' non disponibile:', err.message);
+  }
+  globalThis._modelCache = globalThis._modelCache || {};
+  globalThis._modelCache[provider] = { model: fallback, ts: Date.now(), failed: true };
+  return fallback;
+}
 
 /**
  * Verifica il Firebase ID Token JWT in un Cloudflare Worker.

@@ -57,8 +57,49 @@ function CardDetail__({ $ }) {
           e.stopPropagation();
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 10, paddingBottom: 2 }}>
-          <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,.25)' }} />
+        {/* Header sticky: handle trascinamento + X per chiudere */}
+        <div
+          style={{
+            position: 'sticky',
+            top: 0,
+            zIndex: 6,
+            display: 'flex',
+            justifyContent: 'center',
+            padding: '10px 12px 6px',
+            background:
+              'linear-gradient(180deg, rgba(15,23,42,.97) 0%, rgba(15,23,42,.97) 55%, rgba(15,23,42,0) 100%)',
+          }}
+        >
+          <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,.25)', marginTop: 6 }} />
+          <button
+            onClick={function (e) {
+              e.stopPropagation();
+              $.closeCard();
+            }}
+            aria-label="Chiudi card"
+            title="Chiudi"
+            className="cd-close"
+            style={{
+              position: 'absolute',
+              right: 10,
+              top: 8,
+              width: 32,
+              height: 32,
+              borderRadius: '50%',
+              border: '1px solid rgba(255,255,255,.14)',
+              background: 'rgba(255,255,255,.08)',
+              color: 'rgba(255,255,255,.85)',
+              fontSize: 16,
+              fontWeight: 700,
+              lineHeight: 1,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            ✕
+          </button>
         </div>
 
         {/* Cover image */}

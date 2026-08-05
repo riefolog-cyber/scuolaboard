@@ -13,7 +13,11 @@
     UNDO_TIMEOUT_MS: 5000,
     TOAST_TIMEOUT_MS: 2400,
     ALARM_WINDOW_MS: 2000,
-    GROQ_MODELS: ['llama-3.1-8b-instant', 'llama-3.3-70b-versatile', 'openai/gpt-oss-20b', 'openai/gpt-oss-120b'],
+    // NB: il modello AI NON si sceglie qui. La selezione è server-side nel
+    // Cloudflare Worker (worker cloudflare.txt → pickBestModel), che interroga
+    // i cataloghi Groq/OpenRouter e adotta automaticamente il miglior modello
+    // gratuito disponibile (cache 24h). Override manuale: env var GROQ_MODEL /
+    // OPENROUTER_MODEL nel pannello Cloudflare.
     LS_KEYS: {
       seen: 'seen_cards',
       anno: 'annoScolasticoAttivo',

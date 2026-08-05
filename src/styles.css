@@ -159,6 +159,20 @@ textarea,input,select,button{font-family:inherit}
   border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700;
 }
 
+/* ── FASE 6c: bottone X chiudi CardDetail (header sticky) ── */
+/* Sfondo/bordo/colore restano inline; qui solo micro-interazioni. */
+.cd-close{
+  min-height: 0; /* evita che i min-height globali (38-42px su mobile) lo schiaccino in ovale */
+  transition: background .15s ease, transform .12s ease, opacity .15s ease;
+}
+.cd-close:hover{
+  background: rgba(255,255,255,.18) !important;
+  transform: scale(1.07);
+}
+.cd-close:active{
+  transform: scale(.94);
+}
+
 /* ── FASE 6c: bottone × rimozione (modali) ── */
 .icon-del{
   background:rgba(239,68,68,.2);color:#f87171;border:none;border-radius:7px;
