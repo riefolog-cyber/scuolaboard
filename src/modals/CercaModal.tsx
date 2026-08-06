@@ -59,8 +59,138 @@ function CercaModal(props) {
   var allCards = props.allCards || cards;
   var [q, setQ] = useState('');
   var [tuttiAnni, setTuttiAnni] = useState(false);
+  // Anno scolastico scelto per la ricerca (default: quello attivo in bacheca).
+  // Il pulsante 📅 apre un menu con gli anni disponibili per la ricerca.
+  var annoCorrente = props.annoScolastico || '';
+  var [annoScelto, setAnnoScelto] = useState(annoCorrente);
+  var [annoMenuOpen, setAnnoMenuOpen] = useState(false);
 
-  var base = tuttiAnni ? allCards : cards;
+  // ⚠️ "Tutti gli anni" deve cercare DAVVERO in tutti gli anni. Il dataset in
+  // bacheca (allCards) contiene SOLO l'anno selezionato: firestore-sync carica
+  // le card con filtro server-side .where('annoScolastico','==', anno). Quando
+  // l'utente attiva il toggle carichiamo qui (fetch singolo, senza filtro)
+  // tutte le card di tutti gli anni e le uniamo a quelle già in memoria.
+  var [allYears, setAllYears] = useState(null); // null = caricamento in corso
+  var [allYearsErr, setAllYearsErr] = useState(false);
+
+  // Serve il dataset di tutti gli anni quando si cerca in "Tutti gli anni" o in
+  // un anno diverso da quello attivo in bacheca (l'unico già in memoria).
+  var needsAll = tuttiAnni || annoScelto !== annoCorrente;
+
+  useEffect(
+    function () {
+      // Non serve, oppure già caricato in questa apertura della modale: niente re-fetch.
+      if (!needsAll || allYears !== null) return;
+      setAllYearsErr(false);
+      var db = (typeof window !== 'undefined' && window.db) || null;
+      // Senza db (es. test unitari) resta props.allCards: è l'unica fonte.
+      if (!db || !db.collection) {
+        setAllYears([]);
+        return;
+      }
+      var cancelled = false;
+      db.collection('cards')
+        .get()
+        .then(function (snap) {
+          if (cancelled) return;
+          var a = [];
+          snap.forEach(function (d) {
+            a.push(d.data());
+          });
+          setAllYears(a);
+        })
+        .catch(function () {
+          if (cancelled) return;
+          setAllYearsErr(true);
+          setAllYears([]);
+        });
+      return function () {
+        cancelled = true;
+      };
+    },
+    [needsAll, allYears]
+  );
+
+  // Unisce le card scaricate (tutti gli anni) con quelle già in memoria
+  // (props.allCards), senza duplicati per id.
+  var mergedAll = useMemo(
+    function () {
+      var map = {};
+      [allYears, allCards].forEach(function (list) {
+        (list || []).forEach(function (c) {
+          if (!c || c.id == null) return;
+          if (!(String(c.id) in map)) map[String(c.id)] = c;
+        });
+      });
+      return Object.keys(map).map(function (k) {
+        return map[k];
+      });
+    },
+    [allYears, allCards]
+  );
+
+  // Anni selezionabili: lista config + eventuali anni presenti nei dati caricati.
+  var ANNI = useMemo(
+    function () {
+      var cfg = (typeof window !== 'undefined' && window.SB_CONFIG) || null;
+      var baseList =
+        props.ANNI_DISPONIBILI ||
+        (cfg && cfg.ANNI_DISPONIBILI) ||
+        (typeof window !== 'undefined' ? window.ANNI_DISPONIBILI : null) ||
+        [];
+      var list = [];
+      var seen = {};
+      function add(a) {
+        if (a && !seen[a]) {
+          seen[a] = true;
+          list.push(a);
+        }
+      }
+      (baseList || []).forEach(add);
+      mergedAll.forEach(function (c) {
+        add(c.annoScolastico);
+      });
+      return list;
+    },
+    [props.ANNI_DISPONIBILI, mergedAll]
+  );
+
+  // Chiude il menu anni cliccando fuori di esso (capture sul document).
+  useEffect(
+    function () {
+      if (!annoMenuOpen) return;
+      function onDocClick(e) {
+        var el = e.target;
+        while (el && el !== document.body) {
+          if (el.getAttribute && el.getAttribute('data-anno-picker')) return;
+          el = el.parentNode;
+        }
+        setAnnoMenuOpen(false);
+      }
+      document.addEventListener('click', onDocClick, true);
+      return function () {
+        document.removeEventListener('click', onDocClick, true);
+      };
+    },
+    [annoMenuOpen]
+  );
+
+  // Base della ricerca: tutti gli anni, un anno specifico (diverso da quello in
+  // bacheca → filtrato dal dataset di tutti gli anni), oppure l'anno attivo già
+  // in memoria (cards).
+  var base = useMemo(
+    function () {
+      if (tuttiAnni) return mergedAll;
+      if (annoScelto !== annoCorrente) {
+        return mergedAll.filter(function (c) {
+          return (c.annoScolastico || '') === annoScelto;
+        });
+      }
+      return cards;
+    },
+    [tuttiAnni, annoScelto, annoCorrente, mergedAll, cards]
+  );
+
   var rawTerms = String(q || '')
     .trim()
     .split(/\s+/)
@@ -229,32 +359,139 @@ function CercaModal(props) {
               }
               {
                 <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
-                  {[
-                    { k: false, label: '📅 ' + (props.annoScolastico || 'Anno corrente') },
-                    { k: true, label: '🗂 Tutti gli anni' },
-                  ].map(function (t) {
-                    var sel = tuttiAnni === t.k;
-                    return (
-                      <button
-                        key={String(t.k)}
-                        onClick={function () {
-                          setTuttiAnni(t.k);
-                        }}
-                        style={{
-                          background: sel ? 'rgba(99,102,241,.3)' : 'rgba(255,255,255,.05)',
-                          border: '1px solid ' + (sel ? 'rgba(99,102,241,.55)' : 'rgba(255,255,255,.12)'),
-                          borderRadius: 8,
-                          padding: '4px 10px',
-                          fontSize: 11,
-                          fontWeight: 700,
-                          color: sel ? '#e0e7ff' : 'rgba(255,255,255,.6)',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        {t.label}
-                      </button>
-                    );
-                  })}
+                  {
+                    <div data-anno-picker="1" style={{ position: 'relative' }}>
+                      {
+                        <button
+                          aria-label="Scegli anno scolastico"
+                          aria-haspopup="menu"
+                          aria-expanded={annoMenuOpen}
+                          onClick={function (e) {
+                            e.stopPropagation();
+                            setAnnoMenuOpen(function (v) {
+                              return !v;
+                            });
+                          }}
+                          style={{
+                            background: !tuttiAnni ? 'rgba(99,102,241,.3)' : 'rgba(255,255,255,.05)',
+                            border: '1px solid ' + (!tuttiAnni ? 'rgba(99,102,241,.55)' : 'rgba(255,255,255,.12)'),
+                            borderRadius: 8,
+                            padding: '4px 10px',
+                            fontSize: 11,
+                            fontWeight: 700,
+                            color: !tuttiAnni ? '#e0e7ff' : 'rgba(255,255,255,.6)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 4,
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          📅 {annoScelto || annoCorrente || 'Anno corrente'} ▾
+                        </button>
+                      }
+                      {annoMenuOpen && (
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: 'calc(100% + 6px)',
+                            left: 0,
+                            background: 'rgba(13,13,30,.98)',
+                            border: '1px solid rgba(99,102,241,.4)',
+                            borderRadius: 14,
+                            padding: '8px 6px',
+                            zIndex: 600,
+                            minWidth: 190,
+                            boxShadow: '0 12px 40px rgba(0,0,0,.7)',
+                          }}
+                        >
+                          {
+                            <div
+                              style={{
+                                fontSize: 10,
+                                fontWeight: 800,
+                                color: 'rgba(255,255,255,.38)',
+                                letterSpacing: 1.2,
+                                padding: '2px 10px 8px',
+                              }}
+                            >
+                              CERCA NELL'ANNO
+                            </div>
+                          }
+                          {ANNI.map(function (anno) {
+                            var sel = !tuttiAnni && anno === annoScelto;
+                            return (
+                              <button
+                                key={anno}
+                                onClick={function () {
+                                  setAnnoScelto(anno);
+                                  setTuttiAnni(false);
+                                  setAnnoMenuOpen(false);
+                                }}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 8,
+                                  width: '100%',
+                                  textAlign: 'left',
+                                  background: sel ? 'rgba(99,102,241,.25)' : 'transparent',
+                                  border: 'none',
+                                  borderRadius: 9,
+                                  padding: '7px 12px',
+                                  cursor: 'pointer',
+                                  fontSize: 13,
+                                  fontWeight: sel ? 800 : 500,
+                                  color: sel ? '#e0e7ff' : 'rgba(255,255,255,.72)',
+                                  marginBottom: 1,
+                                }}
+                              >
+                                {
+                                  <span style={{ width: 16, textAlign: 'center', fontSize: 12 }}>
+                                    {sel ? '✓' : ''}
+                                  </span>
+                                }
+                                {anno}
+                              </button>
+                            );
+                          })}
+                          {
+                            <div
+                              style={{
+                                margin: '8px 10px 4px',
+                                padding: '6px 0 0',
+                                borderTop: '1px solid rgba(255,255,255,.07)',
+                                fontSize: 10,
+                                color: 'rgba(255,255,255,.3)',
+                                lineHeight: 1.5,
+                              }}
+                            >
+                              Scegli l'anno in cui cercare.{<br />}Le card degli anni passati restano archiviate.
+                            </div>
+                          }
+                        </div>
+                      )}
+                    </div>
+                  }
+                  {
+                    <button
+                      onClick={function () {
+                        setTuttiAnni(true);
+                        setAnnoMenuOpen(false);
+                      }}
+                      style={{
+                        background: tuttiAnni ? 'rgba(99,102,241,.3)' : 'rgba(255,255,255,.05)',
+                        border: '1px solid ' + (tuttiAnni ? 'rgba(99,102,241,.55)' : 'rgba(255,255,255,.12)'),
+                        borderRadius: 8,
+                        padding: '4px 10px',
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color: tuttiAnni ? '#e0e7ff' : 'rgba(255,255,255,.6)',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      🗂 Tutti gli anni
+                    </button>
+                  }
                 </div>
               }
               {
@@ -314,6 +551,16 @@ function CercaModal(props) {
                   Cerca tra tutte le classi, incluse le card «Solo prof», per verificare se un argomento esiste già.
                 </div>
               }
+              {needsAll && allYears === null && (
+                <div style={{ fontSize: 11, color: '#a5b4fc', marginTop: 6, lineHeight: 1.5 }}>
+                  ⏳ Caricamento card di tutti gli anni…
+                </div>
+              )}
+              {needsAll && allYearsErr && (
+                <div style={{ fontSize: 11, color: '#fbbf24', marginTop: 6, lineHeight: 1.5 }}>
+                  ⚠️ Impossibile caricare gli anni passati: sto cercando solo nell'anno corrente.
+                </div>
+              )}
             </div>
           }
           {
@@ -337,7 +584,7 @@ function CercaModal(props) {
                   }
                 </div>
               )}
-              {q.trim() && results.length === 0 && (
+              {q.trim() && results.length === 0 && !(needsAll && allYears === null) && (
                 <div style={{ padding: '34px 20px', textAlign: 'center' }}>
                   {
                     <div style={{ fontSize: 30, marginBottom: 8, opacity: 0.6 }}>
@@ -427,7 +674,7 @@ function CercaModal(props) {
                         {cc.length > 3 && (
                           <span style={{ fontSize: 10, color: 'rgba(255,255,255,.4)' }}>+{cc.length - 3}</span>
                         )}
-                        {tuttiAnni && c.annoScolastico && (
+                        {needsAll && c.annoScolastico && (
                           <span
                             className="badge-chip"
                             style={{ background: 'rgba(139,92,246,.2)', color: '#a78bfa', padding: '2px 7px', fontSize: 10, fontWeight: 700 }}

@@ -1,6 +1,6 @@
 // CercaModal.test.tsx — Tests for the prof keyword-search modal
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import React from "react";
 
 import "./CercaModal.tsx";
@@ -98,11 +98,67 @@ describe("CercaModal", () => {
     expect(props.setShowCerca).toHaveBeenCalledWith(false);
   });
 
-  it("searches all years when the 'Tutti gli anni' toggle is active", () => {
+  it("searches all years when the 'Tutti gli anni' toggle is active", async () => {
     renderModal();
     fireEvent.click(screen.getByText(/Tutti gli anni/));
+    // Il toggle avvia il fetch delle card dal db: aspetta che lo stato si assesti
+    await act(async () => {
+      await Promise.resolve();
+    });
     fireEvent.input(screen.getByLabelText("Cerca card"), { target: { value: "Equazioni" } });
     expect(screen.getByRole("button", { name: /Equazioni di primo grado/ })).toBeTruthy();
     expect(screen.getByRole("button", { name: /Equazioni vecchio anno/ })).toBeTruthy();
+  });
+
+  it("carica dal db le card degli anni passati quando il toggle 'Tutti gli anni' è attivo", async () => {
+    // Simula il caso reale: la bacheca ha SOLO le card dell'anno selezionato
+    // (filtro server-side in firestore-sync) ma nel db ci sono anche card di
+    // anni precedenti, che devono comparire nella ricerca "Tutti gli anni".
+    const origCollection = window.db.collection;
+    window.db.collection = () => ({
+      get: () =>
+        Promise.resolve({
+          forEach: (cb) => {
+            cb({ data: () => ({ id: "oldDb", tipo: "nota", titolo: "Equazioni anno precedente", testo: "", classi: ["3AO"], commenti: [], ordine: 50, annoScolastico: "2024/2025" }) });
+          },
+        }),
+    });
+    try {
+      renderModal({ allCards: cards }); // l'anno passato NON è tra le props
+      fireEvent.click(screen.getByText(/Tutti gli anni/));
+      fireEvent.input(screen.getByLabelText("Cerca card"), { target: { value: "Equazioni" } });
+      expect(await screen.findByRole("button", { name: /Equazioni anno precedente/ })).toBeTruthy();
+      // Il merge non deve perdere le card dell'anno corrente già in memoria
+      expect(screen.getByRole("button", { name: /Equazioni di primo grado/ })).toBeTruthy();
+    } finally {
+      window.db.collection = origCollection;
+    }
+  });
+
+  it("cliccando sul pulsante anno apre il menu con gli anni disponibili", () => {
+    renderModal();
+    // Menu chiuso: nessun anno elencato come voce
+    expect(screen.queryByRole("button", { name: /2025\/2026/ })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /Scegli anno scolastico/ }));
+    // Menu aperto: gli anni di window.ANNI_DISPONIBILI compaiono come voci
+    expect(screen.getByRole("button", { name: /2025\/2026/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /2026\/2027/ })).toBeTruthy();
+  });
+
+  it("selezionando un anno passato cerca solo in quell'anno", async () => {
+    renderModal();
+    fireEvent.click(screen.getByRole("button", { name: /Scegli anno scolastico/ }));
+    fireEvent.click(screen.getByRole("button", { name: /2025\/2026/ }));
+    // Il cambio anno avvia il fetch del dataset completo: aspetta che si assesti
+    await act(async () => {
+      await Promise.resolve();
+    });
+    fireEvent.input(screen.getByLabelText("Cerca card"), { target: { value: "Equazioni" } });
+    // Trovata la card del 2025/2026 (da props.allCards), NON quella del 2026/2027
+    expect(screen.getByRole("button", { name: /Equazioni vecchio anno/ })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /Equazioni di primo grado/ })).toBeNull();
+    // L'anno scelto è mostrato sul pulsante e la card espone il badge 📅
+    expect(screen.getByRole("button", { name: /Scegli anno scolastico/ })).toHaveTextContent("2025/2026");
+    expect(screen.getByText("📅 2025/2026")).toBeTruthy();
   });
 });
