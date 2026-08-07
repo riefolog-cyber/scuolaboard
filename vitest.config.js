@@ -17,7 +17,7 @@ export default defineConfig({
     include: ['src/**/*.test.{ts,tsx}'],
     // I test di INTEGRAZIONE caricano l'app VERA (lazy CardDetail + 16 moduli modal)
     // e, in suite parallela, sforano facilmente il default di 5000ms (timeout flaky
-    // documentato in REFACTORING_PLAN Fase 1a). 15000ms dà margine senza nascondere
+    // documentato in archive/REFACTORING_PLAN.md Fase 1a). 15000ms dà margine senza nascondere
     // veri deadlock (restano < 30s).
     testTimeout: 15000,
     coverage: {

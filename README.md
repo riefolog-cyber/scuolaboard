@@ -7,24 +7,39 @@ Applicazione web per la gestione della bacheca digitale scolastica, con supporto
 ```
 scuolaboard/
 ├── src/                    # Codice sorgente TypeScript + React
-│   ├── main.tsx            # Entry point Vite
+│   ├── main.tsx            # Entry point Vite (import dei moduli in ordine)
 │   ├── contexts/           # React Context API (Auth, Cards, Modals, AI, UI)
+│   ├── hooks/              # Hook di dominio (useToast, useQuiz, useAmmonizioni, useClassi)
+│   ├── carddetail/         # Pannelli della CardDetail (AI, quiz, partecipazione, commenti)
+│   ├── modals/             # Tutte le modali (split da Modals.tsx) + focusTrap
+│   ├── utils/              # Utility pure (format, cloud, hooks)
+│   ├── integration/        # Test di integrazione (fake-firestore + harness)
 │   ├── AppLayout.tsx       # Layout principale
-│   ├── CardDetail.tsx      # Dettaglio card (lazy-loaded)
 │   ├── CardGrid.tsx        # Griglia card
-│   ├── Modals.tsx          # Tutte le modali
+│   ├── CardDetail.tsx      # Dettaglio card (lazy-loaded)
+│   ├── Modals.tsx          # Aggregatore modali
 │   ├── ai-services.ts      # Integrazione AI (Groq/OpenRouter)
 │   ├── auth.ts             # Autenticazione Firebase
 │   ├── firebase-init.ts    # Inizializzazione Firebase
+│   ├── firebase-modular.ts # Shim compat sopra il modular SDK
 │   ├── firestore-services.ts # Servizi Firestore
+│   ├── firestore-sync.ts   # Adapter useSyncExternalStore per Firestore
 │   ├── app-handlers.ts     # Handler operazioni CRUD
 │   ├── app-utils.ts        # Utility e funzioni globali
-│   └── app-state.ts        # Stato globale e bootstrap
-├── docs/                   # Build di produzione (Vite → GitHub Pages)
+│   ├── app-state.ts        # Stato globale e bootstrap
+│   ├── globals.ts          # Espone npm packages su window (legacy UMD)
+│   └── global.d.ts         # Dichiarazioni dei globali (UMD + window.*)
+├── e2e/                    # Test E2E Playwright (harness con Firebase finto)
+├── migrations/             # Script di migrazione dati (firebase-admin)
+├── scripts/                # Script di supporto (deploy.sh)
+├── archive/                # Documentazione di piani completati (REFACTORING/TESTING_PLAN)
+├── docs/                   # Build di produzione (Vite → GitHub Pages, committata)
+├── public/                 # PWA: manifest, service worker, icona
 ├── index.html              # Entry point sviluppo (NON produzione)
 ├── vite.config.js          # Configurazione Vite
 ├── tsconfig.json           # Configurazione TypeScript
-└── vitest.config.js        # Configurazione test
+├── vitest.config.js        # Configurazione test
+└── playwright.config.js    # Configurazione E2E
 ```
 
 ## Sviluppo locale
@@ -33,7 +48,7 @@ scuolaboard/
 npm install        # Installa dipendenze
 npm run dev        # Avvia server sviluppo su http://localhost:5173
 npm run build      # Build di produzione in docs/
-npm test           # Esegue i test (138 test, 20 file)
+npm test           # Esegue i test (157 test, 22 file)
 npm run lint       # ESLint
 npx tsc --noEmit   # Typecheck
 npm run test:e2e   # Test E2E (Playwright, usa il Chrome di sistema)

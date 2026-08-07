@@ -1,6 +1,6 @@
 // e2e/modals.spec.js — verifica in Chrome reale che le modali sistemate
 // (Copia in altro anno, Rifiuta proposta, Timer, Ammonizioni, EditAmm,
-// Profilo studente) si aprano DAVVERO e funzionino (vedi TESTING_PLAN.md).
+// Profilo studente) si aprano DAVVERO e funzionino (vedi archive/TESTING_PLAN.md).
 //
 // Usa e2e/harness.html: l'app VERA montata nel browser con Firebase finto
 // (nessuna credenziale reale necessaria). Il fake db è esposto su window.__db

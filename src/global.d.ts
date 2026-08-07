@@ -1,6 +1,10 @@
 // global.d.ts — Type declarations for ScuolaBoard's UMD/global pattern
-// Only declares globals set by module files (globals.ts). Script files define
-// their own globals via `function` / `var` and don't need declare var here.
+// Unico file di dichiarazioni globali (fusione di global.d.ts + globals.d.ts,
+// agosto 2026): dichiara i globali impostati dai moduli e l'interfaccia Window
+// estesa con le funzioni esposte via window.*. I file script (IIFE/UMD)
+// definiscono i propri globali via `function`/`var` e non servono declare qui.
+// NB: i tipi Window restano volutamente permissivi (`any` per i duplicati):
+// il vecchio global.d.ts usava `any` e i consumer (test inclusi) ci si appoggiano.
 
 // ── CSS modules ────────────────────────────────────────────────────────────
 declare module '*.css' {}
@@ -31,6 +35,11 @@ interface Window {
   _SB_LS: any;
   _appVersionLoaded: string;
   _appRenderAttempts: number;
+
+  // Runtime / librerie (impostati da globals.ts)
+  React: any;
+  ReactDOM: any;
+  firebase: any;
 
   // Firebase instances
   storage: any;
@@ -81,8 +90,11 @@ interface Window {
   Avatar: any;
   sbSafeUrl: any;
   avatarColor: any;
+  avatarInitials: (name: string) => string;
   cleanMarkdownText: any;
   classeColor: any;
+  ErrorBoundary: any;
+  App: any;
 
   // Audio
   webkitAudioContext?: typeof AudioContext;
