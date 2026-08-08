@@ -2,7 +2,7 @@
 var SB = window.SB || {};
 var h = SB.h || React.createElement;
 
-function Header__({ $ }) {
+function Header__({ $ }: any) {
   return (
     <div
       className="scuola-header"
@@ -118,7 +118,7 @@ function Header__({ $ }) {
           {
             <select
               value={$.previewClasse}
-              onChange={function (e) {
+              onChange={function (e: any) {
                 $.setPreviewClasse(e.target.value);
               }}
               style={{
@@ -132,7 +132,7 @@ function Header__({ $ }) {
               }}
             >
               {<option value="TUTTE">Tutte le classi</option>}
-              {$.CLASSI_LIST.map(function (cl) {
+              {$.CLASSI_LIST.map(function (cl: any) {
                 return (
                   <option key={cl} value={cl}>
                     {cl}
@@ -146,15 +146,15 @@ function Header__({ $ }) {
       {
         <div
           style={{ position: 'relative', display: 'flex', alignItems: 'center' }}
-          onClick={function (e) {
+          onClick={function (e: any) {
             e.stopPropagation();
           }}
         >
           {
             <button
-              onClick={function (e) {
+              onClick={function (e: any) {
                 e.stopPropagation();
-                $.setShowAnnoMenu(function (v) {
+                $.setShowAnnoMenu(function (v: any) {
                   return !v;
                 });
               }}
@@ -204,12 +204,12 @@ function Header__({ $ }) {
                   ANNO SCOLASTICO
                 </div>
               }
-              {$.ANNI_DISPONIBILI.map(function (anno) {
+              {$.ANNI_DISPONIBILI.map(function (anno: any) {
                 var sel = anno === $.annoScolastico;
                 return (
                   <button
                     key={anno}
-                    onClick={function (e) {
+                    onClick={function (e: any) {
                       e.stopPropagation();
                       $.setAnnoScolastico(anno);
                       try {
@@ -319,7 +319,7 @@ function Header__({ $ }) {
       {$.isProf && (
         <button
           onClick={function () {
-            $.setPreviewSt(function (v) {
+            $.setPreviewSt(function (v: any) {
               return !v;
             });
           }}

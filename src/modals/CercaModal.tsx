@@ -10,7 +10,7 @@ var useEffect = React.useEffect;
 var useMemo = React.useMemo;
 
 // Normalizza per il match: minuscolo + rimozione accenti (è→e, à→a…).
-function norm(s) {
+function norm(s: any) {
   return String(s || '')
     .toLowerCase()
     .normalize('NFD')
@@ -19,15 +19,15 @@ function norm(s) {
 
 // Evidenzia i termini nel testo (case-insensitive sul testo ORIGINALE: la
 // normalizzazione NFD sposterebbe gli indici con i caratteri accentati).
-function hilite(text, terms) {
+function hilite(text: string, terms: string[]) {
   var t = String(text || '');
   if (!t || !terms.length) return t;
   var lower = t.toLowerCase();
-  var out = [];
+  var out: any[] = [];
   var i = 0;
   while (i < t.length) {
-    var best = null;
-    terms.forEach(function (term) {
+    var best: any = null;
+    terms.forEach(function (term: string) {
       if (!term) return;
       var idx = lower.indexOf(term, i);
       if (idx >= 0 && (best === null || idx < best.idx)) best = { idx: idx, len: term.length };
@@ -52,7 +52,7 @@ function hilite(text, terms) {
   return out;
 }
 
-function CercaModal(props) {
+function CercaModal(props: any) {
   if (!props.showCerca || !props.isProf) return null;
   var setShowCerca = props.setShowCerca;
   var cards = props.cards || [];
@@ -70,7 +70,8 @@ function CercaModal(props) {
   // le card con filtro server-side .where('annoScolastico','==', anno). Quando
   // l'utente attiva il toggle carichiamo qui (fetch singolo, senza filtro)
   // tutte le card di tutti gli anni e le uniamo a quelle già in memoria.
-  var [allYears, setAllYears] = useState(null); // null = caricamento in corso
+  // any: null = caricamento in corso, poi array di card (di tutti gli anni)
+  var [allYears, setAllYears] = useState<any>(null);
   var [allYearsErr, setAllYearsErr] = useState(false);
 
   // Serve il dataset di tutti gli anni quando si cerca in "Tutti gli anni" o in
@@ -91,10 +92,10 @@ function CercaModal(props) {
       var cancelled = false;
       db.collection('cards')
         .get()
-        .then(function (snap) {
+        .then(function (snap: any) {
           if (cancelled) return;
-          var a = [];
-          snap.forEach(function (d) {
+          var a: any[] = [];
+          snap.forEach(function (d: any) {
             a.push(d.data());
           });
           setAllYears(a);
@@ -115,14 +116,14 @@ function CercaModal(props) {
   // (props.allCards), senza duplicati per id.
   var mergedAll = useMemo(
     function () {
-      var map = {};
-      [allYears, allCards].forEach(function (list) {
-        (list || []).forEach(function (c) {
+      var map: any = {};
+      [allYears, allCards].forEach(function (list: any) {
+        (list || []).forEach(function (c: any) {
           if (!c || c.id == null) return;
           if (!(String(c.id) in map)) map[String(c.id)] = c;
         });
       });
-      return Object.keys(map).map(function (k) {
+      return Object.keys(map).map(function (k: string) {
         return map[k];
       });
     },
@@ -138,16 +139,16 @@ function CercaModal(props) {
         (cfg && cfg.ANNI_DISPONIBILI) ||
         (typeof window !== 'undefined' ? window.ANNI_DISPONIBILI : null) ||
         [];
-      var list = [];
-      var seen = {};
-      function add(a) {
+      var list: string[] = [];
+      var seen: any = {};
+      function add(a: string) {
         if (a && !seen[a]) {
           seen[a] = true;
           list.push(a);
         }
       }
       (baseList || []).forEach(add);
-      mergedAll.forEach(function (c) {
+      mergedAll.forEach(function (c: any) {
         add(c.annoScolastico);
       });
       return list;
@@ -159,7 +160,7 @@ function CercaModal(props) {
   useEffect(
     function () {
       if (!annoMenuOpen) return;
-      function onDocClick(e) {
+      function onDocClick(e: any) {
         var el = e.target;
         while (el && el !== document.body) {
           if (el.getAttribute && el.getAttribute('data-anno-picker')) return;
@@ -182,7 +183,7 @@ function CercaModal(props) {
     function () {
       if (tuttiAnni) return mergedAll;
       if (annoScelto !== annoCorrente) {
-        return mergedAll.filter(function (c) {
+        return mergedAll.filter(function (c: any) {
           return (c.annoScolastico || '') === annoScelto;
         });
       }
@@ -202,51 +203,51 @@ function CercaModal(props) {
       if (!query) return [];
       var terms = query.split(/\s+/);
       return base
-        .filter(function (c) {
+        .filter(function (c: any) {
           var hay = norm(c.titolo + ' ' + (c.testo || ''));
-          (c.commenti || []).forEach(function (cm) {
+          (c.commenti || []).forEach(function (cm: any) {
             hay += ' ' + norm(cm.testo || '');
           });
-          (c.quizDomande || []).forEach(function (d) {
+          (c.quizDomande || []).forEach(function (d: any) {
             hay += ' ' + norm(d.testo || '');
           });
-          (c.opzioni || []).forEach(function (o) {
+          (c.opzioni || []).forEach(function (o: any) {
             hay += ' ' + norm(o.testo || '');
           });
-          return terms.every(function (t) {
+          return terms.every(function (t: string) {
             return t && hay.indexOf(t) >= 0;
           });
         })
         .slice()
-        .sort(function (a, b) {
+        .sort(function (a: any, b: any) {
           return (a.ordine || 0) - (b.ordine || 0);
         });
     },
     [base, q]
   );
 
-  function open(c) {
+  function open(c: any) {
     setShowCerca(false);
     if (props.openCard) props.openCard(c);
   }
 
   // Snippet che privilegia il campo dove il match è AVVENUTO (testo, commento,
   // domanda quiz o opzione): così l'evidenziazione cade sempre nel testo visibile.
-  function matchedSnippet(c, terms) {
-    var candidates = [];
+  function matchedSnippet(c: any, terms: string[]) {
+    var candidates: string[] = [];
     if (c.testo) candidates.push(c.testo);
-    (c.commenti || []).forEach(function (cm) {
+    (c.commenti || []).forEach(function (cm: any) {
       if (cm.testo) candidates.push('💬 ' + cm.testo);
     });
-    (c.quizDomande || []).forEach(function (d) {
+    (c.quizDomande || []).forEach(function (d: any) {
       if (d.testo) candidates.push('❓ ' + d.testo);
     });
-    (c.opzioni || []).forEach(function (o) {
+    (c.opzioni || []).forEach(function (o: any) {
       if (o.testo) candidates.push('🗳️ ' + o.testo);
     });
-    var found = candidates.find(function (txt) {
+    var found = candidates.find(function (txt: any) {
       var n = norm(txt);
-      return terms.some(function (t) {
+      return terms.some(function (t: string) {
         return t && n.indexOf(t) >= 0;
       });
     });
@@ -262,7 +263,7 @@ function CercaModal(props) {
   // globale non chiude anche la card sottostante).
   useEffect(
     function () {
-      function onKey(e) {
+      function onKey(e: any) {
         if (e.key === 'Escape') {
           e.stopPropagation();
           setShowCerca(false);
@@ -307,7 +308,7 @@ function CercaModal(props) {
             overflow: 'hidden',
             boxShadow: '0 20px 80px rgba(0,0,0,.7)',
           }}
-          onClick={function (e) {
+          onClick={function (e: any) {
             e.stopPropagation();
           }}
         >
@@ -366,9 +367,9 @@ function CercaModal(props) {
                           aria-label="Scegli anno scolastico"
                           aria-haspopup="menu"
                           aria-expanded={annoMenuOpen}
-                          onClick={function (e) {
+                          onClick={function (e: any) {
                             e.stopPropagation();
-                            setAnnoMenuOpen(function (v) {
+                            setAnnoMenuOpen(function (v: any) {
                               return !v;
                             });
                           }}
@@ -418,7 +419,7 @@ function CercaModal(props) {
                               CERCA NELL'ANNO
                             </div>
                           }
-                          {ANNI.map(function (anno) {
+                          {ANNI.map(function (anno: string) {
                             var sel = !tuttiAnni && anno === annoScelto;
                             return (
                               <button
@@ -510,7 +511,7 @@ function CercaModal(props) {
                     <input
                       aria-label="Cerca card"
                       value={q}
-                      onInput={function (e) {
+                      onInput={function (e: any) {
                         setQ(e.target.value);
                       }}
                       placeholder="Cerca per titolo, testo, commenti…"
@@ -608,7 +609,7 @@ function CercaModal(props) {
                   {results.length + (results.length === 1 ? ' RISULTATO' : ' RISULTATI')}
                 </div>
               )}
-              {results.map(function (c) {
+              {results.map(function (c: any) {
                 var cc = c.classi || [];
                 var senzaClasse = cc.length === 0;
                 var nascosta = c.visibile === false;
@@ -621,7 +622,7 @@ function CercaModal(props) {
                     onClick={function () {
                       open(c);
                     }}
-                    onKeyDown={function (e) {
+                    onKeyDown={function (e: any) {
                       if (e.key === 'Enter') open(c);
                     }}
                     style={{
@@ -659,7 +660,7 @@ function CercaModal(props) {
                             Solo prof
                           </span>
                         ) : (
-                          cc.slice(0, 3).map(function (cl, i) {
+                          cc.slice(0, 3).map(function (cl: string, i: number) {
                             return (
                               <span
                                 key={i}

@@ -45,7 +45,7 @@ var LazyCercaModal = lazy(function () {
 });
 
 // ── AGGREGATOR: renders all modals ──
-SB.Modals = function ({ $ }) {
+SB.Modals = function ({ $ }: any) {
   return (
     // Fase 8b: le modali chiuse rendono null → il trap trova solo i focusable
     // della modale aperta. display:contents non altera il layout.

@@ -2,9 +2,8 @@
 var SB = window.SB || {};
 window.SB = SB;
 var h = SB.h || React.createElement;
-var Fragment = SB.Fragment || React.Fragment;
 
-function ConfirmDelModal(props) {
+function ConfirmDelModal(props: any) {
   var confirmDel = props.confirmDel;
   var setConfirmDel = props.setConfirmDel;
   var delCardWithUndo = props.delCardWithUndo;
@@ -17,12 +16,15 @@ function ConfirmDelModal(props) {
   var modalMessage =
     'Vuoi davvero eliminare ' +
     (isComment ? 'questo commento' : isReply ? 'questa risposta' : 'questa card') +
-    "? L'azione può essere annullata entro 5 secondi.";
+    // Solo l'eliminazione card ha l'undo (toast con "Annulla"): per commenti e
+    // risposte l'operazione è subito persistita su Firestore, niente recupero.
+    (isComment || isReply ? "? L'operazione è irreversibile." : "? L'azione può essere annullata entro 5 secondi.");
   var confirmAction = function () {
     if (isComment) {
       executeDelCom(confirmDel.cardId, confirmDel.id);
     } else if (isReply) {
-      executeDelReply(confirmDel.cardId, confirmDel.cmId, confirmDel.id);
+      // Ordine parametri di executeDelReply: (cmId, rId, cardId)
+      executeDelReply(confirmDel.cmId, confirmDel.id, confirmDel.cardId);
     } else {
       delCardWithUndo(confirmDel.id);
     }
@@ -54,7 +56,7 @@ function ConfirmDelModal(props) {
             maxWidth: 360,
             width: '100%',
           }}
-          onClick={function (e) {
+          onClick={function (e: any) {
             e.stopPropagation();
           }}
         >
@@ -124,5 +126,4 @@ function ConfirmDelModal(props) {
   );
 }
 
-SB.ConfirmDelModal = ConfirmDelModal;
 export default ConfirmDelModal;

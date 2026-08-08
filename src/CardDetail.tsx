@@ -1,7 +1,6 @@
 // CardDetail.jsx · ScuolaBoard
 var SB = window.SB || {};
 var h = SB.h || React.createElement;
-var Fragment = SB.Fragment || React.Fragment;
 
 import QuizPanel from './carddetail/QuizPanel.tsx';
 import AIPanel from './carddetail/AIPanel.tsx';
@@ -10,11 +9,11 @@ import DomandeLiberePanel from './carddetail/DomandeLiberePanel.tsx';
 import CommentsSection from './carddetail/CommentsSection.tsx';
 import RifiutaModal from './carddetail/RifiutaModal.tsx';
 
-function CardDetail__({ $ }) {
+function CardDetail__({ $ }: any) {
   if (!$.showCard) return null;
   var c = $.showCard;
   var totV = c.opzioni
-    ? c.opzioni.reduce(function (a, o) {
+    ? c.opzioni.reduce(function (a: any, o: any) {
         return a + (o.voti || []).length;
       }, 0)
     : 0;
@@ -53,7 +52,7 @@ function CardDetail__({ $ }) {
           maxHeight: '92vh',
           overflow: 'auto',
         }}
-        onClick={function (e) {
+        onClick={function (e: any) {
           e.stopPropagation();
         }}
       >
@@ -72,7 +71,7 @@ function CardDetail__({ $ }) {
         >
           <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,.25)', marginTop: 6 }} />
           <button
-            onClick={function (e) {
+            onClick={function (e: any) {
               e.stopPropagation();
               $.closeCard();
             }}
@@ -106,7 +105,7 @@ function CardDetail__({ $ }) {
         {c.copertina && (
           <div
             style={{ width: '100%', background: '#0f172a', cursor: 'pointer' }}
-            onClick={function (e) {
+            onClick={function (e: any) {
               e.stopPropagation();
               $.setLightbox({ url: c.copertina, didascalia: c.titolo });
             }}
@@ -148,7 +147,7 @@ function CardDetail__({ $ }) {
                   color: 'rgba(255,255,255,.7)',
                 }}
               >
-                {cc.slice(0, 3).map(function (cl, i) {
+                {cc.slice(0, 3).map(function (cl: any, i: any) {
                   var isCustom = $.CLASSI_DEFAULT.indexOf(cl) < 0;
                   var ccc = isCustom ? $.classeColor(cl, $.classiCustom) : '#fb923c';
                   return (
@@ -215,7 +214,7 @@ function CardDetail__({ $ }) {
           {/* Images gallery */}
           {c.immagini && c.immagini.length > 0 && (
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
-              {c.immagini.map(function (img, i) {
+              {c.immagini.map(function (img: any, i: any) {
                 return (
                   <img
                     key={i}
@@ -252,7 +251,7 @@ function CardDetail__({ $ }) {
               >
                 📎 ALLEGATI
               </div>
-              {c.allegati.map(function (al, i) {
+              {c.allegati.map(function (al: any, i: any) {
                 return (
                   <a
                     key={i}
@@ -284,7 +283,7 @@ function CardDetail__({ $ }) {
           {/* Links */}
           {cardLinks.length > 0 && (
             <div style={{ marginBottom: 14 }}>
-              {cardLinks.map(function (link, i) {
+              {cardLinks.map(function (link: any, i: any) {
                 return (
                   <a
                     key={i}
@@ -343,7 +342,7 @@ function CardDetail__({ $ }) {
                   <span>{'⏰ ' + str}</span>
                   {$.isProf && !$.simulaSt && (
                     <button
-                      onClick={function (e) {
+                      onClick={function (e: any) {
                         e.stopPropagation();
                         $.setCardTimer(c.id, null);
                       }}
@@ -379,7 +378,7 @@ function CardDetail__({ $ }) {
               >
                 🗳️ SONDAGGIO · {totV} voti
               </div>
-              {c.opzioni.map(function (o) {
+              {c.opzioni.map(function (o: any) {
                 var pct = totV > 0 ? Math.round(((o.voti || []).length / totV) * 100) : 0;
                 var hasVoted = (o.voti || []).indexOf($.myName($.user)) >= 0;
                 return (
@@ -444,7 +443,7 @@ function CardDetail__({ $ }) {
           {/* Like + Reactions row */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
             <button
-              onClick={function (e) {
+              onClick={function (e: any) {
                 e.stopPropagation();
                 $.toggleLike(c.id);
               }}
@@ -462,7 +461,7 @@ function CardDetail__({ $ }) {
             </button>
             {$.isProf && !$.simulaSt && (
               <button
-                onClick={function (e) {
+                onClick={function (e: any) {
                   e.stopPropagation();
                   $.setShowTimerModal(true);
                   $.setTimerInput(c.scadenza ? String(c.scadenza).slice(0, 16) : '');
@@ -483,7 +482,7 @@ function CardDetail__({ $ }) {
               return (
                 <button
                   key={emoji}
-                  onClick={function (e) {
+                  onClick={function (e: any) {
                     e.stopPropagation();
                     $.toggleReazione(c.id, emoji);
                   }}
@@ -507,7 +506,7 @@ function CardDetail__({ $ }) {
             <span style={{ flex: 1 }} />
             {$.isProf && !$.simulaSt && (
               <button
-                onClick={function (e) {
+                onClick={function (e: any) {
                   e.stopPropagation();
                   $.editCard(c);
                 }}
@@ -523,7 +522,7 @@ function CardDetail__({ $ }) {
             )}
             {isOwner && (
               <button
-                onClick={function (e) {
+                onClick={function (e: any) {
                   e.stopPropagation();
                   $.editCard(c);
                 }}
@@ -539,7 +538,7 @@ function CardDetail__({ $ }) {
             )}
             {$.isProf && !$.simulaSt && (
               <button
-                onClick={function (e) {
+                onClick={function (e: any) {
                   e.stopPropagation();
                   $.delCardWithUndo(c.id);
                 }}
@@ -561,7 +560,7 @@ function CardDetail__({ $ }) {
           {/* Sondaggio AI analisi (prof) */}
           {$.isProf && !$.simulaSt && c.tipo === 'sondaggio' && (
             <button
-              onClick={function (e) {
+              onClick={function (e: any) {
                 e.stopPropagation();
                 $.aiAnalisiSondaggio(c);
               }}

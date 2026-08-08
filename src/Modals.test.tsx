@@ -13,7 +13,7 @@ beforeEach(() => {
 import "./Modals.tsx";
 
 describe("Modals", () => {
-  function make$() {
+  function make$(): any {
     return {
       lightbox: null, setLightbox: () => {},
       showPrivacy: false, setShowPrivacy: () => {},
@@ -77,7 +77,7 @@ describe("Modals", () => {
         S: {},
       })
     );
-    fireEvent.change(document.getElementById("editamm-input"), {
+    fireEvent.change(document.getElementById("editamm-input") as HTMLElement, {
       target: { value: "Fuori tema (corretto)" },
     });
     fireEvent.click(screen.getByRole("button", { name: "✓ Salva modifica" }));
@@ -97,7 +97,7 @@ describe("Modals", () => {
         S: {},
       })
     );
-    fireEvent.change(document.getElementById("editamm-input"), {
+    fireEvent.change(document.getElementById("editamm-input") as HTMLElement, {
       target: { value: "   " },
     });
     fireEvent.click(screen.getByRole("button", { name: "✓ Salva modifica" }));

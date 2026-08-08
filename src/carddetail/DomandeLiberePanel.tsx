@@ -3,7 +3,7 @@ var SB = window.SB || {};
 var h = SB.h || React.createElement;
 var Fragment = SB.Fragment || React.Fragment;
 
-function DomandeLiberePanel({ $, c }) {
+function DomandeLiberePanel({ $, c }: any) {
   return (
     <Fragment>
       {$.isProf && !$.simulaSt && $.cardQOpen[String(c.id)] && (
@@ -19,7 +19,7 @@ function DomandeLiberePanel({ $, c }) {
           <textarea
             id="cm-textarea"
             value={$.cardQ}
-            onInput={function (e) {
+            onInput={function (e: any) {
               $.setCardQ(e.target.value);
             }}
             rows={2}
@@ -57,7 +57,7 @@ function DomandeLiberePanel({ $, c }) {
             </button>
             <button
               onClick={function () {
-                $.setCardQOpen(function (p) {
+                $.setCardQOpen(function (p: any) {
                   var n = Object.assign({}, p);
                   delete n[String(c.id)];
                   return n;
@@ -118,7 +118,7 @@ function DomandeLiberePanel({ $, c }) {
                     🗑️ Elimina domande
                   </button>
                 </div>
-                {domande.map(function (dq) {
+                {domande.map(function (dq: any) {
                   return (
                     <div
                       key={dq.id}
@@ -147,7 +147,7 @@ function DomandeLiberePanel({ $, c }) {
       {$.isProf && !$.simulaSt && !$.cardQOpen[String(c.id)] && (
         <button
           onClick={function () {
-            $.setCardQOpen(function (p) {
+            $.setCardQOpen(function (p: any) {
               var n = Object.assign({}, p);
               n[String(c.id)] = true;
               return n;

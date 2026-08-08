@@ -2,9 +2,8 @@
 var SB = window.SB || {};
 window.SB = SB;
 var h = SB.h || React.createElement;
-var Fragment = SB.Fragment || React.Fragment;
 
-function LightboxModal(props) {
+function LightboxModal(props: any) {
   if (!props.lightbox) return null;
   var lb = props.lightbox;
   var setLb = props.setLightbox;
@@ -51,7 +50,7 @@ function LightboxModal(props) {
       {lb.tutti && lb.tutti.length > 1 && (
         <button
           aria-label="Immagine precedente"
-          onClick={function (e) {
+          onClick={function (e: any) {
             e.stopPropagation();
             var ni = (lb.idx - 1 + lb.tutti.length) % lb.tutti.length;
             var img = lb.tutti[ni];
@@ -80,7 +79,7 @@ function LightboxModal(props) {
         <img
           src={lb.url}
           alt={lb.didascalia || ''}
-          onClick={function (e) {
+          onClick={function (e: any) {
             e.stopPropagation();
           }}
           style={{
@@ -108,11 +107,11 @@ function LightboxModal(props) {
       )}
       {lb.tutti && lb.tutti.length > 1 && (
         <div style={{ marginTop: 8, display: 'flex', gap: 6 }}>
-          {lb.tutti.map(function (_, i) {
+          {lb.tutti.map(function (_: any, i: number) {
             return (
               <div
                 key={i}
-                onClick={function (e) {
+                onClick={function (e: any) {
                   e.stopPropagation();
                   var img = lb.tutti[i];
                   setLb({ url: img.url, didascalia: img.didascalia || '', tutti: lb.tutti, idx: i });
@@ -133,7 +132,7 @@ function LightboxModal(props) {
       {lb.tutti && lb.tutti.length > 1 && (
         <button
           aria-label="Immagine successiva"
-          onClick={function (e) {
+          onClick={function (e: any) {
             e.stopPropagation();
             var ni = (lb.idx + 1) % lb.tutti.length;
             var img = lb.tutti[ni];
@@ -162,5 +161,4 @@ function LightboxModal(props) {
   );
 }
 
-SB.LightboxModal = LightboxModal;
 export default LightboxModal;

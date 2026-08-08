@@ -16,11 +16,8 @@ textarea,input,select,button{font-family:inherit}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
 @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 @keyframes fadein{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-@keyframes slidedown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
-@keyframes glow{0%,100%{box-shadow:0 0 8px rgba(var(--c-primary-rgb),.3)}50%{box-shadow:0 0 18px rgba(var(--c-primary-rgb),.6)}}
 .pulse{animation:pulse 2s infinite}
 .fadein{animation:fadein .35s cubic-bezier(.22,1,.36,1)}
-.slidedown{animation:slidedown .25s ease}
 .card-wrap{cursor:pointer}
 .card-wrap button:hover{filter:brightness(1.15);transform:scale(1.04);}
 .bulk-card{cursor:pointer !important;}
@@ -31,11 +28,7 @@ textarea,input,select,button{font-family:inherit}
 .ai-panel.open{max-height:600px;opacity:1;}
 .card-wrap button:active{transform:scale(.94);}
 .card-wrap a:hover{filter:brightness(1.2);}
-.card-wrap.dragging{opacity:.3;transform:scale(.96)}
 .card-wrap.drag-over{outline:2px dashed var(--c-primary);border-radius:16px;outline-offset:2px}
-/* Confetti celebration */
-@keyframes confetti-fall{0%{transform:translateY(-20px) rotate(0deg);opacity:1}100%{transform:translateY(200px) rotate(720deg);opacity:0}}
-.confetti-piece{position:absolute;width:8px;height:8px;border-radius:2px;animation:confetti-fall 1.2s ease-out forwards;}
 
 /* Skeleton loading */
 @keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
@@ -106,16 +99,6 @@ textarea,input,select,button{font-family:inherit}
   }
 }
 
-/* ── UTILITY CLASSES (da stili inline ripetuti) ── */
-.u-spin{display:inline-block;animation:spin 1s linear infinite}
-.u-flex6{display:flex;gap:6px}
-.u-flex8{display:flex;gap:8px}
-.u-flex10{display:flex;gap:10px}
-.u-mb8{margin-bottom:8px}
-.u-mb10{margin-bottom:10px}
-.u-muted{font-size:11px;color:rgba(255,255,255,.62)}
-.u-muted2{font-size:11px;color:rgba(255,255,255,.58)}
-.u-muted3{font-size:11px;color:rgba(255,255,255,.66)}
 
 /* ── FASE 6: PILL BUTTON (azioni card: like, reazioni, commenta, ecc.) ── */
 /* NB: fontWeight/fontSize/gap/padding non nel default → ogni bottone li
@@ -206,21 +189,6 @@ button:focus-visible{
   border:1px solid rgba(255,255,255,.10);
 }
 
-/* ── SKELETON CARD-SHAPED ── */
-.sk-card{
-  background:rgba(255,255,255,.035);
-  border-radius:18px;
-  border:1px solid rgba(255,255,255,.06);
-  border-top:3px solid rgba(99,102,241,.25);
-  padding:16px;
-  margin-bottom:16px;
-  break-inside:avoid;
-}
-.sk-badge{width:56px;height:20px;border-radius:6px}
-.sk-title{height:18px;width:75%;margin:10px 0 8px}
-.sk-body{height:13px;width:100%;margin-bottom:6px}
-.sk-body-short{height:13px;width:55%;margin-bottom:14px}
-.sk-footer{height:14px;width:40%;margin-top:4px}
 
 /* ── EMPTY STATE ── */
 .empty-state{
@@ -232,14 +200,6 @@ button:focus-visible{
 .empty-state-icon{font-size:56px;line-height:1}
 .empty-state-title{font-size:17px;font-weight:700;color:#f1f5f9;margin:0}
 .empty-state-sub{font-size:13px;color:rgba(255,255,255,.68);margin:0;text-align:center;max-width:300px;line-height:1.55}
-.empty-state-btn{
-  margin-top:8px;padding:10px 24px;
-  background:linear-gradient(135deg,#6366f1,#8b5cf6);
-  border:none;border-radius:10px;color:#fff;
-  font-size:14px;font-weight:700;cursor:pointer;
-  transition:opacity var(--t-fast);
-}
-.empty-state-btn:hover{opacity:.85}
 
 
 /* ═══════════════════════════════════════════════════════
@@ -289,20 +249,6 @@ button:focus-visible{
   border:1px solid rgba(255,255,255,.12);padding:7px 14px;font-size:12px;
 }
 .btn-ghost:hover{background:rgba(255,255,255,.12)}
-.btn-danger{
-  background:rgba(248,113,113,.12);color:#f87171;
-  border:1px solid rgba(248,113,113,.28);padding:7px 14px;font-size:12px;
-}
-.btn-danger:hover{background:rgba(248,113,113,.2)}
-.btn-success{
-  background:rgba(74,222,128,.12);color:#4ade80;
-  border:1px solid rgba(74,222,128,.28);padding:7px 14px;font-size:12px;
-}
-.btn-success:hover{background:rgba(74,222,128,.2)}
-.btn-warn{
-  background:rgba(251,191,36,.12);color:#fbbf24;
-  border:1px solid rgba(251,191,36,.28);padding:7px 14px;font-size:12px;
-}
 
 /* ── TIPOGRAFIA: line-height coerente ── */
 body{line-height:1.5}
@@ -331,10 +277,6 @@ select option{
   background:#fff;
 }
 
-/* ── BADGE tipo: microanimazione on hover ── */
-.card-wrap:hover .badge-tipo{
-  filter:brightness(1.15);
-}
 
 /* ── LINK stile ── */
 a{color:#a5b4fc;text-decoration:none}

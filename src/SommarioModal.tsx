@@ -2,9 +2,9 @@
 var SB = window.SB || {};
 var h = SB.h || React.createElement;
 
-function SommarioModal__({ $ }) {
+function SommarioModal__({ $ }: any) {
   if (!$.showSommario) return null;
-  var card = $.cards.find(function (c) {
+  var card = $.cards.find(function (c: any) {
     return String(c.id) === String($.showSommario);
   });
   if (!card) return null;
@@ -38,7 +38,7 @@ function SommarioModal__({ $ }) {
           maxHeight: '80vh',
           overflowY: 'auto',
         }}
-        onClick={function (e) {
+        onClick={function (e: any) {
           e.stopPropagation();
         }}
       >

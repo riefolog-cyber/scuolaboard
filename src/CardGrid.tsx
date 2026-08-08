@@ -3,13 +3,13 @@ import CardItem from './CardItem.tsx';
 var SB = window.SB || {};
 var h = SB.h || React.createElement;
 
-function CardGrid__({ $ }) {
+function CardGrid__({ $ }: any) {
   if ($.cards.length === 0) {
     return (
       <div style={{ padding: '10px 14px 18px' }}>
         {
           <div className="card-grid" style={{ columns: '300px', columnGap: 16 }}>
-            {[1, 2, 3, 4, 5, 6].map(function (i) {
+            {[1, 2, 3, 4, 5, 6].map(function (i: number) {
               return (
                 <div
                   key={i}
@@ -127,7 +127,7 @@ function CardGrid__({ $ }) {
 
   return (
     <div className="card-grid" style={{ columns: '300px', columnGap: 16 }}>
-      {$.visibleSorted.map(function (c) {
+      {$.visibleSorted.map(function (c: any) {
         return h(CardItem, { key: c.id, $: $, c: c });
       })}
     </div>

@@ -3,7 +3,7 @@ var SB = window.SB || {};
 var h = SB.h || React.createElement;
 var Fragment = SB.Fragment || React.Fragment;
 
-function QuizPanel({ $, c }) {
+function QuizPanel({ $, c }: any) {
   return (
     c.tipo === 'quiz' && c.quizDomande && (
                 <div style={{ marginBottom: 14 }}>
@@ -22,17 +22,17 @@ function QuizPanel({ $, c }) {
                   {$.isProf && !$.simulaSt ? (
                     (function () {
                       // ── VISTA PROF: RISULTATI + classifica + valutazione aperte ──
-                      var risProf = ($.quizRisposte || []).filter(function (r) {
+                      var risProf = ($.quizRisposte || []).filter(function (r: any) {
                         return String(r.cardId) === String(c.id);
                       });
                       var domProf = c.quizDomande || [];
-                      var haAperte = domProf.some(function (d) {
+                      var haAperte = domProf.some(function (d: any) {
                         return d.tipo === 'aperta';
                       });
-                      var tutteValutate = risProf.length > 0 && risProf.every(function (r) {
+                      var tutteValutate = risProf.length > 0 && risProf.every(function (r: any) {
                         return r.aiValutato;
                       });
-                      var pendingCount = risProf.filter(function (r) {
+                      var pendingCount = risProf.filter(function (r: any) {
                         return !r.aiValutato;
                       }).length;
                       return (
@@ -43,7 +43,7 @@ function QuizPanel({ $, c }) {
                                 {'📊 RISULTATI (' + risProf.length + ' studenti)'}
                               </div>
                               <button
-                                onClick={function (e) {
+                                onClick={function (e: any) {
                                   e.stopPropagation();
                                   $.resetRisposte(c.id);
                                 }}
@@ -106,10 +106,10 @@ function QuizPanel({ $, c }) {
                           )}
                           {risProf
                             .slice()
-                            .sort(function (a, b) {
+                            .sort(function (a: any, b: any) {
                               return ((b.punteggio || {}).pct || 0) - ((a.punteggio || {}).pct || 0);
                             })
-                            .map(function (r, ri) {
+                            .map(function (r: any, ri: number) {
                               var colore = ((r.punteggio || {}).pct || 0) >= 75 ? '#4ade80' : ((r.punteggio || {}).pct || 0) >= 50 ? '#fbbf24' : '#f87171';
                               return (
                                 <div
@@ -146,11 +146,11 @@ function QuizPanel({ $, c }) {
                                       )}
                                     </div>
                                   </div>
-                                  {domProf.some(function (d) {
+                                  {domProf.some(function (d: any) {
                                     return d.tipo !== 'aperta';
                                   }) && (
                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: haAperte ? 8 : 0 }}>
-                                      {domProf.map(function (d, di) {
+                                      {domProf.map(function (d: any, di: number) {
                                         if (d.tipo === 'aperta') return null;
                                         var risp = r.risposte && r.risposte[di];
                                         var corretta = risp === d.corretta;
@@ -186,7 +186,7 @@ function QuizPanel({ $, c }) {
                                   )}
                                   {haAperte && r.aiValutato && (
                                     <div>
-                                      {domProf.map(function (d, di) {
+                                      {domProf.map(function (d: any, di: number) {
                                         if (d.tipo !== 'aperta') return null;
                                         var s =
                                           r.aiScores &&
@@ -194,7 +194,7 @@ function QuizPanel({ $, c }) {
                                             r.aiScores[di + 1] ||
                                             (function () {
                                               var k = Object.keys(r.aiScores || {});
-                                              var oi = domProf.slice(0, di + 1).filter(function (x) {
+                                              var oi = domProf.slice(0, di + 1).filter(function (x: any) {
                                                 return x.tipo === 'aperta';
                                               }).length - 1;
                                               return r.aiScores[k[oi]] || null;
@@ -206,7 +206,7 @@ function QuizPanel({ $, c }) {
                                   )}
                                   {haAperte && !r.aiValutato && (
                                     <div>
-                                      {domProf.map(function (d, di) {
+                                      {domProf.map(function (d: any, di: number) {
                                         if (d.tipo !== 'aperta') return null;
                                         var risposta = r.risposte && r.risposte[di];
                                         return (
@@ -249,8 +249,8 @@ function QuizPanel({ $, c }) {
                     // Risposta già inviata: cerca il doc dello studente corrente
                     // nell'array quizRisposte (dal listener). NON usiamo c.risposte:
                     // le Firestore Rules vietano allo studente di scriverlo.
-                    var miaRisposta = null;
-                    ($.quizRisposte || []).forEach(function (r) {
+                    var miaRisposta: any = null;
+                    ($.quizRisposte || []).forEach(function (r: any) {
                       if (r.studente === $.myName($.user)) miaRisposta = r;
                     });
                     var giaRisposto = miaRisposta && miaRisposta.risposte;
@@ -278,7 +278,7 @@ function QuizPanel({ $, c }) {
                       </div>
                     ) : (
                       <div>
-                        {c.quizDomande.map(function (d, di) {
+                        {c.quizDomande.map(function (d: any, di: number) {
                           var rispostaUtente = risposteUtente[di];
                           return (
                             <div
@@ -296,7 +296,7 @@ function QuizPanel({ $, c }) {
                               >
                                 {di + 1 + '. ' + d.testo}
                               </div>
-                              {(d.opzioni || []).map(function (opt, oi) {
+                              {(d.opzioni || []).map(function (opt: any, oi: number) {
                                 var sel = rispostaUtente === oi;
                                 return (
                                   <button
@@ -304,7 +304,7 @@ function QuizPanel({ $, c }) {
                                     onClick={function () {
                                       var nuovo = Object.assign({}, risposteUtente);
                                       nuovo[di] = oi;
-                                      $.setQRisposte(function (p) {
+                                      $.setQRisposte(function (p: any) {
                                         var nr = Object.assign({}, p);
                                         nr[String(c.id)] = nuovo;
                                         return nr;

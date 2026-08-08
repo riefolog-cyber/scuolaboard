@@ -1,15 +1,14 @@
 // PartecipazionePanel.tsx · ScuolaBoard · pannello estratto da CardDetail
 var SB = window.SB || {};
 var h = SB.h || React.createElement;
-var Fragment = SB.Fragment || React.Fragment;
 
-function PartecipazionePanel({ $, c }) {
+function PartecipazionePanel({ $, c }: any) {
   return (
     (function () {
                 var commentatori = [
                   ...new Set(
-                    (c.commenti || []).flatMap(function (cm) {
-                      return [cm.autore].concat((cm.risposte || []).map(function (r) {
+                    (c.commenti || []).flatMap(function (cm: any) {
+                      return [cm.autore].concat((cm.risposte || []).map(function (r: any) {
                         return r.autore;
                       }));
                     })
@@ -18,7 +17,7 @@ function PartecipazionePanel({ $, c }) {
                   return n && n !== 'Prof';
                 });
                 var votanti = c.opzioni
-                  ? [...new Set(c.opzioni.flatMap(function (o) {
+                  ? [...new Set(c.opzioni.flatMap(function (o: any) {
                       return o.voti;
                     }))]
                   : [];
@@ -84,9 +83,9 @@ function PartecipazionePanel({ $, c }) {
                       </div>
                     )}
                     {(function () {
-                      var ammCard = [];
-                      Object.keys($.ammonizioniMap || {}).forEach(function (nome) {
-                        ($.ammonizioniMap[nome] || []).forEach(function (a) {
+                      var ammCard: any[] = [];
+                      Object.keys($.ammonizioniMap || {}).forEach(function (nome: string) {
+                        ($.ammonizioniMap[nome] || []).forEach(function (a: any) {
                           if (String(a.cardId) === String(c.id)) ammCard.push(Object.assign({}, a, { nome: nome }));
                         });
                       });
@@ -96,7 +95,7 @@ function PartecipazionePanel({ $, c }) {
                           <div style={{ fontWeight: 700, color: 'rgba(245,158,11,.9)', fontSize: 11, marginBottom: 4 }}>
                             ⚠️ Ammoniti in questa card:
                           </div>
-                          {ammCard.map(function (a) {
+                          {ammCard.map(function (a: any) {
                             return (
                               <div
                                 key={a.id}

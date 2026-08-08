@@ -1,22 +1,10 @@
 // FilterBar.jsx · ScuolaBoard
+import filterBtn from './modals/filterBtn.ts';
 var SB = window.SB || {};
 var h = SB.h || React.createElement;
 
-// Helper: stile pulsanti filtro
-function filterBtn(active) {
-  return {
-    border: '1px solid ' + (active ? 'rgba(99,102,241,.5)' : 'rgba(255,255,255,.1)'),
-    borderRadius: 8,
-    background: active ? 'rgba(99,102,241,.25)' : 'rgba(255,255,255,.04)',
-    color: active ? '#a5b4fc' : 'rgba(255,255,255,.58)',
-    cursor: 'pointer',
-    fontWeight: active ? 800 : 500,
-    fontSize: 11,
-    padding: '4px 10px',
-  };
-}
 
-function FilterBar__({ $ }) {
+function FilterBar__({ $ }: any) {
   if (!$.isProf || $.simulaSt || $.view !== 'bacheca') return null;
   return (
     <div style={{ background: 'rgba(255,255,255,.02)', borderBottom: '1px solid rgba(255,255,255,.06)' }}>
@@ -24,7 +12,7 @@ function FilterBar__({ $ }) {
         <div
           style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 14px', cursor: 'pointer' }}
           onClick={function () {
-            $.setFiltroBarOpen(function (v) {
+            $.setFiltroBarOpen(function (v: any) {
               return !v;
             });
           }}
@@ -50,7 +38,7 @@ function FilterBar__({ $ }) {
           )}
           {$.filterClasse !== 'tutte' && (
             <button
-              onClick={function (e) {
+              onClick={function (e: any) {
                 e.stopPropagation();
                 $.setFilterClasse('tutte');
               }}
@@ -81,7 +69,7 @@ function FilterBar__({ $ }) {
               CLASSE:
             </span>
           }
-          {$.CLASSI_LIST.map(function (cl) {
+          {$.CLASSI_LIST.map(function (cl: any) {
             var sel = $.filterClasse === cl;
             var isCustom = $.CLASSI_DEFAULT.indexOf(cl) < 0;
             var cc = isCustom ? $.classeColor(cl, $.classiCustom) : '#fb923c';
@@ -132,17 +120,17 @@ function FilterBar__({ $ }) {
                 {$.rinominaClasse === cl ? (
                   <div
                     style={{ display: 'flex', gap: 3, alignItems: 'center' }}
-                    onClick={function (e) {
+                    onClick={function (e: any) {
                       e.stopPropagation();
                     }}
                   >
                     {
                       <input
                         value={$.rinominaInput || ''}
-                        onInput={function (e) {
+                        onInput={function (e: any) {
                           $.setRinominaInput(e.target.value.toUpperCase());
                         }}
-                        onKeyDown={function (e) {
+                        onKeyDown={function (e: any) {
                           if (e.key === 'Enter') $.eseguiRinomina();
                           if (e.key === 'Escape') $.setRinominaClasse(null);
                         }}
@@ -202,7 +190,7 @@ function FilterBar__({ $ }) {
                   </div>
                 ) : (
                   <button
-                    onClick={function (e) {
+                    onClick={function (e: any) {
                       e.stopPropagation();
                       $.apriRinomina(cl);
                     }}
@@ -221,7 +209,7 @@ function FilterBar__({ $ }) {
                 )}
                 {
                   <button
-                    onClick={function (e) {
+                    onClick={function (e: any) {
                       e.stopPropagation();
                       if (
                         confirm(
@@ -268,10 +256,10 @@ function FilterBar__({ $ }) {
               {
                 <input
                   value={$.newClasseInput}
-                  onInput={function (e) {
+                  onInput={function (e: any) {
                     $.setNewClasseInput(e.target.value.toUpperCase());
                   }}
-                  onKeyDown={function (e) {
+                  onKeyDown={function (e: any) {
                     if (e.key === 'Enter') $.addClasseCustom();
                     if (e.key === 'Escape') {
                       $.setAddingClasse(false);

@@ -2,7 +2,7 @@
 var SB = window.SB || {};
 var h = SB.h || React.createElement;
 
-function AIOverlay__({ $ }) {
+function AIOverlay__({ $ }: any) {
   if (!($.aiRunning || $.cardAiLoad || $.cardQLoad || $.sommarioLoading || $.sondaggioAiLoading)) return null;
   return (
     <div

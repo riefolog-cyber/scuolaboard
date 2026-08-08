@@ -110,7 +110,6 @@ export async function bootApp({ seed = {}, user = null } = {}) {
   await import('../app-utils.ts');
   await import('../ai-services.ts');
   await import('../firestore-services.ts');
-  await import('../AppComponents.tsx');
   await import('../Modals.tsx');
   await import('../modals.ts');
   await import('../auth.ts');
@@ -140,7 +139,3 @@ export async function renderApp({ seed = {}, user = null } = {}) {
   };
 }
 
-// Attende che l'app sia renderizzata (auth risolto + card caricate).
-export async function waitForApp(screen, text, timeout = 3000) {
-  return screen.findByText(text, {}, { timeout });
-}

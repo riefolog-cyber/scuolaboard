@@ -37,9 +37,9 @@ var db = window.db;
 // client-side (visibleSorted in cards.ts) e così evitiamo un indice composito.
 // ⚠️ Richiede che TUTTE le card abbiano il campo annoScolastico: eseguire
 // prima migrations/migrate-card-annoscolastico.js per le card legacy.
-function createCardsStore(anno) {
+function createCardsStore(anno: string | null) {
   return {
-    subscribe: function (onStoreChange) {
+    subscribe: function (onStoreChange: () => void) {
       _cardsListeners.add(onStoreChange);
       // Cambio anno scolastico → nuova sottoscrizione con il filtro giusto
       if (_cardsAnno !== anno) {
@@ -55,9 +55,9 @@ function createCardsStore(anno) {
         _cardsUnsub = db
           .collection('cards')
           .where('annoScolastico', '==', anno)
-          .onSnapshot(function (s) {
-            var a = [];
-            s.forEach(function (d) {
+          .onSnapshot(function (s: any) {
+            var a: any[] = [];
+            s.forEach(function (d: any) {
               a.push(d.data());
             });
             _cardsSnapshot = a;
@@ -88,7 +88,7 @@ function createCardsStore(anno) {
 }
 
 // ── STORE: CLASSI ──────────────────────────────────────────────────────────
-function createClassiStore(anno) {
+function createClassiStore(anno: string | null) {
   if (_classiAnno !== anno) {
     if (_classiUnsub) {
       _classiUnsub();
@@ -101,13 +101,13 @@ function createClassiStore(anno) {
   }
 
   return {
-    subscribe: function (onStoreChange) {
+    subscribe: function (onStoreChange: () => void) {
       _classiListeners.add(onStoreChange);
       if (!_classiUnsub && anno) {
         _classiUnsub = db
           .collection('config')
           .doc('classi_custom_' + anno.replace('/', '_'))
-          .onSnapshot(function (doc) {
+          .onSnapshot(function (doc: any) {
             var d = doc.exists ? doc.data() : {};
             _classiCustom = d.lista || [];
             _classiNascoste = d.nascoste || [];
@@ -138,7 +138,7 @@ function createClassiStore(anno) {
 }
 
 // ── STORE: PREFERITI ───────────────────────────────────────────────────────
-function createFavStore(uid) {
+function createFavStore(uid: string | null) {
   if (_preferitiUid !== uid) {
     if (_preferitiUnsub) {
       _preferitiUnsub();
@@ -150,13 +150,13 @@ function createFavStore(uid) {
   }
 
   return {
-    subscribe: function (onStoreChange) {
+    subscribe: function (onStoreChange: () => void) {
       _preferitiListeners.add(onStoreChange);
       if (!_preferitiUnsub && uid) {
         _preferitiUnsub = db
           .collection('preferiti')
           .doc(uid)
-          .onSnapshot(function (doc) {
+          .onSnapshot(function (doc: any) {
             _preferiti = doc.exists && doc.data().ids ? doc.data().ids : [];
             _cachedCombined = null; // invalida cache combinata
             _preferitiListeners.forEach(function (l) {
@@ -184,13 +184,13 @@ function createFavStore(uid) {
 }
 
 // ── COMBINED STORE ─────────────────────────────────────────────────────────
-function createCombinedStore(user, annoScolastico) {
+function createCombinedStore(user: any, annoScolastico: string | null) {
   var cardsStore = createCardsStore(annoScolastico);
   var classiStore = createClassiStore(annoScolastico);
   var favStore = createFavStore(user ? user.uid : null);
 
   return {
-    subscribe: function (onStoreChange) {
+    subscribe: function (onStoreChange: () => void) {
       var u1 = cardsStore.subscribe(onStoreChange);
       var u2 = classiStore.subscribe(onStoreChange);
       var u3 = favStore.subscribe(onStoreChange);

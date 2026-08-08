@@ -2,9 +2,8 @@
 var SB = window.SB || {};
 window.SB = SB;
 var h = SB.h || React.createElement;
-var Fragment = SB.Fragment || React.Fragment;
 
-function RifiutaModal(props) {
+function RifiutaModal(props: any) {
   if (!props.showRifiutaModal) return null;
   var setShowRifiutaModal = props.setShowRifiutaModal;
   var rifiutaInput = props.rifiutaInput;
@@ -38,7 +37,7 @@ function RifiutaModal(props) {
             maxWidth: 360,
             width: '100%',
           }}
-          onClick={function (e) {
+          onClick={function (e: any) {
             e.stopPropagation();
           }}
         >
@@ -70,7 +69,7 @@ function RifiutaModal(props) {
             <textarea
               value={rifiutaInput}
               aria-label="Motivazione del rifiuto"
-              onInput={function (e) {
+              onInput={function (e: any) {
                 setRifiutaInput(e.target.value);
               }}
               rows={3}
@@ -129,5 +128,4 @@ function RifiutaModal(props) {
   );
 }
 
-SB.RifiutaModal = RifiutaModal;
 export default RifiutaModal;

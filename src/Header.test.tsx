@@ -6,7 +6,7 @@ import React from 'react';
 import './Header.tsx';
 
 describe('Header', () => {
-  let $;
+  let $: any;
 
   beforeEach(() => {
     $ = {

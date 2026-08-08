@@ -2,7 +2,7 @@ import js from "@eslint/js";
 import tsParser from "@typescript-eslint/parser";
 
 export default [
-  { ignores: ["src/**/*.d.ts", "src/types.ts", "src/**/*.test.ts", "src/**/*.test.tsx"] },
+  { ignores: ["src/**/*.d.ts", "src/**/*.test.ts", "src/**/*.test.tsx"] },
   js.configs.recommended,
   {
     files: ["src/**/*.ts", "src/**/*.tsx"],

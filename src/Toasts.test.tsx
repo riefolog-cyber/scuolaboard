@@ -6,7 +6,7 @@ import React from 'react';
 import './Toasts.tsx';
 
 describe('Toasts', () => {
-  let $;
+  let $: any;
 
   beforeEach(() => {
     $ = {

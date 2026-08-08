@@ -8,12 +8,20 @@ var useRef = React.useRef;
 var db = window.db;
 var quizListenRisposte = window.quizListenRisposte;
 
+type QuizDeps = {
+  user: any;
+  myName: (_u: any) => string;
+  cards: any[];
+  showToast: (_msg: string, _type?: string) => void;
+  showCard: any;
+};
+
 // Confronto risposta/corretta robusto: per le domande a scelta multipla
 // `corretta` è l'INDICE (stringa) dell'opzione giusta, per vero/falso è il
 // TESTO dell'opzione ('Vero'/'Falso'). Le risposte interattive salvano sempre
 // l'indice dell'opzione cliccata → confrontare con String() e, se non
 // combacia, provare il testo dell'opzione.
-function quizRispostaGiusta(d, rispostaIdx) {
+function quizRispostaGiusta(d: any, rispostaIdx: any) {
   if (rispostaIdx == null || rispostaIdx === '') return false;
   if (d.corretta == null || d.corretta === '') return false;
   if (String(rispostaIdx) === String(d.corretta)) return true; // multipla: indice
@@ -21,7 +29,7 @@ function quizRispostaGiusta(d, rispostaIdx) {
   return testo != null && String(testo) === String(d.corretta); // vero/falso: testo
 }
 
-function useQuiz(deps) {
+function useQuiz(deps: QuizDeps) {
   var user = deps.user;
   var myName = deps.myName;
   var cards = deps.cards;
@@ -29,12 +37,12 @@ function useQuiz(deps) {
   var showCard = deps.showCard;
 
   // Quiz risposte interattive
-  var [qRisposte, setQRisposte] = useState({});
+  var [qRisposte, setQRisposte] = useState<any>({});
   var [qInviato, setQInviato] = useState(false);
   var [qLoading, setQLoading] = useState(false);
-  var [quizRisposte, setQuizRisposte] = useState([]);
-  var quizUnsubRef = useRef(null);
-  var quizTimerRef = useRef(null);
+  var [quizRisposte, setQuizRisposte] = useState([] as any[]);
+  var quizUnsubRef = useRef<(() => void) | null>(null);
+  var quizTimerRef = useRef<any>(null);
 
   // Listener risposte quiz
   useEffect(
@@ -49,7 +57,7 @@ function useQuiz(deps) {
       }
       var cardIdSnapshot = String(showCard.id);
       var active = true;
-      quizUnsubRef.current = quizListenRisposte(cardIdSnapshot, function (arr) {
+      quizUnsubRef.current = quizListenRisposte(cardIdSnapshot, function (arr: any[]) {
         if (active) setQuizRisposte(arr);
       });
       return function () {
@@ -63,10 +71,10 @@ function useQuiz(deps) {
     [showCard ? String(showCard.id) : null]
   );
 
-  async function inviaRisposteQuiz(cardId) {
+  async function inviaRisposteQuiz(cardId: any) {
     // CardDetail chiama $.inviaRisposteQuiz(c.id): l'argomento è l'ID, non
     // l'oggetto card. Risolviamo la card corrente per leggere le domande.
-    var card = cards.find(function (c) {
+    var card = cards.find(function (c: any) {
       return String(c.id) === String(cardId);
     });
     if (!card) return;
@@ -80,7 +88,7 @@ function useQuiz(deps) {
       var score = 0,
         totale = dom.length;
       var haAperte = false;
-      dom.forEach(function (d, i) {
+      dom.forEach(function (d: any, i: number) {
         if (d.tipo === 'aperta') {
           haAperte = true;
           return;
@@ -113,28 +121,28 @@ function useQuiz(deps) {
     }
   }
 
-  async function valutaAperteProfAI(card, ris) {
+  async function valutaAperteProfAI(card: any, ris: any[]) {
     var dom = card.quizDomande || [];
     var domAI = dom
-      .map(function (d, i) {
+      .map(function (d: any, i: number) {
         return { d: d, i: i };
       })
-      .filter(function (x) {
+      .filter(function (x: any) {
         return x.d.tipo === 'aperta';
       });
     if (!domAI.length) return;
-    var pending = ris.filter(function (r) {
+    var pending = ris.filter(function (r: any) {
       return !r.aiValutato;
     });
     if (!pending.length) return;
     setQLoading(true);
     try {
-      async function evalOne(r) {
+      async function evalOne(r: any) {
         var aiScores = r.aiScores || {};
         var dom2 = card.quizDomande || [];
         var totale = dom2.length,
           score = 0;
-        dom2.forEach(function (d, i) {
+        dom2.forEach(function (d: any, i: number) {
           if (d.tipo === 'aperta') return;
           if (d.corretta == null || d.corretta === '') {
             totale--;
@@ -142,7 +150,7 @@ function useQuiz(deps) {
           }
           if (r.risposte && quizRispostaGiusta(d, r.risposte[i])) score++;
         });
-        var openTasks = domAI.map(function (item) {
+        var openTasks = domAI.map(function (item: any) {
           var risposta = (r.risposte && r.risposte[item.i]) || '';
           if (!risposta.trim()) return Promise.resolve(null);
           var prompt =
@@ -152,7 +160,7 @@ function useQuiz(deps) {
             risposta +
             '\nRestituisci SOLO questo JSON:\n{"voto": <0.0-1.0>, "punti_forza":"...", "lacune":"...", "suggerimento":"..."}';
           return window.callGroqJSON(null, prompt, 600)
-            .then(function (res) {
+            .then(function (res: any) {
               return { idx: item.i, res: res };
             })
             .catch(function () {
@@ -160,7 +168,7 @@ function useQuiz(deps) {
             });
         });
         var results = await Promise.all(openTasks);
-        results.forEach(function (out) {
+        results.forEach(function (out: any) {
           if (!out || !out.res) return;
           aiScores[out.idx] = out.res;
           if (out.res.voto != null) score += out.res.voto;
@@ -185,11 +193,11 @@ function useQuiz(deps) {
     setQLoading(false);
   }
 
-  async function resetRisposte(cardId) {
+  async function resetRisposte(cardId: any) {
     try {
       var snap = await db.collection('quiz_risposte').where('cardId', '==', String(cardId)).get();
-      var ids = [];
-      snap.forEach(function (d) {
+      var ids: string[] = [];
+      snap.forEach(function (d: any) {
         ids.push(d.id);
       });
       await Promise.all(

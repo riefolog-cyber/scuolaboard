@@ -1,6 +1,6 @@
 // ai-services.ts  ·  ScuolaBoard  ·  AI Groq via Cloudflare Worker (pattern UMD)
 
-var db = window.SB && SB.db;
+var db: any = window.SB && SB.db;
 var CFG = window.SB_CONFIG || { AI_CACHE_TTL_MS: 15 * 60 * 1000 };
 // Disabilita i log di debug AI in produzione.
 // Attivali temporaneamente aggiungendo ?debug_ai=1 all'URL dell'app.
@@ -42,7 +42,7 @@ function cacheGet() {
   }
 }
 
-function cacheSetAll(m) {
+function cacheSetAll(m: any) {
   // ponytail: sessionStorage — dati AI non sensibili ma invalidati ogni 15min. Se dati diventano personali, cifrare o spostare in Firestore.
   SB.LS.aiCache.set(JSON.stringify(m));
   SB.LS.aiCacheAt.set(String(Date.now()));
@@ -54,10 +54,10 @@ function cacheInvalidate() {
 }
 
 /**
- * Pulisce il testo AI da markdown — implementazione locale per evitare conflitti
- * con cleanMarkdownText globale di app-utils.ts (che ha una logica diversa).
+ * Pulisce il testo AI da markdown — implementazione locale (non dipende da
+ * utility globali di app-utils.ts).
  */
-function _cleanAiMarkdown(txt) {
+function _cleanAiMarkdown(txt: any) {
   if (!txt) return '';
   var lines = String(txt).split('\n');
   var cleanLines = [];
@@ -110,7 +110,7 @@ function _cleanAiMarkdown(txt) {
  * Pulisce ricorsivamente tutte le stringhe di testo all'interno di un oggetto JSON
  * (utile per rimuovere simboli strani dalle spiegazioni o domande dei quiz).
  */
-function cleanJsonStrings(obj) {
+function cleanJsonStrings(obj: any): any {
   if (!obj) return obj;
   if (Array.isArray(obj)) {
     return obj.map(cleanJsonStrings);
@@ -135,7 +135,7 @@ var AI_THROTTLE_MS = 5000; // 5 secondi tra chiamate
  * Unica funzione di comunicazione con l'AI.
  * Invia la richiesta al Cloudflare Worker.
  */
-async function chiamaAI(type, content, options) {
+async function chiamaAI(type: any, content: any, options: any) {
   var now = Date.now();
   if (now - _lastAiCall < AI_THROTTLE_MS) {
     throw new Error(
@@ -170,7 +170,7 @@ async function chiamaAI(type, content, options) {
     throw new Error("Devi effettuare il login per usare l'AI");
   }
 
-  async function doFetch(forceRefresh) {
+  async function doFetch(forceRefresh: any) {
     var idToken = await currentUser.getIdToken(forceRefresh);
     return fetch(WORKER_URL, {
       method: 'POST',
@@ -198,13 +198,13 @@ async function chiamaAI(type, content, options) {
           var recoverableCodes = ['AUTH_TOKEN_EXPIRED', 'AUTH_KID_NOT_FOUND'];
           shouldRetry = recoverableCodes.indexOf(errData.code) !== -1;
         }
-      } catch (e) {}
+      } catch (e: any) {}
       if (shouldRetry) {
         aiLog('[ScuolaBoard] Token AI rifiutato (401), tentativo di refresh...');
         res = await doFetch(true);
       }
     }
-  } catch (e) {
+  } catch (e: any) {
     aiLog('[ScuolaBoard] Impossibile autenticare la richiesta AI', e);
     throw new Error('Impossibile autenticare la richiesta. Verifica di essere loggato e riprova.');
   }
@@ -212,7 +212,7 @@ async function chiamaAI(type, content, options) {
   var data;
   try {
     data = await res.json();
-  } catch (e) {
+  } catch (e: any) {
     aiLog('[ScuolaBoard] chiamaAI risorsa non JSON', e, res.status);
     throw new Error('Risposta del server non valida (status ' + res.status + ')');
   }
@@ -231,7 +231,7 @@ async function chiamaAI(type, content, options) {
 }
 
 // Chiamata AI testuale
-async function callGroqText(_ignoredKey, prompt, mx) {
+async function callGroqText(_ignoredKey: any, prompt: any, mx: any) {
   return await chiamaAI('text', prompt, { max_tokens: mx || 2000 }).then(function (d) {
     var rawText = d.content || d || '';
     return _cleanAiMarkdown(rawText);
@@ -239,7 +239,7 @@ async function callGroqText(_ignoredKey, prompt, mx) {
 }
 
 // Chiamata AI JSON
-async function callGroqJSON(_ignoredKey, prompt, mx) {
+async function callGroqJSON(_ignoredKey: any, prompt: any, mx: any) {
   var raw = await chiamaAI('json', prompt, { max_tokens: mx || 1500 }).then(function (d) {
     return d.content || d || '';
   });
@@ -259,7 +259,7 @@ async function callGroqJSON(_ignoredKey, prompt, mx) {
   }
 }
 
-function aiLoad(cb) {
+function aiLoad(cb: any) {
   var cached = cacheGet();
   if (cached) {
     if (cb) cb(cached);
@@ -271,22 +271,22 @@ function aiLoad(cb) {
   }
   db.collection('ai_results')
     .get()
-    .then(function (s) {
-      var m = {};
-      s.forEach(function (d) {
+    .then(function (s: any) {
+      var m: any = {};
+      s.forEach(function (d: any) {
         m[d.id] = d.data();
       });
       cacheSetAll(m);
       if (cb) cb(m);
     })
-    .catch(function (err) {
+    .catch(function (err: any) {
       aiLog('[ScuolaBoard] aiLoad:', err);
       if (cb) cb({});
     });
   return function () {};
 }
 
-function aiSave(cardId, data) {
+function aiSave(cardId: any, data: any) {
   cacheInvalidate();
   // Invalida anche eventuali cache sessionStorage legacy
   try {
@@ -326,7 +326,7 @@ if (window.SB) {
 var useState = React.useState;
 var useEffect = React.useEffect;
 
-SB.useAI = function (user) {
+SB.useAI = function (user: any) {
   // Cattura locale dei riferimenti con firma esplicita: nel pattern UMD le
   // function di modulo diventano globali e TS6 inferirebbe `() => ...`
   // (zero argomenti) sulle catture → TS2554. La firma esplicita mantiene il
@@ -337,10 +337,10 @@ SB.useAI = function (user) {
   var _aiSave: (_cardId: string | number, _data: any) => Promise<any> = aiSave;
 
   var [aiRunning, setAiRunning] = useState(false);
-  var [aiResult, setAiResult] = useState(null);
+  var [aiResult, setAiResult] = useState<any>(null);
   var [aiErr, setAiErr] = useState('');
   var [aiTarget, setAiTarget] = useState('tutte');
-  var [aiMap, setAiMap] = useState({});
+  var [aiMap, setAiMap] = useState<any>({});
 
   // Quiz AI States
   var AQG0 = { testo: '', loading: false, err: '', numDom: 4, tipo: 'multipla', anteprima: null, regenIdx: null };
@@ -348,9 +348,9 @@ SB.useAI = function (user) {
   var [showAiQuizGen, setShowAiQuizGen] = useState(false);
 
   // Card AI States
-  var [cardAiLoad, setCardAiLoad] = useState(null);
-  var [cardAiOpen, setCardAiOpen] = useState(null);
-  var [cardAiErr, setCardAiErr] = useState(null);
+  var [cardAiLoad, setCardAiLoad] = useState<any>(null);
+  var [cardAiOpen, setCardAiOpen] = useState<any>(null);
+  var [cardAiErr, setCardAiErr] = useState<any>(null);
 
   // Domande libere AI
   var [cardQ, setCardQ] = useState('');
@@ -359,13 +359,13 @@ SB.useAI = function (user) {
   var [cardQOpen, setCardQOpen] = useState({});
 
   // Sommario discussione AI
-  var [showSommario, setShowSommario] = useState(null);
-  var [sommarioResult, setSommarioResult] = useState({});
-  var [sommarioLoading, setSommarioLoading] = useState(null);
+  var [showSommario, setShowSommario] = useState<any>(null);
+  var [sommarioResult, setSommarioResult] = useState<any>({});
+  var [sommarioLoading, setSommarioLoading] = useState<any>(null);
 
   // Sondaggio AI
-  var [sondaggioAiResult, setSondaggioAiResult] = useState({});
-  var [sondaggioAiLoading, setSondaggioAiLoading] = useState(null);
+  var [sondaggioAiResult, setSondaggioAiResult] = useState<any>({});
+  var [sondaggioAiLoading, setSondaggioAiLoading] = useState<any>(null);
 
   useEffect(function () {
     // Fase 4c: la collezione ai_results (analisi + domande AI) è prof-only.
@@ -385,9 +385,9 @@ SB.useAI = function (user) {
     return u;
   }, [user]);
 
-  async function performAnalysis(cards) {
+  async function performAnalysis(cards: any) {
     var det = cards
-      .map(function (c) {
+      .map(function (c: any) {
         var text = (c.testo || '').replace(/\s+/g, ' ').trim().slice(0, 160);
         return (
           'CARD: "' +
@@ -429,7 +429,7 @@ SB.useAI = function (user) {
   }
 
   // 1. Analisi didattica generale della classe
-  async function runAI(targetCards) {
+  async function runAI(targetCards: any) {
     if (!targetCards.length) {
       setAiErr('Nessuna card trovata.');
       notifyUser("Nessuna card trovata per l'analisi.", 'warn');
@@ -441,10 +441,10 @@ SB.useAI = function (user) {
 
     try {
       if (aiTarget === 'suddivisa') {
-        var results = {};
-        var allClassi = [];
-        targetCards.forEach(function (c) {
-          (c.classi || []).forEach(function (cl) {
+        var results: any = {};
+        var allClassi: any[] = [];
+        targetCards.forEach(function (c: any) {
+          (c.classi || []).forEach(function (cl: any) {
             if (cl !== 'TUTTE') allClassi.push(cl);
           });
         });
@@ -452,7 +452,7 @@ SB.useAI = function (user) {
 
         for (var i = 0; i < uniqueClassi.length; i++) {
           var cl = uniqueClassi[i];
-          var classCards = targetCards.filter(function (c) {
+          var classCards = targetCards.filter(function (c: any) {
             return (c.classi || []).indexOf(cl) >= 0;
           });
           if (classCards.length > 0) {
@@ -474,7 +474,7 @@ SB.useAI = function (user) {
   }
 
   // Helper per messaggi di errore user-friendly
-  function getFriendlyAIError(err) {
+  function getFriendlyAIError(err: any) {
     var msg = (err && err.message) || String(err) || "Errore di connessione all'AI.";
     if (msg.includes('401') || msg.includes('Autenticazione'))
       return 'Sessione scaduta o non autorizzata. Riprova effettuando il login.';
@@ -487,16 +487,16 @@ SB.useAI = function (user) {
   }
 
   // Helper per notifiche non bloccanti
-  function notifyUser(msg, type) {
+  function notifyUser(msg: any, type: any) {
     if (window.SB && typeof window.SB.showToast === 'function') {
       window.SB.showToast(msg, type || 'warn');
     }
   }
 
   // 2. Analisi della singola card didattica
-  async function runCardAI(card, allCurrentCards, refreshCallback) {
+  async function runCardAI(card: any, allCurrentCards: any, refreshCallback: any) {
     var freshCard =
-      allCurrentCards.find(function (c) {
+      allCurrentCards.find(function (c: any) {
         return String(c.id) === String(card.id);
       }) || card;
 
@@ -505,7 +505,7 @@ SB.useAI = function (user) {
     setCardAiErr(null);
 
     var commTxt = (freshCard.commenti || [])
-      .map(function (cm, i) {
+      .map(function (cm: any, i: any) {
         return i + 1 + '. ' + cm.autore + ': "' + cm.testo + '"';
       })
       .join('\n');
@@ -549,7 +549,7 @@ SB.useAI = function (user) {
       } else {
         setCardAiErr('Risposta AI non valida.');
       }
-    } catch (err) {
+    } catch (err: any) {
       var friendly = getFriendlyAIError(err);
       setCardAiErr(friendly);
       notifyUser(friendly, 'err');
@@ -559,7 +559,7 @@ SB.useAI = function (user) {
   }
 
   // 3. Risposta a domanda libera sulla card
-  async function runCardQ(showCard) {
+  async function runCardQ(showCard: any) {
     if (!cardQ.trim() || !showCard) return;
     setCardQLoad(true);
     setCardQErr('');
@@ -576,7 +576,7 @@ SB.useAI = function (user) {
       userData += '--- ATTENZIONE: ELENCO COMMENTI E PARTECIPANTI REALI ---\n';
       userData +=
         'I seguenti sono i commenti lasciati dagli studenti reali. Usali per rispondere a domande sulla partecipazione, sui concetti emersi o su chi ha argomentato meglio.\n';
-      showCard.commenti.forEach(function (c) {
+      showCard.commenti.forEach(function (c: any) {
         var nome = SB.escapeForPrompt(c.autore || c.authorName || c.name || 'Studente');
         var testoCommento = SB.escapeForPrompt(c.testo || c.content || '');
         userData += '- ' + nome + ' ha commentato: "' + testoCommento + '"\n';
@@ -603,7 +603,7 @@ SB.useAI = function (user) {
       var nuova = { id: Date.now(), q: cardQ.trim(), risposta: txt, data: new Date().toISOString() };
       var aggiornate = esistenti.concat([nuova]);
 
-      setAiMap(function (prev) {
+      setAiMap(function (prev: any) {
         var next = Object.assign({}, prev);
         next[String(showCard.id)] = Object.assign({}, prev[String(showCard.id)] || {}, { domande: aggiornate });
         return next;
@@ -611,7 +611,7 @@ SB.useAI = function (user) {
 
       await _aiSave(showCard.id, { domande: aggiornate });
       setCardQ('');
-    } catch (e) {
+    } catch (e: any) {
       setCardQErr(e.message || 'Errore di rete.');
     } finally {
       setCardQLoad(false);
@@ -650,15 +650,15 @@ SB.useAI = function (user) {
           return Object.assign({}, p, { err: "L'AI non ha generato domande valide.", loading: false });
         });
       }
-    } catch (e) {
-      setAqg(function (p) {
+    } catch (e: any) {
+      setAqg(function (p: any) {
         return Object.assign({}, p, { err: e.message || 'Errore AI.', loading: false });
       });
     }
   }
 
   // 5. Rigenera singola domanda del quiz
-  async function aiRigenDomanda(idx) {
+  async function aiRigenDomanda(idx: any) {
     setAqg(function (p) {
       return Object.assign({}, p, { regenIdx: idx });
     });
@@ -673,22 +673,22 @@ SB.useAI = function (user) {
     try {
       var r = await _callGroqJSON(null, prompt, 600);
       if (r && Array.isArray(r.domande) && r.domande.length) {
-        setAqg(function (p) {
+        setAqg(function (p: any) {
           var a = p.anteprima.slice();
           a[idx] = r.domande[0];
           return Object.assign({}, p, { anteprima: a });
         });
       }
-    } catch (e) {}
-    setAqg(function (p) {
+    } catch (e: any) {}
+    setAqg(function (p: any) {
       return Object.assign({}, p, { regenIdx: null });
     });
   }
 
   // 6. Conferma e importa il quiz generato
-  function aiConfirmaQuiz(setForm) {
+  function aiConfirmaQuiz(setForm: any) {
     if (!aqg.anteprima) return;
-    setForm(function (p) {
+    setForm(function (p: any) {
       return Object.assign({}, p, { tipo: 'quiz', quizDomande: (p.quizDomande || []).concat(aqg.anteprima) });
     });
     setShowAiQuizGen(false);
@@ -696,17 +696,17 @@ SB.useAI = function (user) {
   }
 
   // 7. Riassunto discussione commenti
-  async function riassuntiCommentiRun(card) {
+  async function riassuntiCommentiRun(card: any) {
     var commenti = card.commenti || [];
     if (commenti.length < 2) {
-      setSommarioResult(function (p) {
+      setSommarioResult(function (p: any) {
         return Object.assign({}, p, { [card.id]: "Commenti insufficienti per l'analisi." });
       });
       return;
     }
     setSommarioLoading(card.id);
     var txt = commenti
-      .map(function (c) {
+      .map(function (c: any) {
         return SB.escapeForPrompt(c.autore) + ': ' + SB.escapeForPrompt(c.testo);
       })
       .join('\\n');
@@ -719,11 +719,11 @@ SB.useAI = function (user) {
 
     try {
       var res = await _callGroqText(null, prompt, 600);
-      setSommarioResult(function (p) {
+      setSommarioResult(function (p: any) {
         return Object.assign({}, p, { [card.id]: res });
       });
-    } catch (e) {
-      setSommarioResult(function (p) {
+    } catch (e: any) {
+      setSommarioResult(function (p: any) {
         return Object.assign({}, p, { [card.id]: 'Errore: ' + e.message });
       });
     } finally {
@@ -732,21 +732,21 @@ SB.useAI = function (user) {
   }
 
   // 8. Lettura didattica dei risultati dei sondaggi
-  async function aiAnalisiSondaggio(card) {
+  async function aiAnalisiSondaggio(card: any) {
     if (!card.opzioni || !card.opzioni.length) return;
     setSondaggioAiLoading(card.id);
-    var totV = card.opzioni.reduce(function (a, o) {
+    var totV = card.opzioni.reduce(function (a: any, o: any) {
       return a + o.voti.length;
     }, 0);
     if (totV === 0) {
-      setSondaggioAiResult(function (p) {
+      setSondaggioAiResult(function (p: any) {
         return Object.assign({}, p, { [card.id]: 'Nessun voto registrato.' });
       });
       setSondaggioAiLoading(null);
       return;
     }
     var votiTxt = card.opzioni
-      .map(function (o) {
+      .map(function (o: any) {
         return SB.escapeForPrompt(o.testo) + ': ' + o.voti.length + ' voti';
       })
       .join(', ');
@@ -761,11 +761,11 @@ SB.useAI = function (user) {
 
     try {
       var res = await _callGroqText(null, prompt, 350);
-      setSondaggioAiResult(function (p) {
+      setSondaggioAiResult(function (p: any) {
         return Object.assign({}, p, { [card.id]: res });
       });
-    } catch (e) {
-      setSondaggioAiResult(function (p) {
+    } catch (e: any) {
+      setSondaggioAiResult(function (p: any) {
         return Object.assign({}, p, { [card.id]: 'Errore: ' + e.message });
       });
     } finally {

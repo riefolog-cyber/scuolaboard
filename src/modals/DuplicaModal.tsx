@@ -2,9 +2,8 @@
 var SB = window.SB || {};
 window.SB = SB;
 var h = SB.h || React.createElement;
-var Fragment = SB.Fragment || React.Fragment;
 
-function DuplicaModal(props) {
+function DuplicaModal(props: any) {
   if (!props.showDuplica) return null;
   var card = props.showDuplica;
   var CLASSI_LIST = props.CLASSI_LIST || [];
@@ -13,11 +12,11 @@ function DuplicaModal(props) {
   var setShowDuplica = props.setShowDuplica;
   var confermaDuplica = props.confermaDuplica;
 
-  function toggleCl(cl) {
+  function toggleCl(cl: any) {
     if (!setDuplicaClassi) return;
-    setDuplicaClassi(function (p) {
+    setDuplicaClassi(function (p: any) {
       return p.indexOf(cl) >= 0
-        ? p.filter(function (x) {
+        ? p.filter(function (x: any) {
             return x !== cl;
           })
         : p.concat([cl]);
@@ -52,7 +51,7 @@ function DuplicaModal(props) {
             width: '100%',
             boxShadow: '0 24px 60px rgba(0,0,0,.5)',
           }}
-          onClick={function (e) {
+          onClick={function (e: any) {
             e.stopPropagation();
           }}
         >
@@ -78,7 +77,7 @@ function DuplicaModal(props) {
           }
           {
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 18 }}>
-              {CLASSI_LIST.map(function (cl) {
+              {CLASSI_LIST.map(function (cl: any) {
                 var sel = duplicaClassi.indexOf(cl) >= 0;
                 return (
                   <button
@@ -156,5 +155,4 @@ function DuplicaModal(props) {
   );
 }
 
-SB.DuplicaModal = DuplicaModal;
 export default DuplicaModal;

@@ -2,9 +2,8 @@
 var SB = window.SB || {};
 window.SB = SB;
 var h = SB.h || React.createElement;
-var Fragment = SB.Fragment || React.Fragment;
 
-function QRModal(props) {
+function QRModal(props: any) {
   if (!props.showQR) return null;
   var qrUrl = props.qrUrl;
   var setShowQR = props.setShowQR;
@@ -35,7 +34,7 @@ function QRModal(props) {
             width: '100%',
             textAlign: 'center',
           }}
-          onClick={function (e) {
+          onClick={function (e: any) {
             e.stopPropagation();
           }}
         >
@@ -94,5 +93,4 @@ function QRModal(props) {
   );
 }
 
-SB.QRModal = QRModal;
 export default QRModal;

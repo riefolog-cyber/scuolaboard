@@ -5,7 +5,18 @@ import { compareStudenti } from '../utils/format.ts';
 
 var db = window.db;
 
-function useClassi(deps) {
+type ClassiDeps = {
+  classeInput: string;
+  user: any;
+  annoScolastico: string;
+  annoLegacy: string | null;
+  setUser: (_fn: (_u: any) => any) => void;
+  setShowClasseModal: (_v: boolean) => void;
+  setStudenti: (_fn: any) => void;
+  showToast: (_msg: string, _type?: string) => void;
+};
+
+function useClassi(deps: ClassiDeps) {
   var classeInput = deps.classeInput;
   var user = deps.user;
   var annoScolastico = deps.annoScolastico;
@@ -25,7 +36,7 @@ function useClassi(deps) {
       .doc(user.uid)
       .update({ classiPerAnno: newClassiPerAnno })
       .then(function () {
-        setUser(function (u) {
+        setUser(function (u: any) {
           return Object.assign({}, u, { classiPerAnno: newClassiPerAnno, classe: classeInput });
         });
         setShowClasseModal(false);
@@ -36,9 +47,9 @@ function useClassi(deps) {
     db.collection('users')
       .where('role', '==', 'studente')
       .get()
-      .then(function (snap) {
-        var arr = [];
-        snap.forEach(function (d) {
+      .then(function (snap: any) {
+        var arr: any[] = [];
+        snap.forEach(function (d: any) {
           var studentData = d.data();
           var classiPerAnno = studentData.classiPerAnno || {};
           // Fonte di verità: classiPerAnno[anno] per l'anno selezionato.
@@ -58,10 +69,10 @@ function useClassi(deps) {
               : null;
           arr.push(Object.assign({ uid: d.id }, studentData, { classe: classeCorrente }));
         });
-        arr = arr.filter(function (s) {
+        arr = arr.filter(function (s: any) {
           return s.classe !== null;
         });
-        arr.sort(function (a, b) {
+        arr.sort(function (a: any, b: any) {
           var classeA = a.classe || '',
             classeB = b.classe || '';
           if (classeA === '' && classeB !== '') return -1;
@@ -71,17 +82,17 @@ function useClassi(deps) {
         });
         setStudenti(arr);
       })
-      .catch(function (e) {
+      .catch(function (e: any) {
         console.error('[ScuolaBoard] loadStudenti:', e);
         showToast('Errore caricamento studenti', 'err');
       });
   }
 
-  function aggiornaClasseStudente(uid, cl) {
+  function aggiornaClasseStudente(uid: string, cl: string | null) {
     db.collection('users')
       .doc(uid)
       .get()
-      .then(function (doc) {
+      .then(function (doc: any) {
         if (doc.exists) {
           var studentData = doc.data();
           var newClassiPerAnno = Object.assign({}, studentData.classiPerAnno || {}, { [annoScolastico]: cl || null });
@@ -89,15 +100,15 @@ function useClassi(deps) {
             .doc(uid)
             .update({ classiPerAnno: newClassiPerAnno })
             .then(function () {
-              setStudenti(function (prev) {
-                return prev.map(function (s) {
+              setStudenti(function (prev: any[]) {
+                return prev.map(function (s: any) {
                   return s.uid === uid
                     ? Object.assign({}, s, { classiPerAnno: newClassiPerAnno, classe: cl || null })
                     : s;
                 });
               });
             })
-            .catch(function (e) {
+            .catch(function (e: any) {
               console.error('[ScuolaBoard] aggiornaClasseStudente:', e);
               showToast('Errore aggiornamento classe', 'err');
             });
@@ -105,7 +116,7 @@ function useClassi(deps) {
       });
   }
 
-  function rimuoviStudente(uid) {
+  function rimuoviStudente(uid: string) {
     // Legge il doc per azzerare SOLO la classe dell'anno corrente in
     // classiPerAnno (come aggiornaClasseStudente). Senza questo, al reload
     // loadStudenti (che ora legge solo classiPerAnno[anno]) lo studente
@@ -113,7 +124,7 @@ function useClassi(deps) {
     db.collection('users')
       .doc(uid)
       .get()
-      .then(function (doc) {
+      .then(function (doc: any) {
         if (!doc.exists) return;
         var studentData = doc.data();
         var newClassiPerAnno = Object.assign({}, studentData.classiPerAnno || {});
@@ -124,13 +135,13 @@ function useClassi(deps) {
           .set({ classe: null, rimosso: true, classiPerAnno: newClassiPerAnno }, { merge: true });
       })
       .then(function () {
-        setStudenti(function (prev) {
-          return prev.filter(function (s) {
+        setStudenti(function (prev: any[]) {
+          return prev.filter(function (s: any) {
             return s.uid !== uid;
           });
         });
       })
-      .catch(function (e) {
+      .catch(function (e: any) {
         console.error('[ScuolaBoard] rimuoviStudente:', e);
         showToast('Errore rimozione studente', 'err');
       });

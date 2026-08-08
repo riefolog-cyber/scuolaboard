@@ -23,7 +23,7 @@
       anno: 'annoScolasticoAttivo',
       aiCache: 'ai_results_cache',
       aiCacheAt: 'ai_results_cache_at',
-      privacy: function (uid) {
+      privacy: function (uid: string) {
         return 'privacy_accepted_' + uid;
       },
     },
@@ -40,7 +40,7 @@
           return new Set();
         }
       },
-      set: function (s) {
+      set: function (s: Set<any>) {
         try {
           if (typeof localStorage !== 'undefined') localStorage.setItem(CFG.LS_KEYS.seen, JSON.stringify([...s]));
         } catch (e) {}
@@ -52,10 +52,10 @@
       },
     },
     privacy: {
-      get: function (uid) {
+      get: function (uid: string) {
         return typeof localStorage !== 'undefined' ? localStorage.getItem(CFG.LS_KEYS.privacy(uid)) : null;
       },
-      set: function (uid) {
+      set: function (uid: string) {
         try {
           if (typeof localStorage !== 'undefined') localStorage.setItem(CFG.LS_KEYS.privacy(uid), '1');
         } catch (e) {}
@@ -72,7 +72,7 @@
           return CFG.ANNO_DEFAULT;
         }
       },
-      set: function (v) {
+      set: function (v: string) {
         try {
           if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(CFG.LS_KEYS.anno, v);
         } catch (e) {}
@@ -82,7 +82,7 @@
       get: function () {
         return typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(CFG.LS_KEYS.aiCache) : null;
       },
-      set: function (v) {
+      set: function (v: string) {
         try {
           if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(CFG.LS_KEYS.aiCache, v);
         } catch (e) {}
@@ -97,7 +97,7 @@
       get: function () {
         return typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(CFG.LS_KEYS.aiCacheAt) : null;
       },
-      set: function (v) {
+      set: function (v: string) {
         try {
           if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(CFG.LS_KEYS.aiCacheAt, v);
         } catch (e) {}
@@ -120,14 +120,13 @@
   // modo canonico in app-utils.ts (import da utils/format.ts) e qui NON
   // vengono duplicati per evitare drift tra le due versioni.
 
-  SB.REACTIONS = ['👍', '❤️', '🤔'];
   SB.user = null;
 
-  SB.showToast = function (msg, type) {
+  SB.showToast = function (msg: string, type?: string) {
     console.warn('[ScuolaBoard]', type || 'info', msg);
   };
 
-  SB.myName = function (u) {
+  SB.myName = function (u: any) {
     return u
       ? u.role === 'prof'
         ? 'Prof'

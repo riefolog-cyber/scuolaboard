@@ -1,23 +1,18 @@
 // app-utils.ts — utility globali e servizi Firestore (pattern UMD)
 import {
-  CLASSI_COLORS,
   CLASSI_DEFAULT,
   classeColor,
   fmt,
   fmtDT,
   timeAgo,
-  avatarColor,
-  avatarInitials,
   badgeBg,
   tipoIcon,
   sbSafeUrl,
   safeDocId,
   normalizeLinks,
-  cleanMarkdownText,
   escapeForPrompt,
 } from './utils/format.ts';
 import { buildWordCloud, collectCloudStats } from './utils/cloud.ts';
-import { useCountUp } from './utils/hooks.ts';
 
 var SB = window.SB || {};
 window.SB = SB;
@@ -31,7 +26,6 @@ SB.useCallback = React.useCallback;
 SB.useMemo = React.useMemo;
 SB.useReducer = React.useReducer;  SB.useLayoutEffect = React.useLayoutEffect;
   SB.Fragment = React.Fragment;
-  SB.memo = React.memo;
   var db = SB.db;
 var h = SB.h,
   useState = SB.useState,
@@ -43,35 +37,22 @@ var h = SB.h,
   useLayoutEffect = SB.useLayoutEffect,
   Fragment = SB.Fragment;
 
-SB.CLASSI_COLORS = CLASSI_COLORS;
 SB.CLASSI_DEFAULT = CLASSI_DEFAULT;
 SB.classeColor = classeColor;
 // ── DESIGN TOKENS ───────────────────────────────────────────────────
-var S_BASE = {
-  muted: { fontSize: 11, color: 'rgba(255,255,255,.52)' },
-  muted2: { fontSize: 11, color: 'rgba(255,255,255,.45)' },
-  muted3: { fontSize: 11, color: 'rgba(255,255,255,.58)' },
-  flex6: { display: 'flex', gap: 6 },
-  flex8: { display: 'flex', gap: 8 },
-  flex10: { display: 'flex', gap: 10 },
-  mb8: { marginBottom: 8 },
-  mb10: { marginBottom: 10 },
-  center: { display: 'flex', alignItems: 'center', justifyContent: 'center' },
-};
-
-function fbClassiSave(arr, anno) {
+function fbClassiSave(arr: string[], anno: string) {
   return db
     .collection('config')
     .doc('classi_custom_' + safeDocId(anno || ''))
     .set({ lista: arr, aggiornato: new Date().toISOString() }, { merge: true });
 }
-function fbNascosteSave(arr, anno) {
+function fbNascosteSave(arr: string[], anno: string) {
   return db
     .collection('config')
     .doc('classi_custom_' + safeDocId(anno || ''))
     .set({ nascoste: arr, aggiornato: new Date().toISOString() }, { merge: true });
 }
-function fbFavSave(uid, ids) {
+function fbFavSave(uid: string, ids: string[]) {
   return db.collection('preferiti').doc(uid).set({ ids: ids, aggiornato: new Date().toISOString() });
 }
 var FORM0 = {
@@ -99,60 +80,31 @@ var ANNI_DISPONIBILI = (window.SB_CONFIG && window.SB_CONFIG.ANNI_DISPONIBILI) |
 SB.ANNI_DISPONIBILI = ANNI_DISPONIBILI;
 SB.FORM0 = FORM0;
 
-function Avatar(name, size) {
-  size = size || 28;
-  var bg = avatarColor(name);
-  var initials = avatarInitials(name);
-  return h(
-    'div',
-    {
-      title: name,
-      style: {
-        width: size,
-        height: size,
-        borderRadius: '50%',
-        background: bg,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: Math.round(size * 0.36),
-        fontWeight: 800,
-        color: '#fff',
-        flexShrink: 0,
-        letterSpacing: 0.5,
-      },
-    },
-    initials
-  );
-}
-
-SB.useCountUp = useCountUp;
-
 // Traduce gli errori Firestore in messaggi leggibili (regole che bloccano le scritture)
-function fbErrTxt(e) {
+function fbErrTxt(e: any) {
   if (e && (e.code === 'permission-denied' || String(e.message || '').indexOf('Missing or insufficient permissions') >= 0)) {
     return 'Permesso negato: le regole Firestore bloccano questa operazione. Verifica il ruolo prof e le regole.';
   }
   return 'Errore di salvataggio: ' + ((e && e.message) || 'errore sconosciuto');
 }
-function fbSave(c) {
+function fbSave(c: any) {
   var p = db.collection('cards').doc(String(c.id)).set(c);
   // Safety-net centralizzato: mostra il toast su OGNI percorso di scrittura,
   // non solo su quelli che chiamano .catch() esplicitamente.
-  p.catch(function (e) {
+  p.catch(function (e: any) {
     if (SB.showToast) SB.showToast(fbErrTxt(e), 'err');
   });
   return p;
 }
 SB.fbSave = fbSave;
-function fbDel(id) {
+function fbDel(id: any) {
   var p = db.collection('cards').doc(String(id)).delete();
-  p.catch(function (e) {
+  p.catch(function (e: any) {
     if (SB.showToast) SB.showToast(fbErrTxt(e), 'err');
   });
   return p;
 }
-function compressImage(file, maxW, maxH, quality) {
+function compressImage(file: File, maxW: number, maxH: number, quality?: number) {
   if (!file.type.startsWith('image/'))
     return Promise.reject(new Error("Il file selezionato non è un'immagine valida."));
   return new Promise(function (resolve, reject) {
@@ -175,7 +127,7 @@ function compressImage(file, maxW, maxH, quality) {
       var canvas = document.createElement('canvas');
       canvas.width = cw;
       canvas.height = ch;
-      var ctx = canvas.getContext('2d');
+      var ctx = canvas.getContext('2d')!;
       ctx.drawImage(img, 0, 0, cw, ch);
       var TARGET_KB = 90;
       var q = quality != null ? quality : 0.8; // default quality
@@ -189,7 +141,7 @@ function compressImage(file, maxW, maxH, quality) {
         var c2 = document.createElement('canvas');
         c2.width = Math.round(cw * 0.75);
         c2.height = Math.round(ch * 0.75);
-        c2.getContext('2d').drawImage(canvas, 0, 0, c2.width, c2.height);
+        c2.getContext('2d')!.drawImage(canvas, 0, 0, c2.width, c2.height);
         b64 = c2.toDataURL('image/jpeg', 0.6);
         kb = Math.round((b64.length * 0.75) / 1024);
       }
@@ -209,20 +161,20 @@ function compressImage(file, maxW, maxH, quality) {
 // aiSave è definita canonicamente in ai-services.ts (con invalidazione cache
 // SB.LS). NON ridefinire qui per evitare conflitti di override su
 // window.SB.aiSave. Se serve chiamarla qui, usare: SB.aiSave(cardId, data)
-function quizListenRisposte(cardId, cb) {
+function quizListenRisposte(cardId: any, cb: (_arr: any[]) => void) {
   return db
     .collection('quiz_risposte')
     .where('cardId', '==', String(cardId))
-    .onSnapshot(function (s) {
-      var arr = [];
-      s.forEach(function (d) {
+    .onSnapshot(function (s: any) {
+      var arr: any[] = [];
+      s.forEach(function (d: any) {
         arr.push(d.data());
       });
       cb(arr);
     });
 }
 
-var S = Object.assign({}, S_BASE, {
+var S = {
   input: {
     width: '100%',
     padding: '8px 10px',
@@ -232,82 +184,13 @@ var S = Object.assign({}, S_BASE, {
     background: 'rgba(255,255,255,.08)',
     color: '#f1f5f9',
   },
-  filterBtn: function (a) {
-    return {
-      display: 'flex',
-      alignItems: 'center',
-      gap: 4,
-      padding: '5px 12px',
-      borderRadius: 20,
-      border: '1px solid ' + (a ? '#6366f1' : 'rgba(255,255,255,.15)'),
-      background: a ? '#6366f1' : 'rgba(255,255,255,.05)',
-      color: a ? '#fff' : 'rgba(255,255,255,.6)',
-      fontSize: 12,
-      fontWeight: 700,
-      cursor: 'pointer',
-    };
-  },
-  // Common style tokens — avoids repeating the same strings hundreds of times
-  c: {
-    ptr: { cursor: 'pointer' },
-    fw7: { fontWeight: 700 },
-    fw8: { fontWeight: 800 },
-    br8: { borderRadius: 8 },
-    br11: { borderRadius: 11 },
-    br20: { borderRadius: 20 },
-    fs11: { fontSize: 11 },
-    fs12: { fontSize: 12 },
-    fs13: { fontSize: 13 },
-    muted: { color: 'rgba(255,255,255,.58)' },
-    light: { color: '#f1f5f9' },
-    glass8: { background: 'rgba(255,255,255,.08)' },
-    glass6: { background: 'rgba(255,255,255,.06)' },
-    // Pre-built composite button bases
-    btnGhost: {
-      background: 'rgba(255,255,255,.07)',
-      border: '1px solid rgba(255,255,255,.12)',
-      borderRadius: 8,
-      cursor: 'pointer',
-      color: 'rgba(255,255,255,.6)',
-      fontSize: 12,
-      fontWeight: 700,
-    },
-    btnPrimary: {
-      background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
-      border: 'none',
-      borderRadius: 11,
-      cursor: 'pointer',
-      color: '#fff',
-      fontWeight: 800,
-    },
-    modal: {
-      background: 'rgba(15,23,42,.92)',
-      backdropFilter: 'blur(24px)',
-      WebkitBackdropFilter: 'blur(24px)',
-      border: '1px solid rgba(255,255,255,.12)',
-      borderRadius: 20,
-      padding: 26,
-      boxShadow: '0 24px 60px rgba(0,0,0,.5)',
-    },
-  },
-  annullaBtn: {
-    flex: 1,
-    padding: 11,
-    background: 'rgba(255,255,255,.08)',
-    color: 'rgba(255,255,255,.6)',
-    border: 'none',
-    borderRadius: 11,
-    fontSize: 14,
-    fontWeight: 700,
-    cursor: 'pointer',
-  },
-});
+};
 
 SB.sbSafeUrl = sbSafeUrl;
 
 SB.safeDocId = safeDocId;
 // ── myName helper: ora definito in app-state.js ──
-function renderLinks(card, setShowCard) {
+function renderLinks(card: any, setShowCard: any) {
   // Aggiunto setShowCard come parametro
   var links = normalizeLinks(card);
   if (!links.length) return null;
@@ -315,7 +198,7 @@ function renderLinks(card, setShowCard) {
   // Lazily initialize Firebase save function if not already available
   var saveCardToFirebase = typeof SB !== 'undefined' && SB.fbSave ? SB.fbSave : null;
 
-  function move(i, delta) {
+  function move(i: number, delta: number) {
     var newIdx = i + delta;
     if (newIdx < 0 || newIdx >= links.length) return;
     var currentLinks = normalizeLinks(card);
@@ -341,7 +224,7 @@ function renderLinks(card, setShowCard) {
   return h(
     'div',
     { style: { marginTop: 8, display: 'flex', flexDirection: 'column', gap: 5 } },
-    links.map(function (l, i) {
+    links.map(function (l: any, i: number) {
       if (!l.url || !sbSafeUrl(l.url)) return null;
       return h(
         'div',
@@ -373,7 +256,7 @@ function renderLinks(card, setShowCard) {
           h(
             'button',
             {
-              onClick: function (e) {
+              onClick: function (e: any) {
                 e.stopPropagation();
                 move(i, -1);
               },
@@ -397,7 +280,7 @@ function renderLinks(card, setShowCard) {
           h(
             'button',
             {
-              onClick: function (e) {
+              onClick: function (e: any) {
                 e.stopPropagation();
                 move(i, 1);
               },
@@ -423,7 +306,7 @@ function renderLinks(card, setShowCard) {
 }
 
 // ── Componente valutazione AI aperta (riusato da prof e studente) ──
-function ValutazioneApertaAI(h, s, risposta, di, d, isProf) {
+function ValutazioneApertaAI(h: any, s: any, risposta: any, di: number, d: any, isProf: boolean) {
   if (!s) return null;
   var colore = s.voto >= 0.75 ? '#4ade80' : s.voto >= 0.5 ? '#fbbf24' : '#f87171';
   var etichetta = s.voto >= 0.75 ? 'Ottima risposta' : s.voto >= 0.5 ? 'Risposta parziale' : 'Da rivedere';
@@ -605,16 +488,16 @@ function ValutazioneApertaAI(h, s, risposta, di, d, isProf) {
 
 // ── ERROR BOUNDARY ──────────────────────────────────────────────────────────
 var ErrorBoundary = (function () {
-  function ErrorBoundary(props) {
+  function ErrorBoundary(this: any, props: any) {
     React.Component.call(this, props);
     this.state = { hasError: false, error: null };
   }
   ErrorBoundary.prototype = Object.create(React.Component.prototype);
   ErrorBoundary.prototype.constructor = ErrorBoundary;
-  ErrorBoundary.getDerivedStateFromError = function (error) {
+  ErrorBoundary.getDerivedStateFromError = function (error: any) {
     return { hasError: true, error: error };
   };
-  ErrorBoundary.prototype.componentDidCatch = function (error, info) {
+  ErrorBoundary.prototype.componentDidCatch = function (error: any, info: any) {
     console.error('[ScuolaBoard] Crash:', error, info);
   };
   ErrorBoundary.prototype.render = function () {
@@ -679,7 +562,7 @@ window.ErrorBoundary = ErrorBoundary;
     return;
   }
 
-  function _safeGetItem(storage, key) {
+  function _safeGetItem(storage: any, key: string) {
     try {
       if (typeof window !== 'undefined' && storage) return storage.getItem(key);
     } catch (e) {
@@ -687,14 +570,14 @@ window.ErrorBoundary = ErrorBoundary;
     }
     return null;
   }
-  function _safeSetItem(storage, key, value) {
+  function _safeSetItem(storage: any, key: string, value: string) {
     try {
       if (typeof window !== 'undefined' && storage) storage.setItem(key, value);
     } catch (e) {
       console.warn('[ScuolaBoard] Storage setItem error:', e);
     }
   }
-  function _safeRemoveItem(storage, key) {
+  function _safeRemoveItem(storage: any, key: string) {
     try {
       if (typeof window !== 'undefined' && storage) storage.removeItem(key);
     } catch (e) {
@@ -717,7 +600,7 @@ window.ErrorBoundary = ErrorBoundary;
           return new Set();
         }
       },
-      set: function (s) {
+      set: function (s: Set<any>) {
         try {
           _safeSetItem(localStorage, CFG_LS_KEYS.seen || 'seen_cards', JSON.stringify([...s]));
         } catch (e) {
@@ -731,16 +614,16 @@ window.ErrorBoundary = ErrorBoundary;
       },
     },
     privacy: {
-      get: function (uid) {
+      get: function (uid: string) {
         return _safeGetItem(
           localStorage,
           (CFG_LS_KEYS.privacy && CFG_LS_KEYS.privacy(uid)) || 'privacy_accepted_' + uid
         );
       },
-      set: function (uid) {
+      set: function (uid: string) {
         _safeSetItem(localStorage, (CFG_LS_KEYS.privacy && CFG_LS_KEYS.privacy(uid)) || 'privacy_accepted_' + uid, '1');
       },
-      rm: function (uid) {
+      rm: function (uid: string) {
         try {
           _safeRemoveItem(localStorage, (CFG_LS_KEYS.privacy && CFG_LS_KEYS.privacy(uid)) || 'privacy_accepted_' + uid);
         } catch (e) {}
@@ -759,7 +642,7 @@ window.ErrorBoundary = ErrorBoundary;
           return (window.SB_CONFIG && window.SB_CONFIG.ANNO_DEFAULT) || '2026/2027';
         }
       },
-      set: function (v) {
+      set: function (v: string) {
         try {
           _safeSetItem(sessionStorage, CFG_LS_KEYS.anno || 'annoScolasticoAttivo', v);
         } catch (e) {
@@ -776,7 +659,7 @@ window.ErrorBoundary = ErrorBoundary;
       get: function () {
         return _safeGetItem(sessionStorage, CFG_LS_KEYS.aiCache || 'ai_results_cache');
       },
-      set: function (v) {
+      set: function (v: string) {
         try {
           _safeSetItem(sessionStorage, CFG_LS_KEYS.aiCache || 'ai_results_cache', v);
         } catch (e) {}
@@ -791,7 +674,7 @@ window.ErrorBoundary = ErrorBoundary;
       get: function () {
         return _safeGetItem(sessionStorage, CFG_LS_KEYS.aiCacheAt || 'ai_results_cache_at');
       },
-      set: function (v) {
+      set: function (v: string) {
         try {
           _safeSetItem(sessionStorage, CFG_LS_KEYS.aiCacheAt || 'ai_results_cache_at', v);
         } catch (e) {}
@@ -806,8 +689,6 @@ window.ErrorBoundary = ErrorBoundary;
   window._SB_LS = SB.LS; // Esporta per evitare reinizializzazione
   window.SB_CONFIG = window.SB_CONFIG || CFG_LS_KEYS; // Assicura che la config sia disponibile
 })();
-
-SB.cleanMarkdownText = cleanMarkdownText;
 
 // Utility per sanificare input utente prima di inviarlo a modelli AI (Prompt Injection)
 
@@ -849,6 +730,3 @@ window.useLayoutEffect = useLayoutEffect;
 window.Fragment = Fragment;
 window.CLASSI_DEFAULT = CLASSI_DEFAULT;
 window.ANNI_DISPONIBILI = ANNI_DISPONIBILI;
-window.useCountUp = useCountUp;
-window.Avatar = Avatar;
-window.avatarColor = avatarColor;

@@ -2,7 +2,7 @@
 var SB = window.SB || {};
 var h = SB.h || React.createElement;
 
-function FAB__({ $ }) {
+function FAB__({ $ }: any) {
   if ($.simulaSt) return null;
   return (
     <button

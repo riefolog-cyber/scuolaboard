@@ -1,7 +1,7 @@
 // src/utils/cloud.ts — word cloud e statistiche pure
 // Estratto da app-utils.ts (Fase 2d): nessuna dipendenza da Firestore/React.
 
-export var STOP_IT = new Set([
+var STOP_IT = new Set([
   'il',
   'la',
   'lo',
@@ -170,8 +170,8 @@ export var STOP_IT = new Set([
   'ora',
   'poi',
 ]);
-export function buildWordCloud(cards, cardId) {
-  var testi = [];
+export function buildWordCloud(cards: any[], cardId: string) {
+  var testi: string[] = [];
   cards
     .filter(function (c) {
       if (c.proposta) return false;
@@ -183,15 +183,15 @@ export function buildWordCloud(cards, cardId) {
       return false;
     })
     .forEach(function (c) {
-      (c.commenti || []).forEach(function (cm) {
+      (c.commenti || []).forEach(function (cm: any) {
         testi.push(cm.testo);
         if (cm.risposte)
-          cm.risposte.forEach(function (r) {
+          cm.risposte.forEach(function (r: any) {
             testi.push(r.testo);
           });
       });
     });
-  var freq = {};
+  var freq: Record<string, number> = {};
   // Rimuove URL, poi sostituisce punteggiatura (escluse lettere unicode) con spazi, poi divide
   var cleanedText = testi
     .join(' ')
@@ -206,10 +206,10 @@ export function buildWordCloud(cards, cardId) {
     .forEach(function (w) {
       freq[w] = (freq[w] || 0) + 1;
     });
-  // freq è Record<string, number> ma l'oggetto letterale {} inferisce
-  // Record<string, unknown> → Object.entries dà [string, unknown][] che
-  // non ammette confronti aritmetici. Cast esplicito al tipo reale.
-  var entries = Object.entries(freq) as [string, number][];
+  // freq è tipizzato Record<string, number> (non l'oggetto letterale {} che
+  // inferirebbe Record<string, unknown> → Object.entries non ammetterebbe
+  // confronti aritmetici).
+  var entries = Object.entries(freq);
   return entries
     .filter(function (e) {
       return e[1] > 0;
@@ -219,7 +219,7 @@ export function buildWordCloud(cards, cardId) {
     })
     .slice(0, 10);
 }
-export function collectCloudStats(cards, cardId) {
+export function collectCloudStats(cards: any[], cardId: string) {
   var filtered = cards.filter(function (c) {
     if (c.proposta) return false;
     if (cardId === 'tutte') return true;
@@ -230,13 +230,13 @@ export function collectCloudStats(cards, cardId) {
     return false;
   });
   var commentCount = 0;
-  var studentSet = new Set();
+  var studentSet = new Set<string>();
   filtered.forEach(function (c) {
-    (c.commenti || []).forEach(function (cm) {
+    (c.commenti || []).forEach(function (cm: any) {
       commentCount++;
       if (cm.autore) studentSet.add(cm.autore);
       if (cm.risposte)
-        cm.risposte.forEach(function (r) {
+        cm.risposte.forEach(function (r: any) {
           commentCount++;
           if (r.autore) studentSet.add(r.autore);
         });

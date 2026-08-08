@@ -3,9 +3,9 @@ var SB = window.SB || {};
 var h = SB.h || React.createElement;
 var normalizeLinks = window.normalizeLinks;
 
-function CardItem__({ $, c }) {
+function CardItem__({ $, c }: any) {
   var totV = c.opzioni
-    ? c.opzioni.reduce(function (a, o) {
+    ? c.opzioni.reduce(function (a: any, o: any) {
         return a + (o.voti || []).length;
       }, 0)
     : 0;
@@ -28,19 +28,19 @@ function CardItem__({ $, c }) {
         ($.bulkMode && $.isProf && $.bulkSelected.indexOf(String(c.id)) >= 0 ? ' bulk-selected' : '')
       }
       draggable={!$.bulkMode && $.isProf && !$.simulaSt}
-      onDragStart={function (e) {
+      onDragStart={function (e: any) {
         $.onDragStart(e, c.id);
       }}
-      onDragEnd={function (e) {
+      onDragEnd={function (e: any) {
         $.onDragEnd(e, c.id);
       }}
-      onDragOver={function (e) {
+      onDragOver={function (e: any) {
         $.onDragOver(e, c.id);
       }}
-      onDragLeave={function (e) {
+      onDragLeave={function (e: any) {
         $.onDragLeave(e, c.id);
       }}
-      onDrop={function (e) {
+      onDrop={function (e: any) {
         $.onDrop(e, c.id);
       }}
       style={(function () {
@@ -92,7 +92,7 @@ function CardItem__({ $, c }) {
                 position: 'relative',
                 cursor: 'pointer',
               }}
-              onClick={function (e) {
+              onClick={function (e: any) {
                 e.stopPropagation();
                 $.setLightbox({ url: c.copertina, didascalia: c.titolo });
               }}
@@ -160,7 +160,7 @@ function CardItem__({ $, c }) {
                             color: 'rgba(255,255,255,.7)',
                           }}
                         >
-                          {cc.slice(0, 3).map(function (cl, i) {
+                          {cc.slice(0, 3).map(function (cl: any, i: any) {
                             var isCustom = $.CLASSI_DEFAULT.indexOf(cl) < 0;
                             var ccc = isCustom ? $.classeColor(cl, $.classiCustom) : '#fb923c';
                             return (
@@ -230,7 +230,7 @@ function CardItem__({ $, c }) {
                       aria-label={nascosta ? 'Rendi visibile' : 'Nascondi'}
                       title={nascosta ? 'Rendi visibile' : 'Nascondi'}
                       className="icon-btn"
-                      onClick={function (e) {
+                      onClick={function (e: any) {
                         e.stopPropagation();
                         $.toggleVisibile(c, e);
                       }}
@@ -343,8 +343,7 @@ function CardItem__({ $, c }) {
               )}
               {c.tipo === 'sondaggio' && c.opzioni && (
                 <div style={{ marginTop: 8 }}>
-                  {c.opzioni
-                    .map(function (o) {
+                  {c.opzioni.map(function (o: any) {
                       var pct = totV > 0 ? Math.round(((o.voti || []).length / totV) * 100) : 0;
                       return (
                         <div key={o.id} style={{ marginBottom: 4 }}>
@@ -409,7 +408,7 @@ function CardItem__({ $, c }) {
                 <button
                   aria-label={liked ? 'Rimuovi like' : 'Aggiungi like'}
                   className={($.likeAnimCard === c.id ? 'like-btn-active ' : '') + 'pill-btn'}
-                  onClick={function (e) {
+                  onClick={function (e: any) {
                     e.stopPropagation();
                     $.toggleLike(c.id);
                   }}
@@ -457,7 +456,7 @@ function CardItem__({ $, c }) {
                       👍 LIKE DI
                     </div>
                   }
-                  {c.likesBy.map(function (nome, i) {
+                  {c.likesBy.map(function (nome: any, i: any) {
                     return (
                       <div
                         key={i}
@@ -513,7 +512,7 @@ function CardItem__({ $, c }) {
                 return (
                   <button
                     key={emoji}
-                    onClick={function (e) {
+                    onClick={function (e: any) {
                       e.stopPropagation();
                       $.toggleReazione(c.id, emoji);
                     }}
@@ -539,7 +538,7 @@ function CardItem__({ $, c }) {
             <button
               aria-label="Apri commenti"
               className="pill-btn"
-              onClick={function (e) {
+              onClick={function (e: any) {
                 e.stopPropagation();
                 $.openCard(c);
                 setTimeout(function () {
@@ -579,7 +578,7 @@ function CardItem__({ $, c }) {
           {$.isProf && !$.simulaSt && (c.commenti || []).length >= 3 && (
             <button
               className="pill-btn"
-              onClick={function (e) {
+              onClick={function (e: any) {
                 e.stopPropagation();
                 $.setShowSommario(c.id);
                 if (!$.sommarioResult[c.id]) $.riassuntiCommentiRun(c);
@@ -597,7 +596,7 @@ function CardItem__({ $, c }) {
           {!$.isProf && !$.simulaSt && (
             <button
               className="pill-btn"
-              onClick={function (e) {
+              onClick={function (e: any) {
                 e.stopPropagation();
                 $.togglePreferito(c.id);
               }}
@@ -623,7 +622,7 @@ function CardItem__({ $, c }) {
             <button
               aria-label="Copia link"
               className="pill-btn"
-              onClick={function (e) {
+              onClick={function (e: any) {
                 e.stopPropagation();
                 var url = window.location.href.split('#')[0] + '#card-' + c.id;
                 navigator.clipboard &&
@@ -650,7 +649,7 @@ function CardItem__({ $, c }) {
             <button
               aria-label="Modifica card"
               className="pill-btn"
-              onClick={function (e) {
+              onClick={function (e: any) {
                 e.stopPropagation();
                 $.editCard(c);
               }}
@@ -668,7 +667,7 @@ function CardItem__({ $, c }) {
             <button
               aria-label="Modifica card"
               className="pill-btn"
-              onClick={function (e) {
+              onClick={function (e: any) {
                 e.stopPropagation();
                 $.editCard(c);
               }}
@@ -686,7 +685,7 @@ function CardItem__({ $, c }) {
             <button
               aria-label="Duplica card"
               className="pill-btn"
-              onClick={function (e) {
+              onClick={function (e: any) {
                 $.apriDuplica(c, e);
               }}
               style={{
@@ -705,10 +704,10 @@ function CardItem__({ $, c }) {
               draggable={false}
               aria-label="Copia in altro anno"
               className="pill-btn"
-              onMouseDown={function (e) {
+              onMouseDown={function (e: any) {
                 e.stopPropagation();
               }}
-              onClick={function (e) {
+              onClick={function (e: any) {
                 e.stopPropagation();
                 $.apriCopiaAnno(c, e);
               }}
@@ -726,7 +725,7 @@ function CardItem__({ $, c }) {
             <button
               aria-label="Elimina"
               className="pill-btn"
-              onClick={function (e) {
+              onClick={function (e: any) {
                 e.stopPropagation();
                 $.delCardWithUndo(c.id);
               }}

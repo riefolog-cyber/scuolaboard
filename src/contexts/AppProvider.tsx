@@ -10,7 +10,6 @@ import useAmmonizioni from '../hooks/useAmmonizioni.ts';
 import useClassi from '../hooks/useClassi.ts';
 import {
   playAlarm,
-  escHtml,
   classeCorrenteOf,
   buildOpzioni,
   buildQuizDomande,
@@ -60,7 +59,7 @@ var ANNI_DISPONIBILI = window.ANNI_DISPONIBILI,
 // TESTO dell'opzione ('Vero'/'Falso'). Le risposte interattive salvano sempre
 // l'indice dell'opzione cliccata → confrontare con String() e, se non
 // combacia, provare il testo dell'opzione.
-function AppProvider({ children }) {
+function AppProvider({ children }: any) {
   // ── ANNO SCOLASTICO ──
   var annoDefault = (function () {
     try {
@@ -96,7 +95,7 @@ function AppProvider({ children }) {
   var [form, setForm] = useState(Object.assign({}, window.FORM0 || SB.FORM0));
   var [editMode, setEditMode] = useState(null);
   var [nc, setNc] = useState({ testo: '' });
-  var [editingCm, setEditingCm] = useState(null);
+  var [editingCm, setEditingCm] = useState<any>(null);
   var [replyTo, setReplyTo] = useState(null);
   var [replyTesto, setReplyTesto] = useState('');
   var [classeInput, setClasseInput] = useState('');
@@ -115,16 +114,16 @@ function AppProvider({ children }) {
   var [timerInput, setTimerInput] = useState('');
 
 
-  var [showCard, setShowCard] = useState(null);
+  var [showCard, setShowCard] = useState<any>(null);
 
   // Toast ed eliminazioni revocabili (Undo)
   var toastHook = useToast();
   var toasts = toastHook.toasts;
   var setToasts = toastHook.setToasts;
   var showToast = toastHook.showToast;
-  var [undoDelete, setUndoDelete] = useState(null);
+  var [undoDelete, setUndoDelete] = useState<any>(null);
   var [bulkMode, setBulkMode] = useState(false);
-  var [bulkSelected, setBulkSelected] = useState([]);
+  var [bulkSelected, setBulkSelected] = useState<any>([]);
 
 
   // ── REFS ──
@@ -181,7 +180,7 @@ function AppProvider({ children }) {
     rimuoviStudente = classi.rimuoviStudente;
 
   var seenRef = cardsHook.seenRef;
-  function markSeen(id) {
+  function markSeen(id: any) {
     if (!seenRef.current.has(String(id))) {
       seenRef.current.add(String(id));
       try {
@@ -190,7 +189,7 @@ function AppProvider({ children }) {
     }
   }
 
-  function myName(u) {
+  function myName(u: any) {
     return SB.myName(u);
   }
 
@@ -220,10 +219,10 @@ function AppProvider({ children }) {
   var CLASSI_LIST = useMemo(
     function () {
       var nascoste = cardsHook.classiNascoste || [];
-      return CLASSI_DEFAULT.filter(function (c) {
+      return CLASSI_DEFAULT.filter(function (c: any) {
         return nascoste.indexOf(c) < 0;
       }).concat(
-        cardsHook.classiCustom.filter(function (c) {
+        cardsHook.classiCustom.filter(function (c: any) {
           return CLASSI_DEFAULT.indexOf(c) < 0;
         })
       );
@@ -264,8 +263,8 @@ function AppProvider({ children }) {
       get rinominaConferma() { return rinominaConferma; },
       get isProf() { return isProf; },
       get annoScolastico() { return annoScolastico; },
-      fbClassiSave: function (arr) { return fbClassiSave(arr, annoScolastico); },
-      fbNascosteSave: function (arr) { return fbNascosteSave(arr, annoScolastico); },
+      fbClassiSave: function (arr: any) { return fbClassiSave(arr, annoScolastico); },
+      fbNascosteSave: function (arr: any) { return fbNascosteSave(arr, annoScolastico); },
       fbSave: fbSave,
       fbFavSave: fbFavSave,
       db: db,
@@ -298,7 +297,7 @@ function AppProvider({ children }) {
   }, [appHandlerCtx]);
 
   // Destruttura handlers con fallback sicuri
-  function safeFn(fn) {
+  function safeFn(fn: any) {
     return typeof fn === 'function' ? fn : function () {};
   }
   var toggleLike = safeFn(__handlers.toggleLike);
@@ -318,12 +317,12 @@ function AppProvider({ children }) {
   var removeClasseCustom = safeFn(__handlers.removeClasseCustom);
 
   // ── OPERAZIONI LOCALI ──
-  function toggleVisibile(card, e) {
+  function toggleVisibile(card: any, e: any) {
     e.stopPropagation();
     fbSave(Object.assign({}, card, { visibile: card.visibile === false }));
   }
 
-  function apriDuplica(card, e) {
+  function apriDuplica(card: any, e: any) {
     e.stopPropagation();
     modals.setShowDuplica(card);
     setDuplicaClassi([]);
@@ -409,18 +408,18 @@ function AppProvider({ children }) {
     setForm(Object.assign({}, window.FORM0 || SB.FORM0));
   }
 
-  function editCard(card) {
+  function editCard(card: any) {
     setShowCard(null);
     setEditMode(card);
     setForm(buildEditForm(card, normalizeLinks));
     modals.setShowModal(true);
   }
 
-  async function handleImgUpload(e, isCover) {
-    var files = Array.from(e.target.files);
+  async function handleImgUpload(e: any, isCover: any) {
+    var files = Array.from(e.target.files) as File[];
     if (!files.length) return;
     setImgUploading(true);
-    var imgMimeOk = function (t) {
+    var imgMimeOk = function (t: any) {
       return t === 'image/jpeg' || t === 'image/png' || t === 'image/gif' || t === 'image/webp';
     };
     try {
@@ -436,11 +435,11 @@ function AppProvider({ children }) {
         }
         var b64 = await window.compressImage(file, 900, 900, 0.72);
         if (isCover) {
-          setForm(function (p) {
+          setForm(function (p: any) {
             return Object.assign({}, p, { copertina: b64 });
           });
         } else {
-          setForm(function (p) {
+          setForm(function (p: any) {
             if ((p.immagini || []).length >= 5) return p;
             return Object.assign({}, p, {
               immagini: (p.immagini || []).concat([
@@ -457,33 +456,33 @@ function AppProvider({ children }) {
     e.target.value = '';
   }
 
-  function rimuoviImmagine(id) {
-    setForm(function (p) {
+  function rimuoviImmagine(id: any) {
+    setForm(function (p: any) {
       return Object.assign({}, p, {
-        immagini: (p.immagini || []).filter(function (x) {
+        immagini: (p.immagini || []).filter(function (x: any) {
           return x.id !== id;
         }),
       });
     });
   }
 
-  function setDidascalia(id, val) {
-    setForm(function (p) {
+  function setDidascalia(id: any, val: any) {
+    setForm(function (p: any) {
       return Object.assign({}, p, {
-        immagini: (p.immagini || []).map(function (x) {
+        immagini: (p.immagini || []).map(function (x: any) {
           return x.id === id ? Object.assign({}, x, { didascalia: val }) : x;
         }),
       });
     });
   }
 
-  function delCard(id) {
+  function delCard(id: any) {
     modals.setConfirmDel({ type: 'card', id: id });
   }
 
   var delCardWithUndo = useCallback(
-    function (id) {
-      var card = cardsHook.cards.find(function (c) {
+    function (id: any) {
+      var card = cardsHook.cards.find(function (c: any) {
         return c.id === id;
       });
       if (!card) return;
@@ -518,8 +517,8 @@ function AppProvider({ children }) {
     showToast('Eliminazione annullata ✓', 'ok');
   }
 
-  function appCard(id) {
-    var c = cardsHook.cards.find(function (x) {
+  function appCard(id: any) {
+    var c = cardsHook.cards.find(function (x: any) {
       return x.id === id;
     });
     if (c) {
@@ -528,8 +527,8 @@ function AppProvider({ children }) {
     }
   }
 
-  function rifiutaConMot(id, mot) {
-    var c = cardsHook.cards.find(function (x) {
+  function rifiutaConMot(id: any, mot: any) {
+    var c = cardsHook.cards.find(function (x: any) {
       return x.id === id;
     });
     if (c) fbSave(Object.assign({}, c, { proposta: 'rifiutata', motivazioneRifiuto: mot || '' }));
@@ -542,9 +541,9 @@ function AppProvider({ children }) {
   // documento cards (così anche gli studenti smettono di vederla) e il doc
   // ai_results/{cardId} (cache prof-only). Aggiorna anche lo stato locale
   // aiMap per riflettere subito la rimozione senza aspettare il listener.
-  function eliminaAnalisiAI(cardId) {
+  function eliminaAnalisiAI(cardId: any) {
     var id = String(cardId);
-    var card = cardsHook.cards.find(function (c) {
+    var card = cardsHook.cards.find(function (c: any) {
       return String(c.id) === String(id);
     });
     if (!card) return;
@@ -558,7 +557,7 @@ function AppProvider({ children }) {
     ])
       .then(function () {
         if (window.aiCacheInvalidate) window.aiCacheInvalidate();
-        ai.setAiMap(function (prev) {
+        ai.setAiMap(function (prev: any) {
           var next = Object.assign({}, prev);
           delete next[id];
           return next;
@@ -580,34 +579,34 @@ function AppProvider({ children }) {
   // Elimina la cronologia delle domande libere all'AI del prof (riquadro
   // "Fai una domanda all'AI"): svuota SOLO il campo `domande` del doc
   // ai_results/{cardId}, preservando l'analisi (`analisi`) nello stesso doc.
-  function eliminaDomandeAI(cardId) {
+  function eliminaDomandeAI(cardId: any) {
     var id = String(cardId);
     db.collection('ai_results')
       .doc(id)
       .set({ domande: [] }, { merge: true })
       .then(function () {
         if (window.aiCacheInvalidate) window.aiCacheInvalidate();
-        ai.setAiMap(function (prev) {
+        ai.setAiMap(function (prev: any) {
           var next = Object.assign({}, prev);
           next[id] = Object.assign({}, next[id] || {}, { domande: [] });
           return next;
         });
         showToast('Cronologia domande all\'AI eliminata', 'ok');
       })
-      .catch(function (e) {
+      .catch(function (e: any) {
         console.error('[ScuolaBoard] eliminaDomandeAI:', e);
         showToast('Errore eliminazione domande AI', 'err');
       });
   }
 
-  function saveEditCm(cid) {
+  function saveEditCm(cid: any) {
     if (!editingCm || !editingCm.testo.trim()) return;
-    var card = cardsHook.cards.find(function (c) {
+    var card = cardsHook.cards.find(function (c: any) {
       return c.id === cid;
     });
     if (!card) return;
-    function aggiornaLista(lista) {
-      return lista.map(function (cm) {
+    function aggiornaLista(lista: any) {
+      return lista.map(function (cm: any) {
         if (cm.id === editingCm.id) return Object.assign({}, cm, { testo: editingCm.testo.trim(), modificato: true });
         if (cm.risposte && cm.risposte.length) return Object.assign({}, cm, { risposte: aggiornaLista(cm.risposte) });
         return cm;
@@ -617,20 +616,20 @@ function AppProvider({ children }) {
     setEditingCm(null);
   }
 
-  function toggleReaction(cardId, cmId, emoji) {
-    var card = cardsHook.cards.find(function (c) {
+  function toggleReaction(cardId: any, cmId: any, emoji: any) {
+    var card = cardsHook.cards.find(function (c: any) {
       return String(c.id) === String(cardId);
     });
     if (!card) return;
     var vn = myName(user);
-    function upd(lista) {
-      return lista.map(function (item) {
+    function upd(lista: any) {
+      return lista.map(function (item: any) {
         if (String(item.id) === String(cmId)) {
           var reaz = item.reazioni || {};
           var chi = reaz[emoji] || [];
           var hasMine = chi.indexOf(vn) >= 0;
           var next = hasMine
-            ? chi.filter(function (x) {
+            ? chi.filter(function (x: any) {
                 return x !== vn;
               })
             : chi.concat([vn]);
@@ -645,8 +644,8 @@ function AppProvider({ children }) {
     fbSave(Object.assign({}, card, { commenti: upd(card.commenti) }));
   }
 
-  function setCardTimer(cardId, isoDeadline) {
-    var card = cardsHook.cards.find(function (c) {
+  function setCardTimer(cardId: any, isoDeadline: any) {
+    var card = cardsHook.cards.find(function (c: any) {
       return String(c.id) === String(cardId);
     });
     if (!card) return;
@@ -655,24 +654,24 @@ function AppProvider({ children }) {
   }
 
   // Drag & drop
-  function onDragStart(e, id) {
+  function onDragStart(e: any, id: any) {
     dragId.current = id;
     e.dataTransfer.effectAllowed = 'move';
     // Necessario per Firefox: senza setData il drag non parte proprio.
     e.dataTransfer.setData('text/plain', String(id));
   }
-  function onDragEnd(_e, _id) {
+  function onDragEnd(_e: any, _id: any) {
     document.querySelectorAll('.drag-over').forEach(function (el) {
       el.classList.remove('drag-over');
     });
   }
-  function onDragOver(e, id) {
+  function onDragOver(e: any, id: any) {
     e.preventDefault();
     if (String(dragId.current) === String(id)) return;
     var el = document.getElementById('card-' + id);
     if (el) el.classList.add('drag-over');
   }
-  function onDragLeave(e, id) {
+  function onDragLeave(e: any, id: any) {
     var el = document.getElementById('card-' + id);
     // Il dragleave scatta anche muovendosi tra i figli della stessa card:
     // se il puntatore resta DENTRO la card, non rimuovere l'evidenziazione
@@ -680,49 +679,49 @@ function AppProvider({ children }) {
     if (el && e.relatedTarget && el.contains(e.relatedTarget)) return;
     if (el) el.classList.remove('drag-over');
   }
-  function onDrop(e, targetId) {
+  function onDrop(e: any, targetId: any) {
     e.preventDefault();
     document.querySelectorAll('.drag-over').forEach(function (el) {
       el.classList.remove('drag-over');
     });
     var fromId = dragId.current;
     if (!fromId || String(fromId) === String(targetId)) return;
-    var arr = cardsHook.cards.slice().sort(function (a, b) {
+    var arr = cardsHook.cards.slice().sort(function (a: any, b: any) {
       return (a.ordine || 0) - (b.ordine || 0);
     });
-    var fi = arr.findIndex(function (c) {
+    var fi = arr.findIndex(function (c: any) {
       return String(c.id) === String(fromId);
     });
-    var ti = arr.findIndex(function (c) {
+    var ti = arr.findIndex(function (c: any) {
       return String(c.id) === String(targetId);
     });
     if (fi < 0 || ti < 0) return;
     var moved = arr.splice(fi, 1)[0];
     arr.splice(ti, 0, moved);
-    arr.forEach(function (c, i) {
+    arr.forEach(function (c: any, i: any) {
       fbSave(Object.assign({}, c, { ordine: i + 1 }));
     });
     dragId.current = null;
   }
 
-  function toggleBulkSelect(id) {
+  function toggleBulkSelect(id: any) {
     var sid = String(id);
-    setBulkSelected(function (p) {
+    setBulkSelected(function (p: any) {
       return p.indexOf(sid) >= 0
-        ? p.filter(function (x) {
+        ? p.filter(function (x: any) {
             return x !== sid;
           })
-        : [].concat(p, [sid]);
+        : p.concat([sid]);
     });
   }
 
-  function bulkHide(vis) {
-    bulkSelected.forEach(function (id) {
+  function bulkHide(vis: any) {
+    bulkSelected.forEach(function (id: any) {
       db.collection('cards')
         .doc(id)
         .update({ visibile: vis })
         .catch(function () {
-          var card = cardsHook.cards.find(function (c) {
+          var card = cardsHook.cards.find(function (c: any) {
             return String(c.id) === id;
           });
           if (card) fbSave(Object.assign({}, card, { visibile: vis }));
@@ -740,7 +739,7 @@ function AppProvider({ children }) {
       if (deepLinkDone.current) return;
       var id = new URLSearchParams(location.search).get('card');
       if (!id || !cardsHook.cards.length) return;
-      var c = cardsHook.cards.find(function (x) {
+      var c = cardsHook.cards.find(function (x: any) {
         return String(x.id) === String(id);
       });
       if (c) {
@@ -757,7 +756,7 @@ function AppProvider({ children }) {
     function () {
       if (!cardsHook.cards.length) return;
       var n = cardsHook.now;
-      cardsHook.cards.forEach(function (c) {
+      cardsHook.cards.forEach(function (c: any) {
         if (!c.scadenza) return;
         var key = String(c.id);
         if (alarmFiredRef.current.has(key)) return;
@@ -793,7 +792,7 @@ function AppProvider({ children }) {
   useEffect(
     function () {
       if (!isProf) return;
-      var count = cardsHook.cards.filter(function (c) {
+      var count = cardsHook.cards.filter(function (c: any) {
         return c.proposta === true;
       }).length;
       if (prevProposteCount.current > 0 && count > prevProposteCount.current) {
@@ -807,7 +806,7 @@ function AppProvider({ children }) {
   // Escape key
   useEffect(
     function () {
-      function onKey(e) {
+      function onKey(e: any) {
         if (e.key !== 'Escape') return;
         if (modals.lightbox) {
           modals.setLightbox(null);
@@ -1042,15 +1041,15 @@ function AppProvider({ children }) {
           var cards = cardsHook.cards;
           // Se aiTarget è una classe specifica (non 'tutte' o 'suddivisa'), filtra le card
           if (ai.aiTarget && ai.aiTarget !== 'tutte' && ai.aiTarget !== 'suddivisa') {
-            cards = cards.filter(function (c) {
+            cards = cards.filter(function (c: any) {
               return (c.classi || []).indexOf(ai.aiTarget) >= 0;
             });
           }
           ai.runAI(cards);
         },
-        runCardAI: function (card, _e) {
+        runCardAI: function (card: any, _e: any) {
           if (!isProf || simulaSt) return;
-          ai.runCardAI(card, cardsHook.cards, function (m) {
+          ai.runCardAI(card, cardsHook.cards, function (m: any) {
             // Guardia anti-crash: m deve essere sempre un oggetto (mai
             // undefined/null, altrimenti la CardDetail esplode su $.aiMap[id]).
             ai.setAiMap(m || {});
@@ -1064,7 +1063,7 @@ function AppProvider({ children }) {
           if (!isProf || simulaSt) return;
           ai.aiGenerateQuiz();
         },
-        aiRigenDomanda: function (idx) {
+        aiRigenDomanda: function (idx: any) {
           if (!isProf || simulaSt) return;
           ai.aiRigenDomanda(idx);
         },
@@ -1072,15 +1071,14 @@ function AppProvider({ children }) {
           if (!isProf || simulaSt) return;
           ai.aiConfirmaQuiz(setForm);
         },
-        riassuntiCommentiRun: function (card) {
+        riassuntiCommentiRun: function (card: any) {
           if (!isProf || simulaSt) return;
           ai.riassuntiCommentiRun(card);
         },
-        aiAnalisiSondaggio: function (card) {
+        aiAnalisiSondaggio: function (card: any) {
           if (!isProf || simulaSt) return;
           ai.aiAnalisiSondaggio(card);
         },
-        REACTIONS: SB.REACTIONS || ['👍', '❤️', '🤔'],
         aiQuizGenAnteprima: ai.aqg.anteprima,
       };
     },
@@ -1222,7 +1220,7 @@ function AppProvider({ children }) {
         appCard: appCard,
         rifiutaConMot: rifiutaConMot,
         inviaRisposteQuiz: inviaRisposteQuiz,
-        valutaAperteProfAI: function (card, ris) {
+        valutaAperteProfAI: function (card: any, ris: any) {
           if (!isProf || simulaSt) return;
           valutaAperteProfAI(card, ris);
         },
@@ -1256,13 +1254,13 @@ function AppProvider({ children }) {
         executeDelReply: executeDelReply,
         executeDelCom: executeDelCom,
         ammonisci: ammonisci,
-        handleAllegatiUpload: function (e) {
+        handleAllegatiUpload: function (e: any) {
           handleAllegatiUpload(e, setForm, setAllegatiUploading, showToast);
         },
-        handleRimuoviAllegato: function (id) {
+        handleRimuoviAllegato: function (id: any) {
           handleRimuoviAllegato(id, setForm);
         },
-        apriCopiaAnno: function (card, e) {
+        apriCopiaAnno: function (card: any, e: any) {
           e.stopPropagation();
           modals.setShowCopiaAnno(card);
           setCopiaAnnoTarget('');
@@ -1279,7 +1277,7 @@ function AppProvider({ children }) {
         timeAgo: timeAgo,
         badgeBg: badgeBg,
         tipoIcon: tipoIcon,
-        renderLinks: function (card) {
+        renderLinks: function (card: any) {
           return renderLinks(card, setShowCard);
         },
         ValutazioneApertaAI: ValutazioneApertaAI,
@@ -1290,7 +1288,6 @@ function AppProvider({ children }) {
         // Modifica ammonizioni
         modificaAmm: modificaAmm,
         eliminaAmm: eliminaAmm,
-        escHtml: escHtml,
       };
     },
     [

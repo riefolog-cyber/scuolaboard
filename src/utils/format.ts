@@ -2,7 +2,7 @@
 // Estratto da app-utils.ts (Fase 2d): nessuna dipendenza da Firestore/React.
 // app-utils.ts importa queste funzioni e le ri-registra su window.* / SB.*.
 
-export var CLASSI_COLORS = [
+var CLASSI_COLORS = [
   '#f59e0b',
   '#22c55e',
   '#3b82f6',
@@ -14,7 +14,7 @@ export var CLASSI_COLORS = [
   '#84cc16',
   '#a855f7',
 ];
-export function classeColor(nome, lista) {
+export function classeColor(nome: string, lista: string[]) {
   var idx = lista.indexOf(nome);
   return CLASSI_COLORS[idx % CLASSI_COLORS.length] || '#f59e0b';
 }
@@ -42,7 +42,7 @@ export var CLASSI_DEFAULT = [
 // Comparatore per ordinare gli studenti per cognome (A→Z), poi per nome.
 // Usato sia da loadStudenti (useClassi) sia dal render della vista Gestione
 // Studenti (AppLayout) per evitare logiche duplicate e divergenze future.
-export function compareStudenti(a, b) {
+export function compareStudenti(a: { cognome?: string; nome?: string }, b: { cognome?: string; nome?: string }) {
   var ca = (a.cognome || '').toLowerCase();
   var cb = (b.cognome || '').toLowerCase();
   if (ca !== cb) return ca.localeCompare(cb, 'it');
@@ -51,10 +51,10 @@ export function compareStudenti(a, b) {
   return na.localeCompare(nb, 'it');
 }
 
-export function fmt(d) {
+export function fmt(d: string | number | Date) {
   return new Date(d).toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' });
 }
-export function fmtDT(d) {
+export function fmtDT(d: any) {
   if (!d) return '';
   // Gestione Firestore Timestamp (oggetto con metodo toDate)
   if (d && typeof d.toDate === 'function') {
@@ -75,7 +75,7 @@ export function fmtDT(d) {
     dt.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
   );
 }
-export function timeAgo(d) {
+export function timeAgo(d: string | number | Date) {
   if (!d) return '';
   var ms = Date.now() - new Date(d).getTime();
   var s = Math.floor(ms / 1000),
@@ -91,37 +91,16 @@ export function timeAgo(d) {
   if (weeks < 5) return weeks + 'sett fa';
   return fmt(d);
 }
-export function avatarColor(name) {
-  var colors = [
-    '#6366f1',
-    '#8b5cf6',
-    '#ec4899',
-    '#06b6d4',
-    '#22c55e',
-    '#f59e0b',
-    '#ef4444',
-    '#3b82f6',
-    '#a855f7',
-    '#14b8a6',
-  ];
-  var hash = 0;
-  for (var i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  return colors[Math.abs(hash) % colors.length];
-}
-export function avatarInitials(name) {
-  var parts = (name || '?').trim().split(' ');
-  return parts.length >= 2 ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase() : (name[0] || '?').toUpperCase();
-}
-export function badgeBg(t) {
+export function badgeBg(t: string) {
   return t === 'domanda' ? '#6366f1' : t === 'sondaggio' ? '#22c55e' : t === 'quiz' ? '#a855f7' : '#94a3b8';
 }
-export function tipoIcon(t) {
+export function tipoIcon(t: string) {
   return t === 'domanda' ? '💬' : t === 'sondaggio' ? '🗳️' : t === 'quiz' ? '🧩' : '📌';
 }
 
 // Allowlist URL: solo http(s). Blocca esplicitamente javascript:, data:, vbscript:,
 // file:, ecc. Previene stored XSS via URL malevolo passato da docente.
-export function sbSafeUrl(s) {
+export function sbSafeUrl(s: string) {
   try {
     var u = new URL(s);
     return u.protocol === 'https:' || u.protocol === 'http:';
@@ -142,36 +121,25 @@ export function sbSafeUrl(s) {
 // `displayNameSafe` su users/{uid} e usarlo nelle rules. Per ora manteniamo
 // il check basato su token.name + backward-compat; il rischio è limitato a
 // nomi che contengono / . # $ [ ] *, rari in Italia.
-export function safeDocId(s) {
-  s = String(s == null ? '' : s).trim();
-  if (!s) return '_anon_';
+export function safeDocId(s: unknown) {
+  var str = String(s == null ? '' : s).trim();
+  if (!str) return '_anon_';
   // Sostituisce caratteri proibiti da Firestore
-  s = s.replace(/[\/\\\.\#\$\[\]\*]/g, '_');
+  str = str.replace(/[\/\\\.\#\$\[\]\*]/g, '_');
   // Evita id riservati e collisioni
-  s = s.replace(/_+/g, '_');
+  str = str.replace(/_+/g, '_');
   // Limite docId: 1500 bytes (UTF-8). Tronca con margine.
-  return s.slice(0, 256) || '_anon_';
+  return str.slice(0, 256) || '_anon_';
 }
 
-export function normalizeLinks(c) {
+export function normalizeLinks(c: any) {
   if (c.links && Array.isArray(c.links)) return c.links;
   if (c.linkEsterno && typeof c.linkEsterno === 'string') return [{ url: c.linkEsterno, label: '' }];
   return [];
 }
 
-export function cleanMarkdownText(s) {
-  return String(s || '')
-    .replace(/```[\s\S]*?```/g, '')
-    .replace(/`[^`]*`/g, '')
-    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
-    .replace(/[*_~]{1,3}([^*_~]+)[*_~]{1,3}/g, '$1')
-    .replace(/^#{1,6}\s+/gm, '')
-    .replace(/\n{2,}/g, '\n')
-    .trim();
-}
-
 // Utility per sanificare input utente prima di inviarlo a modelli AI (Prompt Injection)
-export function escapeForPrompt(text) {
+export function escapeForPrompt(text: unknown) {
   return String(text || '')
     .replace(/\\/g, '\\\\') // Escape backslashes first
     .replace(/"/g, '\\"') // Escape double quotes

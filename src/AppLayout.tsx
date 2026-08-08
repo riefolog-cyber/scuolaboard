@@ -34,10 +34,9 @@ var LazySommarioModal = lazy(function () {
   });
 });
 
-SB.AppLayout = function (props) {
+SB.AppLayout = function (props: any) {
   var h = SB.h || React.createElement;
   var Fragment = SB.Fragment || React.Fragment;
-  var useMemo = SB.useMemo || React.useMemo;
   var useContext = React.useContext;
 
   // Consume all contexts and merge into $ for backward compatibility
@@ -130,7 +129,7 @@ SB.AppLayout = function (props) {
               {<span style={{ fontSize: 11, color: 'rgba(255,255,255,.45)' }}>•</span>}
               {
                 <span style={{ fontSize: 11, color: 'rgba(255,255,255,.58)' }}>
-                  {$.cards.filter(function (c) {
+                  {$.cards.filter(function (c: any) {
                     return !c.proposta;
                   }).length + ' card'}
                 </span>
@@ -191,7 +190,7 @@ SB.AppLayout = function (props) {
                         <select
                           aria-label="Tipo di analisi AI"
                           value={$.aiTarget}
-                          onChange={function (e) {
+                          onChange={function (e: any) {
                             $.setAiTarget(e.target.value);
                           }}
                           style={{
@@ -208,7 +207,7 @@ SB.AppLayout = function (props) {
                           {<option value="tutte">📊 Analisi unica (tutte le classi)</option>}
                           {<option value="suddivisa">📋 Analisi suddivisa per classe</option>}
                           {<option disabled value="">──────────────</option>}
-                          {$.CLASSI_LIST.map(function (cl) {
+                          {$.CLASSI_LIST.map(function (cl: any) {
                             return (
                               <option key={cl} value={cl}>
                                 {'📌 ' + cl}
@@ -337,7 +336,7 @@ SB.AppLayout = function (props) {
                                 🔑 Punti chiave
                               </h3>
                             }
-                            {r.punti_chiave.map(function (p, i) {
+                            {r.punti_chiave.map(function (p: any, i: any) {
                               return (
                                 <div
                                   key={i}
@@ -384,7 +383,7 @@ SB.AppLayout = function (props) {
                                 💡 Spunti didattici
                               </h3>
                             }
-                            {r.spunti_dibattito.map(function (s, i) {
+                            {r.spunti_dibattito.map(function (s: any, i: any) {
                               return (
                                 <div
                                   key={i}
@@ -467,7 +466,7 @@ SB.AppLayout = function (props) {
                         }
                         {r.punti_chiave && r.punti_chiave.length > 0 && (
                           <div style={{ marginBottom: 8 }}>
-                            {r.punti_chiave.map(function (p, i) {
+                            {r.punti_chiave.map(function (p: any, i: any) {
                               return (
                                 <div
                                   key={i}
@@ -565,7 +564,7 @@ SB.AppLayout = function (props) {
                             // Esporta gli studenti caricati (anno selezionato) in CSV
                             // con separatore ';' e BOM UTF-8 (compatibile Excel IT).
                             var rows = [['Nome', 'Cognome', 'Classe', 'Email']];
-                            $.studenti.forEach(function (s) {
+                            $.studenti.forEach(function (s: any) {
                               rows.push([s.nome || '', s.cognome || '', s.classe || '', s.email || '']);
                             });
                             var csv = rows
@@ -637,8 +636,8 @@ SB.AppLayout = function (props) {
               {$.studenti.length > 0 &&
                 (function () {
                   // Raggruppa studenti per classe
-                  var byClasse = {};
-                  $.studenti.forEach(function (s) {
+                  var byClasse: any = {};
+                  $.studenti.forEach(function (s: any) {
                     var cl = s.classe || 'Senza classe';
                     if (!byClasse[cl]) byClasse[cl] = [];
                     byClasse[cl].push(s);
@@ -696,7 +695,7 @@ SB.AppLayout = function (props) {
                         }
                         {
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                            {lista.map(function (s, idx) {
+                            {lista.map(function (s: any, idx: any) {
                               return (
                                 <div
                                   key={s.uid}
@@ -715,9 +714,7 @@ SB.AppLayout = function (props) {
                                         width: 28,
                                         height: 28,
                                         borderRadius: '50%',
-                                        background: $.avatarColor
-                                          ? $.avatarColor(s.nome + ' ' + (s.cognome || ''))
-                                          : '#6366f1',
+                                        background: '#6366f1',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
@@ -748,7 +745,7 @@ SB.AppLayout = function (props) {
                                     <select
                                       aria-label={'Assegna classe a ' + (s.nome || 'studente')}
                                       value={s.classe || ''}
-                                      onChange={function (e) {
+                                      onChange={function (e: any) {
                                         $.aggiornaClasseStudente(s.uid, e.target.value || null);
                                       }}
                                       style={{
@@ -762,7 +759,7 @@ SB.AppLayout = function (props) {
                                       }}
                                     >
                                       {<option value="">Nessuna</option>}
-                                      {$.CLASSI_LIST.map(function (c) {
+                                      {$.CLASSI_LIST.map(function (c: any) {
                                         return (
                                           <option key={c} value={c}>
                                             {c}

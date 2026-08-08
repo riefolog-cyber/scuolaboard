@@ -13,7 +13,7 @@ window.SB.h = React.createElement;
 window.SB.Fragment = React.Fragment;
 
 // Mock useSyncExternalStore (React 18+)
-window.React.useSyncExternalStore = function (subscribe, getSnapshot) {
+window.React.useSyncExternalStore = function (_subscribe: any, getSnapshot: any) {
   return getSnapshot();
 };
 
@@ -40,7 +40,7 @@ window.db = {
 window.__firestoreSync = {
   createCombinedStore: function () {
     return {
-      subscribe: function (_cb) {
+      subscribe: function (_cb: any) {
         return function () {};
       },
       getSnapshot: function () {
@@ -59,8 +59,8 @@ window.fbFavSave = () => Promise.resolve();
 // Mock globale per funzioni di utilità
 window.CLASSI_DEFAULT = ['1A', '1B', '2A', '2B', '3A', '3B', '4A', '4B', '5A', '5B'];
 window.classeColor = () => '#6366f1';
-window.fmt = (d) => d || '';
-window.fmtDT = (d) => d || '';
+window.fmt = (d: any) => d || '';
+window.fmtDT = (d: any) => d || '';
 window.timeAgo = () => '1g fa';
 window.badgeBg = () => '#6366f1';
 window.tipoIcon = () => '📌';

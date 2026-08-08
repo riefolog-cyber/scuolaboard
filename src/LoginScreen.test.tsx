@@ -6,7 +6,7 @@ import React from 'react';
 import './LoginScreen.tsx';
 
 describe('LoginScreen', () => {
-  let $;
+  let $: any;
 
   beforeEach(() => {
     $ = {

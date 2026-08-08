@@ -2,9 +2,8 @@
 var SB = window.SB || {};
 window.SB = SB;
 var h = SB.h || React.createElement;
-var Fragment = SB.Fragment || React.Fragment;
 
-function PrivacyModal(props) {
+function PrivacyModal(props: any) {
   if (!props.showPrivacy) return null;
   return (
     <div
@@ -29,7 +28,7 @@ function PrivacyModal(props) {
             maxWidth: 440,
             width: '100%',
           }}
-          onClick={function (e) {
+          onClick={function (e: any) {
             e.stopPropagation();
           }}
         >
@@ -75,5 +74,4 @@ function PrivacyModal(props) {
   );
 }
 
-SB.PrivacyModal = PrivacyModal;
 export default PrivacyModal;

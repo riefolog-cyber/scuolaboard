@@ -2,11 +2,11 @@
 var SB = window.SB || {};
 var h = SB.h || React.createElement;
 
-function Toasts__({ $ }) {
+function Toasts__({ $ }: any) {
   if (!$.toasts || $.toasts.length === 0) return null;
   return (
     <div className="toast-container">
-      {$.toasts.map(function (t) {
+      {$.toasts.map(function (t: any) {
         var icon = t.type === 'ok' ? '✅' : t.type === 'warn' ? '⚠️' : '❌';
         return (
           <div

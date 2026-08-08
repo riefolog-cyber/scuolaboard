@@ -34,6 +34,11 @@ jobs:
       - run: npm run lint
       - name: Typecheck
         run: npx tsc --noEmit
+      # Typecheck STRICT incrementale: i moduli puri in tsconfig.strict.json
+      # devono restare `strict: true`-puliti. La lista cresce nel tempo; il
+      # gate impedisce regressioni sui file già migrati.
+      - name: Typecheck strict (moduli puri)
+        run: npm run typecheck:strict
       - name: Unit & integration tests
         run: npm test
 

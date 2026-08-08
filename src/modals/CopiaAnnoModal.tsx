@@ -2,9 +2,8 @@
 var SB = window.SB || {};
 window.SB = SB;
 var h = SB.h || React.createElement;
-var Fragment = SB.Fragment || React.Fragment;
 
-function CopiaAnnoModal(props) {
+function CopiaAnnoModal(props: any) {
   if (!props.showCopiaAnno) return null;
   var card = props.showCopiaAnno;
   var ANNI = props.ANNI_DISPONIBILI || [];
@@ -41,7 +40,7 @@ function CopiaAnnoModal(props) {
             width: '100%',
             boxShadow: '0 24px 60px rgba(0,0,0,.5)',
           }}
-          onClick={function (e) {
+          onClick={function (e: any) {
             e.stopPropagation();
           }}
         >
@@ -74,7 +73,7 @@ function CopiaAnnoModal(props) {
             <select
               aria-label="Anno scolastico di destinazione"
               value={copiaAnnoTarget}
-              onChange={function (e) {
+              onChange={function (e: any) {
                 setCopiaAnnoTarget && setCopiaAnnoTarget(e.target.value);
               }}
               style={{
@@ -93,7 +92,7 @@ function CopiaAnnoModal(props) {
                   Seleziona anno…
                 </option>
               }
-              {ANNI.map(function (a) {
+              {ANNI.map(function (a: any) {
                 return (
                   <option key={a} value={a} style={{ background: '#1c1a2e', color: '#f1f5f9' }}>
                     {a}
@@ -155,5 +154,4 @@ function CopiaAnnoModal(props) {
   );
 }
 
-SB.CopiaAnnoModal = CopiaAnnoModal;
 export default CopiaAnnoModal;

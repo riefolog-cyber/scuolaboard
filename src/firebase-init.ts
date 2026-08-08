@@ -12,22 +12,6 @@ firebase.initializeApp({
 var SB = window.SB || {};
 window.SB = SB;
 
-// Storage instance per file uploads — graceful skip su piano Spark/free
-// (Firebase Storage richiede Blaze). L'app non usa Storage (immagini base64
-// in Firestore), ma lasciamo graceful fallback per futuro upgrade piano.
-try {
-  if (firebase.storage && firebase.app().options.storageBucket) {
-    SB.storage = firebase.storage();
-    window.storage = SB.storage;
-  } else {
-    SB.storage = null;
-    window.storage = null;
-  }
-} catch (e) {
-  SB.storage = null;
-  window.storage = null;
-}
-
 // Firestore instance
 if (firebase.firestore) {
   SB.db = firebase.firestore();

@@ -1,9 +1,8 @@
 // RifiutaModal.tsx · ScuolaBoard · pannello estratto da CardDetail
 var SB = window.SB || {};
 var h = SB.h || React.createElement;
-var Fragment = SB.Fragment || React.Fragment;
 
-function RifiutaModal({ $, c }) {
+function RifiutaModal({ $, c }: any) {
   return (
     $.showRifiutaModal && $.showRifiutaModal.id === c.id && (
               <div
@@ -16,7 +15,7 @@ function RifiutaModal({ $, c }) {
                   width: '100%',
                   margin: '0 auto 20px',
                 }}
-                onClick={function (e) {
+                onClick={function (e: any) {
                   e.stopPropagation();
                 }}
               >
@@ -49,7 +48,7 @@ function RifiutaModal({ $, c }) {
                 </label>
                 <textarea
                   value={$.rifiutaInput}
-                  onInput={function (e) {
+                  onInput={function (e: any) {
                     $.setRifiutaInput(e.target.value);
                   }}
                   rows={3}

@@ -2,38 +2,37 @@
 var SB = window.SB || {};
 window.SB = SB;
 var h = SB.h || React.createElement;
-var Fragment = SB.Fragment || React.Fragment;
 
-function ProfiloModal(props) {
+function ProfiloModal(props: any) {
   if (!props.showProfilo || props.isProf) return null;
   var user = props.user;
   var cards = props.cards || [];
   var preferiti = props.preferiti || [];
   var setShowProfilo = props.setShowProfilo;
   var myName = props.myName;
-  function c(n) {
+  function c(n: any) {
     return n || 0;
   }
   var vn = myName(user);
-  var mieCard = cards.filter(function (c) {
+  var mieCard = cards.filter(function (c: any) {
     return !c.proposta && c.visibile !== false;
   });
   var meiCommenti = 0;
-  mieCard.forEach(function (c) {
-    (c.commenti || []).forEach(function (cm) {
+  mieCard.forEach(function (c: any) {
+    (c.commenti || []).forEach(function (cm: any) {
       if (cm.autore === vn) meiCommenti++;
-      (cm.risposte || []).forEach(function (r) {
+      (cm.risposte || []).forEach(function (r: any) {
         if (r.autore === vn) meiCommenti++;
       });
     });
   });
-  var meiLike = mieCard.filter(function (c) {
+  var meiLike = mieCard.filter(function (c: any) {
     return (c.likesBy || []).indexOf(vn) >= 0;
   }).length;
-  var meiVoti = mieCard.filter(function (c) {
+  var meiVoti = mieCard.filter(function (c: any) {
     return (
       c.opzioni &&
-      c.opzioni.some(function (o) {
+      c.opzioni.some(function (o: any) {
         return o.voti.indexOf(vn) >= 0;
       })
     );
@@ -70,7 +69,7 @@ function ProfiloModal(props) {
             maxWidth: 380,
             width: '100%',
           }}
-          onClick={function (e) {
+          onClick={function (e: any) {
             e.stopPropagation();
           }}
         >
@@ -115,7 +114,7 @@ function ProfiloModal(props) {
                 { v: c(meiLike), l: 'Like dati', i: '👍', c: '#6366f1' },
                 { v: c(meiVoti), l: 'Sondaggi votati', i: '🗳️', c: '#22c55e' },
                 { v: c(meiPref), l: 'Preferiti', i: '★', c: '#fbbf24' },
-              ].map(function (s) {
+              ].map(function (s: any) {
                 return (
                   <div
                     key={s.l}
@@ -180,5 +179,4 @@ function ProfiloModal(props) {
   );
 }
 
-SB.ProfiloModal = ProfiloModal;
 export default ProfiloModal;

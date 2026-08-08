@@ -2,7 +2,7 @@
 var SB = window.SB || {};
 var h = SB.h || React.createElement;
 
-function LoginScreen__({ $ }) {
+function LoginScreen__({ $ }: any) {
   return (
     <div
       style={{

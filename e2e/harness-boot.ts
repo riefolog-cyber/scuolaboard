@@ -234,7 +234,6 @@ async function boot() {
     '../src/app-utils.ts',
     '../src/ai-services.ts',
     '../src/firestore-services.ts',
-    '../src/AppComponents.tsx',
     '../src/Modals.tsx',
     '../src/modals.ts',
     '../src/auth.ts',

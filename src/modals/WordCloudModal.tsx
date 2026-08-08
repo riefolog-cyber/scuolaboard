@@ -2,9 +2,8 @@
 var SB = window.SB || {};
 window.SB = SB;
 var h = SB.h || React.createElement;
-var Fragment = SB.Fragment || React.Fragment;
 
-function WordCloudModal(props) {
+function WordCloudModal(props: any) {
   if (!props.showWordCloud || !props.isProf) return null;
   var cards = props.cards || [];
   var wcTarget = props.wcTarget;
@@ -44,7 +43,7 @@ function WordCloudModal(props) {
     >
       {
         <div
-          onClick={function (e) {
+          onClick={function (e: any) {
             e.stopPropagation();
           }}
           style={{
@@ -119,7 +118,7 @@ function WordCloudModal(props) {
                   Tutte le classi
                 </button>
               }
-              {aiCardClasses.map(function (cl) {
+              {aiCardClasses.map(function (cl: any) {
                 return (
                   <button
                     key={cl}
@@ -197,7 +196,7 @@ function WordCloudModal(props) {
                 minHeight: 200,
               }}
             >
-              {parole.map(function (entry, i) {
+              {parole.map(function (entry: any, i: number) {
                 var parola = entry[0],
                   freq = entry[1];
                 var size = Math.round(12 + (freq / maxFreq) * 28);
@@ -256,5 +255,4 @@ function WordCloudModal(props) {
   );
 }
 
-SB.WordCloudModal = WordCloudModal;
 export default WordCloudModal;

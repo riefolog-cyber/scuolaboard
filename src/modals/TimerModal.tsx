@@ -2,9 +2,8 @@
 var SB = window.SB || {};
 window.SB = SB;
 var h = SB.h || React.createElement;
-var Fragment = SB.Fragment || React.Fragment;
 
-function TimerModal(props) {
+function TimerModal(props: any) {
   if (!props.showTimerModal || !props.showCard) return null;
   var showCard = props.showCard;
   var timerInput = props.timerInput;
@@ -40,7 +39,7 @@ function TimerModal(props) {
             maxWidth: 360,
             width: '100%',
           }}
-          onClick={function (e) {
+          onClick={function (e: any) {
             e.stopPropagation();
           }}
         >
@@ -60,7 +59,7 @@ function TimerModal(props) {
               type="datetime-local"
               aria-label="Data e ora di scadenza"
               value={timerInput}
-              onInput={function (e) {
+              onInput={function (e: any) {
                 setTimerInput(e.target.value);
               }}
               style={Object.assign({}, S.input, { marginBottom: 14, fontSize: 14, colorScheme: 'dark' })}
@@ -140,5 +139,4 @@ function TimerModal(props) {
   );
 }
 
-SB.TimerModal = TimerModal;
 export default TimerModal;

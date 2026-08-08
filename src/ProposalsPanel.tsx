@@ -4,12 +4,12 @@ var h = SB.h || React.createElement;
 var Fragment = SB.Fragment || React.Fragment;
 var fbDel = window.fbDel;
 
-function ProposalsPanel__({ $ }) {
+function ProposalsPanel__({ $ }: any) {
   return (
     <>
       {!$.isProf &&
         !$.simulaSt &&
-        $.cards.filter(function (c) {
+        $.cards.filter(function (c: any) {
           return c.proposta === true && $.user && c.autore === $.myName($.user);
         }).length > 0 && (
           <div
@@ -27,10 +27,10 @@ function ProposalsPanel__({ $ }) {
             {
               <div>
                 {$.cards
-                  .filter(function (c) {
+                  .filter(function (c: any) {
                     return c.proposta === true && $.user && c.autore === $.myName($.user);
                   })
-                  .map(function (c) {
+                  .map(function (c: any) {
                     return (
                       <div
                         key={c.id}
@@ -74,7 +74,7 @@ function ProposalsPanel__({ $ }) {
         )}
       {!$.isProf &&
         !$.simulaSt &&
-        $.cards.filter(function (c) {
+        $.cards.filter(function (c: any) {
           return c.proposta === 'rifiutata' && $.user && c.autore === $.myName($.user);
         }).length > 0 && (
           <div
@@ -92,10 +92,10 @@ function ProposalsPanel__({ $ }) {
             {
               <div>
                 {$.cards
-                  .filter(function (c) {
+                  .filter(function (c: any) {
                     return c.proposta === 'rifiutata' && $.user && c.autore === $.myName($.user);
                   })
-                  .map(function (c) {
+                  .map(function (c: any) {
                     return (
                       <div
                         key={c.id}
@@ -184,7 +184,7 @@ function ProposalsPanel__({ $ }) {
               ⏳ PROPOSTE IN ATTESA
             </div>
           }
-          {$.proposte.map(function (c) {
+          {$.proposte.map(function (c: any) {
             return (
               <div
                 key={c.id}
@@ -265,7 +265,7 @@ function ProposalsPanel__({ $ }) {
         !$.simulaSt &&
         $.preferiti.length > 0 &&
         (function () {
-          var prefCards = $.visible.filter(function (c) {
+          var prefCards = $.visible.filter(function (c: any) {
             return $.preferiti.indexOf(String(c.id)) >= 0;
           });
           if (!prefCards.length) return null;
@@ -284,7 +284,7 @@ function ProposalsPanel__({ $ }) {
               }
               {
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {prefCards.map(function (c) {
+                  {prefCards.map(function (c: any) {
                     return (
                       <button
                         key={c.id}
@@ -339,7 +339,7 @@ function ProposalsPanel__({ $ }) {
               {
                 <div style={{ fontSize: 11, color: 'rgba(255,255,255,.65)' }}>
                   {$.newCardsBanner
-                    .map(function (c) {
+                    .map(function (c: any) {
                       return c.titolo;
                     })
                     .join(' · ')}
@@ -350,7 +350,7 @@ function ProposalsPanel__({ $ }) {
           {
             <button
               onClick={function () {
-                $.newCardsBanner.forEach(function (c) {
+                $.newCardsBanner.forEach(function (c: any) {
                   $.markSeen(c.id);
                 });
                 $.setShowBanner(false);

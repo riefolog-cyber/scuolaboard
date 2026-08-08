@@ -4,13 +4,13 @@ window.SB = SB;
 var h = SB.h || React.createElement;
 var Fragment = SB.Fragment || React.Fragment;
 
-function AiQuizGenModal(props) {
+function AiQuizGenModal(props: any) {
   if (!props.showAiQuizGen) return null;
   var S = props.S || window.S || {};
   var aqg = props.aqg || {};
   var setAqg = props.setAqg;
-  function saqg(patch) {
-    setAqg(function (p) {
+  function saqg(patch: any) {
+    setAqg(function (p: any) {
       return Object.assign({}, p, patch);
     });
   }
@@ -45,7 +45,7 @@ function AiQuizGenModal(props) {
             border: '1px solid rgba(99,102,241,.3)',
             borderBottom: 'none',
           }}
-          onClick={function (e) {
+          onClick={function (e: any) {
             e.stopPropagation();
           }}
         >
@@ -118,7 +118,7 @@ function AiQuizGenModal(props) {
                 <textarea
                   value={aqg.testo}
                   aria-label="Testo sorgente per generare il quiz"
-                  onInput={function (e) {
+                  onInput={function (e: any) {
                     saqg({ testo: e.target.value });
                   }}
                   rows={7}
@@ -189,7 +189,7 @@ function AiQuizGenModal(props) {
                           max={10}
                           aria-label="Numero di domande"
                           value={aqg.numDom}
-                          onInput={function (e) {
+                          onInput={function (e: any) {
                             var v = Math.max(1, Math.min(10, parseInt(e.target.value) || 4));
                             saqg({ numDom: v });
                           }}
@@ -309,7 +309,7 @@ function AiQuizGenModal(props) {
                   domande, poi conferma.
                 </div>
               }
-              {aqg.anteprima.map(function (d, i) {
+              {aqg.anteprima.map(function (d: any, i: number) {
                 var isRegen = aqg.regenIdx === i;
                 var tipoBadgeBg = d.tipo === 'multipla' ? '#6366f1' : d.tipo === 'verofalso' ? '#22c55e' : '#f59e0b';
                 var tipoLabel = d.tipo === 'multipla' ? 'Multipla' : d.tipo === 'verofalso' ? 'Vero/Falso' : 'Aperta';
@@ -400,7 +400,7 @@ function AiQuizGenModal(props) {
                     }
                     {d.tipo === 'multipla' && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        {d.opzioni.map(function (op, j) {
+                        {d.opzioni.map(function (op: any, j: number) {
                           var isCorr = String(d.corretta) === String(j);
                           return (
                             <div
@@ -535,5 +535,4 @@ function AiQuizGenModal(props) {
   );
 }
 
-SB.AiQuizGenModal = AiQuizGenModal;
 export default AiQuizGenModal;

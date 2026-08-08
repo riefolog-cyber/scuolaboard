@@ -7,7 +7,7 @@ import React from 'react';
 import './FAB.tsx';
 
 describe('FAB', () => {
-  let $;
+  let $: any;
 
   beforeEach(() => {
     $ = {
@@ -49,7 +49,7 @@ describe('FAB', () => {
   it('calls form and modal setup on click', () => {
     let modalShown = false;
     renderFAB({
-      setShowModal: (v) => {
+      setShowModal: (v: any) => {
         modalShown = v;
       },
     });

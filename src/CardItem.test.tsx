@@ -6,7 +6,7 @@ import React from 'react';
 import './CardItem.tsx';
 
 describe('CardItem', () => {
-  let $, card;
+  let $: any, card: any;
 
   beforeEach(() => {
     $ = {
@@ -20,15 +20,14 @@ describe('CardItem', () => {
       setLikeHoverCard: vi.fn(),
       likeAnimCard: null,
       setLikeAnimCard: vi.fn(),
-      badgeBg: (t) => (t === 'nota' ? '#6366f1' : '#22c55e'),
+      badgeBg: (t: any) => (t === 'nota' ? '#6366f1' : '#22c55e'),
       tipoIcon: () => '📌',
       timeAgo: () => '2g fa',
-      myName: (u) => (u && u.nome ? u.nome : 'Anonimo'),
+      myName: (u: any) => (u && u.nome ? u.nome : 'Anonimo'),
       CLASSI_DEFAULT: ['1A', '2A', '3A'],
       classiCustom: [],
       classeColor: () => '#6366f1',
       fmt: () => '30/07/2026',
-      REACTIONS: ['🤔', '💡', '🔥'],
       preferiti: [],
       openCard: vi.fn(),
       onDragStart: vi.fn(),
@@ -133,9 +132,9 @@ describe('CardItem', () => {
     renderCard({}, { onDragStart, onDragOver, onDrop });
     const wrap = document.getElementById('card-c1');
     expect(wrap).not.toBeNull();
-    fireEvent.dragStart(wrap);
-    fireEvent.dragOver(wrap);
-    fireEvent.drop(wrap);
+    fireEvent.dragStart(wrap as HTMLElement);
+    fireEvent.dragOver(wrap as HTMLElement);
+    fireEvent.drop(wrap as HTMLElement);
     expect(onDragStart).toHaveBeenCalledWith(expect.anything(), 'c1');
     expect(onDragOver).toHaveBeenCalledWith(expect.anything(), 'c1');
     expect(onDrop).toHaveBeenCalledWith(expect.anything(), 'c1');

@@ -8,7 +8,7 @@ var db = SB.db;
 // ── Atomically get next card order ──────────────────────────────────────
 async function getNewCardOrder() {
   var configRef = db.collection('_internal_').doc('counters');
-  return db.runTransaction(async function (t) {
+  return db.runTransaction(async function (t: any) {
     var doc = await t.get(configRef);
     var currentOrder = doc.exists ? doc.data().nextCardOrder || 0 : 0;
     var newOrder = currentOrder + 1;
@@ -17,13 +17,13 @@ async function getNewCardOrder() {
   });
 }
 
-async function createCardWithOrder(card) {
+async function createCardWithOrder(card: any) {
   var newOrder = await getNewCardOrder();
   var cardWithOrder = Object.assign({}, card, { ordine: newOrder });
   return saveCard(cardWithOrder);
 }
 
-function saveCard(card) {
+function saveCard(card: any) {
   try {
     if (SB.fbSave) return SB.fbSave(card);
     return db.collection('cards').doc(String(card.id)).set(card);
@@ -32,7 +32,7 @@ function saveCard(card) {
   }
 }
 
-function delCard(id) {
+function delCard(id: any) {
   try {
     if (SB.fbDel) return SB.fbDel(id);
     return db.collection('cards').doc(String(id)).delete();
@@ -41,7 +41,7 @@ function delCard(id) {
   }
 }
 
-function updateCard(id, patch, fallbackCard) {
+function updateCard(id: any, patch: any, fallbackCard: any) {
   try {
     return db
       .collection('cards')
@@ -57,12 +57,12 @@ function updateCard(id, patch, fallbackCard) {
 }
 
 function refreshAiMap() {
-  var m = {};
+  var m: any = {};
   return db
     .collection('ai_results')
     .get()
-    .then(function (s) {
-      s.forEach(function (d) {
+    .then(function (s: any) {
+      s.forEach(function (d: any) {
         m[d.id] = d.data();
       });
       if (SB.aiCacheSetAll) SB.aiCacheSetAll(m);
@@ -70,7 +70,7 @@ function refreshAiMap() {
     });
 }
 
-function addAmmonizione(autore, nuova) {
+function addAmmonizione(autore: any, nuova: any) {
   try {
     return db
       .collection('ammonizioni')

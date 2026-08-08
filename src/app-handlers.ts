@@ -2,10 +2,10 @@
 // Il ctx è tipizzato strutturalmente: i campi opzionali sono quelli forniti
 // da AppProvider al momento della creazione.
 
-var SB = window.SB || {};
+var SB: any = window.SB || {};
 window.SB = SB;
 
-SB.createAppHandlers = function (ctx) {
+SB.createAppHandlers = function (ctx: any) {
   ctx = ctx || {};
   var fbClassiSave = ctx.fbClassiSave;
   var fbSave = ctx.fbSave;
@@ -13,7 +13,7 @@ SB.createAppHandlers = function (ctx) {
   var db = ctx.db || (window.SB && window.SB.db);
   var cardServices = (window.SB && window.SB.services) || {};
 
-  function saveCard(card) {
+  function saveCard(card: any) {
     // Input length cap difensivo: titolo card <= 200. La motivazione ammonizioni
     // è capped in ammonisci() (mostra toast). Se vuoi UX visibile qui, passare
     // ctx.showToast via closure o spostare il check al livello UI.
@@ -27,7 +27,7 @@ SB.createAppHandlers = function (ctx) {
     return db.collection('cards').doc(String(card.id)).set(card);
   }
 
-  function updateCard(id, patch, fallbackCard) {
+  function updateCard(id: any, patch: any, fallbackCard: any) {
     if (cardServices.updateCard) return cardServices.updateCard(id, patch, fallbackCard);
     try {
       return db
@@ -81,53 +81,53 @@ SB.createAppHandlers = function (ctx) {
         // Ri-aggiungere una classe PREDEFINITA nascosta (es. col tasto ×) =
         // toglierla da classiNascoste. Aggiungerla a classiCustom non avrebbe
         // effetto: CLASSI_LIST scarta i nomi che sono già in CLASSI_DEFAULT.
-        var nextNascoste = (ctx.classiNascoste || []).filter(function (c) {
+        var nextNascoste = (ctx.classiNascoste || []).filter(function (c: any) {
           return c !== v;
         });
         if (ctx.setClassiNascoste) ctx.setClassiNascoste(nextNascoste);
         if (ctx.fbNascosteSave)
           try {
-            ctx.fbNascosteSave(nextNascoste).catch(function (e) {
+            ctx.fbNascosteSave(nextNascoste).catch(function (e: any) {
               if (ctx.showToast) ctx.showToast('Errore salvataggio classi: ' + (e && e.message ? e.message : 'permessi'), 'err');
             });
-          } catch (e) {}
+          } catch (e: any) {}
       } else {
         var next = (ctx.classiCustom || []).concat([v]);
         if (ctx.setClassiCustom) ctx.setClassiCustom(next);
         if (fbClassiSave)
           try {
-            fbClassiSave(next).catch(function (e) {
+            fbClassiSave(next).catch(function (e: any) {
               if (ctx.showToast) ctx.showToast('Errore salvataggio classi: ' + (e && e.message ? e.message : 'permessi'), 'err');
             });
-          } catch (e) {}
+          } catch (e: any) {}
       }
       if (ctx.setAddingClasse) ctx.setAddingClasse(false);
       if (ctx.setNewClasseInput) ctx.setNewClasseInput('');
     },
-    removeClasseCustom: function (cl) {
+    removeClasseCustom: function (cl: any) {
       var isDefault = ((window.SB && window.SB.CLASSI_DEFAULT) || []).indexOf(cl) >= 0;
       if (isDefault) {
         var nextNascoste = (ctx.classiNascoste || []).concat([cl]);
         if (ctx.setClassiNascoste) ctx.setClassiNascoste(nextNascoste);
         try {
-          if (ctx.fbNascosteSave) ctx.fbNascosteSave(nextNascoste).catch(function (e) {
+          if (ctx.fbNascosteSave) ctx.fbNascosteSave(nextNascoste).catch(function (e: any) {
             if (ctx.showToast) ctx.showToast('Errore salvataggio classi: ' + (e && e.message ? e.message : 'permessi'), 'err');
           });
-        } catch (e) {}
+        } catch (e: any) {}
       } else {
-        var next = (ctx.classiCustom || []).filter(function (c) {
+        var next = (ctx.classiCustom || []).filter(function (c: any) {
           return c !== cl;
         });
         if (ctx.setClassiCustom) ctx.setClassiCustom(next);
         if (fbClassiSave)
           try {
-            fbClassiSave(next).catch(function (e) {
+            fbClassiSave(next).catch(function (e: any) {
               if (ctx.showToast) ctx.showToast('Errore salvataggio classi: ' + (e && e.message ? e.message : 'permessi'), 'err');
             });
-          } catch (e) {}
+          } catch (e: any) {}
       }
     },
-    apriRinomina: function (cl) {
+    apriRinomina: function (cl: any) {
       if (ctx.setRinominaClasse) ctx.setRinominaClasse(cl);
       if (ctx.setRinominaInput) ctx.setRinominaInput(cl);
       if (ctx.setRinominaConferma) ctx.setRinominaConferma(false);
@@ -155,27 +155,27 @@ SB.createAppHandlers = function (ctx) {
         //  - se è un nome nuovo (custom) → aggiunta alla lista custom.
         var isNewDefault = ((window.SB && window.SB.CLASSI_DEFAULT) || []).indexOf(newN) >= 0;
         var nextNascoste = (ctx.classiNascoste || [])
-          .filter(function (c) {
+          .filter(function (c: any) {
             return c !== oldN && c !== newN;
           })
           .concat([oldN]);
-        var nextCustom = (ctx.classiCustom || []).filter(function (c) {
+        var nextCustom = (ctx.classiCustom || []).filter(function (c: any) {
           return c !== oldN && c !== newN;
         });
         if (!isNewDefault) nextCustom = nextCustom.concat([newN]);
         if (ctx.setClassiNascoste) ctx.setClassiNascoste(nextNascoste);
         if (ctx.setClassiCustom) ctx.setClassiCustom(nextCustom);
         try {
-          if (ctx.fbNascosteSave) ctx.fbNascosteSave(nextNascoste).catch(function (e) {
+          if (ctx.fbNascosteSave) ctx.fbNascosteSave(nextNascoste).catch(function (e: any) {
             if (ctx.showToast) ctx.showToast('Errore salvataggio classi: ' + (e && e.message ? e.message : 'permessi'), 'err');
           });
-        } catch (e) {}
+        } catch (e: any) {}
         if (fbClassiSave)
           try {
-            fbClassiSave(nextCustom).catch(function (e) {
+            fbClassiSave(nextCustom).catch(function (e: any) {
               if (ctx.showToast) ctx.showToast('Errore salvataggio classi: ' + (e && e.message ? e.message : 'permessi'), 'err');
             });
-          } catch (e) {}
+          } catch (e: any) {}
       } else {
         // Rinomina classe CUSTOM. Se il nuovo nome è una classe PREDEFINITA,
         // non può restare in classiCustom (CLASSI_LIST lo scarterebbe perché il
@@ -183,47 +183,47 @@ SB.createAppHandlers = function (ctx) {
         // ri-mostrata (tolta da classiNascoste) — stesso fix del ramo isDefault.
         var newIsDefault = ((window.SB && window.SB.CLASSI_DEFAULT) || []).indexOf(newN) >= 0;
         var next = (ctx.classiCustom || [])
-          .map(function (c) {
+          .map(function (c: any) {
             return c === oldN ? newN : c;
           })
-          .filter(function (c) {
+          .filter(function (c: any) {
             return !newIsDefault || c !== newN;
           });
         if (ctx.setClassiCustom) ctx.setClassiCustom(next);
         if (fbClassiSave)
           try {
-            fbClassiSave(next).catch(function (e) {
+            fbClassiSave(next).catch(function (e: any) {
               if (ctx.showToast) ctx.showToast('Errore salvataggio classi: ' + (e && e.message ? e.message : 'permessi'), 'err');
             });
-          } catch (e) {}
+          } catch (e: any) {}
         if (newIsDefault) {
-          var nextNascosteC = (ctx.classiNascoste || []).filter(function (c) {
+          var nextNascosteC = (ctx.classiNascoste || []).filter(function (c: any) {
             return c !== newN;
           });
           if (ctx.setClassiNascoste) ctx.setClassiNascoste(nextNascosteC);
           if (ctx.fbNascosteSave)
             try {
-              ctx.fbNascosteSave(nextNascosteC).catch(function (e) {
+              ctx.fbNascosteSave(nextNascosteC).catch(function (e: any) {
                 if (ctx.showToast) ctx.showToast('Errore salvataggio classi: ' + (e && e.message ? e.message : 'permessi'), 'err');
               });
-            } catch (e) {}
+            } catch (e: any) {}
         }
       }
 
-      var toUpdate = (getCards() || []).filter(function (c) {
+      var toUpdate = (getCards() || []).filter(function (c: any) {
         return (c.classi || []).indexOf(oldN) >= 0;
       });
-      toUpdate.forEach(function (c) {
+      toUpdate.forEach(function (c: any) {
         if (fbSave)
           try {
             fbSave(
               Object.assign({}, c, {
-                classi: c.classi.map(function (x) {
+                classi: c.classi.map(function (x: any) {
                   return x === oldN ? newN : x;
                 }),
               })
             );
-          } catch (e) {}
+          } catch (e: any) {}
       });
       try {
         // NB: niente `return` qui dentro — deve comunque eseguire il cleanup
@@ -233,8 +233,8 @@ SB.createAppHandlers = function (ctx) {
           db.collection('users')
             .where('role', '==', 'studente')
             .get()
-            .then(function (snap) {
-              snap.forEach(function (d) {
+            .then(function (snap: any) {
+              snap.forEach(function (d: any) {
                 try {
                   var data = d.data() || {};
                   var map = data.classiPerAnno || {};
@@ -251,37 +251,37 @@ SB.createAppHandlers = function (ctx) {
                   // rimosso sui doc users (match /users/{uid} → isProf && affectedKeys
                   // hasOnly). Se fallisce (es. regole non ancora pubblicate in console)
                   // logghiamo per diagnosi senza crash.
-                  d.ref.update({ classiPerAnno: nextMap, classe: newN }).catch(function (e) {
+                  d.ref.update({ classiPerAnno: nextMap, classe: newN }).catch(function (e: any) {
                     console.warn('[ScuolaBoard] rinomina: aggiornamento classe studente non permesso dalle rules:', e && e.code ? e.code : e);
                   });
-                } catch (e) {}
+                } catch (e: any) {}
               });
             });
         }
-      } catch (e) {}
+      } catch (e: any) {}
       if (ctx.setRinominaClasse) ctx.setRinominaClasse(null);
       if (ctx.setRinominaConferma) ctx.setRinominaConferma(false);
     },
-    togglePreferito: function (cardId) {
+    togglePreferito: function (cardId: any) {
       var id = String(cardId);
       var preferiti = ctx.preferiti || [];
       var next =
         preferiti.indexOf(id) >= 0
-          ? preferiti.filter(function (x) {
+          ? preferiti.filter(function (x: any) {
               return x !== id;
             })
-          : [].concat(preferiti, [id]);
+          : preferiti.concat([id]);
       if (ctx.setPreferiti) ctx.setPreferiti(next);
       try {
         if (fbFavSave) fbFavSave((getUser() && getUser().uid) || '', next);
-      } catch (e) {}
+      } catch (e: any) {}
       if (ctx.showToast)
         try {
           ctx.showToast(preferiti.indexOf(id) < 0 ? 'Aggiunto ai preferiti ★' : 'Rimosso dai preferiti', 'ok');
-        } catch (e) {}
+        } catch (e: any) {}
     },
-    toggleLike: function (cardId) {
-      var card = getCards().find(function (c) {
+    toggleLike: function (cardId: any) {
+      var card = getCards().find(function (c: any) {
         return c.id === cardId;
       });
       if (!card) return;
@@ -297,7 +297,7 @@ SB.createAppHandlers = function (ctx) {
         if (ctx.myLikes && ctx.myLikes.current) ctx.myLikes.current.add(key);
       }
       var vn = getMyName()(getUser());
-      var likesBy = (card.likesBy || []).filter(function (n) {
+      var likesBy = (card.likesBy || []).filter(function (n: any) {
         return n !== vn;
       });
       if (!liked) likesBy = likesBy.concat([vn]);
@@ -310,9 +310,9 @@ SB.createAppHandlers = function (ctx) {
         if (fbSave) fbSave(Object.assign({}, card, { likes: (card.likes || 0) + (liked ? -1 : 1), likesBy: likesBy }));
       });
     },
-    toggleReazione: function (cardId, emoji) {
+    toggleReazione: function (cardId: any, emoji: any) {
       if (!getUser()) return;
-      var card = getCards().find(function (c) {
+      var card = getCards().find(function (c: any) {
         return c.id === cardId;
       });
       if (!card) return;
@@ -327,15 +327,15 @@ SB.createAppHandlers = function (ctx) {
         if (fbSave) fbSave(Object.assign({}, card, { reazioni: reaz }));
       });
     },
-    vote: function (cid, oid) {
+    vote: function (cid: any, oid: any) {
       if (!getUser()) return;
-      var card = getCards().find(function (c) {
+      var card = getCards().find(function (c: any) {
         return c.id === cid;
       });
       if (!card) return;
       var vn = getMyName()(getUser());
-      var nuoveOpzioni = card.opzioni.map(function (o) {
-        var voti = o.voti.filter(function (v) {
+      var nuoveOpzioni = card.opzioni.map(function (o: any) {
+        var voti = o.voti.filter(function (v: any) {
           return v !== vn;
         });
         if (o.id === oid) voti = voti.concat([vn]);
@@ -353,16 +353,20 @@ SB.createAppHandlers = function (ctx) {
         if (ctx.showToast) ctx.showToast('Commento troppo lungo (max 1000 caratteri).', 'warn');
         return;
       }
-      var card = getCards().find(function (c) {
+      var card = getCards().find(function (c: any) {
         return String(c.id) === String(getShowCard() && getShowCard().id);
       });
       if (!card) return;
+      // NB: il testo va salvato RAW (senza escapeForPrompt): l'escaping serve
+      // solo quando si costruisce il prompt per l'AI (ai-services lo rifà al
+      // momento della chiamata). Escapare qui corromperebbe il testo con
+      // backslash davanti ad apostrofi/virgolette in tutta la UI.
       var nextCard = Object.assign({}, card, {
         commenti: (card.commenti || []).concat([
           {
             id: Date.now(),
             autore: getMyName()(user),
-            testo: SB.escapeForPrompt(getNc().testo.trim()),
+            testo: getNc().testo.trim(),
             data: new Date().toISOString(),
             risposte: [],
           },
@@ -372,26 +376,28 @@ SB.createAppHandlers = function (ctx) {
       if (ctx.setNc) ctx.setNc({ testo: '' });
       if (ctx.showToast) ctx.showToast('Commento inviato ✓', 'ok');
     },
-    addReply: function (cmId) {
+    addReply: function (cmId: any) {
       var user = getUser();
       if (!user || !getReplyTesto().trim()) return;
       if (getReplyTesto().length > 500) {
         if (ctx.showToast) ctx.showToast('Risposta troppo lunga (max 500 caratteri).', 'warn');
         return;
       }
-      var card = getCards().find(function (c) {
+      var card = getCards().find(function (c: any) {
         return String(c.id) === String(getShowCard() && getShowCard().id);
       });
       if (!card) return;
+      // Testo salvato RAW: l'escaping per l'AI avviene solo in ai-services al
+      // momento di costruire il prompt (vedi addCom).
       var nuova = {
         id: Date.now(),
         autore: getMyName()(user),
-        testo: SB.escapeForPrompt(getReplyTesto().trim()),
+        testo: getReplyTesto().trim(),
         data: new Date().toISOString(),
         risposte: [],
       };
-      function ins(lista) {
-        return lista.map(function (item) {
+      function ins(lista: any) {
+        return lista.map(function (item: any) {
           if (String(item.id) === String(cmId))
             return Object.assign({}, item, { risposte: (item.risposte || []).concat([nuova]) });
           if (item.risposte && item.risposte.length) return Object.assign({}, item, { risposte: ins(item.risposte) });
@@ -404,16 +410,16 @@ SB.createAppHandlers = function (ctx) {
       if (ctx.setReplyTesto) ctx.setReplyTesto('');
       if (ctx.showToast) ctx.showToast('Risposta inviata ✓', 'ok');
     },
-    executeDelReply: function (cmId, rId, cardId) {
-      var card = getCards().find(function (c) {
+    executeDelReply: function (cmId: any, rId: any, cardId: any) {
+      var card = getCards().find(function (c: any) {
         return String(c.id) === String(cardId);
       });
       if (!card) return;
-      function rem(lista) {
-        return lista.map(function (item) {
+      function rem(lista: any) {
+        return lista.map(function (item: any) {
           if (String(item.id) === String(cmId))
             return Object.assign({}, item, {
-              risposte: (item.risposte || []).filter(function (r) {
+              risposte: (item.risposte || []).filter(function (r: any) {
                 return String(r.id) !== String(rId);
               }),
             });
@@ -423,38 +429,29 @@ SB.createAppHandlers = function (ctx) {
       }
       saveCard(Object.assign({}, card, { commenti: rem(card.commenti) }));
     },
-    executeDelCom: function (cid, cmid) {
-      var card = getCards().find(function (c) {
+    executeDelCom: function (cid: any, cmid: any) {
+      var card = getCards().find(function (c: any) {
         return String(c.id) === String(cid);
       });
       if (!card) return;
       saveCard(
         Object.assign({}, card, {
-          commenti: card.commenti.filter(function (cm) {
+          commenti: card.commenti.filter(function (cm: any) {
             return String(cm.id) !== String(cmid);
           }),
         })
       );
     },
-    resetCommenti: function (cid) {
-      if (!confirm("Eliminare TUTTI i commenti e le risposte di questa card? L'operazione è irreversibile.")) return;
-      var card = getCards().find(function (c) {
-        return String(c.id) === String(cid);
-      });
-      if (!card) return;
-      saveCard(Object.assign({}, card, { commenti: [] }));
-      if (ctx.showToast) ctx.showToast('Commenti e risposte cancellati', 'ok');
-    },
-    resetRisposte: function (cid) {
+    resetRisposte: function (cid: any) {
       if (!confirm("Eliminare TUTTE le risposte al quiz di questa card? L'operazione è irreversibile.")) return;
       var db = ctx.SB && ctx.SB.db;
       if (!db) return;
       db.collection('quiz_risposte')
         .where('cardId', '==', String(cid))
         .get()
-        .then(function (snap) {
+        .then(function (snap: any) {
           var batch = db.batch();
-          snap.forEach(function (d) {
+          snap.forEach(function (d: any) {
             batch.delete(d.ref);
           });
           return batch.commit();
@@ -462,11 +459,11 @@ SB.createAppHandlers = function (ctx) {
         .then(function () {
           if (ctx.showToast) ctx.showToast('Risposte quiz cancellate', 'ok');
         })
-        .catch(function (e) {
+        .catch(function (e: any) {
           if (ctx.showToast) ctx.showToast('Errore: ' + e.message, 'err');
         });
     },
-    ammonisci: function (cardId, cmId, autore, motivazione) {
+    ammonisci: function (cardId: any, cmId: any, autore: any, motivazione: any) {
       if (!ctx.isProf) return;
       if (String(motivazione || '').length > 300) {
         if (ctx.showToast) ctx.showToast('Motivazione troppo lunga (max 300 caratteri).', 'warn');
@@ -492,11 +489,11 @@ SB.createAppHandlers = function (ctx) {
                 { merge: true }
               );
           }
-        } catch (e) {}
+        } catch (e: any) {}
       }
       if (ctx.setShowAmm) ctx.setShowAmm(null);
     },
-    markSeen: function (id) {
+    markSeen: function (id: any) {
       try {
         var seenRef = ctx.seenRef;
         if (!seenRef) return;
@@ -504,15 +501,15 @@ SB.createAppHandlers = function (ctx) {
           seenRef.current.add(String(id));
           try {
             if (ctx.SB && ctx.SB.LS && ctx.SB.LS.seen) ctx.SB.LS.seen.set(seenRef.current);
-          } catch (e) {}
+          } catch (e: any) {}
         }
-      } catch (e) {}
+      } catch (e: any) {}
     },
-    openCard: function (c) {
+    openCard: function (c: any) {
       if (ctx.setShowCard) ctx.setShowCard(c);
       if (this.markSeen) this.markSeen(c.id);
     },
-    handleAllegatiUpload: function (e, setForm, setAllegatiUploading, showToast) {
+    handleAllegatiUpload: function (e: any, setForm: any, setAllegatiUploading: any, showToast: any) {
       // DOM lib: e.target.files è FileList → cast esplicito per ottenere File[]
       // (con React any-globale, Array.from() su un valore non tipizzato dà unknown[])
       var files = Array.from((e && e.target && e.target.files) || []) as File[];
@@ -540,7 +537,7 @@ SB.createAppHandlers = function (ctx) {
       var allowedExts = /^(pdf|doc|docx|txt|md|csv|xls|xlsx|ppt|pptx|zip|rar|jpg|jpeg|png|gif|webp)$/i;
       var maxSize = 700 * 1024;
       var promises = files.map(function (file) {
-        var ext = file.name.split('.').pop().toLowerCase();
+        var ext = (file.name.split('.').pop() || '').toLowerCase();
         var extOk = allowedExts.test(ext);
         // Controllo estensione doppia (es. file.pdf.exe)
         var baseName = file.name.slice(0, -(ext.length + 1));
@@ -579,12 +576,12 @@ SB.createAppHandlers = function (ctx) {
           reader.readAsDataURL(file);
         });
       });
-      Promise.all(promises).then(function (results) {
-        var valid = results.filter(function (r) {
+      Promise.all(promises).then(function (results: any) {
+        var valid = results.filter(function (r: any) {
           return r !== null;
         });
         if (valid.length) {
-          setForm(function (p) {
+          setForm(function (p: any) {
             return Object.assign({}, p, { allegati: (p.allegati || []).concat(valid) });
           });
         }
@@ -592,11 +589,11 @@ SB.createAppHandlers = function (ctx) {
         e.target.value = '';
       });
     },
-    handleRimuoviAllegato: function (allegatoId, setForm) {
-      setForm(function (p) {
+    handleRimuoviAllegato: function (allegatoId: any, setForm: any) {
+      setForm(function (p: any) {
         var allegati = p.allegati || [];
         return Object.assign({}, p, {
-          allegati: allegati.filter(function (a) {
+          allegati: allegati.filter(function (a: any) {
             return a.id !== allegatoId;
           }),
         });

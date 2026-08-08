@@ -24,15 +24,6 @@ export function playAlarm() {
   } catch (e) {}
 }
 
-export function escHtml(s: any): string {
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
 // Classe corrente dello studente per l'anno selezionato: fonte di verità è la
 // mappa classiPerAnno[anno] (per-anno), con fallback sul campo piatto legacy.
 export function classeCorrenteOf(user: any, annoScolastico: string): string | null {

@@ -2,17 +2,19 @@
 var useState = React.useState;
 var useCallback = React.useCallback;
 
-function useToast() {
-  var [toasts, setToasts] = useState([]);
+type Toast = { id: number; msg: string; type: string; undo?: boolean };
 
-  var showToast = useCallback(function (msg, type) {
+function useToast() {
+  var [toasts, setToasts] = useState<Toast[]>([]);
+
+  var showToast = useCallback(function (msg: string, type?: string) {
     var id = Date.now();
-    setToasts(function (p) {
+    setToasts(function (p: Toast[]) {
       return p.concat([{ id: id, msg: msg, type: type || 'ok' }]);
     });
     setTimeout(function () {
-      setToasts(function (p) {
-        return p.filter(function (t) {
+      setToasts(function (p: Toast[]) {
+        return p.filter(function (t: Toast) {
           return t.id !== id;
         });
       });

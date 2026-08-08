@@ -6,8 +6,8 @@ import React from "react";
 import "./CercaModal.tsx";
 
 describe("CercaModal", () => {
-  let props;
-  let cards;
+  let props: any;
+  let cards: any;
 
   beforeEach(() => {
     cards = [
@@ -118,7 +118,7 @@ describe("CercaModal", () => {
     window.db.collection = () => ({
       get: () =>
         Promise.resolve({
-          forEach: (cb) => {
+          forEach: (cb: any) => {
             cb({ data: () => ({ id: "oldDb", tipo: "nota", titolo: "Equazioni anno precedente", testo: "", classi: ["3AO"], commenti: [], ordine: 50, annoScolastico: "2024/2025" }) });
           },
         }),

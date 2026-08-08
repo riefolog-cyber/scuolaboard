@@ -7,7 +7,7 @@ window._appVersionLoaded = '2026-05-26-FIX-v2';
 
 // Debug flag: imposta a true per abilitare i log di avvio
 const SB_DEBUG_BOOT = false;
-function debugLog(...args) {
+function debugLog(...args: any[]) {
   if (SB_DEBUG_BOOT) console.log(...args);
 }
 
@@ -55,14 +55,14 @@ if (typeof App !== 'undefined') debugLog('[ScuolaBoard] App component loaded');
 else diagnostics.push('App component missing');
 
 // Helper XSS-safe: scrive testo come nodi textContent, MAI innerHTML con concat.
-function _sbSetTextReport(root, lines, color) {
+function _sbSetTextReport(root: any, lines: any[], color?: string) {
   while (root.firstChild) root.removeChild(root.firstChild);
   var wrap = document.createElement('div');
   wrap.style.padding = '20px';
   wrap.style.color = color || '#f87171';
   wrap.style.fontFamily = 'monospace';
   wrap.style.background = '#1a1a2e';
-  lines.forEach(function (line, idx) {
+  lines.forEach(function (line: any, idx: any) {
     if (idx > 0) wrap.appendChild(document.createElement('br'));
     // doc.createTextNode è sicuro: non interpreta HTML.
     wrap.appendChild(document.createTextNode(line));
@@ -82,7 +82,7 @@ if (diagnostics.length > 0) {
   debugLog('[ScuolaBoard] All dependencies OK - proceeding to render');
   try {
     ReactDOM.createRoot(document.getElementById('root')).render(hh(ErrorBoundary, null, hh(App, null)));
-  } catch (e) {
+  } catch (e: any) {
     console.error('[ScuolaBoard] Render error:', e.message, e.stack);
     // FIX XSS: prima si concatenava e.message dentro innerHTML con += → vettore
     // di stored/reflected XSS se il messaggio conteneva <script>. Ora usa

@@ -9,7 +9,6 @@ import './app-state.ts'; // window.SB_CONFIG, window._SB_LS, SB.safeDocId, SB.my
 import './app-utils.ts'; // Utilities, CLASSI_DEFAULT, fbSave, etc.
 import './ai-services.ts'; // AI module (callGroqJSON, callGroqText, etc.)
 import './firestore-services.ts'; // SB.services
-import './AppComponents.tsx'; // UI components (JSX)
 import './Modals.tsx'; // Modal components (JSX)
 import './modals.ts'; // useModals hook
 import './auth.ts'; // useAuth hook

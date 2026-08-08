@@ -11,9 +11,11 @@ var useRef = React.useRef;
 var useCallback = React.useCallback;
 var useSyncExternalStore = React.useSyncExternalStore;
 
-SB.useCards = function (user, annoScolastico) {
+SB.useCards = function (user: any, annoScolastico: string) {
   // ── STORE (useSyncExternalStore) ──────────────────────────────────────
-  var storeRef = useRef(null);
+  // any: lo store è `empty` (locale) o quello di createCombinedStore (compat,
+  // non tipizzato) — la superficie comune è subscribe/getSnapshot/destroy.
+  var storeRef = useRef<any>(null);
 
   // Ricrea lo store combinato quando user o anno cambiano
   var store = useMemo(
@@ -25,9 +27,11 @@ SB.useCards = function (user, annoScolastico) {
         // Nessun utente: store vuoto (no listener Firestore)
         // IMPORTANTE: getSnapshot deve restituire lo STESSO riferimento ogni volta
         // altrimenti useSyncExternalStore entra in loop infinito (Object.is fail).
-        var emptySnap = { allCards: [], classiCustom: [], classiNascoste: [], preferiti: [] };
+        // [] as any[]: evita che i campi siano inferiti come never[] (trappola
+        // latente quando lo store verrà tipizzato — allCards deve restare any[]).
+        var emptySnap = { allCards: [] as any[], classiCustom: [] as any[], classiNascoste: [] as any[], preferiti: [] as any[] };
         var empty = {
-          subscribe: function (_cb) {
+          subscribe: function (_cb: any) {
             return function () {};
           },
           getSnapshot: function () {
@@ -136,7 +140,7 @@ SB.useCards = function (user, annoScolastico) {
       }
       wasEmpty.current = false;
 
-      var nuove = rawAllCards.filter(function (c) {
+      var nuove = rawAllCards.filter(function (c: any) {
         if (c.proposta || c.visibile === false) return false;
         var cc = c.classi || ['TUTTE'];
         if (cc.length === 0) return false;
@@ -165,7 +169,7 @@ SB.useCards = function (user, annoScolastico) {
         var m = nowDate.getMonth() + 1;
         return m >= 9 ? y + '/' + (y + 1) : y - 1 + '/' + y;
       }
-      return rawAllCards.filter(function (c) {
+      return rawAllCards.filter(function (c: any) {
         return (c.annoScolastico || annoScolasticoDefault()) === annoScolastico;
       });
     },
@@ -179,7 +183,7 @@ SB.useCards = function (user, annoScolastico) {
   // ── TIMER TICK ────────────────────────────────────────────────────────
   useEffect(
     function () {
-      var hasScadenze = cards.some(function (c) {
+      var hasScadenze = cards.some(function (c: any) {
         return c.scadenza && new Date(c.scadenza).getTime() > Date.now() - 5000;
       });
       if (!hasScadenze) return;
@@ -196,7 +200,7 @@ SB.useCards = function (user, annoScolastico) {
   // ── FILTRO E ORDINAMENTO ──────────────────────────────────────────────
   var visible = useMemo(
     function () {
-      return cards.filter(function (c) {
+      return cards.filter(function (c: any) {
         if (simulaSt || !isProf) {
           if (c.proposta || c.visibile === false) return false;
           var cc = c.classi || ['TUTTE'];
@@ -221,7 +225,7 @@ SB.useCards = function (user, annoScolastico) {
 
   var visibleSorted = useMemo(
     function () {
-      return visible.slice().sort(function (a, b) {
+      return visible.slice().sort(function (a: any, b: any) {
         return (a.ordine || 0) - (b.ordine || 0);
       });
     },

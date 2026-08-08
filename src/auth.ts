@@ -4,20 +4,22 @@ var SB = window.SB || {};
 window.SB = SB;
 var useState = React.useState;
 var useEffect = React.useEffect;
-SB.useAuth = function (annoScolastico) {
-  var [user, setUser] = useState(null);
+SB.useAuth = function (annoScolastico: string) {
+  // AuthUser | null: stato autenticato (merge doc users/{uid}) o non autenticato
+  var [user, setUser] = useState<AuthUser | null>(null);
   var [authLoad, setAuthLoad] = useState(true);
   var [isProf, setIsProf] = useState(false);
   // Guard against missing Firebase auth
-  var auth = null;
+  var auth: any = null;
   if (typeof firebase === 'undefined' || typeof firebase.auth !== 'function') {
     console.error('[auth] Firebase Auth not available. App will start in offline mode.');
   } else {
     auth = firebase.auth();
-  }// Tipo strutturale dell'utente: matcha l'interfaccia `User` di types.ts
-// senza import (auth.ts è script UMD — un import lo convertirebbe in module
-// rompendo l'export globale SB.useAuth). I campi di Firestore sono opzionali:
-// il merge con il doc users/{} li completa (nascono dai dati Google).
+  }// Tipo strutturale dell'utente: matcha l'interfaccia `User` (storica in
+// types.ts, rimossa perché mai importata). Nessun import qui: auth.ts è uno
+// script UMD — un import lo convertirebbe in module rompendo l'export globale
+// SB.useAuth. I campi di Firestore sono opzionali: il merge con il doc users/{}
+// li completa (nascono dai dati Google).
 type AuthUser = {
   uid: string;
   nome?: string;
@@ -41,13 +43,13 @@ useEffect(
     }
     auth
       .getRedirectResult()
-      .then(function (cr) {
+      .then(function (cr: any) {
         if (!cr || !cr.user) return;
         var fu = cr.user;
         db.collection('users')
           .doc(fu.uid)
           .get()
-          .then(function (ud) {
+          .then(function (ud: any) {
             if (!ud.exists) {
               var np = (fu.displayName || '').split(' ');
               db.collection('users')
@@ -73,26 +75,23 @@ useEffect(
     var authTimeout = setTimeout(function () {
       setAuthLoad(false);
     }, 10000);
-    var unsub = auth.onAuthStateChanged(function (fu) {
+    var unsub = auth.onAuthStateChanged(function (fu: any) {
       clearTimeout(authTimeout);
       if (fu) {
         db.collection('users')
           .doc(fu.uid)
           .get()
-          .then(function (doc) {
+          .then(function (doc: any) {
             var base = { uid: fu.uid, email: fu.email, displayName: fu.displayName, photoURL: fu.photoURL };
-            var finalUser: AuthUser | null;
             if (doc.exists) {
               var d = doc.data();
-              finalUser = Object.assign({}, base, d);
+              var finalUser = Object.assign({}, base, d) as AuthUser;
+              setUser(finalUser);
+              setIsProf(finalUser.role === 'prof');
             } else {
               setUser(null);
               setIsProf(false);
-              setAuthLoad(false);
-              return;
             }
-            setUser(finalUser);
-            setIsProf(finalUser.role === 'prof');
             setAuthLoad(false);
           });
       } else {
@@ -139,7 +138,7 @@ useEffect(
           await db.collection('users').doc(fu.uid).update({ displayName: fu.displayName });
         }
       }
-    } catch (e) {
+    } catch (e: any) {
       if (e.code === 'auth/popup-blocked') {
         try {
           await auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider());

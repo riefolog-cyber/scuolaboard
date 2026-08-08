@@ -1,10 +1,8 @@
 // ClasseModal.tsx  ·  estratto da Modals.tsx (split Fase 2a)
 var SB = window.SB || {};
 window.SB = SB;
-var h = SB.h || React.createElement;
-var Fragment = SB.Fragment || React.Fragment;
 
-function ClasseModal(props) {
+function ClasseModal(props: any) {
   if (!props.showClasseModal) return null;
   var h = SB.h || React.createElement;
   var S = props.S || window.S || {};
@@ -47,7 +45,7 @@ function ClasseModal(props) {
             maxWidth: 440,
             width: '100%',
           }}
-          onClick={function (e) {
+          onClick={function (e: any) {
             e.stopPropagation();
           }}
         >
@@ -90,7 +88,7 @@ function ClasseModal(props) {
                 <select
                   aria-label="Scegli la tua classe"
                   value={props.classeInput}
-                  onInput={function (e) {
+                  onInput={function (e: any) {
                     props.setClasseInput(e.target.value);
                   }}
                   style={Object.assign({}, S.input, { fontSize: 14, color: '#f1f5f9', background: '#1c1a2e' })}
@@ -104,7 +102,7 @@ function ClasseModal(props) {
                       Nessuna classe attiva per quest'anno
                     </option>
                   )}
-                  {CLASSI_LIST.map(function (cl) {
+                  {CLASSI_LIST.map(function (cl: any) {
                     var isCustom = CLASSI_DEFAULT.indexOf(cl) < 0;
                     var cc = isCustom ? classeColor(cl, classiCustom) : null;
                     return (
@@ -147,5 +145,4 @@ function ClasseModal(props) {
   );
 }
 
-SB.ClasseModal = ClasseModal;
 export default ClasseModal;

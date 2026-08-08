@@ -3,7 +3,7 @@ var SB = window.SB || {};
 var h = SB.h || React.createElement;
 var Fragment = SB.Fragment || React.Fragment;
 
-function AIPanel({ $, c }) {
+function AIPanel({ $, c }: any) {
   var aiD = ($.aiMap && $.aiMap[String(c.id)]) || {};
   var cRes = c.aiAnalisi || (aiD && aiD.analisi);
   var manuallyClosed = $.cardAiOpen === 'closed_' + String(c.id);
@@ -36,7 +36,7 @@ function AIPanel({ $, c }) {
                         >
                           {(function () {
                             var lastAnalisi = cRes.data ? new Date(cRes.data).getTime() : 0;
-                            var newCount = (c.commenti || []).filter(function (cm) {
+                            var newCount = (c.commenti || []).filter(function (cm: any) {
                               return new Date(cm.data || 0).getTime() > lastAnalisi;
                             }).length;
                             return (
@@ -81,7 +81,7 @@ function AIPanel({ $, c }) {
                               ↻ Rigenera
                             </button>
                             <button
-                              onClick={function (e) {
+                              onClick={function (e: any) {
                                 e.stopPropagation();
                                 if (!window.confirm('Eliminare l\'analisi AI di questa card?')) return;
                                 $.eliminaAnalisiAI(c.id);
@@ -154,7 +154,7 @@ function AIPanel({ $, c }) {
                               💭 SPUNTI PER RIFLETTERE{' '}
                               <span style={{ color: 'rgba(255,255,255,.42)', fontWeight: 600 }}>· visibili agli studenti</span>
                             </div>
-                            {cRes.domande_stimolo.map(function (d, i) {
+                            {cRes.domande_stimolo.map(function (d: any, i: number) {
                               return (
                                 <div
                                   key={i}
@@ -236,7 +236,7 @@ function AIPanel({ $, c }) {
                             <div style={{ fontSize: 11, fontWeight: 800, color: '#a5b4fc', letterSpacing: 0.5, marginBottom: 6 }}>
                               💭 SPUNTI PER RIFLETTERE
                             </div>
-                            {cRes.domande_stimolo.map(function (d, i) {
+                            {cRes.domande_stimolo.map(function (d: any, i: number) {
                               return (
                                 <div key={i} style={{ display: 'flex', gap: 6, marginBottom: 5, alignItems: 'flex-start' }}>
                                   <span
@@ -269,7 +269,7 @@ function AIPanel({ $, c }) {
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
                   {$.isProf && !$.simulaSt && (
                     <button
-                      onClick={function (e) {
+                      onClick={function (e: any) {
                         e.stopPropagation();
                         if (cRes) {
                           $.setCardAiOpen(cOpen ? 'closed_' + String(c.id) : String(c.id));
@@ -296,7 +296,7 @@ function AIPanel({ $, c }) {
                   )}
                   {isStudent && cRes && (
                     <button
-                      onClick={function (e) {
+                      onClick={function (e: any) {
                         e.stopPropagation();
                         $.setCardAiOpen(cOpen ? 'closed_' + String(c.id) : String(c.id));
                       }}

@@ -2,9 +2,8 @@
 var SB = window.SB || {};
 window.SB = SB;
 var h = SB.h || React.createElement;
-var Fragment = SB.Fragment || React.Fragment;
 
-function AmmModal(props) {
+function AmmModal(props: any) {
   if (!props.showAmm) return null;
   var showAmm = props.showAmm;
   var setShowAmm = props.setShowAmm;
@@ -36,7 +35,7 @@ function AmmModal(props) {
             maxWidth: 420,
             width: '100%',
           }}
-          onClick={function (e) {
+          onClick={function (e: any) {
             e.stopPropagation();
           }}
         >
@@ -82,10 +81,10 @@ function AmmModal(props) {
                   {(function () {
                     var tuttiNomi = [
                       ...new Set(
-                        cards.flatMap(function (c) {
-                          return (c.commenti || []).flatMap(function (cm) {
+                        cards.flatMap(function (c: any) {
+                          return (c.commenti || []).flatMap(function (cm: any) {
                             return [cm.autore].concat(
-                              (cm.risposte || []).map(function (r) {
+                              (cm.risposte || []).map(function (r: any) {
                                 return r.autore;
                               })
                             );
@@ -93,22 +92,22 @@ function AmmModal(props) {
                         })
                       ),
                     ]
-                      .filter(function (n) {
+                      .filter(function (n: any) {
                         return n && n !== 'Prof' && !String(n).startsWith('Prof');
                       })
                       .sort();
                     // Fallback: se nessuno ha ancora commentato, usa la lista studenti
                     if (tuttiNomi.length === 0 && props.studenti && props.studenti.length) {
                       tuttiNomi = props.studenti
-                        .map(function (s) {
+                        .map(function (s: any) {
                           return ((s.nome || '') + (s.cognome ? ' ' + s.cognome : '')).trim();
                         })
-                        .filter(function (n) {
+                        .filter(function (n: any) {
                           return n;
                         })
                         .sort();
                     }
-                    return tuttiNomi.map(function (n) {
+                    return tuttiNomi.map(function (n: any) {
                       return (
                         <option key={n} value={n}>
                           {n}
@@ -142,7 +141,7 @@ function AmmModal(props) {
                         key={m}
                         onClick={function () {
                           var el = document.getElementById('amm-input');
-                          if (el) el['value'] = m;
+                          if (el) (el as any)['value'] = m;
                         }}
                         style={{
                           background: 'rgba(255,255,255,.06)',
@@ -197,9 +196,9 @@ function AmmModal(props) {
                 <button
                   onClick={function () {
                     var el = document.getElementById('amm-input');
-                    var mot = el ? el['value'].trim() : '';
+                    var mot = el ? (el as any)['value'].trim() : '';
                     var stud = document.getElementById('amm-studente');
-                    var autore = showAmm.autore || (stud ? stud['value'] : '');
+                    var autore = showAmm.autore || (stud ? (stud as any)['value'] : '');
                     if (!mot || !autore) return;
                     props.ammonisci(showAmm.cardId || 0, showAmm.cmId || 0, autore, mot);
                   }}
@@ -226,5 +225,4 @@ function AmmModal(props) {
   );
 }
 
-SB.AmmModal = AmmModal;
 export default AmmModal;

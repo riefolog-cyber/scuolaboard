@@ -2,13 +2,12 @@
 var SB = window.SB || {};
 window.SB = SB;
 var h = SB.h || React.createElement;
-var Fragment = SB.Fragment || React.Fragment;
 // filterBtn ora vive in src/modals/filterBtn.ts (estratto con lo split):
 // il vecchio monolite lo esponeva come globale di script; in un ES module
 // va importato esplicitamente.
 import filterBtn from './filterBtn.ts';
 
-function NuovaCardModal(props) {
+function NuovaCardModal(props: any) {
   if (!props.showModal) return null;
   var isProf = props.isProf,
     form = props.form,
@@ -56,7 +55,7 @@ function NuovaCardModal(props) {
             border: '1px solid rgba(255,255,255,.1)',
             borderBottom: 'none',
           }}
-          onClick={function (e) {
+          onClick={function (e: any) {
             e.stopPropagation();
           }}
         >
@@ -87,13 +86,13 @@ function NuovaCardModal(props) {
                 { v: 'domanda', i: '💬' },
                 { v: 'sondaggio', i: '🗳️' },
                 { v: 'quiz', i: '🧩' },
-              ].map(function (t) {
+              ].map(function (t: any) {
                 var sel = (form.tipo || 'domanda') === t.v;
                 return (
                   <button
                     key={t.v}
                     onClick={function () {
-                      setForm(function (p) {
+                      setForm(function (p: any) {
                         return Object.assign({}, p, { tipo: t.v });
                       });
                     }}
@@ -127,8 +126,8 @@ function NuovaCardModal(props) {
                 <input
                   value={form.titolo}
                   maxLength={100}
-                  onInput={function (e) {
-                    setForm(function (p) {
+                  onInput={function (e: any) {
+                    setForm(function (p: any) {
                       return Object.assign({}, p, { titolo: e.target.value });
                     });
                   }}
@@ -149,8 +148,8 @@ function NuovaCardModal(props) {
               {
                 <textarea
                   value={form.testo}
-                  onInput={function (e) {
-                    setForm(function (p) {
+                  onInput={function (e: any) {
+                    setForm(function (p: any) {
                       return Object.assign({}, p, { testo: e.target.value });
                     });
                   }}
@@ -180,7 +179,7 @@ function NuovaCardModal(props) {
                     <button
                       type="button"
                       onClick={function () {
-                        setForm(function (f) {
+                        setForm(function (f: any) {
                           var isAll = f.classi && f.classi.indexOf('TUTTE') >= 0;
                           return Object.assign({}, f, { classi: isAll ? [] : ['TUTTE'] });
                         });
@@ -193,24 +192,24 @@ function NuovaCardModal(props) {
                       {(form.classi && form.classi.indexOf('TUTTE') >= 0 ? '✓ ' : '') + 'TUTTE LE CLASSI'}
                     </button>
                   }
-                  {CLASSI_LIST.map(function (cl) {
+                  {CLASSI_LIST.map(function (cl: any) {
                     var sel = form.classi && form.classi.indexOf(cl) >= 0 && form.classi.indexOf('TUTTE') < 0;
                     return (
                       <button
                         type="button"
                         key={cl}
                         onClick={function () {
-                          setForm(function (f) {
-                            var cur = (f.classi || []).filter(function (x) {
+                          setForm(function (f: any) {
+                            var cur = (f.classi || []).filter(function (x: any) {
                               return x !== 'TUTTE';
                             });
                             var idx = cur.indexOf(cl);
                             var next =
                               idx >= 0
-                                ? cur.filter(function (x) {
+                                ? cur.filter(function (x: any) {
                                     return x !== cl;
                                   })
-                                : [].concat(cur, [cl]);
+                                : cur.concat([cl]);
                             return Object.assign({}, f, { classi: next });
                           });
                         }}
@@ -250,7 +249,7 @@ function NuovaCardModal(props) {
                   {(form.links || []).length < 5 && (
                     <button
                       onClick={function () {
-                        setForm(function (p) {
+                        setForm(function (p: any) {
                           return Object.assign({}, p, { links: (p.links || []).concat([{ url: '', label: '' }]) });
                         });
                       }}
@@ -270,7 +269,7 @@ function NuovaCardModal(props) {
                   )}
                 </div>
               }
-              {(form.links || []).map(function (l, i) {
+              {(form.links || []).map(function (l: any, i: number) {
                 return (
                   <div
                     key={i}
@@ -287,9 +286,9 @@ function NuovaCardModal(props) {
                         {
                           <input
                             value={l.url}
-                            onInput={function (e) {
-                              setForm(function (p) {
-                                var ls = p.links.map(function (x, j) {
+                            onInput={function (e: any) {
+                              setForm(function (p: any) {
+                                var ls = p.links.map(function (x: any, j: number) {
                                   return j === i ? Object.assign({}, x, { url: e.target.value }) : x;
                                 });
                                 return Object.assign({}, p, { links: ls });
@@ -304,9 +303,9 @@ function NuovaCardModal(props) {
                           <button
                             aria-label="Rimuovi link"
                             onClick={function () {
-                              setForm(function (p) {
+                              setForm(function (p: any) {
                                 return Object.assign({}, p, {
-                                  links: p.links.filter(function (_, j) {
+                                  links: p.links.filter(function (_: any, j: number) {
                                     return j !== i;
                                   }),
                                 });
@@ -322,9 +321,9 @@ function NuovaCardModal(props) {
                     {
                       <input
                         value={l.label}
-                        onInput={function (e) {
-                          setForm(function (p) {
-                            var ls = p.links.map(function (x, j) {
+                        onInput={function (e: any) {
+                          setForm(function (p: any) {
+                            var ls = p.links.map(function (x: any, j: number) {
                               return j === i ? Object.assign({}, x, { label: e.target.value }) : x;
                             });
                             return Object.assign({}, p, { links: ls });
@@ -352,7 +351,7 @@ function NuovaCardModal(props) {
                   {(function () {
                     var kb = 0;
                     if (form.copertina) kb += Math.round((form.copertina.length * 0.75) / 1024);
-                    (form.immagini || []).forEach(function (x) {
+                    (form.immagini || []).forEach(function (x: any) {
                       if (x.url) kb += Math.round((x.url.length * 0.75) / 1024);
                     });
                     var color = kb > 700 ? '#f87171' : kb > 400 ? '#fbbf24' : 'rgba(255,255,255,.40)';
@@ -391,7 +390,7 @@ function NuovaCardModal(props) {
                         <button
                           aria-label="Rimuovi copertina"
                           onClick={function () {
-                            setForm(function (p) {
+                            setForm(function (p: any) {
                               return Object.assign({}, p, { copertina: null });
                             });
                           }}
@@ -441,7 +440,7 @@ function NuovaCardModal(props) {
                           type="file"
                           accept="image/*"
                           style={{ display: 'none' }}
-                          onChange={function (e) {
+                          onChange={function (e: any) {
                             handleImgUpload(e, true);
                           }}
                         />
@@ -452,7 +451,7 @@ function NuovaCardModal(props) {
               }
               {(form.immagini || []).length > 0 && (
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
-                  {(form.immagini || []).map(function (img) {
+                  {(form.immagini || []).map(function (img: any) {
                     return (
                       <div key={img.id} style={{ position: 'relative', width: 72, flexShrink: 0 }}>
                         {
@@ -472,7 +471,7 @@ function NuovaCardModal(props) {
                         {
                           <input
                             value={img.didascalia || ''}
-                            onInput={function (e) {
+                            onInput={function (e: any) {
                               setDidascalia(img.id, e.target.value);
                             }}
                             placeholder="Didascalia"
@@ -554,7 +553,7 @@ function NuovaCardModal(props) {
                       multiple={true}
                       style={{ display: 'none' }}
                       disabled={imgUploading}
-                      onChange={function (e) {
+                      onChange={function (e: any) {
                         handleImgUpload(e, false);
                       }}
                     />
@@ -574,7 +573,7 @@ function NuovaCardModal(props) {
                   }
                   {(function () {
                     var kb = 0;
-                    (form.allegati || []).forEach(function (a) {
+                    (form.allegati || []).forEach(function (a: any) {
                       kb += Math.round((a.size || 0) / 1024);
                     });
                     var color = kb > 500 ? '#f87171' : kb > 200 ? '#fbbf24' : 'rgba(255,255,255,.40)';
@@ -610,7 +609,7 @@ function NuovaCardModal(props) {
                       multiple={true}
                       style={{ display: 'none' }}
                       disabled={allegatiUploading}
-                      onChange={function (e) {
+                      onChange={function (e: any) {
                         handleAllegatiUpload(e);
                       }}
                     />
@@ -619,7 +618,7 @@ function NuovaCardModal(props) {
               }
               {(form.allegati || []).length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 8 }}>
-                  {(form.allegati || []).map(function (a) {
+                  {(form.allegati || []).map(function (a: any) {
                     var icon =
                       a.type && a.type.startsWith('image')
                         ? '🖼️'
@@ -705,14 +704,14 @@ function NuovaCardModal(props) {
                   OPZIONI
                 </label>
               }
-              {form.opzioni.map(function (o, i) {
+              {form.opzioni.map(function (o: any, i: number) {
                 return (
                   <div key={i} style={{ display: 'flex', gap: 5, marginBottom: 6 }}>
                     {
                       <input
                         value={o}
-                        onInput={function (e) {
-                          setForm(function (p) {
+                        onInput={function (e: any) {
+                          setForm(function (p: any) {
                             var ops = p.opzioni.slice();
                             ops[i] = e.target.value;
                             return Object.assign({}, p, { opzioni: ops });
@@ -727,9 +726,9 @@ function NuovaCardModal(props) {
                       <button
                         aria-label="Rimuovi opzione"
                         onClick={function () {
-                          setForm(function (p) {
+                          setForm(function (p: any) {
                             return Object.assign({}, p, {
-                              opzioni: p.opzioni.filter(function (_, j) {
+                              opzioni: p.opzioni.filter(function (_: any, j: number) {
                                 return j !== i;
                               }),
                             });
@@ -746,7 +745,7 @@ function NuovaCardModal(props) {
               {form.opzioni.length < 6 && (
                 <button
                   onClick={function () {
-                    setForm(function (p) {
+                    setForm(function (p: any) {
                       return Object.assign({}, p, { opzioni: p.opzioni.concat(['']) });
                     });
                   }}
@@ -814,8 +813,8 @@ function NuovaCardModal(props) {
                           max={120}
                           aria-label="Minuti del timer quiz"
                           value={form.quizTimer || 10}
-                          onInput={function (e) {
-                            setForm(function (p) {
+                          onInput={function (e: any) {
+                            setForm(function (p: any) {
                               return Object.assign({}, p, { quizTimer: parseInt(e.target.value) || 10 });
                             });
                           }}
@@ -826,7 +825,7 @@ function NuovaCardModal(props) {
                   }
                 </div>
               }
-              {(form.quizDomande || []).map(function (d, i) {
+              {(form.quizDomande || []).map(function (d: any, i: number) {
                 return (
                   <div
                     key={i}
@@ -862,8 +861,8 @@ function NuovaCardModal(props) {
                         {
                           <select
                             value={d.tipo || 'multipla'}
-                            onChange={function (e) {
-                              setForm(function (p) {
+                            onChange={function (e: any) {
+                              setForm(function (p: any) {
                                 var qs = p.quizDomande.slice();
                                 qs[i] = Object.assign({}, qs[i], {
                                   tipo: e.target.value,
@@ -896,9 +895,9 @@ function NuovaCardModal(props) {
                           <button
                             aria-label="Rimuovi domanda"
                             onClick={function () {
-                              setForm(function (p) {
+                              setForm(function (p: any) {
                                 return Object.assign({}, p, {
-                                  quizDomande: p.quizDomande.filter(function (_, j) {
+                                  quizDomande: p.quizDomande.filter(function (_: any, j: number) {
                                     return j !== i;
                                   }),
                                 });
@@ -921,8 +920,8 @@ function NuovaCardModal(props) {
                     {
                       <input
                         value={d.testo || ''}
-                        onInput={function (e) {
-                          setForm(function (p) {
+                        onInput={function (e: any) {
+                          setForm(function (p: any) {
                             var qs = p.quizDomande.slice();
                             qs[i] = Object.assign({}, qs[i], { testo: e.target.value });
                             return Object.assign({}, p, { quizDomande: qs });
@@ -935,14 +934,14 @@ function NuovaCardModal(props) {
                     }
                     {d.tipo === 'multipla' && (
                       <div>
-                        {(d.opzioni || ['', '', '', '']).map(function (op, j) {
+                        {(d.opzioni || ['', '', '', '']).map(function (op: any, j: number) {
                           return (
                             <div key={j} style={{ display: 'flex', gap: 5, marginBottom: 4, alignItems: 'center' }}>
                               {
                                 <button
                                   aria-label={'Segna come risposta corretta ' + (j + 1)}
                                   onClick={function () {
-                                    setForm(function (p) {
+                                    setForm(function (p: any) {
                                       var qs = p.quizDomande.slice();
                                       qs[i] = Object.assign({}, qs[i], { corretta: String(j) });
                                       return Object.assign({}, p, { quizDomande: qs });
@@ -963,8 +962,8 @@ function NuovaCardModal(props) {
                               {
                                 <input
                                   value={op}
-                                  onInput={function (e) {
-                                    setForm(function (p) {
+                                  onInput={function (e: any) {
+                                    setForm(function (p: any) {
                                       var qs = p.quizDomande.slice();
                                       var ops = (qs[i].opzioni || ['', '', '', '']).slice();
                                       ops[j] = e.target.value;
@@ -994,7 +993,7 @@ function NuovaCardModal(props) {
                             <button
                               key={vf}
                               onClick={function () {
-                                setForm(function (p) {
+                                setForm(function (p: any) {
                                   var qs = p.quizDomande.slice();
                                   qs[i] = Object.assign({}, qs[i], { corretta: vf });
                                   return Object.assign({}, p, { quizDomande: qs });
@@ -1031,7 +1030,7 @@ function NuovaCardModal(props) {
               {
                 <button
                   onClick={function () {
-                    setForm(function (p) {
+                    setForm(function (p: any) {
                       return Object.assign({}, p, {
                         quizDomande: (p.quizDomande || []).concat([
                           { tipo: 'multipla', testo: '', opzioni: ['', '', '', ''], corretta: '' },
@@ -1081,5 +1080,4 @@ function NuovaCardModal(props) {
   );
 }
 
-SB.NuovaCardModal = NuovaCardModal;
 export default NuovaCardModal;

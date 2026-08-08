@@ -65,12 +65,12 @@ function wrap(authOverrides: any = {}, cardsOverrides: any = {}) {
   var modalsCtx = Object.assign({}, emptyModals);
   var aiCtx = Object.assign({}, emptyAI);
   var uiCtx = Object.assign({}, emptyUI);
-  return function Wrapper({ children }: { children: React.ReactNode }) {
-    return h(AuthContext.Provider, { value: authCtx },
-      h(CardsContext.Provider, { value: cardsCtx },
-        h(ModalsContext.Provider, { value: modalsCtx },
-          h(AIContext.Provider, { value: aiCtx },
-            h(UIContext.Provider, { value: uiCtx }, children)
+  return function Wrapper({ children }: { children: React.ReactNode }): React.ReactElement {
+    return h(AuthContext.Provider, { value: authCtx as any },
+      h(CardsContext.Provider, { value: cardsCtx as any },
+        h(ModalsContext.Provider, { value: modalsCtx as any },
+          h(AIContext.Provider, { value: aiCtx as any },
+            h(UIContext.Provider, { value: uiCtx as any }, children)
           )
         )
       )

@@ -7,7 +7,6 @@ beforeEach(() => {
   window.SB = window.SB || {};
   window.SB.h = React.createElement;
   window.SB.Fragment = React.Fragment;
-  window.S = { filterBtn: () => ({}) };
 });
 
 import "./FilterBar.tsx";
@@ -67,7 +66,7 @@ describe("FilterBar", () => {
   it("expands filter panel when clicked", () => {
     var opened = false;
     var $ = make$({
-      setFiltroBarOpen: vi.fn(function (fn) {
+      setFiltroBarOpen: vi.fn(function () {
         opened = true;
       }),
     });

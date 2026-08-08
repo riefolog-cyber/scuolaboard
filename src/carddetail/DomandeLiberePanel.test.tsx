@@ -9,8 +9,8 @@ import React from "react";
 import DomandeLiberePanel from "./DomandeLiberePanel.tsx";
 
 describe("DomandeLiberePanel", () => {
-  let $;
-  let card;
+  let $: any;
+  let card: any;
 
   beforeEach(() => {
     $ = {

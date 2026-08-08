@@ -19,8 +19,8 @@ function getFocusables(container: Element | null): HTMLElement[] {
   return out;
 }
 
-function FocusTrap(props) {
-  var wrapRef = React.useRef(null);
+function FocusTrap(props: any) {
+  var wrapRef = React.useRef<HTMLElement | null>(null);
   React.useEffect(function () {
     var wrap = wrapRef.current;
     if (!wrap) return;
@@ -37,7 +37,8 @@ function FocusTrap(props) {
         else setTimeout(move, 0);
       }
     }
-    function onKey(e) {
+    function onKey(e: any) {
+      if (!wrap) return;
       if (e.key !== 'Tab') return;
       // Guard anti-conflitto: se il focus è dentro un ALTRO FocusTrap (es. una
       // modale aperta sopra la CardDetail, che hanno trap separati), lascia

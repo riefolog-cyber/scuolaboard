@@ -30,9 +30,12 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint src/**/*.{ts,tsx} --ignore-pattern dist",
+    "typecheck": "tsc --noEmit",
+    "typecheck:strict": "tsc --noEmit -p tsconfig.strict.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "deadcode": "bash scripts/dead-code.sh",
     "format": "prettier --write \"src/**/*.{ts,tsx}\" \"*.json\" \"*.md\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx}\" \"*.json\" \"*.md\""
   }

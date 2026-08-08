@@ -2,9 +2,8 @@
 var SB = window.SB || {};
 window.SB = SB;
 var h = SB.h || React.createElement;
-var Fragment = SB.Fragment || React.Fragment;
 
-function EditAmmModal(props) {
+function EditAmmModal(props: any) {
   if (!props.editAmm) return null;
   var editAmm = props.editAmm;
   var setEditAmm = props.setEditAmm;
@@ -35,7 +34,7 @@ function EditAmmModal(props) {
             maxWidth: 380,
             width: '100%',
           }}
-          onClick={function (e) {
+          onClick={function (e: any) {
             e.stopPropagation();
           }}
         >
@@ -83,7 +82,7 @@ function EditAmmModal(props) {
               {
                 <button
                   onClick={function () {
-                    var val = (document.getElementById('editamm-input') || {})['value']; if (val) val = val.trim();
+                    var val = ((document.getElementById('editamm-input') || {}) as any)['value']; if (val) val = val.trim();
                     if (val) {
                       props.modificaAmm(editAmm.nome, editAmm.id, val);
                       // FIX (bug E2E): la modale si chiude da sola dopo il salvataggio,
