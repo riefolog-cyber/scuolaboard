@@ -22,6 +22,8 @@ import {
   buildCopiaAnno,
   countCommenti,
   getProposte,
+  imgUsageKB,
+  computeImageTargetKB,
   cardJsonSize,
   CARD_SIZE_LIMIT,
 } from '../app-provider-helpers.ts';
@@ -113,7 +115,6 @@ function AppProvider({ children }: any) {
   var [allegatiUploading, setAllegatiUploading] = useState(false);
   var [timerInput, setTimerInput] = useState('');
 
-
   var [showCard, setShowCard] = useState<any>(null);
 
   // Toast ed eliminazioni revocabili (Undo)
@@ -124,7 +125,6 @@ function AppProvider({ children }: any) {
   var [undoDelete, setUndoDelete] = useState<any>(null);
   var [bulkMode, setBulkMode] = useState(false);
   var [bulkSelected, setBulkSelected] = useState<any>([]);
-
 
   // ── REFS ──
   var myLikes = useRef(new Set());
@@ -242,59 +242,124 @@ function AppProvider({ children }: any) {
   // ref equivalente aggiornato a ogni render), mai da una variabile locale.
   var cardsHookRef = useRef(cardsHook);
   cardsHookRef.current = cardsHook;
-  var appHandlerCtx = useMemo(function () {
-    return {
-      get cards() { return cardsHookRef.current.cards; },
-      get user() { return user; },
-      get showCard() { return showCard; },
-      get nc() { return nc; },
-      get replyTesto() { return replyTesto; },
-      get myLikes() { return myLikes; },
-      get SB() { return SB; },
-      get myName() { return myName; },
-      get CLASSI_LIST() { return CLASSI_LIST; },
-      get classiCustom() { return cardsHookRef.current.classiCustom; },
-      get classiNascoste() { return cardsHookRef.current.classiNascoste; },
-      get newClasseInput() { return cardsHookRef.current.newClasseInput; },
-      get preferiti() { return cardsHookRef.current.preferiti; },
-      get showToast() { return showToast; },
-      get rinominaClasse() { return rinominaClasse; },
-      get rinominaInput() { return rinominaInput; },
-      get rinominaConferma() { return rinominaConferma; },
-      get isProf() { return isProf; },
-      get annoScolastico() { return annoScolastico; },
-      fbClassiSave: function (arr: any) { return fbClassiSave(arr, annoScolastico); },
-      fbNascosteSave: function (arr: any) { return fbNascosteSave(arr, annoScolastico); },
-      fbSave: fbSave,
-      fbFavSave: fbFavSave,
-      db: db,
-      setClassiCustom: cardsHook.setClassiCustom,
-      setClassiNascoste: cardsHook.setClassiNascoste,
-      setAddingClasse: cardsHook.setAddingClasse,
-      setNewClasseInput: cardsHook.setNewClasseInput,
-      setRinominaClasse: setRinominaClasse,
-      setRinominaInput: setRinominaInput,
-      setRinominaConferma: setRinominaConferma,
-      setPreferiti: cardsHook.setPreferiti,
-      setShowCard: setShowCard,
-      setLikeAnimCard: setLikeAnimCard,
-      setNc: setNc,
-      setReplyTo: setReplyTo,
-      setReplyTesto: setReplyTesto,
-      setShowAmm: modals.setShowAmm,
-      seenRef: seenRef,
-    };
-  }, [cardsHook.cards, user, showCard, nc, replyTesto, CLASSI_LIST, cardsHook.classiCustom, cardsHook.classiNascoste, cardsHook.preferiti, cardsHook.addingClasse, cardsHook.newClasseInput, rinominaClasse, rinominaInput, rinominaConferma, isProf, annoScolastico]);
+  var appHandlerCtx = useMemo(
+    function () {
+      return {
+        get cards() {
+          return cardsHookRef.current.cards;
+        },
+        get user() {
+          return user;
+        },
+        get showCard() {
+          return showCard;
+        },
+        get nc() {
+          return nc;
+        },
+        get replyTesto() {
+          return replyTesto;
+        },
+        get myLikes() {
+          return myLikes;
+        },
+        get SB() {
+          return SB;
+        },
+        get myName() {
+          return myName;
+        },
+        get CLASSI_LIST() {
+          return CLASSI_LIST;
+        },
+        get classiCustom() {
+          return cardsHookRef.current.classiCustom;
+        },
+        get classiNascoste() {
+          return cardsHookRef.current.classiNascoste;
+        },
+        get newClasseInput() {
+          return cardsHookRef.current.newClasseInput;
+        },
+        get preferiti() {
+          return cardsHookRef.current.preferiti;
+        },
+        get showToast() {
+          return showToast;
+        },
+        get rinominaClasse() {
+          return rinominaClasse;
+        },
+        get rinominaInput() {
+          return rinominaInput;
+        },
+        get rinominaConferma() {
+          return rinominaConferma;
+        },
+        get isProf() {
+          return isProf;
+        },
+        get annoScolastico() {
+          return annoScolastico;
+        },
+        fbClassiSave: function (arr: any) {
+          return fbClassiSave(arr, annoScolastico);
+        },
+        fbNascosteSave: function (arr: any) {
+          return fbNascosteSave(arr, annoScolastico);
+        },
+        fbSave: fbSave,
+        fbFavSave: fbFavSave,
+        db: db,
+        setClassiCustom: cardsHook.setClassiCustom,
+        setClassiNascoste: cardsHook.setClassiNascoste,
+        setAddingClasse: cardsHook.setAddingClasse,
+        setNewClasseInput: cardsHook.setNewClasseInput,
+        setRinominaClasse: setRinominaClasse,
+        setRinominaInput: setRinominaInput,
+        setRinominaConferma: setRinominaConferma,
+        setPreferiti: cardsHook.setPreferiti,
+        setShowCard: setShowCard,
+        setLikeAnimCard: setLikeAnimCard,
+        setNc: setNc,
+        setReplyTo: setReplyTo,
+        setReplyTesto: setReplyTesto,
+        setShowAmm: modals.setShowAmm,
+        seenRef: seenRef,
+      };
+    },
+    [
+      cardsHook.cards,
+      user,
+      showCard,
+      nc,
+      replyTesto,
+      CLASSI_LIST,
+      cardsHook.classiCustom,
+      cardsHook.classiNascoste,
+      cardsHook.preferiti,
+      cardsHook.addingClasse,
+      cardsHook.newClasseInput,
+      rinominaClasse,
+      rinominaInput,
+      rinominaConferma,
+      isProf,
+      annoScolastico,
+    ]
+  );
 
   // Handlers memoized per evitare ricreazione a ogni render
-  var __handlers = useMemo(function () {
-    try {
-      if (SB.createAppHandlers) return SB.createAppHandlers(appHandlerCtx);
-    } catch (e) {
-      console.error('[ScuolaBoard] createAppHandlers:', e);
-    }
-    return {};
-  }, [appHandlerCtx]);
+  var __handlers = useMemo(
+    function () {
+      try {
+        if (SB.createAppHandlers) return SB.createAppHandlers(appHandlerCtx);
+      } catch (e) {
+        console.error('[ScuolaBoard] createAppHandlers:', e);
+      }
+      return {};
+    },
+    [appHandlerCtx]
+  );
 
   // Destruttura handlers con fallback sicuri
   function safeFn(fn: any) {
@@ -419,6 +484,13 @@ function AppProvider({ children }: any) {
     var files = Array.from(e.target.files) as File[];
     if (!files.length) return;
     setImgUploading(true);
+    var CFG = window.SB_CONFIG || {};
+    // Budget dinamico: ogni immagine prende una quota dello spazio residuo della
+    // card (guard Firestore ~900KB) — qualità alta con 1-2 immagini, card sempre
+    // salvabile anche piena. maxSlots = IMG_MAX_COUNT galleria + 1 copertina.
+    var maxSlots = (CFG.IMG_MAX_COUNT != null ? CFG.IMG_MAX_COUNT : 5) + 1;
+    var usedKB = imgUsageKB(form.copertina, form.immagini);
+    var currentSlots = (form.copertina ? 1 : 0) + (form.immagini || []).length;
     var imgMimeOk = function (t: any) {
       return t === 'image/jpeg' || t === 'image/png' || t === 'image/gif' || t === 'image/webp';
     };
@@ -429,11 +501,24 @@ function AppProvider({ children }: any) {
           showToast('Tipo immagine non supportato: ' + file['name'], 'warn');
           continue;
         }
-        if (file['size'] > 5 * 1024 * 1024) {
-          showToast('Immagine troppo grande (max 5MB)', 'warn');
+        var maxSrc = CFG.IMG_MAX_BYTES != null ? CFG.IMG_MAX_BYTES : 12 * 1024 * 1024;
+        if (file['size'] > maxSrc) {
+          showToast('Immagine troppo grande (max ' + Math.round(maxSrc / 1024 / 1024) + 'MB)', 'warn');
           continue;
         }
-        var b64 = await window.compressImage(file, 900, 900, 0.72);
+        // Compressa a max IMG_COVER_SIZE px con qualità IMG_QUALITY (adattiva,
+        // WebP quando possibile) e target calcolato dal budget residuo della card.
+        var maxPx = CFG.IMG_COVER_SIZE != null ? CFG.IMG_COVER_SIZE : 1920;
+        var imgQ = CFG.IMG_QUALITY != null ? CFG.IMG_QUALITY : 0.85;
+        var targetKB = computeImageTargetKB({
+          usedKB: usedKB,
+          currentSlots: currentSlots,
+          maxSlots: maxSlots,
+          cardLimitKB: CARD_SIZE_LIMIT / 1024,
+        });
+        var b64 = await window.compressImage(file, maxPx, maxPx, imgQ, targetKB);
+        usedKB += (b64.length * 0.75) / 1024;
+        currentSlots++;
         if (isCover) {
           setForm(function (p: any) {
             return Object.assign({}, p, { copertina: b64 });
@@ -591,7 +676,7 @@ function AppProvider({ children }: any) {
           next[id] = Object.assign({}, next[id] || {}, { domande: [] });
           return next;
         });
-        showToast('Cronologia domande all\'AI eliminata', 'ok');
+        showToast("Cronologia domande all'AI eliminata", 'ok');
       })
       .catch(function (e: any) {
         console.error('[ScuolaBoard] eliminaDomandeAI:', e);
@@ -830,7 +915,7 @@ function AppProvider({ children }: any) {
   // (usa classiPerAnno[anno], non il campo piatto legacy user.classe)
   useEffect(
     function () {
-      if (user && user.role === 'studente' && !((user.classiPerAnno || {})[annoScolastico])) {
+      if (user && user.role === 'studente' && !(user.classiPerAnno || {})[annoScolastico]) {
         modals.setShowClasseModal(true);
       }
     },

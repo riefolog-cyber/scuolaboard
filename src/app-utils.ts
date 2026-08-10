@@ -24,9 +24,10 @@ SB.useEffect = React.useEffect;
 SB.useRef = React.useRef;
 SB.useCallback = React.useCallback;
 SB.useMemo = React.useMemo;
-SB.useReducer = React.useReducer;  SB.useLayoutEffect = React.useLayoutEffect;
-  SB.Fragment = React.Fragment;
-  var db = SB.db;
+SB.useReducer = React.useReducer;
+SB.useLayoutEffect = React.useLayoutEffect;
+SB.Fragment = React.Fragment;
+var db = SB.db;
 var h = SB.h,
   useState = SB.useState,
   useEffect = SB.useEffect,
@@ -82,7 +83,10 @@ SB.FORM0 = FORM0;
 
 // Traduce gli errori Firestore in messaggi leggibili (regole che bloccano le scritture)
 function fbErrTxt(e: any) {
-  if (e && (e.code === 'permission-denied' || String(e.message || '').indexOf('Missing or insufficient permissions') >= 0)) {
+  if (
+    e &&
+    (e.code === 'permission-denied' || String(e.message || '').indexOf('Missing or insufficient permissions') >= 0)
+  ) {
     return 'Permesso negato: le regole Firestore bloccano questa operazione. Verifica il ruolo prof e le regole.';
   }
   return 'Errore di salvataggio: ' + ((e && e.message) || 'errore sconosciuto');
@@ -104,9 +108,13 @@ function fbDel(id: any) {
   });
   return p;
 }
-function compressImage(file: File, maxW: number, maxH: number, quality?: number) {
+function compressImage(file: File, maxW: number, maxH: number, quality?: number, targetKB?: number) {
   if (!file.type.startsWith('image/'))
     return Promise.reject(new Error("Il file selezionato non è un'immagine valida."));
+  var CFG = window.SB_CONFIG || {};
+  var TARGET_KB = targetKB != null ? targetKB : CFG.IMG_TARGET_KB != null ? CFG.IMG_TARGET_KB : 250;
+  var qStart = quality != null ? quality : CFG.IMG_QUALITY != null ? CFG.IMG_QUALITY : 0.85;
+  var qMin = CFG.IMG_QUALITY_MIN != null ? CFG.IMG_QUALITY_MIN : 0.55;
   return new Promise(function (resolve, reject) {
     var img = new Image();
     var url = URL.createObjectURL(file);
@@ -119,36 +127,74 @@ function compressImage(file: File, maxW: number, maxH: number, quality?: number)
     }
     img.onload = function () {
       cleanup();
-      var w = img.naturalWidth,
-        h = img.naturalHeight;
-      var scale = Math.min(1, maxW / w, maxH / h);
-      var cw = Math.round(w * scale),
-        ch = Math.round(h * scale);
-      var canvas = document.createElement('canvas');
-      canvas.width = cw;
-      canvas.height = ch;
-      var ctx = canvas.getContext('2d')!;
-      ctx.drawImage(img, 0, 0, cw, ch);
-      var TARGET_KB = 90;
-      var q = quality != null ? quality : 0.8; // default quality
-      var b64 = canvas.toDataURL('image/jpeg', q);
-      var kb = Math.round((b64.length * 0.75) / 1024);
-      if (kb > TARGET_KB) {
-        b64 = canvas.toDataURL('image/jpeg', q * 0.65);
-        kb = Math.round((b64.length * 0.75) / 1024);
+      try {
+        var w = img.naturalWidth,
+          h = img.naturalHeight;
+        var scale = Math.min(1, maxW / w, maxH / h);
+        var cw = Math.round(w * scale),
+          ch = Math.round(h * scale);
+        var canvas = document.createElement('canvas');
+        canvas.width = cw;
+        canvas.height = ch;
+        var ctx = canvas.getContext('2d')!;
+        ctx.drawImage(img, 0, 0, cw, ch);
+        // Encoding: WebP quando il browser lo supporta (≈30% più piccolo a parità
+        // di qualità e mantiene la trasparenza); altrimenti JPEG. Se toDataURL
+        // non supporta il tipo, il canvas restituisce PNG: in quel caso si usa
+        // JPEG (molto più compatto).
+        function encode(cur: any, q: number) {
+          var webp: any;
+          try {
+            webp = cur.toDataURL('image/webp', q);
+          } catch (e) {
+            // toDataURL webp non supportato: caduta su JPEG
+            return cur.toDataURL('image/jpeg', q);
+          }
+          if (webp.indexOf('data:image/webp') === 0) return webp;
+          return cur.toDataURL('image/jpeg', q);
+        }
+        function kbOf(b64: string) {
+          return Math.round((b64.length * 0.75) / 1024);
+        }
+        // Ricerca adattiva della qualità: parte da qStart e scende finché il
+        // risultato entra nel target (mai sotto qMin). Massimizza la qualità per
+        // il budget disponibile — molto meglio dei gradini fissi.
+        function fit(cur: any, fromQ: number) {
+          var q = fromQ;
+          var last: any = null;
+          var lastKb = 0;
+          for (var i = 0; i < 10; i++) {
+            var b64 = encode(cur, q);
+            var kb = kbOf(b64);
+            if (kb <= TARGET_KB) return { b64: b64, kb: kb };
+            last = b64;
+            lastKb = kb;
+            if (q <= qMin) break;
+            q = Math.max(qMin, Math.round((q - 0.05) * 100) / 100);
+          }
+          return { b64: last, kb: lastKb };
+        }
+        function downscale(src: any, factor: number) {
+          var c = document.createElement('canvas');
+          c.width = Math.max(64, Math.round(src.width * factor));
+          c.height = Math.max(64, Math.round(src.height * factor));
+          c.getContext('2d')!.drawImage(src, 0, 0, c.width, c.height);
+          return c;
+        }
+        var cur = canvas;
+        var result = fit(cur, qStart);
+        if (result.kb > TARGET_KB) {
+          cur = downscale(cur, 0.85);
+          result = fit(cur, qStart);
+        }
+        if (result.kb > TARGET_KB) {
+          cur = downscale(cur, 0.8);
+          result = fit(cur, qStart);
+        }
+        resolve(result.b64);
+      } catch (e) {
+        reject(e);
       }
-      if (kb > TARGET_KB * 2) {
-        var c2 = document.createElement('canvas');
-        c2.width = Math.round(cw * 0.75);
-        c2.height = Math.round(ch * 0.75);
-        c2.getContext('2d')!.drawImage(canvas, 0, 0, c2.width, c2.height);
-        b64 = c2.toDataURL('image/jpeg', 0.6);
-        kb = Math.round((b64.length * 0.75) / 1024);
-      }
-      if (kb > TARGET_KB * 3) {
-        b64 = canvas.toDataURL('image/jpeg', 0.4);
-      }
-      resolve(b64);
     };
     img.onerror = function (e) {
       cleanup();

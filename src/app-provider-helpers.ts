@@ -225,6 +225,44 @@ export function cardJsonSize(card: any): number {
   }
 }
 
+// ── Budget immagini dentro la card (guard Firestore ~900KB) ────────────────
+// Le immagini (base64) vivono DENTRO il documento card: il totale copertina +
+// galleria deve restare sotto CARD_SIZE_LIMIT. imgUsageKB misura l'occupazione
+// corrente; computeImageTargetKB calcola il target per la prossima immagine in
+// modo che la card resti salvabile, riservando spazio per al più `reservedFuture`
+// slot futuri: 1-2 immagini → qualità alta, card piene → qualità minore ma ok.
+export const IMG_TEXT_OVERHEAD_KB = 10;
+
+export function imgUsageKB(coverB64: string | null | undefined, immagini: any[]): number {
+  var kb = 0;
+  if (coverB64) kb += (coverB64.length * 0.75) / 1024;
+  (immagini || []).forEach(function (x: any) {
+    if (x && x.url) kb += (x.url.length * 0.75) / 1024;
+  });
+  return kb;
+}
+
+export function computeImageTargetKB(opts: {
+  usedKB: number;
+  currentSlots: number;
+  maxSlots: number;
+  cardLimitKB: number;
+  maxSingleKB?: number;
+  minKB?: number;
+  reservedFuture?: number;
+}): number {
+  var cardLimitKB = opts.cardLimitKB;
+  var maxSingleKB = opts.maxSingleKB != null ? opts.maxSingleKB : 700;
+  var minKB = opts.minKB != null ? opts.minKB : 120;
+  var reservedFuture = opts.reservedFuture != null ? opts.reservedFuture : 3;
+  var remainingSlots = Math.max(1, opts.maxSlots - opts.currentSlots);
+  var expected = Math.max(1, Math.min(remainingSlots, reservedFuture));
+  var remainingKB = cardLimitKB - IMG_TEXT_OVERHEAD_KB - opts.usedKB;
+  var target = remainingKB / expected;
+  var floor = Math.max(25, Math.min(minKB, target));
+  return Math.round(Math.max(floor, Math.min(maxSingleKB, target)));
+}
+
 // ── Contatori / selettori puri ─────────────────────────────────────────────
 export function countCommenti(cards: any[]): number {
   return cards.reduce(function (a, c) {

@@ -76,3 +76,6 @@ coverage/
 
 # Backup locale del codice (non committare)
 backup/
+
+# Immagini di test generate per la verifica manuale dell'upload (non committare)
+test-images/

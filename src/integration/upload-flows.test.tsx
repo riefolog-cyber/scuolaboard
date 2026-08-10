@@ -70,4 +70,32 @@ describe('Upload immagini (prof)', () => {
       expect(found[1].immagini).toEqual([]);
     });
   });
+
+  it('rifiuta le immagini oltre il limite sorgente (12MB) senza chiamare compressImage', async () => {
+    const compressMock = vi.fn().mockResolvedValue('data:image/png;base64,FAKEIMG');
+    const { db } = await renderApp({ seed: { users: { prof1: PROF_DOC }, cards: {} }, user: PROF });
+    window.compressImage = compressMock;
+
+    fireEvent.click(await screen.findByTitle('Nuova card', {}, { timeout: 4000 }));
+    fireEvent.input(screen.getByPlaceholderText('Es. Riflessione su…'), {
+      target: { value: 'Card foto enorme' },
+    });
+
+    const inputs = document.querySelectorAll('input[type="file"]');
+    const galleryInput = Array.from(inputs).find((i) => i.accept.indexOf('image/*') >= 0 && i.multiple);
+    // 13 MiB > limite sorgente IMG_MAX_BYTES (12 MiB)
+    const big = new File([new ArrayBuffer(13 * 1024 * 1024)], 'foto.png', { type: 'image/png' });
+    fireEvent.change(galleryInput, { target: { files: [big] } });
+
+    // Nessuna chiamata a compressImage, nessuna immagine salvata
+    await new Promise((r) => setTimeout(r, 50));
+    expect(compressMock).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByText('✅ Crea card'));
+    await waitFor(() => {
+      const found = db._all('cards').find(([, c]) => c.titolo === 'Card foto enorme');
+      expect(found).toBeTruthy();
+      expect(found[1].immagini).toEqual([]);
+    });
+  });
 });

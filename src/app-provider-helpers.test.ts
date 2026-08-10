@@ -3,7 +3,7 @@
 // grande supererebbe il limite e il salvataggio fallirebbe. Il guard blocca
 // prima con un toast (vedi AppProvider.addCard).
 import { describe, it, expect } from 'vitest';
-import { cardJsonSize, CARD_SIZE_LIMIT } from './app-provider-helpers.ts';
+import { cardJsonSize, CARD_SIZE_LIMIT, imgUsageKB, computeImageTargetKB } from './app-provider-helpers.ts';
 
 function fakeImage(kb: number): string {
   // base64 ~1 byte per carattere: genera una stringa di ~kb kilobyte
@@ -33,7 +33,10 @@ describe('cardJsonSize / CARD_SIZE_LIMIT (guard 1MB Firestore)', () => {
     const card = {
       id: 3,
       titolo: 'Card con allegati',
-      allegati: [{ name: 'a.pdf', url: fakeImage(700) }, { name: 'b.pdf', url: fakeImage(700) }],
+      allegati: [
+        { name: 'a.pdf', url: fakeImage(700) },
+        { name: 'b.pdf', url: fakeImage(700) },
+      ],
     };
     expect(cardJsonSize(card)).toBeGreaterThan(CARD_SIZE_LIMIT);
   });
@@ -49,5 +52,46 @@ describe('cardJsonSize / CARD_SIZE_LIMIT (guard 1MB Firestore)', () => {
     expect(cardJsonSize(null)).toBeLessThan(CARD_SIZE_LIMIT);
     expect(cardJsonSize(undefined)).toBeLessThan(CARD_SIZE_LIMIT);
     expect(typeof cardJsonSize(undefined)).toBe('number');
+  });
+});
+
+describe('imgUsageKB / computeImageTargetKB (budget dinamico immagini)', () => {
+  it('misura copertina + galleria in KB', () => {
+    // fakeImage(200) = 200KB base64 ≈ 150KB reali (0.75) → usa url reali
+    const url = 'A'.repeat(1024 * 1000); // 1000KB di stringa ≈ 750KB
+    expect(imgUsageKB(url, [])).toBeGreaterThan(700);
+    expect(imgUsageKB(null, [{ url: 'A'.repeat(1024 * 400) }])).toBeGreaterThan(280);
+    expect(imgUsageKB(undefined, [])).toBe(0);
+  });
+
+  it('card vuota: prima immagine con qualità alta (~890KB/3 riservati)', () => {
+    const t = computeImageTargetKB({ usedKB: 0, currentSlots: 0, maxSlots: 6, cardLimitKB: 900 });
+    expect(t).toBe(Math.round((900 - 10) / 3)); // ~297KB
+    expect(t).toBeLessThan(700);
+  });
+
+  it('maxSlots piccolo: rispetta il cap di 700KB', () => {
+    const t = computeImageTargetKB({ usedKB: 0, currentSlots: 0, maxSlots: 1, cardLimitKB: 900 });
+    expect(t).toBe(700);
+  });
+
+  it('card quasi piena: target ridotto ma mai sotto il floor', () => {
+    const t = computeImageTargetKB({ usedKB: 860, currentSlots: 5, maxSlots: 6, cardLimitKB: 900 });
+    expect(t).toBeGreaterThanOrEqual(25);
+    expect(t).toBeLessThan(120);
+  });
+
+  it('la somma su 6 slot non supera il limite card', () => {
+    let used = 0;
+    let slots = 0;
+    const targets: number[] = [];
+    while (slots < 6) {
+      const t = computeImageTargetKB({ usedKB: used, currentSlots: slots, maxSlots: 6, cardLimitKB: 900 });
+      targets.push(t);
+      used += t;
+      slots++;
+    }
+    const total = targets.reduce((a, b) => a + b, 0);
+    expect(total).toBeLessThan(900); // resta salvabile (guard a 900KB)
   });
 });

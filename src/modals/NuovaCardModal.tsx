@@ -243,9 +243,7 @@ function NuovaCardModal(props: any) {
                 <div
                   style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}
                 >
-                  {
-                    <label className="u-label">🔗 LINK</label>
-                  }
+                  {<label className="u-label">🔗 LINK</label>}
                   {(form.links || []).length < 5 && (
                     <button
                       onClick={function () {
@@ -345,21 +343,21 @@ function NuovaCardModal(props: any) {
                 <div
                   style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}
                 >
-                  {
-                    <label className="u-label">🖼️ IMMAGINI</label>
-                  }
+                  {<label className="u-label">🖼️ IMMAGINI</label>}
                   {(function () {
                     var kb = 0;
                     if (form.copertina) kb += Math.round((form.copertina.length * 0.75) / 1024);
                     (form.immagini || []).forEach(function (x: any) {
                       if (x.url) kb += Math.round((x.url.length * 0.75) / 1024);
                     });
-                    var color = kb > 700 ? '#f87171' : kb > 400 ? '#fbbf24' : 'rgba(255,255,255,.40)';
-                    var warn = kb > 700 ? ' ⚠️ vicino al limite' : kb > 400 ? ' — ottimizza se puoi' : '';
+                    var color = kb > 750 ? '#f87171' : kb > 500 ? '#fbbf24' : 'rgba(255,255,255,.40)';
+                    var warn = kb > 750 ? ' ⚠️ vicino al limite card' : kb > 500 ? ' — qualità ridotta' : '';
                     return kb > 0 ? (
                       <span style={{ fontSize: 11, color: color, fontWeight: 700 }}>{kb + ' KB' + warn}</span>
                     ) : (
-                      <span style={{ fontSize: 11, color: 'rgba(255,255,255,.40)' }}>Max ~150KB consigliato</span>
+                      <span style={{ fontSize: 11, color: 'rgba(255,255,255,.40)' }}>
+                        Budget card ~900KB · qualità automatica
+                      </span>
                     );
                   })()}
                 </div>
@@ -568,9 +566,7 @@ function NuovaCardModal(props: any) {
                 <div
                   style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}
                 >
-                  {
-                    <label className="u-label">📎 ALLEGATI</label>
-                  }
+                  {<label className="u-label">📎 ALLEGATI</label>}
                   {(function () {
                     var kb = 0;
                     (form.allegati || []).forEach(function (a: any) {
@@ -778,9 +774,7 @@ function NuovaCardModal(props: any) {
                     gap: 6,
                   }}
                 >
-                  {
-                    <label className="u-label">🧩 DOMANDE QUIZ</label>
-                  }
+                  {<label className="u-label">🧩 DOMANDE QUIZ</label>}
                   {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                       {

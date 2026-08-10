@@ -5,10 +5,16 @@
     ANNO_DEFAULT: '2026/2027',
     ANNI_DISPONIBILI: ['2025/2026', '2026/2027', '2027/2028', '2028/2029', '2029/2030'],
     AI_CACHE_TTL_MS: 15 * 60 * 1000,
-    IMG_MAX_BYTES: 5 * 1024 * 1024,
+    // Limite SORGENTE immagine: il file viene accettato e poi compresso via
+    // canvas; il peso finale nel documento resta molto più basso (target
+    // IMG_TARGET_KB) perché le immagini vivono dentro il doc Firestore (1 MiB).
+    IMG_MAX_BYTES: 12 * 1024 * 1024,
     IMG_MAX_COUNT: 5,
-    IMG_COVER_SIZE: 900,
-    IMG_QUALITY: 0.72,
+    IMG_COVER_SIZE: 1920, // lato lungo max (px) dopo la compressione
+    IMG_QUALITY: 0.85, // qualità iniziale (poi adattiva: scende finché entra nel target)
+    IMG_QUALITY_MIN: 0.55, // floor qualità durante la ricerca adattiva
+    IMG_TARGET_KB: 250, // target di ripiego se il budget card non è calcolabile
+    IMG_MAX_SINGLE_KB: 700, // cap per immagine singola (rispetta il guard ~900KB della card)
     QUIZ_EVAL_CHUNK: 4,
     UNDO_TIMEOUT_MS: 5000,
     TOAST_TIMEOUT_MS: 2400,
