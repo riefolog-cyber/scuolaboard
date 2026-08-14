@@ -9,18 +9,25 @@ function ConfirmDelModal(props: any) {
   var delCardWithUndo = props.delCardWithUndo;
   var executeDelCom = props.executeDelCom;
   var executeDelReply = props.executeDelReply;
+  var resetRisposte = props.resetRisposte;
   if (!confirmDel) return null;
   var isComment = confirmDel.type === 'comment';
   var isReply = confirmDel.type === 'reply';
-  var modalTitle = 'Elimina ' + (isComment ? 'commento' : isReply ? 'risposta' : 'card');
-  var modalMessage =
-    'Vuoi davvero eliminare ' +
-    (isComment ? 'questo commento' : isReply ? 'questa risposta' : 'questa card') +
-    // Solo l'eliminazione card ha l'undo (toast con "Annulla"): per commenti e
-    // risposte l'operazione è subito persistita su Firestore, niente recupero.
-    (isComment || isReply ? "? L'operazione è irreversibile." : "? L'azione può essere annullata entro 5 secondi.");
+  var isQuizReset = confirmDel.type === 'quiz_reset';
+  var modalTitle = isQuizReset
+    ? 'Reset risposte quiz'
+    : 'Elimina ' + (isComment ? 'commento' : isReply ? 'risposta' : 'card');
+  var modalMessage = isQuizReset
+    ? "Vuoi davvero eliminare TUTTE le risposte al quiz? L'operazione è irreversibile."
+    : 'Vuoi davvero eliminare ' +
+      (isComment ? 'questo commento' : isReply ? 'questa risposta' : 'questa card') +
+      // Solo l'eliminazione card ha l'undo (toast con "Annulla"): per commenti e
+      // risposte l'operazione è subito persistita su Firestore, niente recupero.
+      (isComment || isReply ? "? L'operazione è irreversibile." : "? L'azione può essere annullata entro 5 secondi.");
   var confirmAction = function () {
-    if (isComment) {
+    if (isQuizReset) {
+      resetRisposte(confirmDel.cardId);
+    } else if (isComment) {
       executeDelCom(confirmDel.cardId, confirmDel.id);
     } else if (isReply) {
       // Ordine parametri di executeDelReply: (cmId, rId, cardId)

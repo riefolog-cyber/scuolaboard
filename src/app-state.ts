@@ -20,10 +20,10 @@
     TOAST_TIMEOUT_MS: 2400,
     ALARM_WINDOW_MS: 2000,
     // NB: il modello AI NON si sceglie qui. La selezione è server-side nel
-    // Cloudflare Worker (worker cloudflare.txt → pickBestModel), che interroga
-    // i cataloghi Groq/OpenRouter e adotta automaticamente il miglior modello
-    // gratuito disponibile (cache 24h). Override manuale: env var GROQ_MODEL /
-    // OPENROUTER_MODEL nel pannello Cloudflare.
+    // Cloudflare Worker (worker cloudflare.txt → getModelCandidates), che
+    // interroga i cataloghi Groq/OpenRouter e adotta automaticamente il miglior
+    // modello gratuito disponibile (cache 24h). Override manuale: env var
+    // GROQ_MODEL / OPENROUTER_MODEL nel pannello Cloudflare.
     LS_KEYS: {
       seen: 'seen_cards',
       anno: 'annoScolasticoAttivo',
@@ -35,6 +35,27 @@
     },
   };
   window.SB_CONFIG = CFG;
+
+  // Flag debug globale (attivabile con ?debug=1, persistito in localStorage).
+  // I console.warn di sola-diagnostica sono gated dietro questo flag; i
+  // console.error critici restano sempre visibili.
+  window.SB_DEBUG = (function () {
+    try {
+      var LS_KEY = 'sb_debug';
+      var urlValue = new URLSearchParams(location.search).get('debug');
+      if (urlValue === '1') {
+        localStorage.setItem(LS_KEY, '1');
+        return true;
+      }
+      if (urlValue === '0') {
+        localStorage.removeItem(LS_KEY);
+        return false;
+      }
+      return localStorage.getItem(LS_KEY) === '1';
+    } catch (e) {
+      return false;
+    }
+  })();
 
   window._SB_LS = {
     seen: {

@@ -4,7 +4,7 @@ var SB = window.SB || {};
 window.SB = SB;
 var useState = React.useState;
 var useEffect = React.useEffect;
-SB.useAuth = function (annoScolastico: string) {
+SB.useAuth = function (_annoScolastico: string) {
   // AuthUser | null: stato autenticato (merge doc users/{uid}) o non autenticato
   var [user, setUser] = useState<AuthUser | null>(null);
   var [authLoad, setAuthLoad] = useState(true);
@@ -105,11 +105,11 @@ useEffect(
         clearTimeout(authTimeout);
       };
     },
-    [annoScolastico]
+    []
   );
   async function loginGoogle() {
     if (!auth) {
-      console.warn('[auth] Firebase auth not available; login aborted.');
+      if (window.SB_DEBUG) console.warn('[auth] Firebase auth not available; login aborted.');
       return;
     }
     try {
@@ -147,7 +147,7 @@ useEffect(
     }
   }
   function logout() {
-    auth.signOut();
+    if (auth) auth.signOut();
     setUser(null);
     setIsProf(false);
   }

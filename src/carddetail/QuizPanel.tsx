@@ -45,7 +45,7 @@ function QuizPanel({ $, c }: any) {
                               <button
                                 onClick={function (e: any) {
                                   e.stopPropagation();
-                                  $.resetRisposte(c.id);
+                                  $.confirmResetRisposte(c.id);
                                 }}
                                 style={{
                                   background: 'rgba(239,68,68,.15)',

@@ -2,6 +2,8 @@
 // Sostituisce useState+useEffect(onSnapshot) con useSyncExternalStore
 // per gestione sottoscrizioni gestita da React (no tearing, no stale closure)
 
+import { safeDocId } from './utils/format.ts';
+
 // ── MODULE-LEVEL SINGLETONS ────────────────────────────────────────────────
 var _cardsSnapshot: any[] = [];
 var _cardsListeners = new Set<() => void>();
@@ -106,7 +108,7 @@ function createClassiStore(anno: string | null) {
       if (!_classiUnsub && anno) {
         _classiUnsub = db
           .collection('config')
-          .doc('classi_custom_' + anno.replace('/', '_'))
+          .doc('classi_custom_' + safeDocId(anno))
           .onSnapshot(function (doc: any) {
             var d = doc.exists ? doc.data() : {};
             _classiCustom = d.lista || [];

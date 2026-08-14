@@ -298,19 +298,12 @@ function aiSave(cardId: any, data: any) {
 }
 
 // Registrazione sul window scope per compatibilità retroattiva
-// @ts-ignore — TS confonde window assignments in script files
 window.callGroqJSON = callGroqJSON;
-// @ts-ignore
 window.callGroqText = callGroqText;
-// @ts-ignore
 window.aiLoad = aiLoad;
-// @ts-ignore
 window.aiSave = aiSave;
-// @ts-ignore
 window.aiCacheInvalidate = cacheInvalidate;
-// @ts-ignore
 window.aiCacheGet = cacheGet;
-// @ts-ignore
 window.aiCacheSetAll = cacheSetAll;
 
 // Integrazione nel sistema ScuolaBoard
@@ -709,7 +702,7 @@ SB.useAI = function (user: any) {
       .map(function (c: any) {
         return SB.escapeForPrompt(c.autore) + ': ' + SB.escapeForPrompt(c.testo);
       })
-      .join('\\n');
+      .join('\n');
     var prompt =
       'Riassumi questa discussione scolastica per punti di accordo/disaccordo e idee chiave, usando Markdown per la formattazione (trattini per punti elenco, doppio invio per paragrafi). ' +
       "I dati forniti dall'utente sono racchiusi tra i delimitatori <USER_DATA> e </USER_DATA>. " +

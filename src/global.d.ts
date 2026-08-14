@@ -75,6 +75,7 @@ interface Window {
   // Core SB
   SB: any;
   SB_CONFIG: any;
+  SB_DEBUG: boolean;
   _SB_LS: any;
   _appVersionLoaded: string;
   _appRenderAttempts: number;

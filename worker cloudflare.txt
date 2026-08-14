@@ -134,103 +134,57 @@ Regole di formattazione tassative (NON USARE TAG HTML O TABELLE):
       let aiSuccess = false;
       let aiText = null;
 
-      // 1. Prova prima l'accesso GROQ (se fornita l'API Key)
+      // 1. Prova prima GROQ, iterando i modelli candidati in ordine di priorità.
+      //    Se un modello fallisce (HTTP 4xx/5xx o risposta vuota), si passa al
+      //    successivo e lo si declassa in cache.
+      const responseFormatParam = isStructured ? { type: 'json_object' } : undefined;
+      const callParams = {
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: content }
+        ],
+        temperature: temperature,
+        maxTokens: maxTokens,
+        responseFormatParam: responseFormatParam
+      };
+
       if (env.GROQ_API_KEY) {
-        try {
-          const groqModelSelected = await pickBestModel('groq', env, 'llama-3.3-70b-versatile');
-          let responseFormatParam = isStructured ? { type: 'json_object' } : undefined;
-
-          let groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${env.GROQ_API_KEY}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              model: groqModelSelected,
-              messages: [
-                { role: 'system', content: systemPrompt },
-                { role: 'user', content: content }
-              ],
-              temperature: temperature,
-              response_format: responseFormatParam,
-              max_tokens: maxTokens
-            })
-          });
-
-          // Groq retry logico in caso di errore 400 da response format
-          if (!groqRes.ok && responseFormatParam && groqRes.status === 400) {
-            groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${env.GROQ_API_KEY}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                model: groqModelSelected,
-                messages: [
-                  { role: 'system', content: systemPrompt },
-                  { role: 'user', content: content }
-                ],
-                temperature: temperature,
-                max_tokens: maxTokens
-              })
-            });
-          }
-
-          if (groqRes.ok) {
-            const data = await groqRes.json();
-            aiText = data.choices[0]?.message?.content;
+        const models = await getModelCandidates('groq', env, 'llama-3.3-70b-versatile');
+        for (const model of models) {
+          const r = await callProvider('groq', env, allowedOrigin, model, callParams);
+          if (r.ok) {
+            aiText = r.text;
             aiSuccess = true;
-          } else {
-            groqDiagnostics.status = groqRes.status;
+            break;
           }
-        } catch (err) {
-          groqDiagnostics.error = err.message || String(err);
+          groqDiagnostics = { status: r.status, error: r.error, model: model };
+          demoteModel('groq', model);
+          console.error('[worker] Groq modello fallito:', model, r.status, r.error);
         }
       }
 
-      // 2. OpenRouter Fallback
+      // 2. OpenRouter Fallback (stessa logica di iterazione sui candidati)
       if (!aiSuccess && env.OPENROUTER_API_KEY) {
-        try {
-          const orModelSelected = await pickBestModel('openrouter', env, 'openrouter/free');
-          let responseFormatParam = isStructured ? { type: 'json_object' } : undefined;
-
-          let orRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${env.OPENROUTER_API_KEY}`,
-              'Content-Type': 'application/json',
-              'HTTP-Referer': allowedOrigin,
-              'X-Title': 'ScuolaBoard'
-            },
-            body: JSON.stringify({
-              model: orModelSelected,
-              messages: [
-                { role: 'system', content: systemPrompt },
-                { role: 'user', content: content }
-              ],
-              temperature: temperature,
-              response_format: responseFormatParam,
-              max_tokens: maxTokens
-            })
-          });
-
-          if (orRes.ok) {
-            const data = await orRes.json();
-            aiText = data.choices[0]?.message?.content;
+        const models = await getModelCandidates('openrouter', env, 'openrouter/free');
+        for (const model of models) {
+          const r = await callProvider('openrouter', env, allowedOrigin, model, callParams);
+          if (r.ok) {
+            aiText = r.text;
             aiSuccess = true;
-          } else {
-            openrouterDiagnostics.status = orRes.status;
+            break;
           }
-        } catch (err) {
-          openrouterDiagnostics.error = err.message || String(err);
+          openrouterDiagnostics = { status: r.status, error: r.error, model: model };
+          demoteModel('openrouter', model);
+          console.error('[worker] OpenRouter modello fallito:', model, r.status, r.error);
         }
       }
 
-      // Controllo finale di disponibilità
+      // Controllo finale di disponibilità (con diagnostica utile per il debug)
       if (!aiSuccess || !aiText) {
-        return new Response(JSON.stringify({ error: 'Servizio di AI momentaneamente non disponibile, riprova più tardi.' }), {
+        return new Response(JSON.stringify({
+          error: 'Servizio di AI momentaneamente non disponibile, riprova più tardi.',
+          diagnostics: { groq: groqDiagnostics, openrouter: openrouterDiagnostics }
+        }), {
           status: 503, headers: { ...makeCorsHeaders(origin), 'Content-Type': 'application/json' }
         });
       }
@@ -265,14 +219,21 @@ Regole di formattazione tassative (NON USARE TAG HTML O TABELLE):
  * Come funziona:
  *  - Se imposti GROQ_MODEL / OPENROUTER_MODEL nelle env vars, quello vince
  *    (override esplicito, nessuna chiamata al catalogo).
- *  - Altrimenti il worker scarica il catalogo modelli e usa il primo modello
- *    della lista prioritaria che risulta disponibile → se il provider aggiunge
- *    un modello migliore (es. nuova versione di Llama/GPT-OSS), viene adottato
- *    da solo entro 24h, senza toccare nulla.
+ *  - Altrimenti il worker scarica il catalogo modelli e costruisce una lista
+ *    ORDINATA di candidati (i modelli prioritari presenti nel catalogo, poi un
+ *    eventuale modello "noto"). La richiesta prova i candidati in sequenza:
+ *    se il primo fallisce (HTTP 4xx/5xx o risposta vuota), passa al successivo
+ *    e lo "declassa" in cache, così il fallimento non viene ripetuto.
  *  - Se il catalogo non è raggiungibile si ripiega sul fallback passato.
  */
 const MODEL_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24h: i cataloghi cambiano raramente
 const MODEL_FAIL_TTL_MS = 10 * 60 * 1000; // cache negativa: 10min dopo un errore catalogo
+
+// Modelli dismessi/sospesi dal provider: vanno esclusi anche dal fallback "noto".
+// Es. Groq ha decommissionato llama-3.1-8b-instant il 16/08/2026.
+const MODEL_DENYLIST = new Set([
+  'llama-3.1-8b-instant',
+]);
 
 // Modelli Groq gratuiti ordinati per capacità (il primo disponibile vince).
 // Riordina questa lista se la qualità percepita di un modello cambia.
@@ -281,7 +242,6 @@ const GROQ_PRIORITY = [
   'llama-4-scout',
   'llama-3.3-70b-versatile',
   'openai/gpt-oss-20b',
-  'llama-3.1-8b-instant',
 ];
 
 // Modelli OpenRouter gratuiti (:free) ordinati per capacità.
@@ -295,69 +255,131 @@ const OPENROUTER_PRIORITY = [
   'mistralai/mistral-7b-instruct:free',
 ];
 
-// Scarica l'elenco dei modelli dal provider. Per OpenRouter filtra SOLO i
-// modelli gratuiti (pricing 0/0) per non finire mai su un modello a pagamento.
+// Prefissi di modelli "chat" conosciuti, usati come fallback quando nessun
+// candidato della lista prioritaria è presente nel catalogo. NON includere
+// qui modelli non-chat (es. whisper STT): una chiamata chat fallirebbe.
+const KNOWN_MODEL_PREFIX = /^(llama|openai\/gpt-oss|qwen|deepseek|gemma|mistral)/;
+
+// Scarica l'elenco dei modelli dal provider, escludendo i modelli dismessi.
+// Per OpenRouter filtra SOLO i modelli gratuiti (pricing 0/0) per non finire
+// mai su un modello a pagamento.
 async function getModelCatalog(provider, env) {
+  let ids;
   if (provider === 'groq') {
     const res = await fetch('https://api.groq.com/openai/v1/models', {
       headers: { 'Authorization': `Bearer ${env.GROQ_API_KEY}` }
     });
     if (!res.ok) throw new Error('catalogo Groq HTTP ' + res.status);
     const data = await res.json();
-    return (data.data || []).map((m) => m.id);
+    ids = (data.data || []).map((m) => m.id);
+  } else {
+    const res = await fetch('https://openrouter.ai/api/v1/models');
+    if (!res.ok) throw new Error('catalogo OpenRouter HTTP ' + res.status);
+    const data = await res.json();
+    ids = (data.data || [])
+      .filter((m) => {
+        const p = m.pricing || {};
+        return p.prompt === '0' && p.completion === '0';
+      })
+      .map((m) => m.id);
   }
-  const res = await fetch('https://openrouter.ai/api/v1/models');
-  if (!res.ok) throw new Error('catalogo OpenRouter HTTP ' + res.status);
-  const data = await res.json();
-  return (data.data || [])
-    .filter((m) => {
-      const p = m.pricing || {};
-      return p.prompt === '0' && p.completion === '0';
-    })
-    .map((m) => m.id);
+  return ids.filter((id) => !MODEL_DENYLIST.has(id));
 }
 
-function pickFromCatalog(catalog, priority) {
-  if (!Array.isArray(catalog) || !catalog.length) return null;
-  for (const id of priority) {
-    if (catalog.includes(id)) return id;
-  }
-  // Nessun match in lista: ripiega su un modello chat con prefisso noto.
-  // NB: NON usare catalog[0] — il catalogo Groq include modelli non-chat
-  // (es. whisper STT): una chiamata chat a quelli fallirebbe.
-  const known = catalog.find((id) => /^(llama|openai\/gpt-oss|qwen|deepseek|gemma|mistral)/.test(id));
-  return known || null;
-}
-
-async function pickBestModel(provider, env, fallback) {
+// Costruisce la lista ordinata dei modelli candidati per un provider.
+// Il primo è il modello preferito (override esplicito → cache → catalogo →
+// fallback), i successivi sono le alternative da provare in caso di fallimento.
+async function getModelCandidates(provider, env, fallback) {
   // Override esplicito via env var: nessuna chiamata al catalogo
   const explicit = provider === 'groq' ? env.GROQ_MODEL : env.OPENROUTER_MODEL;
-  if (explicit) return explicit;
+  if (explicit) return [explicit];
 
   const cache = globalThis._modelCache;
   // Gli errori usano una cache negativa breve: un'eventuale indisponibilità
   // del catalogo NON deve far riprovare la fetch a ogni singola richiesta.
   const ttl = cache && cache[provider] && cache[provider].failed ? MODEL_FAIL_TTL_MS : MODEL_CACHE_TTL_MS;
-  if (cache && cache[provider] && Date.now() - cache[provider].ts < ttl) {
-    return cache[provider].model;
+  if (cache && cache[provider] && Array.isArray(cache[provider].candidates) &&
+      Date.now() - cache[provider].ts < ttl) {
+    return cache[provider].candidates;
   }
 
   try {
     const catalog = await getModelCatalog(provider, env);
     const priority = provider === 'groq' ? GROQ_PRIORITY : OPENROUTER_PRIORITY;
-    const model = pickFromCatalog(catalog, priority);
-    if (model) {
+    // 1) modelli prioritari presenti nel catalogo, in ordine di lista
+    const ranked = priority.filter((id) => catalog.includes(id));
+    // 2) fallback su un modello chat "noto" (solo se non già in lista)
+    const known = catalog.find((id) => KNOWN_MODEL_PREFIX.test(id));
+    const candidates = known && !ranked.includes(known) ? [...ranked, known] : ranked;
+    if (candidates.length) {
       globalThis._modelCache = globalThis._modelCache || {};
-      globalThis._modelCache[provider] = { model: model, ts: Date.now(), failed: false };
-      console.log('[worker] Modello dinamico ' + provider + ': ' + model);
-      return model;
+      globalThis._modelCache[provider] = { candidates: candidates, ts: Date.now(), failed: false };
+      console.log('[worker] Modelli dinamici ' + provider + ': ' + candidates.join(', '));
+      return candidates;
     }
   } catch (err) {
     console.error('[worker] Catalogo ' + provider + ' non disponibile:', err.message);
   }
   globalThis._modelCache = globalThis._modelCache || {};
-  globalThis._modelCache[provider] = { model: fallback, ts: Date.now(), failed: true };
-  return fallback;
+  globalThis._modelCache[provider] = { candidates: [fallback], ts: Date.now(), failed: true };
+  return [fallback];
+}
+
+// Declassa un modello fallito: lo rimuove dalla lista candidati in cache così
+// la prossima richiesta non lo riprova subito. Se non resta alcun candidato,
+// marca la cache come negativa (breve TTL) per ricostruire la lista dal catalogo.
+function demoteModel(provider, failedModel) {
+  const cache = globalThis._modelCache && globalThis._modelCache[provider];
+  if (!cache || !Array.isArray(cache.candidates)) return;
+  const next = cache.candidates.filter((m) => m !== failedModel);
+  globalThis._modelCache[provider] = next.length
+    ? { candidates: next, ts: Date.now(), failed: false }
+    : { candidates: [failedModel], ts: Date.now(), failed: true };
+}
+
+// Esegue UNA chiamata al provider per un dato modello. Restituisce { ok, text }
+// oppure { ok: false, status, error } senza mai lanciare. Gestisce il retry sul
+// response_format 400 (valido per Groq E OpenRouter).
+async function callProvider(provider, env, allowedOrigin, model, params) {
+  const isGroq = provider === 'groq';
+  const url = isGroq
+    ? 'https://api.groq.com/openai/v1/chat/completions'
+    : 'https://openrouter.ai/api/v1/chat/completions';
+  const headers = isGroq
+    ? { 'Authorization': `Bearer ${env.GROQ_API_KEY}`, 'Content-Type': 'application/json' }
+    : {
+        'Authorization': `Bearer ${env.OPENROUTER_API_KEY}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': allowedOrigin,
+        'X-Title': 'ScuolaBoard'
+      };
+
+  const buildBody = (withFormat) => JSON.stringify({
+    model: model,
+    messages: params.messages,
+    temperature: params.temperature,
+    ...(withFormat && params.responseFormatParam ? { response_format: params.responseFormatParam } : {}),
+    max_tokens: params.maxTokens
+  });
+
+  try {
+    let res = await fetch(url, { method: 'POST', headers: headers, body: buildBody(true) });
+
+    // Retry logico in caso di 400 da response_format (modello senza json_object)
+    if (!res.ok && params.responseFormatParam && res.status === 400) {
+      res = await fetch(url, { method: 'POST', headers: headers, body: buildBody(false) });
+    }
+
+    if (res.ok) {
+      const data = await res.json();
+      const text = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+      if (text) return { ok: true, text: text };
+      return { ok: false, status: res.status, error: 'Risposta vuota dal modello ' + model };
+    }
+    return { ok: false, status: res.status, error: 'HTTP ' + res.status };
+  } catch (err) {
+    return { ok: false, status: null, error: err.message || String(err) };
+  }
 }
 
 /**

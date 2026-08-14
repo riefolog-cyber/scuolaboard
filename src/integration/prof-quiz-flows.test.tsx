@@ -1,9 +1,9 @@
 // @ts-nocheck — test di INTEGRAZIONE: valutazione quiz lato prof
 // (valutaAperteProfAI con AI mockata + classifica + reset risposte).
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { renderApp } from './harness';
-import { PROF, PROF_DOC, mkCard, setupTestEnv, teardownTestEnv } from './fixtures';
+import { PROF, PROF_DOC, mkCard, modalRoot, setupTestEnv, teardownTestEnv } from './fixtures';
 
 function mkQuizCard(id, over = {}) {
   return mkCard(
@@ -139,6 +139,11 @@ describe('Valutazione quiz lato prof', () => {
     await screen.findByText(/RISULTATI \(1 studenti\)/, {}, { timeout: 4000 });
 
     fireEvent.click(screen.getByRole('button', { name: /Reset/ }));
+
+    // Il reset ora chiede conferma tramite ConfirmDelModal (nessuna eliminazione
+    // silenziosa): conferma col bottone rosso della modale.
+    const modal = modalRoot('Reset risposte quiz');
+    fireEvent.click(within(modal).getByRole('button', { name: '🗑️ Elimina' }));
 
     await waitFor(() => {
       expect(db._get('quiz_risposte', 'q1_Luca Bianchi')).toBeFalsy();

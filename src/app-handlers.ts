@@ -18,7 +18,7 @@ SB.createAppHandlers = function (ctx: any) {
     // è capped in ammonisci() (mostra toast). Se vuoi UX visibile qui, passare
     // ctx.showToast via closure o spostare il check al livello UI.
     if (card.titolo && String(card.titolo).length > 200) {
-      console.warn('[ScuolaBoard] saveCard rejected: titolo > 200 chars');
+      if (window.SB_DEBUG) console.warn('[ScuolaBoard] saveCard rejected: titolo > 200 chars');
       return Promise.reject(new Error('Titolo troppo lungo (max 200 caratteri).'));
     }
     if (!card.ordine && cardServices.createCardWithOrder) return cardServices.createCardWithOrder(card);
@@ -252,7 +252,8 @@ SB.createAppHandlers = function (ctx: any) {
                   // hasOnly). Se fallisce (es. regole non ancora pubblicate in console)
                   // logghiamo per diagnosi senza crash.
                   d.ref.update({ classiPerAnno: nextMap, classe: newN }).catch(function (e: any) {
-                    console.warn('[ScuolaBoard] rinomina: aggiornamento classe studente non permesso dalle rules:', e && e.code ? e.code : e);
+                    if (window.SB_DEBUG)
+                      console.warn('[ScuolaBoard] rinomina: aggiornamento classe studente non permesso dalle rules:', e && e.code ? e.code : e);
                   });
                 } catch (e: any) {}
               });
@@ -282,7 +283,7 @@ SB.createAppHandlers = function (ctx: any) {
     },
     toggleLike: function (cardId: any) {
       var card = getCards().find(function (c: any) {
-        return c.id === cardId;
+        return String(c.id) === String(cardId);
       });
       if (!card) return;
       if (ctx.setLikeAnimCard) ctx.setLikeAnimCard(cardId);
@@ -313,7 +314,7 @@ SB.createAppHandlers = function (ctx: any) {
     toggleReazione: function (cardId: any, emoji: any) {
       if (!getUser()) return;
       var card = getCards().find(function (c: any) {
-        return c.id === cardId;
+        return String(c.id) === String(cardId);
       });
       if (!card) return;
       var vn = getMyName()(getUser());
@@ -330,7 +331,7 @@ SB.createAppHandlers = function (ctx: any) {
     vote: function (cid: any, oid: any) {
       if (!getUser()) return;
       var card = getCards().find(function (c: any) {
-        return c.id === cid;
+        return String(c.id) === String(cid);
       });
       if (!card) return;
       var vn = getMyName()(getUser());
@@ -442,27 +443,6 @@ SB.createAppHandlers = function (ctx: any) {
         })
       );
     },
-    resetRisposte: function (cid: any) {
-      if (!confirm("Eliminare TUTTE le risposte al quiz di questa card? L'operazione è irreversibile.")) return;
-      var db = ctx.SB && ctx.SB.db;
-      if (!db) return;
-      db.collection('quiz_risposte')
-        .where('cardId', '==', String(cid))
-        .get()
-        .then(function (snap: any) {
-          var batch = db.batch();
-          snap.forEach(function (d: any) {
-            batch.delete(d.ref);
-          });
-          return batch.commit();
-        })
-        .then(function () {
-          if (ctx.showToast) ctx.showToast('Risposte quiz cancellate', 'ok');
-        })
-        .catch(function (e: any) {
-          if (ctx.showToast) ctx.showToast('Errore: ' + e.message, 'err');
-        });
-    },
     ammonisci: function (cardId: any, cmId: any, autore: any, motivazione: any) {
       if (!ctx.isProf) return;
       if (String(motivazione || '').length > 300) {
@@ -477,8 +457,12 @@ SB.createAppHandlers = function (ctx: any) {
         motivazione: motivazione,
         data: new Date().toISOString(),
       };
+      function errAmm(e: any) {
+        if (ctx.showToast)
+          ctx.showToast('Errore salvataggio ammonizione: ' + (e && e.message ? e.message : 'errore'), 'err');
+      }
       if (cardServices.addAmmonizione) {
-        cardServices.addAmmonizione(autore, nuova).catch(function () {});
+        cardServices.addAmmonizione(autore, nuova).catch(errAmm);
       } else {
         try {
           if (db && db.collection) {
@@ -487,29 +471,16 @@ SB.createAppHandlers = function (ctx: any) {
               .set(
                 { lista: firebase.firestore.FieldValue.arrayUnion(nuova), aggiornato: new Date().toISOString() },
                 { merge: true }
-              );
+              )
+              .catch(errAmm);
           }
-        } catch (e: any) {}
+        } catch (e: any) {
+          errAmm(e);
+        }
       }
       if (ctx.setShowAmm) ctx.setShowAmm(null);
     },
-    markSeen: function (id: any) {
-      try {
-        var seenRef = ctx.seenRef;
-        if (!seenRef) return;
-        if (!seenRef.current.has(String(id))) {
-          seenRef.current.add(String(id));
-          try {
-            if (ctx.SB && ctx.SB.LS && ctx.SB.LS.seen) ctx.SB.LS.seen.set(seenRef.current);
-          } catch (e: any) {}
-        }
-      } catch (e: any) {}
-    },
-    openCard: function (c: any) {
-      if (ctx.setShowCard) ctx.setShowCard(c);
-      if (this.markSeen) this.markSeen(c.id);
-    },
-    handleAllegatiUpload: function (e: any, setForm: any, setAllegatiUploading: any, showToast: any) {
+    handleAllegatiUpload: function (e: any, currentForm: any, setForm: any, setAllegatiUploading: any, showToast: any) {
       // DOM lib: e.target.files è FileList → cast esplicito per ottenere File[]
       // (con React any-globale, Array.from() su un valore non tipizzato dà unknown[])
       var files = Array.from((e && e.target && e.target.files) || []) as File[];
@@ -536,6 +507,23 @@ SB.createAppHandlers = function (ctx: any) {
       ].concat(allowedMimeImages);
       var allowedExts = /^(pdf|doc|docx|txt|md|csv|xls|xlsx|ppt|pptx|zip|rar|jpg|jpeg|png|gif|webp)$/i;
       var maxSize = 700 * 1024;
+      // Budget Firestore (~900KB): gli allegati sono base64 DENTRO il doc card.
+      // Stima l'occupazione corrente (copertina + immagini + allegati) per dare
+      // feedback immediato, invece di bloccare solo al salvataggio finale (guardSize).
+      var CARD_BUDGET_KB = 900;
+      function kbOf(b64: any) {
+        return (String(b64 || '').length * 0.75) / 1024;
+      }
+      var usedKB = 10; // overhead testo/nomi campi
+      if (currentForm) {
+        if (currentForm.copertina) usedKB += kbOf(currentForm.copertina);
+        (currentForm.immagini || []).forEach(function (x: any) {
+          if (x && x.url) usedKB += kbOf(x.url);
+        });
+        (currentForm.allegati || []).forEach(function (a: any) {
+          if (a && a.url) usedKB += kbOf(a.url);
+        });
+      }
       var promises = files.map(function (file) {
         var ext = (file.name.split('.').pop() || '').toLowerCase();
         var extOk = allowedExts.test(ext);
@@ -580,6 +568,22 @@ SB.createAppHandlers = function (ctx: any) {
         var valid = results.filter(function (r: any) {
           return r !== null;
         });
+        // Guard dimensione complessiva: se l'aggiunta sfora il budget Firestore
+        // blocchiamo qui (feedback immediato) invece di fallire al salvataggio.
+        var addKB = valid.reduce(function (acc: number, r: any) {
+          return acc + kbOf(r.url);
+        }, 0);
+        if (usedKB + addKB > CARD_BUDGET_KB) {
+          showToast(
+            'Allegati troppo grandi: la card supererebbe il limite Firestore (~' +
+              CARD_BUDGET_KB +
+              'KB). Riduci allegati o immagini.',
+            'err'
+          );
+          setAllegatiUploading(false);
+          e.target.value = '';
+          return;
+        }
         if (valid.length) {
           setForm(function (p: any) {
             return Object.assign({}, p, { allegati: (p.allegati || []).concat(valid) });

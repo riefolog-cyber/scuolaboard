@@ -231,7 +231,7 @@ export function cardJsonSize(card: any): number {
 // corrente; computeImageTargetKB calcola il target per la prossima immagine in
 // modo che la card resti salvabile, riservando spazio per al più `reservedFuture`
 // slot futuri: 1-2 immagini → qualità alta, card piene → qualità minore ma ok.
-export const IMG_TEXT_OVERHEAD_KB = 10;
+const IMG_TEXT_OVERHEAD_KB = 10;
 
 export function imgUsageKB(coverB64: string | null | undefined, immagini: any[]): number {
   var kb = 0;

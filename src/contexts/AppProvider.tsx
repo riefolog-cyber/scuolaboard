@@ -565,6 +565,10 @@ function AppProvider({ children }: any) {
     modals.setConfirmDel({ type: 'card', id: id });
   }
 
+  function confirmResetRisposte(cardId: any) {
+    modals.setConfirmDel({ type: 'quiz_reset', cardId: cardId });
+  }
+
   var delCardWithUndo = useCallback(
     function (id: any) {
       var card = cardsHook.cards.find(function (c: any) {
@@ -1310,6 +1314,7 @@ function AppProvider({ children }: any) {
           valutaAperteProfAI(card, ris);
         },
         resetRisposte: resetRisposte,
+        confirmResetRisposte: confirmResetRisposte,
         eliminaAnalisiAI: eliminaAnalisiAI,
         eliminaDomandeAI: eliminaDomandeAI,
         saveEditCm: saveEditCm,
@@ -1340,7 +1345,7 @@ function AppProvider({ children }: any) {
         executeDelCom: executeDelCom,
         ammonisci: ammonisci,
         handleAllegatiUpload: function (e: any) {
-          handleAllegatiUpload(e, setForm, setAllegatiUploading, showToast);
+          handleAllegatiUpload(e, form, setForm, setAllegatiUploading, showToast);
         },
         handleRimuoviAllegato: function (id: any) {
           handleRimuoviAllegato(id, setForm);

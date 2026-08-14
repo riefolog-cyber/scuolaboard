@@ -733,7 +733,6 @@ window.ErrorBoundary = ErrorBoundary;
     },
   };
   window._SB_LS = SB.LS; // Esporta per evitare reinizializzazione
-  window.SB_CONFIG = window.SB_CONFIG || CFG_LS_KEYS; // Assicura che la config sia disponibile
 })();
 
 // Utility per sanificare input utente prima di inviarlo a modelli AI (Prompt Injection)
