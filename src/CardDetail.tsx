@@ -215,23 +215,50 @@ function CardDetail__({ $ }: any) {
           {c.immagini && c.immagini.length > 0 && (
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
               {c.immagini.map(function (img: any, i: any) {
+                // Le immagini galleria sono oggetti { id, url, didascalia } (con
+                // retro-compatibilità per vecchie card con url stringa).
+                var url = img && img.url ? img.url : img;
+                var dida = img && img.didascalia ? img.didascalia : '';
+                var tutti = (c.immagini || []).map(function (x: any) {
+                  return {
+                    url: x && x.url ? x.url : x,
+                    didascalia: (x && x.didascalia) || '',
+                  };
+                });
                 return (
-                  <img
-                    key={i}
-                    src={img}
-                    alt=""
-                    style={{
-                      width: 80,
-                      height: 80,
-                      objectFit: 'cover',
-                      borderRadius: 10,
-                      border: '1px solid rgba(255,255,255,.1)',
-                      cursor: 'pointer',
-                    }}
-                    onClick={function () {
-                      $.setLightbox({ url: img });
-                    }}
-                  />
+                  <div key={i} style={{ width: 80, flexShrink: 0 }}>
+                    <img
+                      src={url}
+                      alt={dida}
+                      style={{
+                        width: 80,
+                        height: 80,
+                        objectFit: 'cover',
+                        borderRadius: 10,
+                        border: '1px solid rgba(255,255,255,.1)',
+                        cursor: 'pointer',
+                        display: 'block',
+                      }}
+                      onClick={function () {
+                        $.setLightbox({ url: url, didascalia: dida, tutti: tutti, idx: i });
+                      }}
+                    />
+                    {dida && (
+                      <div
+                        style={{
+                          fontSize: 10,
+                          color: 'rgba(255,255,255,.5)',
+                          marginTop: 3,
+                          textAlign: 'center',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {dida}
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>
