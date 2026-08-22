@@ -145,3 +145,72 @@ Nel dashboard di Cloudflare devono essere configurate le seguenti variabili:
 ## Sicurezza AI
 
 Il worker verifica la firma crittografica RS256 del token Firebase ID tramite le chiavi pubbliche Google (JWKS). Questo garantisce che solo utenti autentici con un token firmato da Google possano accedere all'AI. L'accesso AI è riservato esclusivamente al ruolo `prof`, verificato lato server dal Worker tramite la collection `users` di Firestore.
+
+## Privacy e Conformità GDPR
+
+ScuolaBoard gestisce dati di studenti minorenni. Di seguito le misure tecniche adottate per garantire la conformità al **GDPR (Regolamento UE 2016/679)**, all'**AI Act (Regolamento UE 2024/1689)** e al **Regolamento IA d'Istituto**.
+
+### Pseudonimizzazione dei commenti
+
+Prima di inviare i commenti degli studenti all'API Groq, i nomi reali vengono sostituiti con identificativi anonimi (`Studente 1`, `Studente 2`, …). La mappatura avviene **nel browser** (client-side) e non viene mai trasmessa al server esterno. Alla ricezione della risposta IA, i nomi reali vengono ripristinati automaticamente prima di mostrare il risultato al docente.
+
+```
+Browser                           Groq
+─────────                        ──────
+"Mario: l'acqua bolle a 100°"  →  "Studente 1: l'acqua bolle a 100°"
+                                   (Groq NON sa chi è Mario)
+"Mario ha ragione"            ←  "Studente 1 ha ragione"
+                                   (browser ripristina il nome)
+```
+
+**Funzioni protette:** `riassuntiCommentiRun`, `runCardAI`, `runCardQ` — le uniche tre funzioni che inviano testi con riferimenti agli studenti.
+
+**Funzioni già safe** (non inviano nomi): `performAnalysis` (solo titoli e conteggi), `valutaAperteProfAI` (solo testo risposta), `aiAnalisiSondaggio` (solo voti aggregati), `aiGenerateQuiz` (solo testo didattico).
+
+### Trasparenza IA (AI Act Art. 50)
+
+Ogni contenuto generato dall'IA include un badge visibile in fondo al pannello:
+
+> 🤖 *Supporto IA – revisionato dal docente*
+
+Il badge appare in:
+- **AIPanel.tsx** — Analisi singola card (vista prof e studente)
+- **SommarioModal.tsx** — Riassunto discussione commenti
+- **AppLayout.tsx** — Analisi globale della bacheca
+
+### Difesa da Prompt Injection
+
+I contenuti utente vengono incapsulati in delimitatori rigidi `<USER_DATA>` con istruzioni di sistema che impediscono la sovrascrittura delle direttive didattiche. Questo previene attacchi in cui uno studente potrebbe inserire istruzioni malevole nei commenti.
+
+### Sicurezza delle chiavi API
+
+- Le chiavi API (Groq, OpenRouter) **non sono mai esposte** nel client frontend
+- Tutte le chiamate AI transitano dal **Cloudflare Worker** (`scuolaboard-groq-proxy`), che:
+  - Valida il token Firebase ID (firma RS256 / JWKS)
+  - Verifica il ruolo `prof` nella collection `users`
+  - Applica rate-limiting globale (`AI_THROTTLE_MS = 5000`)
+  - Limita l'accesso ai soli domini autorizzati (`ALLOWED_ORIGINS`)
+
+### Human-in-the-loop
+
+- I quiz generati dall'IA vengono prodotti come **bozze** che il docente deve revisionare, modificare e approvare esplicitamente (`aiConfirmaQuiz`) prima della somministrazione
+- L'IA non attribuisce mai voti o giudizi docimologici automatici senza validazione umana
+
+### Autenticazione
+
+- Login tramite **Firebase Auth** con Google Sign-In
+- Il ruolo `prof` viene verificato lato server sia dal Worker AI che dalle regole Firestore
+- Il ruolo `studente` è il default e non ha accesso alla scrittura card
+
+---
+
+### Suggerimenti per ulteriori miglioramenti
+
+| Area | Suggerimento | Priorità |
+|------|-------------|----------|
+| **Auth dominio** | Restringere il login al dominio scuola (`@istituto.edu.it`) con whitelist per i docenti | Alta |
+| **Informativa privacy** | Aggiornare il testo della `PrivacyModal` con richiamo all'Informativa d'Istituto e al Patto di Corresponsabilità (Allegato A) | Alta |
+| **Whitelist AI** | Compilare l'Allegato B2 con Groq/Cloudflare per l'inserimento nello strumentario ufficiale | Media |
+| **Data retention** | Documentare la politica di retention di Groq e la conformità GDPR | Media |
+| **Logging audit** | Aggiungere log lato proxy per tracciare le chiamate AI (chi, quando, cosa) | Bassa |
+| **Crittografia at-rest** | Valutare la cifratura dei dati sensibili in Firestore per dati particolarmente sensibili | Bassa |

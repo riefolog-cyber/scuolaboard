@@ -92,6 +92,12 @@ function SommarioModal__({ $ }: any) {
             {res}
           </div>
         )}
+        {!loading && res && (
+          <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid rgba(34,197,94,.15)', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span style={{ fontSize: 10, color: 'rgba(255,255,255,.35)' }}>🤖</span>
+            <span style={{ fontSize: 10, color: 'rgba(255,255,255,.35)', fontStyle: 'italic' }}>Generato con IA – revisionato dal docente</span>
+          </div>
+        )}
         {!loading && !res && (
           <div style={{ textAlign: 'center', color: 'rgba(255,255,255,.45)', padding: 20 }}>
             Clicca Rigenera per avviare l'analisi

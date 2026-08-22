@@ -160,18 +160,23 @@ var STOP_IT = new Set([
   'lì',
   'ora',
 ]);
+// Filtra le card per il target del word cloud: 'tutte' oppure 'classe_<nome>'.
+// Condiviso da buildWordCloud e collectCloudStats (stessa logica, niente duplicazione).
+function filterCardsForCloud(cards: any[], cardId: string) {
+  return cards.filter(function (c) {
+    if (c.proposta) return false;
+    if (cardId === 'tutte') return true;
+    if (String(cardId).indexOf('classe_') === 0) {
+      var classeName = cardId.slice(7);
+      return (c.classi || []).includes(classeName);
+    }
+    return false;
+  });
+}
+
 export function buildWordCloud(cards: any[], cardId: string) {
   var testi: string[] = [];
-  cards
-    .filter(function (c) {
-      if (c.proposta) return false;
-      if (cardId === 'tutte') return true;
-      if (String(cardId).indexOf('classe_') === 0) {
-        var classeName = cardId.slice(7);
-        return (c.classi || []).includes(classeName);
-      }
-      return false;
-    })
+  filterCardsForCloud(cards, cardId)
     .forEach(function (c) {
       (c.commenti || []).forEach(function (cm: any) {
         testi.push(cm.testo);
@@ -210,15 +215,7 @@ export function buildWordCloud(cards: any[], cardId: string) {
     .slice(0, 10);
 }
 export function collectCloudStats(cards: any[], cardId: string) {
-  var filtered = cards.filter(function (c) {
-    if (c.proposta) return false;
-    if (cardId === 'tutte') return true;
-    if (String(cardId).indexOf('classe_') === 0) {
-      var classeName = cardId.slice(7);
-      return (c.classi || []).includes(classeName); // Usare .includes per chiarezza
-    }
-    return false;
-  });
+  var filtered = filterCardsForCloud(cards, cardId);
   var commentCount = 0;
   var studentSet = new Set<string>();
   filtered.forEach(function (c) {

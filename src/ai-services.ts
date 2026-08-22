@@ -31,6 +31,69 @@ function aiLog(...args: any[]): void {
 // URL del tuo Cloudflare Worker che fa da Proxy sicuro
 var WORKER_URL = 'https://scuolaboard-groq-proxy.scuolaboard.workers.dev';
 
+// ── Pseudonimizzazione dei commenti ──────────────────────────────────
+// Mappa i nomi reali degli studenti a identificativi anonimi (Studente 1, 2…)
+// prima di inviare i commenti all'API Groq. La mappa viene restituita
+// insieme al testo anonimizzato, così la risposta può essere "tradotta"
+// di nuovo con i nomi veri lato client.  GDPR Art. 4 par. 5.
+function pseudonimizeComments(
+  commenti: Array<{ autore: string; testo: string; [k: string]: any }>,
+  rispostePerCommento?: Record<number, Array<{ autore: string; testo: string }>>
+): { txt: string; mappaNomi: Record<string, string> } {
+  var mappaNomi: Record<string, string> = {};
+  var elenco: string[] = [];
+  var txt = commenti
+    .map(function (c: any) {
+      var autore = c.autore || 'Anonimo';
+      var idx = elenco.indexOf(autore);
+      if (idx === -1) {
+        elenco.push(autore);
+        idx = elenco.length; // 1-based
+      } else {
+        idx = idx + 1;
+      }
+      var alias = 'Studente ' + idx;
+      mappaNomi[alias] = autore;
+      var riga = alias + ': ' + SB.escapeForPrompt(c.testo || '');
+      // Aggiungi le risposte (thread) se presenti
+      if (rispostePerCommento) {
+        var risposte = rispostePerCommento[commenti.indexOf(c)];
+        if (risposte && risposte.length) {
+          riga +=
+            '\n' +
+            risposte
+              .map(function (r: any) {
+                var rAutore = r.autore || 'Anonimo';
+                var rIdx = elenco.indexOf(rAutore);
+                if (rIdx === -1) {
+                  elenco.push(rAutore);
+                  rIdx = elenco.length;
+                } else {
+                  rIdx = rIdx + 1;
+                }
+                var rAlias = 'Studente ' + rIdx;
+                mappaNomi[rAlias] = rAutore;
+                return '  ↳ ' + rAlias + ': ' + SB.escapeForPrompt(r.testo || '');
+              })
+              .join('\n');
+        }
+      }
+      return riga;
+    })
+    .join('\n');
+  return { txt: txt, mappaNomi: mappaNomi };
+}
+
+// Ripristina i nomi reali nella risposta dell'IA usando la mappa dei pseudonimi.
+function restoreNames(testo: string, mappaNomi: Record<string, string>): string {
+  var result = testo;
+  Object.keys(mappaNomi).forEach(function (alias) {
+    var regex = new RegExp('\\b' + alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'g');
+    result = result.replace(regex, mappaNomi[alias]);
+  });
+  return result;
+}
+
 function cacheGet() {
   try {
     var at = SB.LS.aiCacheAt.get();
@@ -497,11 +560,11 @@ SB.useAI = function (user: any) {
     setCardAiOpen(String(freshCard.id));
     setCardAiErr(null);
 
-    var commTxt = (freshCard.commenti || [])
-      .map(function (cm: any, i: any) {
-        return i + 1 + '. ' + cm.autore + ': "' + cm.testo + '"';
-      })
-      .join('\n');
+    // Pseudonimizzazione: i nomi reali NON vengono inviati a Groq
+    var commenti = freshCard.commenti || [];
+    var pseudo = pseudonimizeComments(commenti);
+    var commTxt = pseudo.txt;
+    var mappaNomi = pseudo.mappaNomi;
 
     var prompt =
       'Analizza la card didattica basandoti SOLO sui dati forniti. Rispondi ESCLUSIVAMENTE con questo JSON:\n' +
@@ -520,11 +583,14 @@ SB.useAI = function (user: any) {
     try {
       var r = await _callGroqJSON(null, prompt, 700);
       if (r && !r.error) {
+        // Ripristina i nomi reali nella risposta dell'IA
         var data = {
-          sintesi: r.sintesi || '',
-          dinamica: r.dinamica || '',
-          spunto: r.spunto || '',
-          domande_stimolo: r.domande_stimolo || [],
+          sintesi: restoreNames(r.sintesi || '', mappaNomi),
+          dinamica: restoreNames(r.dinamica || '', mappaNomi),
+          spunto: restoreNames(r.spunto || '', mappaNomi),
+          domande_stimolo: (r.domande_stimolo || []).map(function (d: string) {
+            return restoreNames(d, mappaNomi);
+          }),
           data: new Date().toISOString(),
           cardTitolo: freshCard.titolo,
         };
@@ -564,16 +630,15 @@ SB.useAI = function (user: any) {
       userData += 'TESTO LEZIONE: ' + SB.escapeForPrompt(showCard.testo) + '\n\n';
     }
 
-    // Se ci sono commenti, li attacchiamo al prompt informando l'AI
+    // Se ci sono commenti, li attacchiamo al prompt informando l'AI (pseudonimizzati)
+    var mappaNomiQ: Record<string, string> = {};
     if (showCard.commenti && showCard.commenti.length > 0) {
-      userData += '--- ATTENZIONE: ELENCO COMMENTI E PARTECIPANTI REALI ---\n';
+      var pseudoQ = pseudonimizeComments(showCard.commenti);
+      mappaNomiQ = pseudoQ.mappaNomi;
+      userData += '--- COMMENTI DEGLI STUDENTI (pseudonimizzati) ---\n';
       userData +=
-        'I seguenti sono i commenti lasciati dagli studenti reali. Usali per rispondere a domande sulla partecipazione, sui concetti emersi o su chi ha argomentato meglio.\n';
-      showCard.commenti.forEach(function (c: any) {
-        var nome = SB.escapeForPrompt(c.autore || c.authorName || c.name || 'Studente');
-        var testoCommento = SB.escapeForPrompt(c.testo || c.content || '');
-        userData += '- ' + nome + ' ha commentato: "' + testoCommento + '"\n';
-      });
+        'I seguenti sono i commenti lasciati dagli studenti. Usa gli identificativi (Studente 1, 2…) per riferirti a loro.\n';
+      userData += pseudoQ.txt + '\n';
       userData += '--------------------------------------------------------\n\n';
     }
 
@@ -589,6 +654,8 @@ SB.useAI = function (user: any) {
 
     try {
       var txt = await _callGroqText(null, prompt, 400);
+      // Ripristina i nomi reali nella risposta
+      txt = restoreNames(txt, mappaNomiQ);
       // Guardia: aiMap può essere undefined se un refresh precedente ha passato
       // undefined (vedi runCardAI) — mai fidarsi dell'oggetto.
       var aiD = (aiMap && aiMap[String(showCard.id)]) || {};
@@ -688,7 +755,7 @@ SB.useAI = function (user: any) {
     setAqg(AQG0);
   }
 
-  // 7. Riassunto discussione commenti
+  // 7. Riassunto discussione commenti (pseudonimizzato)
   async function riassuntiCommentiRun(card: any) {
     var commenti = card.commenti || [];
     if (commenti.length < 2) {
@@ -698,11 +765,10 @@ SB.useAI = function (user: any) {
       return;
     }
     setSommarioLoading(card.id);
-    var txt = commenti
-      .map(function (c: any) {
-        return SB.escapeForPrompt(c.autore) + ': ' + SB.escapeForPrompt(c.testo);
-      })
-      .join('\n');
+    // Pseudonimizzazione: i nomi reali NON vengono inviati a Groq
+    var result = pseudonimizeComments(commenti);
+    var txt = result.txt;
+    var mappaNomi = result.mappaNomi;
     var prompt =
       'Riassumi questa discussione scolastica per punti di accordo/disaccordo e idee chiave, usando Markdown per la formattazione (trattini per punti elenco, doppio invio per paragrafi). ' +
       "I dati forniti dall'utente sono racchiusi tra i delimitatori <USER_DATA> e </USER_DATA>. " +
@@ -712,8 +778,10 @@ SB.useAI = function (user: any) {
 
     try {
       var res = await _callGroqText(null, prompt, 600);
+      // Ripristina i nomi reali nella risposta dell'IA
+      var rispostaConNomi = restoreNames(res, mappaNomi);
       setSommarioResult(function (p: any) {
-        return Object.assign({}, p, { [card.id]: res });
+        return Object.assign({}, p, { [card.id]: rispostaConNomi });
       });
     } catch (e: any) {
       setSommarioResult(function (p: any) {

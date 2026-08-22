@@ -183,6 +183,10 @@ function AIPanel({ $, c }: any) {
                             })}
                           </div>
                         )}
+                        <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid rgba(99,102,241,.15)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                          <span style={{ fontSize: 10, color: 'rgba(255,255,255,.35)' }}>🤖</span>
+                          <span style={{ fontSize: 10, color: 'rgba(255,255,255,.35)', fontStyle: 'italic' }}>Supporto IA – revisionato dal docente</span>
+                        </div>
                       </>
                     )}
                     {!cLoad && cRes && isStudent && (
@@ -262,6 +266,10 @@ function AIPanel({ $, c }: any) {
                             })}
                           </div>
                         )}
+                        <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid rgba(99,102,241,.15)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                          <span style={{ fontSize: 10, color: 'rgba(255,255,255,.35)' }}>🤖</span>
+                          <span style={{ fontSize: 10, color: 'rgba(255,255,255,.35)', fontStyle: 'italic' }}>Supporto IA – revisionato dal docente</span>
+                        </div>
                       </>
                     )}
                   </div>
