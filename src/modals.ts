@@ -12,6 +12,7 @@ SB.useModals = function () {
   var [showAmm, setShowAmm] = useState(null);
   var [editAmm, setEditAmm] = useState(null);
   var [showPrivacy, setShowPrivacy] = useState(false);
+  var [showPrivacyInfo, setShowPrivacyInfo] = useState(false);
   var [showProfilo, setShowProfilo] = useState(false);
   var [showTimerModal, setShowTimerModal] = useState(false);
   var [showDuplica, setShowDuplica] = useState(null);
@@ -31,6 +32,7 @@ SB.useModals = function () {
     setShowAmm(null);
     setEditAmm(null);
     setShowPrivacy(false);
+    setShowPrivacyInfo(false);
     setShowProfilo(false);
     setShowTimerModal(false);
     setShowDuplica(null);
@@ -61,6 +63,8 @@ SB.useModals = function () {
     setEditAmm: setEditAmm,
     showPrivacy: showPrivacy,
     setShowPrivacy: setShowPrivacy,
+    showPrivacyInfo: showPrivacyInfo,
+    setShowPrivacyInfo: setShowPrivacyInfo,
     showProfilo: showProfilo,
     setShowProfilo: setShowProfilo,
     showTimerModal: showTimerModal,

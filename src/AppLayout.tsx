@@ -153,6 +153,44 @@ SB.AppLayout = function (props: any) {
               )}
             </div>
           }
+          {
+            /* Banner privacy — cliccabile per aprire la modale informativa */
+            <div
+              onClick={function () {
+                $.setShowPrivacyInfo(true);
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                padding: '6px 14px',
+                background: 'linear-gradient(90deg,rgba(99,102,241,.05) 0%,rgba(168,85,247,.05) 50%,rgba(99,102,241,.05) 100%)',
+                borderBottom: '1px solid rgba(255,255,255,.05)',
+                cursor: 'pointer',
+                transition: 'background .2s',
+              }}
+              onMouseEnter={function (e: any) {
+                e.currentTarget.style.background = 'rgba(99,102,241,.1)';
+              }}
+              onMouseLeave={function (e: any) {
+                e.currentTarget.style.background = 'linear-gradient(90deg,rgba(99,102,241,.05) 0%,rgba(168,85,247,.05) 50%,rgba(99,102,241,.05) 100%)';
+              }}
+            >
+              <span style={{ fontSize: 13 }}>🛡️</span>
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: 'rgba(199,210,254,.7)',
+                  letterSpacing: 0.3,
+                }}
+              >
+                La tua privacy è protetta — nomi anonimi, IA trasparente, tutto revisionato dal docente
+              </span>
+              <span style={{ fontSize: 10, color: 'rgba(99,102,241,.6)' }}>▶</span>
+            </div>
+          }
           {<FilterBar $={$} />}
           {<ProposalsPanel $={$} />}
           {<div style={{ flex: 1, padding: '10px 14px 18px' }}>{<CardGrid $={$} />}</div>}
