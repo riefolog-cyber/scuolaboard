@@ -37,19 +37,20 @@ service cloud.firestore {
     // Scelta classe studente BLOCCATA: lo studente può SOLO aggiungere una
     // classe per un anno che non ne ha, mai modificare o rimuovere la classe
     // già scelta per un anno (la UI la blocca già; qui anche contro scritture
-    // dirette). oldKeys - newKeys == vuoto → nessuna rimozione;
-    // affectedKeys ∩ oldKeys == vuoto → nessuna modifica di valori esistenti.
-    // Nota: keys() è una List → .toSet() per usare difference()/intersection().
+    // dirette).
+    // NB: funzioni Firestore Rules = solo return expr; (niente if).
+    // Logica: ok se (a) non stiamo scrivendo classiPerAnno, oppure (b) la
+    // nuova mappa è valida E (il profilo è nuovo OPPURE nessuna rimozione
+    // di chiavi E nessuna modifica di valori esistenti nella mappa).
     function classiPerAnnoSoloAggiunte() {
-      if (!request.resource.data.keys().hasAny(['classiPerAnno'])) return true;
-      if (!(request.resource.data.classiPerAnno is map)) return false;
-      // Profili legacy senza mappa: la prima scelta è sempre una aggiunta.
-      if (!resource.data.keys().hasAny(['classiPerAnno'])) return true;
-      if (!(resource.data.classiPerAnno is map)) return false;
-      return resource.data.classiPerAnno.keys().toSet()
-          .difference(request.resource.data.classiPerAnno.keys().toSet()).size() == 0
-        && request.resource.data.classiPerAnno.diff(resource.data.classiPerAnno)
-            .affectedKeys().intersection(resource.data.classiPerAnno.keys().toSet()).size() == 0;
+      return !request.resource.data.keys().hasAny(['classiPerAnno'])
+        || (request.resource.data.classiPerAnno is map
+          && (!resource.data.keys().hasAny(['classiPerAnno'])
+            || (resource.data.classiPerAnno is map
+              && resource.data.classiPerAnno.keys().toSet()
+                  .difference(request.resource.data.classiPerAnno.keys().toSet()).size() == 0
+              && request.resource.data.classiPerAnno.diff(resource.data.classiPerAnno)
+                  .affectedKeys().intersection(resource.data.classiPerAnno.keys().toSet()).size() == 0)));
     }
 
     // ── USERS ──
