@@ -8,7 +8,10 @@ import { safeDocId } from './utils/format.ts';
 var _cardsSnapshot: any[] = [];
 var _cardsListeners = new Set<() => void>();
 var _cardsUnsub: (() => void) | null = null;
-var _cardsAnno: string | null = null;
+// Chiave = anno + ruolo: la query degli studenti (con where visibile==true)
+// è diversa da quella del prof (tutte le card) → cambiando ruolo bisogna
+// ri-sottoscrivere, altrimenti lo studente erediterebbe la query del prof.
+var _cardsKey: string | null = null;
 
 var _classiCustom: string[] = [];
 var _classiNascoste: string[] = [];
@@ -39,35 +42,41 @@ var db = window.db;
 // client-side (visibleSorted in cards.ts) e così evitiamo un indice composito.
 // ⚠️ Richiede che TUTTE le card abbiano il campo annoScolastico: eseguire
 // prima migrations/migrate-card-annoscolastico.js per le card legacy.
-function createCardsStore(anno: string | null) {
+function createCardsStore(user: any, anno: string | null) {
+  var isProf = !!(user && user.role === 'prof');
+  var key = anno + (isProf ? ':prof' : ':stud');
   return {
     subscribe: function (onStoreChange: () => void) {
       _cardsListeners.add(onStoreChange);
-      // Cambio anno scolastico → nuova sottoscrizione con il filtro giusto
-      if (_cardsAnno !== anno) {
+      // Cambio anno/ruolo → nuova sottoscrizione con il filtro giusto
+      if (_cardsKey !== key) {
         if (_cardsUnsub) {
           _cardsUnsub();
           _cardsUnsub = null;
         }
-        _cardsAnno = anno;
+        _cardsKey = key;
         _cardsSnapshot = [];
         _cachedCombined = null;
       }
       if (!_cardsUnsub && anno) {
-        _cardsUnsub = db
-          .collection('cards')
-          .where('annoScolastico', '==', anno)
-          .onSnapshot(function (s: any) {
-            var a: any[] = [];
-            s.forEach(function (d: any) {
-              a.push(d.data());
-            });
-            _cardsSnapshot = a;
-            _cachedCombined = null; // invalida cache combinata
-            _cardsListeners.forEach(function (l) {
-              l();
-            });
+        // ⚠️ Gli studenti devono filtrare in QUERY (where visibile==true): la
+        // regola Firestore (cards read) ha una condizione su resource.data.visibile
+        // e le regole NON sono filtri → senza il vincolo in query l'intera lettura
+        // viene rifiutata con permission-denied (studente non vedeva NESSUNA card).
+        // Il prof legge tutto (isProf() nella regola, query senza filtri).
+        var q: any = db.collection('cards').where('annoScolastico', '==', anno);
+        if (!isProf) q = q.where('visibile', '==', true);
+        _cardsUnsub = q.onSnapshot(function (s: any) {
+          var a: any[] = [];
+          s.forEach(function (d: any) {
+            a.push(d.data());
           });
+          _cardsSnapshot = a;
+          _cachedCombined = null; // invalida cache combinata
+          _cardsListeners.forEach(function (l) {
+            l();
+          });
+        });
       }
       return function () {
         _cardsListeners.delete(onStoreChange);
@@ -84,7 +93,7 @@ function createCardsStore(anno: string | null) {
       _cardsSnapshot = [];
       _cardsListeners.clear(); // Fix #2
       _cachedCombined = null;
-      _cardsAnno = null;
+      _cardsKey = null;
     },
   };
 }
@@ -187,7 +196,7 @@ function createFavStore(uid: string | null) {
 
 // ── COMBINED STORE ─────────────────────────────────────────────────────────
 function createCombinedStore(user: any, annoScolastico: string | null) {
-  var cardsStore = createCardsStore(annoScolastico);
+  var cardsStore = createCardsStore(user, annoScolastico);
   var classiStore = createClassiStore(annoScolastico);
   var favStore = createFavStore(user ? user.uid : null);
 

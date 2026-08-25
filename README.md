@@ -199,6 +199,13 @@ I contenuti utente vengono incapsulati in delimitatori rigidi `<USER_DATA>` con 
 ### Autenticazione
 
 - Login tramite **Firebase Auth** con Google Sign-In
+- **Filtro dominio attivo**: possono accedere solo gli account `@ferrarisfermiclass.it` e gli
+  indirizzi docente in whitelist (`DOCENTI_WHITELIST` in `src/auth.ts`, es. `riefolog@gmail.com`).
+  Gli altri account Google vengono disconnessi all'istante, prima di qualsiasi scrittura su
+  Firestore. Il filtro è presidiato **sia lato client** (`src/auth.ts`, tre flussi: popup,
+  redirect, sessioni persistite) **sia lato server** (helper `isEmailAutorizzata()` nelle
+  Firestore Rules, ereditato da `isAuth()` per tutte le collection)
+  → ⚠️ dopo ogni modifica alle regole, pubblicarle su Firebase Console
 - Il ruolo `prof` viene verificato lato server sia dal Worker AI che dalle regole Firestore
 - Il ruolo `studente` è il default e non ha accesso alla scrittura card
 
@@ -208,7 +215,6 @@ I contenuti utente vengono incapsulati in delimitatori rigidi `<USER_DATA>` con 
 
 | Area | Suggerimento | Priorità |
 |------|-------------|----------|
-| **Auth dominio** | Restringere il login al dominio scuola (`@istituto.edu.it`) con whitelist per i docenti | Alta |
 | **Informativa privacy** | Aggiornare il testo della `PrivacyModal` con richiamo all'Informativa d'Istituto e al Patto di Corresponsabilità (Allegato A) | Alta |
 | **Whitelist AI** | Compilare l'Allegato B2 con Groq/Cloudflare per l'inserimento nello strumentario ufficiale | Media |
 | **Data retention** | Documentare la politica di retention di Groq e la conformità GDPR | Media |

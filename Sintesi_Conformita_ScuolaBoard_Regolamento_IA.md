@@ -48,7 +48,7 @@ ScuolaBoard è una Progressive Web App (PWA) didattica sviluppata in React e Typ
 | Aspetto | Stato Attuale | Requisito Regolamentare | Azione Necessaria |
 | :--- | :--- | :--- | :--- |
 | **White-List d'Istituto** | Groq / Cloudflare non presenti in Allegato B. | Art. 7 c.2: ammessi solo strumenti approvati. | Compilare e trasmettere l'**Allegato B2** al Team IA e DPO per l'inserimento ufficiale. |
-| **Account e Dominio** | Google Sign-in aperto a qualsiasi account `@gmail.com`. | Art. 6 c.1: utilizzo prioritario di account del Workspace protetto. | Restringere il login al dominio scuola `@scuola.edu.it`, mantenendo la whitelist per l'account personale del docente. |
+| **Account e Dominio** | ✅ **RISOLTO**: login limitato al dominio scuola `@ferrarisfermiclass.it` con whitelist docente (`riefolog@gmail.com`). | Art. 6 c.1: utilizzo prioritario di account del Workspace protetto. | Presidio attivo sia client-side (`src/auth.ts`: sign-out immediato su popup, redirect e sessioni persistite, prima di ogni scrittura) sia server-side (Firestore Rules: helper `isEmailAutorizzata()` dentro `isAuth()`, ereditato da tutte le collection). |
 | **Privacy Commenti Studenti** | Nei prompt di riassunto commenti venivano inviati i nomi degli studenti all'API. | Art. 5 c.3, Art. 6 c.3 e GDPR (minori). | Attivare la **pseudonimizzazione locale** prima dell'invio all'IA. |
 | **Informativa Privacy** | `PrivacyModal` con testo sintetico generico. | Art. 6 c.1 e Allegato A (Patto di Corresponsabilità). | Aggiornare il testo della modale con il richiamo all'Informativa d'Istituto. |
 | **Trasparenza IA** | Materiali generati privi di etichetta esplicita. | Art. 4 c.8 e AI Act Art. 50. | Inserire un badge visibile: *"Supporto IA, revisionato dal docente"*. |
@@ -122,18 +122,48 @@ async function riassuntiCommentiRun(card: any) {
 * **Altri account personali:** disconnessi all'istante con notifica di divieto d'accesso.
 
 ```typescript
-// Implementazione in src/auth.ts
-var DOMINIO_SCUOLA = '@istituto.edu.it'; // Sostituire con il dominio reale della scuola
-var DOCENTI_WHITELIST = ['email.personale.prof@gmail.com']; // Inserire la propria email personale
+// Implementazione effettiva in src/auth.ts (✅ attiva dal 2026-08)
+var DOMINIO_SCUOLA = '@ferrarisfermiclass.it';
+var DOCENTI_WHITELIST = ['riefolog@gmail.com'];
 
-function isEmailAutorizzata(email: string | null | undefined): boolean {
+var isEmailAutorizzata = function (email: string | null | undefined): boolean {
+  // Email assente → NON autorizzata, allineato al server (emailUtente() nelle
+  // Rules restituisce '' → isEmailAutorizzata() = false). Prima il client
+  // lasciava passare (return true) e poi il server negava la lettura del
+  // profilo con un permission-denied confuso. Con Google l'email c'è sempre.
   if (!email) return false;
-  var em = email.toLowerCase().trim();
+  var em = String(email).toLowerCase().trim();
   if (em.endsWith(DOMINIO_SCUOLA.toLowerCase())) return true;
-  if (DOCENTI_WHITELIST.map(d => d.toLowerCase()).includes(em)) return true;
-  return false;
+  return (
+    DOCENTI_WHITELIST.filter(function (d: string) {
+      return d.toLowerCase() === em;
+    }).length > 0
+  );
+};
+```
+
+**Presidio server-side corrispondente** (Firestore Rules — il controllo client da solo non è
+una barriera di sicurezza reale):
+
+```
+rules_version = '2';
+function emailUtente() {
+  return request.auth.token.get('email', '').lower();
+}
+function isEmailAutorizzata() {
+  return emailUtente().matches('.*@ferrarisfermiclass[.]it')
+    || emailUtente() == 'riefolog@gmail.com';
+}
+// isAuth() ora richiede anche l'email autorizzata → il filtro vale per
+// TUTTE le collection (users, cards, quiz_risposte, ammonizioni, …).
+function isAuth() {
+  return request.auth != null && isEmailAutorizzata();
 }
 ```
+
+> ⚠️ Nota operativa: dopo ogni modifica a `rules firestore.txt` occorre pubblicare le regole
+> nella Firebase Console (Firestore → Rules → Pubblica). Gli account legacy registrati con
+> email diverse dalle autorizzate perderanno l'accesso al primo tentativo.
 
 ---
 

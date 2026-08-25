@@ -37,19 +37,41 @@ window.React.useSyncExternalStore = function (subscribe, getSnapshot, _getServer
 };
 
 // ── Fake Auth ─────────────────────────────────────────────────────────────
+// Fedele a Firebase reale: signInWithPopup e signOut ri-innescano
+// onAuthStateChanged (senza questo il re-login dopo logout non funziona).
 function makeFakeAuth(getUser) {
   const authFn = () => authInstance;
   authFn.GoogleAuthProvider = class GoogleAuthProvider {
     setCustomParameters() {}
   };
+  // L'utente corrente si legge SEMPRE da getUser(): la harness cambia utente
+  // tra un test e l'altro (userRef.current), quindi uno snapshot all'avvio
+  // resterebbe stale. signedOut simula lo stato post-signOut di Firebase.
+  let signedOut = false;
+  const listeners = new Set();
+  function getCurrent() {
+    return signedOut ? null : getUser();
+  }
+  function emit() {
+    listeners.forEach((cb) => cb(getCurrent()));
+  }
   const authInstance = {
     onAuthStateChanged(cb) {
-      setTimeout(() => cb(getUser()), 0);
-      return () => {};
+      listeners.add(cb);
+      setTimeout(() => cb(getCurrent()), 0);
+      return () => listeners.delete(cb);
     },
     getRedirectResult: () => Promise.resolve(null),
-    signInWithPopup: () => Promise.resolve({ user: getUser() }),
-    signOut: () => Promise.resolve(),
+    signInWithPopup: () => {
+      signedOut = false;
+      emit();
+      return Promise.resolve({ user: getCurrent() });
+    },
+    signOut: () => {
+      signedOut = true;
+      emit();
+      return Promise.resolve();
+    },
     currentUser: { getIdToken: () => Promise.resolve('fake-token') },
   };
   return authFn;
@@ -87,6 +109,13 @@ function seedUserDoc(db, seed, user) {
 }
 
 export async function bootApp({ seed = {}, user = null } = {}) {
+  // Accettazione privacy pre-seeded: la modale privacy (attiva al primo accesso
+  // per uid) non deve interferire con i test di integrazione.
+  if (user && user.uid) {
+    try {
+      localStorage.setItem('privacy_accepted_' + user.uid, '1');
+    } catch (e) {}
+  }
   if (_booted) {
     _booted.db._reset(seed);
     seedUserDoc(_booted.db, seed, user);

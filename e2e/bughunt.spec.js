@@ -263,3 +263,20 @@ test('Drag & drop: trascina la card c1 sotto p1 e l\'ordine viene salvato', asyn
   // Nessun errore console
   expect(fatalErrors(errors), 'Errori fatali: ' + JSON.stringify(fatalErrors(errors))).toEqual([]);
 });
+
+test('Esci: il prof torna alla login e il re-login funziona (fake auth fedele)', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto(HARNESS, { waitUntil: 'domcontentloaded' });
+  await expect(page.getByText('Lezione su X').first()).toBeVisible({ timeout: 15000 });
+
+  // Clic "Esci" → login screen (la bacheca sparisce)
+  await page.getByRole('button', { name: 'Esci' }).click();
+  await expect(page.getByText('Accedi con Google').first()).toBeVisible({ timeout: 10000 });
+  await expect(page.getByText('Lezione su X').first()).not.toBeVisible();
+
+  // Re-login dopo il logout: onAuthStateChanged ri-innescata → si rientra
+  await page.getByText('Accedi con Google').first().click();
+  await expect(page.getByText('Lezione su X').first()).toBeVisible({ timeout: 10000 });
+
+  expect(fatalErrors(errors), 'Errori fatali: ' + JSON.stringify(fatalErrors(errors))).toEqual([]);
+});

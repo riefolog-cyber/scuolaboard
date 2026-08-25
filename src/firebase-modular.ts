@@ -13,7 +13,6 @@ import {
   signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
-  signOut,
   GoogleAuthProvider,
 } from 'firebase/auth';
 import {
@@ -135,7 +134,11 @@ function compatAuth() {
     auth.signInWithPopup = (p: any) => signInWithPopup(auth, p);
     auth.signInWithRedirect = (p: any) => signInWithRedirect(auth, p);
     auth.getRedirectResult = () => getRedirectResult(auth);
-    auth.signOut = () => signOut(auth);
+    // ⚠️ NIENTE auth.signOut = () => signOut(auth): il signOut modulare di
+    // firebase/auth chiama INTERNAMENTE auth.signOut() sull'istanza → il wrapper
+    // sovrascriveva il metodo nativo e ricorreva all'infinito (RangeError:
+    // Maximum call stack size exceeded) → "Esci" non chiudeva mai la sessione.
+    // Il metodo nativo signOut dell'istanza è già quello modulare: va lasciato.
     _auth = auth;
   }
   return _auth;

@@ -5,9 +5,12 @@ import { vi } from 'vitest';
 import { screen, cleanup } from '@testing-library/react';
 
 // ── Utenti finti ───────────────────────────────────────────────────────────
-export const PROF = { uid: 'prof1', email: 'prof@scuola.it', displayName: 'Prof Rossi' };
+// Email allineate al filtro d'accesso di src/auth.ts:
+// - docente → whitelist (riefolog@gmail.com)
+// - studente → dominio scuola @ferrarisfermiclass.it
+export const PROF = { uid: 'prof1', email: 'riefolog@gmail.com', displayName: 'Prof Rossi' };
 export const PROF_DOC = { role: 'prof', nome: 'Prof', cognome: 'Rossi', classiPerAnno: {} };
-export const STUD = { uid: 'stud1', email: 'stud@scuola.it', displayName: 'Luca Bianchi' };
+export const STUD = { uid: 'stud1', email: 'luca.bianchi@ferrarisfermiclass.it', displayName: 'Luca Bianchi' };
 export const STUD_DOC = {
   role: 'studente',
   nome: 'Luca',

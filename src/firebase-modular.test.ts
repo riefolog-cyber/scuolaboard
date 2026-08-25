@@ -73,4 +73,13 @@ describe('firebase-modular shim (surface compat)', () => {
   it("storage è graceful (null, l'app non usa Storage)", () => {
     expect(firebase.storage()).toBeNull();
   });
+
+  it('auth.signOut() NON ricorre (regressione: RangeError stack overflow shim→modulare)', async () => {
+    // Il signOut modulare (firebase/auth) chiama internamente auth.signOut()
+    // sull'istanza: se lo shim sovrascrive quel metodo con un wrapper, si crea
+    // una ricorsione infinita (hi → e.signOut → hi → …) e la sessione non viene
+    // MAI chiusa. Il metodo nativo dell'istanza è già quello modulare.
+    const auth = firebase.auth();
+    await expect(auth.signOut()).resolves.toBeUndefined();
+  });
 });

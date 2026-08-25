@@ -43,19 +43,43 @@ window.React.useSyncExternalStore = function (subscribe, getSnapshot, getServerS
 };
 
 // ── Fake Auth ─────────────────────────────────────────────────────────────
+// Fedele a Firebase reale: onAuthStateChanged viene RI-INNESCATA da
+// signInWithPopup e da signOut. Senza questo, dopo "Esci" il re-login non
+// funzionava nell'harness (loginGoogle si affida a onAuthStateChanged per
+// impostare l'utente) e il flusso logout non era testabile end-to-end.
 function makeFakeAuth(getUser) {
   const authFn = () => authInstance;
   authFn.GoogleAuthProvider = class GoogleAuthProvider {
     setCustomParameters() {}
   };
+  // L'utente corrente si legge SEMPRE da getUser(): la harness cambia utente
+  // (userRef.current), uno snapshot all'avvio resterebbe stale. signedOut
+  // simula lo stato post-signOut di Firebase.
+  let signedOut = false;
+  const listeners = new Set();
+  function getCurrent() {
+    return signedOut ? null : getUser();
+  }
+  function emit() {
+    listeners.forEach((cb) => cb(getCurrent()));
+  }
   const authInstance = {
     onAuthStateChanged(cb) {
-      setTimeout(() => cb(getUser()), 0);
-      return () => {};
+      listeners.add(cb);
+      setTimeout(() => cb(getCurrent()), 0);
+      return () => listeners.delete(cb);
     },
     getRedirectResult: () => Promise.resolve(null),
-    signInWithPopup: () => Promise.resolve({ user: getUser() }),
-    signOut: () => Promise.resolve(),
+    signInWithPopup: () => {
+      signedOut = false;
+      emit();
+      return Promise.resolve({ user: getCurrent() });
+    },
+    signOut: () => {
+      signedOut = true;
+      emit();
+      return Promise.resolve();
+    },
     currentUser: { getIdToken: () => Promise.resolve('fake-token') },
   };
   return authFn;
@@ -78,8 +102,16 @@ function makeFakeFirebase(db, getUser) {
 const params = new URLSearchParams(location.search);
 const asStudent = params.get('user') === 'studente';
 
-const PROF = { uid: 'prof1', email: 'prof@scuola.it', displayName: 'Prof Rossi' };
-const STUD = { uid: 'stud1', email: 'stud@scuola.it', displayName: 'Luca Bianchi' };
+// Email allineate al filtro d'accesso di src/auth.ts (dominio scuola + whitelist docente)
+const PROF = { uid: 'prof1', email: 'riefolog@gmail.com', displayName: 'Prof Rossi' };
+const STUD = { uid: 'stud1', email: 'luca.bianchi@ferrarisfermiclass.it', displayName: 'Luca Bianchi' };
+
+// Accettazione privacy pre-seeded: la modale privacy (ora attiva al primo
+// accesso per uid, in localStorage) non deve bloccare la UI nei test E2E.
+try {
+  localStorage.setItem('privacy_accepted_prof1', '1');
+  localStorage.setItem('privacy_accepted_stud1', '1');
+} catch (e) {}
 
 // Card condivisa: per il prof include un commento di Luca (per il bottone
 // "⚠️ Ammonisci" nella CardDetail); per lo studente è visibile nella sua classe.

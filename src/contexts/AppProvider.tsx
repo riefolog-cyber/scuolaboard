@@ -915,15 +915,25 @@ function AppProvider({ children }: any) {
     [modals.lightbox, showCard]
   );
 
-  // Popup classe per studente senza classe per l'anno scolastico corrente
-  // (usa classiPerAnno[anno], non il campo piatto legacy user.classe)
+  // Popup privacy al PRIMO accesso (una volta per utente, localStorage).
+  // Era codice morto: la modale esisteva ma nessun trigger apriva showPrivacy.
+  // L'accettazione viene salvata in SB.LS.privacy (per uid) e il popup classe
+  // viene rimandato finché la privacy non è accettata (evita due modali sovrapposte).
   useEffect(
     function () {
-      if (user && user.role === 'studente' && !(user.classiPerAnno || {})[annoScolastico]) {
+      if (!user) return;
+      var privacyAccettata = !!(window.SB.LS && window.SB.LS.privacy && window.SB.LS.privacy.get(user.uid));
+      if (!privacyAccettata) {
+        modals.setShowPrivacy(true);
+        return;
+      }
+      // Popup classe per studente senza classe per l'anno scolastico corrente
+      // (usa classiPerAnno[anno], non il campo piatto legacy user.classe)
+      if (user.role === 'studente' && !(user.classiPerAnno || {})[annoScolastico]) {
         modals.setShowClasseModal(true);
       }
     },
-    [user, annoScolastico]
+    [user, annoScolastico, modals.showPrivacy]
   );
 
   // ── COMPUTED VALUES (memoized) ──

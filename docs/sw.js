@@ -2,7 +2,10 @@
 // Strategia: cache-first per gli asset con hashing (immutabili), network-first
 // per le navigazioni con fallback all'app shell salvata in cache (offline).
 // I dati (Firestore) e le chiamate AI passano comunque dalla rete.
-var CACHE = 'scuolaboard-v1';
+// ⚠️ A ogni deploy con modifiche rilevanti (es. fix di logout) BUMPARE CACHE:
+// l'activate purga le cache vecchie e gli utenti con shell PWA stale (che
+// eseguivano build precedenti, es. "Esci" rotto) ricevono subito il codice nuovo.
+var CACHE = 'scuolaboard-v2';
 
 self.addEventListener('install', function (e) {
   e.waitUntil(
