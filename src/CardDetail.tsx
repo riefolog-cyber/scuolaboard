@@ -65,8 +65,7 @@ function CardDetail__({ $ }: any) {
             display: 'flex',
             justifyContent: 'center',
             padding: '10px 12px 6px',
-            background:
-              'linear-gradient(180deg, rgba(15,23,42,.97) 0%, rgba(15,23,42,.97) 55%, rgba(15,23,42,0) 100%)',
+            background: 'linear-gradient(180deg, rgba(15,23,42,.97) 0%, rgba(15,23,42,.97) 55%, rgba(15,23,42,0) 100%)',
           }}
         >
           <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,.25)', marginTop: 6 }} />

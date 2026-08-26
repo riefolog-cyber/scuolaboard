@@ -40,7 +40,7 @@ describe('FocusTrap', () => {
     expect(document.activeElement).toBe(uno);
   });
 
-  it('con Shift+Tab torna dal primo all\'ultimo', () => {
+  it("con Shift+Tab torna dal primo all'ultimo", () => {
     const { container } = render(
       <FocusTrap>
         <button>Uno</button>

@@ -100,7 +100,7 @@ describe('Proposte studente → approva/rifiuta (prof)', () => {
     });
   });
 
-  it("il prof approva una proposta in attesa (diventa card pubblica)", async () => {
+  it('il prof approva una proposta in attesa (diventa card pubblica)', async () => {
     const seed = {
       users: { prof1: PROF_DOC },
       cards: {
@@ -122,7 +122,7 @@ describe('Proposte studente → approva/rifiuta (prof)', () => {
     });
   });
 
-  it("il prof rifiuta una proposta con motivazione", async () => {
+  it('il prof rifiuta una proposta con motivazione', async () => {
     const seed = {
       users: { prof1: PROF_DOC },
       cards: {
@@ -241,9 +241,27 @@ describe('Gestione studenti (prof)', () => {
     const seed = {
       users: {
         prof1: PROF_DOC,
-        stud1: { role: 'studente', nome: 'Luca', cognome: 'Bianchi', classiPerAnno: { '2026/2027': '3AI' }, displayName: 'Luca Bianchi' },
-        stud2: { role: 'studente', nome: 'Giulia', cognome: 'Verdi', classiPerAnno: { '2026/2027': '3AI' }, displayName: 'Giulia Verdi' },
-        stud3: { role: 'studente', nome: 'Anna', cognome: 'Rossi', classiPerAnno: { '2026/2027': '3AI' }, displayName: 'Anna Rossi' },
+        stud1: {
+          role: 'studente',
+          nome: 'Luca',
+          cognome: 'Bianchi',
+          classiPerAnno: { '2026/2027': '3AI' },
+          displayName: 'Luca Bianchi',
+        },
+        stud2: {
+          role: 'studente',
+          nome: 'Giulia',
+          cognome: 'Verdi',
+          classiPerAnno: { '2026/2027': '3AI' },
+          displayName: 'Giulia Verdi',
+        },
+        stud3: {
+          role: 'studente',
+          nome: 'Anna',
+          cognome: 'Rossi',
+          classiPerAnno: { '2026/2027': '3AI' },
+          displayName: 'Anna Rossi',
+        },
       },
       cards: {},
     };

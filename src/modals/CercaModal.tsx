@@ -446,11 +446,7 @@ function CercaModal(props: any) {
                                   marginBottom: 1,
                                 }}
                               >
-                                {
-                                  <span style={{ width: 16, textAlign: 'center', fontSize: 12 }}>
-                                    {sel ? '✓' : ''}
-                                  </span>
-                                }
+                                {<span style={{ width: 16, textAlign: 'center', fontSize: 12 }}>{sel ? '✓' : ''}</span>}
                                 {anno}
                               </button>
                             );
@@ -568,11 +564,7 @@ function CercaModal(props: any) {
             <div style={{ flex: 1, overflow: 'auto', padding: '6px 0' }}>
               {!q.trim() && (
                 <div style={{ padding: '34px 20px', textAlign: 'center' }}>
-                  {
-                    <div style={{ fontSize: 34, marginBottom: 8, opacity: 0.7 }}>
-                      🔎
-                    </div>
-                  }
+                  {<div style={{ fontSize: 34, marginBottom: 8, opacity: 0.7 }}>🔎</div>}
                   {
                     <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,.55)', marginBottom: 4 }}>
                       Digita una parola chiave
@@ -587,11 +579,7 @@ function CercaModal(props: any) {
               )}
               {q.trim() && results.length === 0 && !(needsAll && allYears === null) && (
                 <div style={{ padding: '34px 20px', textAlign: 'center' }}>
-                  {
-                    <div style={{ fontSize: 30, marginBottom: 8, opacity: 0.6 }}>
-                      🕳️
-                    </div>
-                  }
+                  {<div style={{ fontSize: 30, marginBottom: 8, opacity: 0.6 }}>🕳️</div>}
                   {
                     <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,.55)' }}>
                       Nessuna card trovata per «{q.trim()}»
@@ -605,7 +593,15 @@ function CercaModal(props: any) {
                 </div>
               )}
               {results.length > 0 && (
-                <div style={{ padding: '8px 14px', fontSize: 11, fontWeight: 800, color: 'rgba(255,255,255,.42)', letterSpacing: 1 }}>
+                <div
+                  style={{
+                    padding: '8px 14px',
+                    fontSize: 11,
+                    fontWeight: 800,
+                    color: 'rgba(255,255,255,.42)',
+                    letterSpacing: 1,
+                  }}
+                >
                   {results.length + (results.length === 1 ? ' RISULTATO' : ' RISULTATI')}
                 </div>
               )}
@@ -655,7 +651,13 @@ function CercaModal(props: any) {
                         {senzaClasse ? (
                           <span
                             className="badge-chip"
-                            style={{ background: 'rgba(239,68,68,.2)', color: '#f87171', padding: '2px 7px', fontSize: 10, fontWeight: 800 }}
+                            style={{
+                              background: 'rgba(239,68,68,.2)',
+                              color: '#f87171',
+                              padding: '2px 7px',
+                              fontSize: 10,
+                              fontWeight: 800,
+                            }}
                           >
                             Solo prof
                           </span>
@@ -665,7 +667,13 @@ function CercaModal(props: any) {
                               <span
                                 key={i}
                                 className="badge-chip"
-                                style={{ background: 'rgba(255,255,255,.07)', color: 'rgba(255,255,255,.7)', padding: '2px 7px', fontSize: 10, fontWeight: 700 }}
+                                style={{
+                                  background: 'rgba(255,255,255,.07)',
+                                  color: 'rgba(255,255,255,.7)',
+                                  padding: '2px 7px',
+                                  fontSize: 10,
+                                  fontWeight: 700,
+                                }}
                               >
                                 {cl}
                               </span>
@@ -678,7 +686,13 @@ function CercaModal(props: any) {
                         {needsAll && c.annoScolastico && (
                           <span
                             className="badge-chip"
-                            style={{ background: 'rgba(139,92,246,.2)', color: '#a78bfa', padding: '2px 7px', fontSize: 10, fontWeight: 700 }}
+                            style={{
+                              background: 'rgba(139,92,246,.2)',
+                              color: '#a78bfa',
+                              padding: '2px 7px',
+                              fontSize: 10,
+                              fontWeight: 700,
+                            }}
                           >
                             📅 {c.annoScolastico}
                           </span>

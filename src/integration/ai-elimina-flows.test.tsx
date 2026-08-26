@@ -67,7 +67,7 @@ describe('Eliminazione analisi AI (prof)', () => {
     });
   });
 
-  it('non elimina nulla se l\'utente annulla il confirm', async () => {
+  it("non elimina nulla se l'utente annulla il confirm", async () => {
     const seed = {
       users: { prof1: PROF_DOC },
       cards: {
@@ -91,7 +91,7 @@ describe('Eliminazione analisi AI (prof)', () => {
     expect(db._get('ai_results', 'c1').analisi.sintesi).toBe('Da tenere');
   });
 
-  it('elimina la cronologia delle domande all\'AI preservando l\'analisi', async () => {
+  it("elimina la cronologia delle domande all'AI preservando l'analisi", async () => {
     const seed = {
       users: { prof1: PROF_DOC },
       cards: {
@@ -105,7 +105,7 @@ describe('Eliminazione analisi AI (prof)', () => {
           analisi: { sintesi: 'Sintesi del tema', data: '2026-09-01T10:00:00' },
           domande: [
             { id: 1, q: 'Spiega il teorema?', risposta: 'Il teorema afferma…', data: '2026-09-01T10:00:00' },
-            { id: 2, q: 'Che cos\'è una frazione?', risposta: 'Un numero…', data: '2026-09-01T10:00:00' },
+            { id: 2, q: "Che cos'è una frazione?", risposta: 'Un numero…', data: '2026-09-01T10:00:00' },
           ],
         },
       },
@@ -114,9 +114,7 @@ describe('Eliminazione analisi AI (prof)', () => {
     fireEvent.click(await screen.findByText('Card con domande AI', {}, { timeout: 8000 }));
 
     // Apre il riquadro "Fai una domanda all'AI" (CardDetail è lazy → findByRole)
-    fireEvent.click(
-      await screen.findByRole('button', { name: /Fai una domanda all'AI/ }, { timeout: 8000 })
-    );
+    fireEvent.click(await screen.findByRole('button', { name: /Fai una domanda all'AI/ }, { timeout: 8000 }));
     // Le domande già salvate sono visibili nel riquadro.
     // NB: la domanda è renderizzata come "❓ <testo>" → match parziale (regex).
     await screen.findByText(/Spiega il teorema/, {}, { timeout: 8000 });
@@ -135,7 +133,7 @@ describe('Eliminazione analisi AI (prof)', () => {
     });
   });
 
-  it('non elimina le domande all\'AI se l\'utente annulla il confirm', async () => {
+  it("non elimina le domande all'AI se l'utente annulla il confirm", async () => {
     const seed = {
       users: { prof1: PROF_DOC },
       cards: {
@@ -154,9 +152,7 @@ describe('Eliminazione analisi AI (prof)', () => {
     const { db } = await renderApp({ seed, user: PROF });
     fireEvent.click(await screen.findByText('Card con domande AI 2', {}, { timeout: 8000 }));
 
-    fireEvent.click(
-      await screen.findByRole('button', { name: /Fai una domanda all'AI/ }, { timeout: 8000 })
-    );
+    fireEvent.click(await screen.findByRole('button', { name: /Fai una domanda all'AI/ }, { timeout: 8000 }));
     await screen.findByText(/Domanda da tenere/, {}, { timeout: 8000 });
 
     vi.spyOn(window, 'confirm').mockReturnValue(false);
@@ -216,7 +212,7 @@ describe('REGRESSIONE crash: runCardAI non deve mai portare aiMap a undefined', 
 });
 
 describe('Pannello AI: spunti per riflettere (domande_stimolo)', () => {
-  it('il prof vede gli spunti generati dall\'AI, con l\'indicazione che sono visibili agli studenti', async () => {
+  it("il prof vede gli spunti generati dall'AI, con l'indicazione che sono visibili agli studenti", async () => {
     const seed = {
       users: { prof1: PROF_DOC },
       cards: {
@@ -246,7 +242,7 @@ describe('Pannello AI: spunti per riflettere (domande_stimolo)', () => {
     expect(screen.getByText(/visibili agli studenti/)).toBeTruthy();
   });
 
-  it('lo studente vede l\'analisi completa (sintesi, dinamica, spunto, spunti) come il prof', async () => {
+  it("lo studente vede l'analisi completa (sintesi, dinamica, spunto, spunti) come il prof", async () => {
     const seed = {
       users: { stud1: STUD_DOC },
       cards: {

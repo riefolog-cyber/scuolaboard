@@ -176,16 +176,15 @@ function filterCardsForCloud(cards: any[], cardId: string) {
 
 export function buildWordCloud(cards: any[], cardId: string) {
   var testi: string[] = [];
-  filterCardsForCloud(cards, cardId)
-    .forEach(function (c) {
-      (c.commenti || []).forEach(function (cm: any) {
-        testi.push(cm.testo);
-        if (cm.risposte)
-          cm.risposte.forEach(function (r: any) {
-            testi.push(r.testo);
-          });
-      });
+  filterCardsForCloud(cards, cardId).forEach(function (c) {
+    (c.commenti || []).forEach(function (cm: any) {
+      testi.push(cm.testo);
+      if (cm.risposte)
+        cm.risposte.forEach(function (r: any) {
+          testi.push(r.testo);
+        });
     });
+  });
   var freq: Record<string, number> = {};
   // Rimuove URL, poi sostituisce punteggiatura (escluse lettere unicode) con spazi, poi divide
   var cleanedText = testi

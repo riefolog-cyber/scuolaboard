@@ -25,10 +25,8 @@ import './app-bootstrap.ts'; // ReactDOM.createRoot render
 // gestisce solo offline e asset statici.
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', function () {
-    navigator.serviceWorker
-      .register('./sw.js')
-      .catch(function () {
-        /* offline non disponibile: non bloccare l'app */
-      });
+    navigator.serviceWorker.register('./sw.js').catch(function () {
+      /* offline non disponibile: non bloccare l'app */
+    });
   });
 }

@@ -103,9 +103,11 @@ Le regole permettono le scritture (creare/duplicare/copiare/eliminare card) **so
    cd migrations && npm install && npm run dry-run-anno && npm run migrate-anno
    ```
 2. Fai commit e push su GitHub:
+
    ```bash
    bash scripts/deploy.sh "messaggio commit"
    ```
+
    > La build di `docs/` viene rigenerata e committata **automaticamente dalla CI**
    > (job `deploy-docs`) quando i controlli passano: non serve `npm run build` a mano.
 
@@ -126,13 +128,13 @@ Le regole permettono le scritture (creare/duplicare/copiare/eliminare card) **so
 
 Nel dashboard di Cloudflare devono essere configurate le seguenti variabili:
 
-| Nome                  | Tipo    | Descrizione                                                                                 |
-| --------------------- | ------- | ------------------------------------------------------------------------------------------- |
+| Nome                  | Tipo    | Descrizione                                                                                          |
+| --------------------- | ------- | ---------------------------------------------------------------------------------------------------- |
 | `ALLOWED_ORIGINS`     | Testo   | Domini autorizzati separati da virgola, es. `https://riefolog-cyber.github.io,http://localhost:5173` |
-| `FIREBASE_PROJECT_ID` | Testo   | Project ID Firebase, es. `scuolaboard-874d4`                                                |
-| `FIREBASE_API_KEY`    | Testo   | API Key pubblica di Firebase                                                                |
-| `GROQ_API_KEY`        | Segreto | Chiave API Groq                                                                             |
-| `OPENROUTER_API_KEY`  | Segreto | Chiave API OpenRouter (fallback)                                                            |
+| `FIREBASE_PROJECT_ID` | Testo   | Project ID Firebase, es. `scuolaboard-874d4`                                                         |
+| `FIREBASE_API_KEY`    | Testo   | API Key pubblica di Firebase                                                                         |
+| `GROQ_API_KEY`        | Segreto | Chiave API Groq                                                                                      |
+| `OPENROUTER_API_KEY`  | Segreto | Chiave API OpenRouter (fallback)                                                                     |
 
 ## Deploy del Worker
 
@@ -171,9 +173,10 @@ Browser                           Groq
 
 Ogni contenuto generato dall'IA include un badge visibile in fondo al pannello:
 
-> 🤖 *Supporto IA – revisionato dal docente*
+> 🤖 _Supporto IA – revisionato dal docente_
 
 Il badge appare in:
+
 - **AIPanel.tsx** — Analisi singola card (vista prof e studente)
 - **SommarioModal.tsx** — Riassunto discussione commenti
 - **AppLayout.tsx** — Analisi globale della bacheca
@@ -213,10 +216,10 @@ I contenuti utente vengono incapsulati in delimitatori rigidi `<USER_DATA>` con 
 
 ### Suggerimenti per ulteriori miglioramenti
 
-| Area | Suggerimento | Priorità |
-|------|-------------|----------|
-| **Informativa privacy** | Aggiornare il testo della `PrivacyModal` con richiamo all'Informativa d'Istituto e al Patto di Corresponsabilità (Allegato A) | Alta |
-| **Whitelist AI** | Compilare l'Allegato B2 con Groq/Cloudflare per l'inserimento nello strumentario ufficiale | Media |
-| **Data retention** | Documentare la politica di retention di Groq e la conformità GDPR | Media |
-| **Logging audit** | Aggiungere log lato proxy per tracciare le chiamate AI (chi, quando, cosa) | Bassa |
-| **Crittografia at-rest** | Valutare la cifratura dei dati sensibili in Firestore per dati particolarmente sensibili | Bassa |
+| Area                     | Suggerimento                                                                                                                  | Priorità |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------- | -------- |
+| **Informativa privacy**  | Aggiornare il testo della `PrivacyModal` con richiamo all'Informativa d'Istituto e al Patto di Corresponsabilità (Allegato A) | Alta     |
+| **Whitelist AI**         | Compilare l'Allegato B2 con Groq/Cloudflare per l'inserimento nello strumentario ufficiale                                    | Media    |
+| **Data retention**       | Documentare la politica di retention di Groq e la conformità GDPR                                                             | Media    |
+| **Logging audit**        | Aggiungere log lato proxy per tracciare le chiamate AI (chi, quando, cosa)                                                    | Bassa    |
+| **Crittografia at-rest** | Valutare la cifratura dei dati sensibili in Firestore per dati particolarmente sensibili                                      | Bassa    |

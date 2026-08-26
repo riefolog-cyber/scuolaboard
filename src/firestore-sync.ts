@@ -30,7 +30,8 @@ var _preferitiUid: string | null = null;
 // React pensa sempre che lo store sia cambiato → re-render infiniti.
 // Cache: creiamo un nuovo oggetto solo quando i dati sottostanti cambiano.
 
-var _cachedCombined: { allCards: any[]; classiCustom: string[]; classiNascoste: string[]; preferiti: string[] } | null = null;
+var _cachedCombined: { allCards: any[]; classiCustom: string[]; classiNascoste: string[]; preferiti: string[] } | null =
+  null;
 
 var db = window.db;
 

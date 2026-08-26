@@ -62,9 +62,13 @@ function useQuiz(deps: QuizDeps) {
       // permission-denied e le risposte non si ricaricano al refresh).
       // Prof: nessun filtro, deve vedere tutte le risposte per statistiche/AI.
       var studenteNome = user && user.role === 'studente' ? myName(user) : null;
-      quizUnsubRef.current = quizListenRisposte(cardIdSnapshot, function (arr: any[]) {
-        if (active) setQuizRisposte(arr);
-      }, studenteNome);
+      quizUnsubRef.current = quizListenRisposte(
+        cardIdSnapshot,
+        function (arr: any[]) {
+          if (active) setQuizRisposte(arr);
+        },
+        studenteNome
+      );
       return function () {
         active = false;
         if (quizUnsubRef.current) {
@@ -164,7 +168,8 @@ function useQuiz(deps: QuizDeps) {
             '\nRISPOSTA: ' +
             risposta +
             '\nRestituisci SOLO questo JSON:\n{"voto": <0.0-1.0>, "punti_forza":"...", "lacune":"...", "suggerimento":"..."}';
-          return window.callGroqJSON(null, prompt, 600)
+          return window
+            .callGroqJSON(null, prompt, 600)
             .then(function (res: any) {
               return { idx: item.i, res: res };
             })

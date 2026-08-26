@@ -103,7 +103,11 @@ describe('Rinomina classe (eseguiRinomina)', () => {
     expect(ctx.CLASSI_LIST.indexOf('5AI')).toBeGreaterThanOrEqual(0);
     expect(ctx.CLASSI_LIST.indexOf('5AO')).toBe(-1);
     // Nessuna duplicazione di 5AI nella lista
-    expect(ctx.CLASSI_LIST.filter(function (c) { return c === '5AI'; })).toHaveLength(1);
+    expect(
+      ctx.CLASSI_LIST.filter(function (c) {
+        return c === '5AI';
+      })
+    ).toHaveLength(1);
   });
 
   it('predefinita → nuova custom: nasconde la vecchia e aggiunge la nuova a classiCustom', async () => {
@@ -221,7 +225,7 @@ describe('Aggiungi classe dalla UI (FilterBar, flusso reale)', () => {
     return row;
   }
 
-  it('clic + → digita → ✓ : la classe appare nell\'elenco e viene salvata in config', async () => {
+  it("clic + → digita → ✓ : la classe appare nell'elenco e viene salvata in config", async () => {
     const seed = {
       users: { prof1: PROF_DOC },
       config: { classi_custom_2026_2027: { lista: [], nascoste: [] } },
@@ -243,7 +247,7 @@ describe('Aggiungi classe dalla UI (FilterBar, flusso reale)', () => {
     expect(db._get('config', 'classi_custom_2026_2027').lista).toEqual(['1AX']);
   });
 
-  it('ri-aggiunge una classe predefinita nascosta: torna nell\'elenco (e NON finisce in lista)', async () => {
+  it("ri-aggiunge una classe predefinita nascosta: torna nell'elenco (e NON finisce in lista)", async () => {
     const seed = {
       users: { prof1: PROF_DOC },
       config: {

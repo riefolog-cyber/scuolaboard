@@ -88,7 +88,8 @@ SB.createAppHandlers = function (ctx: any) {
         if (ctx.fbNascosteSave)
           try {
             ctx.fbNascosteSave(nextNascoste).catch(function (e: any) {
-              if (ctx.showToast) ctx.showToast('Errore salvataggio classi: ' + (e && e.message ? e.message : 'permessi'), 'err');
+              if (ctx.showToast)
+                ctx.showToast('Errore salvataggio classi: ' + (e && e.message ? e.message : 'permessi'), 'err');
             });
           } catch (e: any) {}
       } else {
@@ -97,7 +98,8 @@ SB.createAppHandlers = function (ctx: any) {
         if (fbClassiSave)
           try {
             fbClassiSave(next).catch(function (e: any) {
-              if (ctx.showToast) ctx.showToast('Errore salvataggio classi: ' + (e && e.message ? e.message : 'permessi'), 'err');
+              if (ctx.showToast)
+                ctx.showToast('Errore salvataggio classi: ' + (e && e.message ? e.message : 'permessi'), 'err');
             });
           } catch (e: any) {}
       }
@@ -110,9 +112,11 @@ SB.createAppHandlers = function (ctx: any) {
         var nextNascoste = (ctx.classiNascoste || []).concat([cl]);
         if (ctx.setClassiNascoste) ctx.setClassiNascoste(nextNascoste);
         try {
-          if (ctx.fbNascosteSave) ctx.fbNascosteSave(nextNascoste).catch(function (e: any) {
-            if (ctx.showToast) ctx.showToast('Errore salvataggio classi: ' + (e && e.message ? e.message : 'permessi'), 'err');
-          });
+          if (ctx.fbNascosteSave)
+            ctx.fbNascosteSave(nextNascoste).catch(function (e: any) {
+              if (ctx.showToast)
+                ctx.showToast('Errore salvataggio classi: ' + (e && e.message ? e.message : 'permessi'), 'err');
+            });
         } catch (e: any) {}
       } else {
         var next = (ctx.classiCustom || []).filter(function (c: any) {
@@ -122,7 +126,8 @@ SB.createAppHandlers = function (ctx: any) {
         if (fbClassiSave)
           try {
             fbClassiSave(next).catch(function (e: any) {
-              if (ctx.showToast) ctx.showToast('Errore salvataggio classi: ' + (e && e.message ? e.message : 'permessi'), 'err');
+              if (ctx.showToast)
+                ctx.showToast('Errore salvataggio classi: ' + (e && e.message ? e.message : 'permessi'), 'err');
             });
           } catch (e: any) {}
       }
@@ -166,14 +171,17 @@ SB.createAppHandlers = function (ctx: any) {
         if (ctx.setClassiNascoste) ctx.setClassiNascoste(nextNascoste);
         if (ctx.setClassiCustom) ctx.setClassiCustom(nextCustom);
         try {
-          if (ctx.fbNascosteSave) ctx.fbNascosteSave(nextNascoste).catch(function (e: any) {
-            if (ctx.showToast) ctx.showToast('Errore salvataggio classi: ' + (e && e.message ? e.message : 'permessi'), 'err');
-          });
+          if (ctx.fbNascosteSave)
+            ctx.fbNascosteSave(nextNascoste).catch(function (e: any) {
+              if (ctx.showToast)
+                ctx.showToast('Errore salvataggio classi: ' + (e && e.message ? e.message : 'permessi'), 'err');
+            });
         } catch (e: any) {}
         if (fbClassiSave)
           try {
             fbClassiSave(nextCustom).catch(function (e: any) {
-              if (ctx.showToast) ctx.showToast('Errore salvataggio classi: ' + (e && e.message ? e.message : 'permessi'), 'err');
+              if (ctx.showToast)
+                ctx.showToast('Errore salvataggio classi: ' + (e && e.message ? e.message : 'permessi'), 'err');
             });
           } catch (e: any) {}
       } else {
@@ -193,7 +201,8 @@ SB.createAppHandlers = function (ctx: any) {
         if (fbClassiSave)
           try {
             fbClassiSave(next).catch(function (e: any) {
-              if (ctx.showToast) ctx.showToast('Errore salvataggio classi: ' + (e && e.message ? e.message : 'permessi'), 'err');
+              if (ctx.showToast)
+                ctx.showToast('Errore salvataggio classi: ' + (e && e.message ? e.message : 'permessi'), 'err');
             });
           } catch (e: any) {}
         if (newIsDefault) {
@@ -204,7 +213,8 @@ SB.createAppHandlers = function (ctx: any) {
           if (ctx.fbNascosteSave)
             try {
               ctx.fbNascosteSave(nextNascosteC).catch(function (e: any) {
-                if (ctx.showToast) ctx.showToast('Errore salvataggio classi: ' + (e && e.message ? e.message : 'permessi'), 'err');
+                if (ctx.showToast)
+                  ctx.showToast('Errore salvataggio classi: ' + (e && e.message ? e.message : 'permessi'), 'err');
               });
             } catch (e: any) {}
         }
@@ -253,7 +263,10 @@ SB.createAppHandlers = function (ctx: any) {
                   // logghiamo per diagnosi senza crash.
                   d.ref.update({ classiPerAnno: nextMap, classe: newN }).catch(function (e: any) {
                     if (window.SB_DEBUG)
-                      console.warn('[ScuolaBoard] rinomina: aggiornamento classe studente non permesso dalle rules:', e && e.code ? e.code : e);
+                      console.warn(
+                        '[ScuolaBoard] rinomina: aggiornamento classe studente non permesso dalle rules:',
+                        e && e.code ? e.code : e
+                      );
                   });
                 } catch (e: any) {}
               });

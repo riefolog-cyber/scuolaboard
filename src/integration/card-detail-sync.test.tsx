@@ -19,7 +19,7 @@ beforeEach(setupTestEnv);
 afterEach(teardownTestEnv);
 
 describe('REGRESSIONE: CardDetail sincronizzata con lo snapshot Firestore', () => {
-  it('mostra il quiz nel dettaglio aperto via deep link dopo l\'aggiornamento della card', async () => {
+  it("mostra il quiz nel dettaglio aperto via deep link dopo l'aggiornamento della card", async () => {
     history.replaceState(null, '', '/?card=' + CARD_ID);
     const seed = {
       users: { prof1: PROF_DOC },

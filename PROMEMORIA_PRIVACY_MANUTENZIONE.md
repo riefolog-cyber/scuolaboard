@@ -22,7 +22,7 @@
 - [ ] `PrivacyModal`: aggiungere titolare, dati raccolti, pseudonimizzazione AI, diritti (Art. 13 GDPR)
 - [ ] Salvare l'accettazione privacy su Firestore (`consensi/{uid}` con timestamp), non solo localStorage
 - [ ] Documentare la procedura di cancellazione su richiesta (oblio): profilo,
-  commenti nelle card, `quiz_risposte`, `ammonizioni` → anonimizzare il displayName
+      commenti nelle card, `quiz_risposte`, `ammonizioni` → anonimizzare il displayName
 - [ ] Verificare DPA/zero-retention di Groq e archiviarlo con l'Allegato B2
 
 ## 🔧 TECNICA — priorità media

@@ -3,7 +3,6 @@ import filterBtn from './modals/filterBtn.ts';
 var SB = window.SB || {};
 var h = SB.h || React.createElement;
 
-
 function FilterBar__({ $ }: any) {
   if (!$.isProf || $.simulaSt || $.view !== 'bacheca') return null;
   return (

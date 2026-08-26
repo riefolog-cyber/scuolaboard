@@ -127,67 +127,110 @@ function PrivacyModal(props: any) {
         {/* Step 1 */}
         <div style={infoCardStyle}>
           <div style={infoStepStyle}>
-            <span style={{ background: '#6366f1', color: '#fff', borderRadius: 8, padding: '2px 8px', fontSize: 11, fontWeight: 800 }}>
+            <span
+              style={{
+                background: '#6366f1',
+                color: '#fff',
+                borderRadius: 8,
+                padding: '2px 8px',
+                fontSize: 11,
+                fontWeight: 800,
+              }}
+            >
               1
             </span>
             <span style={{ fontWeight: 700, color: '#c7d2fe' }}>Anonimizzazione automatica</span>
           </div>
           <p style={infoTextStyle}>
-            Prima di inviare i commenti all'IA, i nomi degli studenti vengono automaticamente sostituiti con identificativi fittizi (Studente 1, Studente 2…). L'IA esterna non sa mai chi ha scritto cosa.
+            Prima di inviare i commenti all'IA, i nomi degli studenti vengono automaticamente sostituiti con
+            identificativi fittizi (Studente 1, Studente 2…). L'IA esterna non sa mai chi ha scritto cosa.
           </p>
         </div>
 
         {/* Step 2 */}
         <div style={infoCardStyle}>
           <div style={infoStepStyle}>
-            <span style={{ background: '#8b5cf6', color: '#fff', borderRadius: 8, padding: '2px 8px', fontSize: 11, fontWeight: 800 }}>
+            <span
+              style={{
+                background: '#8b5cf6',
+                color: '#fff',
+                borderRadius: 8,
+                padding: '2px 8px',
+                fontSize: 11,
+                fontWeight: 800,
+              }}
+            >
               2
             </span>
             <span style={{ fontWeight: 700, color: '#c7d2fe' }}>Trasparenza totale</span>
           </div>
           <p style={infoTextStyle}>
-            Ogni contenuto generato dall'IA è contrassegnato dal badge "Supporto IA – revisionato dal docente". Saprai sempre quando un contenuto è stato prodotto con supporto artificiale.
+            Ogni contenuto generato dall'IA è contrassegnato dal badge "Supporto IA – revisionato dal docente". Saprai
+            sempre quando un contenuto è stato prodotto con supporto artificiale.
           </p>
         </div>
 
         {/* Step 3 */}
         <div style={infoCardStyle}>
           <div style={infoStepStyle}>
-            <span style={{ background: '#a855f7', color: '#fff', borderRadius: 8, padding: '2px 8px', fontSize: 11, fontWeight: 800 }}>
+            <span
+              style={{
+                background: '#a855f7',
+                color: '#fff',
+                borderRadius: 8,
+                padding: '2px 8px',
+                fontSize: 11,
+                fontWeight: 800,
+              }}
+            >
               3
             </span>
             <span style={{ fontWeight: 700, color: '#c7d2fe' }}>Controllo umano</span>
           </div>
           <p style={infoTextStyle}>
-            Nessuna valutazione è mai automatica. I quiz generati dall'IA sono sempre bozze che il docente revisiona prima di pubblicare. L'IA supporta, il docente decide.
+            Nessuna valutazione è mai automatica. I quiz generati dall'IA sono sempre bozze che il docente revisiona
+            prima di pubblicare. L'IA supporta, il docente decide.
           </p>
         </div>
 
         {/* Step 4 */}
         <div style={infoCardStyle}>
           <div style={infoStepStyle}>
-            <span style={{ background: '#ec4899', color: '#fff', borderRadius: 8, padding: '2px 8px', fontSize: 11, fontWeight: 800 }}>
+            <span
+              style={{
+                background: '#ec4899',
+                color: '#fff',
+                borderRadius: 8,
+                padding: '2px 8px',
+                fontSize: 11,
+                fontWeight: 800,
+              }}
+            >
               4
             </span>
             <span style={{ fontWeight: 700, color: '#c7d2fe' }}>Dati mai esposti</span>
           </div>
           <p style={infoTextStyle}>
-            Le chiavi API e i dati sensibili non sono mai nel browser. Le chiamate IA passano da un proxy sicuro che protegge le credenziali.
+            Le chiavi API e i dati sensibili non sono mai nel browser. Le chiamate IA passano da un proxy sicuro che
+            protegge le credenziali.
           </p>
         </div>
 
         {/* Nota legale */}
-        <div style={{
-          marginTop: 16,
-          padding: '10px 14px',
-          background: 'rgba(99,102,241,.08)',
-          border: '1px solid rgba(99,102,241,.15)',
-          borderRadius: 10,
-          fontSize: 11,
-          color: 'rgba(255,255,255,.45)',
-          lineHeight: 1.5,
-        }}>
-          Conforme al Regolamento IA d'Istituto, AI Act (Art. 50) e GDPR (Art. 4 par. 5). Per maggiori dettagli, consulta l'InformativaPrivacy d'Istituto.
+        <div
+          style={{
+            marginTop: 16,
+            padding: '10px 14px',
+            background: 'rgba(99,102,241,.08)',
+            border: '1px solid rgba(99,102,241,.15)',
+            borderRadius: 10,
+            fontSize: 11,
+            color: 'rgba(255,255,255,.45)',
+            lineHeight: 1.5,
+          }}
+        >
+          Conforme al Regolamento IA d'Istituto, AI Act (Art. 50) e GDPR (Art. 4 par. 5). Per maggiori dettagli,
+          consulta l'InformativaPrivacy d'Istituto.
         </div>
 
         {/* Pulsante chiudi */}

@@ -51,42 +51,42 @@ SB.Modals = function ({ $ }: any) {
     // della modale aperta. display:contents non altera il layout.
     <FocusTrap>
       <Fragment>
-      <LightboxModal {...$} />
-      <PrivacyModal {...$} />
-      <ClasseModal {...$} />
-      <AiQuizGenModal {...$} />
-      <AmmModal {...$} />
-      <EditAmmModal {...$} />
-      <ProfiloModal {...$} />
-      <TimerModal {...$} />
-      <NuovaCardModal {...$} />
-      <RifiutaModal {...$} />
-      <ConfirmDelModal {...$} />
-      {$.showWordCloud && $.isProf && (
-        <Suspense fallback={null}>
-          <LazyWordCloudModal {...$} />
-        </Suspense>
-      )}
-      {$.showQR && (
-        <Suspense fallback={null}>
-          <LazyQRModal {...$} />
-        </Suspense>
-      )}
-      {$.showDuplica && (
-        <Suspense fallback={null}>
-          <LazyDuplicaModal {...$} />
-        </Suspense>
-      )}
-      {$.showCopiaAnno && (
-        <Suspense fallback={null}>
-          <LazyCopiaAnnoModal {...$} />
-        </Suspense>
-      )}
-      {$.showCerca && $.isProf && (
-        <Suspense fallback={null}>
-          <LazyCercaModal {...$} />
-        </Suspense>
-      )}
+        <LightboxModal {...$} />
+        <PrivacyModal {...$} />
+        <ClasseModal {...$} />
+        <AiQuizGenModal {...$} />
+        <AmmModal {...$} />
+        <EditAmmModal {...$} />
+        <ProfiloModal {...$} />
+        <TimerModal {...$} />
+        <NuovaCardModal {...$} />
+        <RifiutaModal {...$} />
+        <ConfirmDelModal {...$} />
+        {$.showWordCloud && $.isProf && (
+          <Suspense fallback={null}>
+            <LazyWordCloudModal {...$} />
+          </Suspense>
+        )}
+        {$.showQR && (
+          <Suspense fallback={null}>
+            <LazyQRModal {...$} />
+          </Suspense>
+        )}
+        {$.showDuplica && (
+          <Suspense fallback={null}>
+            <LazyDuplicaModal {...$} />
+          </Suspense>
+        )}
+        {$.showCopiaAnno && (
+          <Suspense fallback={null}>
+            <LazyCopiaAnnoModal {...$} />
+          </Suspense>
+        )}
+        {$.showCerca && $.isProf && (
+          <Suspense fallback={null}>
+            <LazyCercaModal {...$} />
+          </Suspense>
+        )}
       </Fragment>
     </FocusTrap>
   );

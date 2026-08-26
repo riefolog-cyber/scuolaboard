@@ -167,4 +167,3 @@ export async function renderApp({ seed = {}, user = null } = {}) {
     },
   };
 }
-

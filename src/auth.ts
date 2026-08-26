@@ -57,28 +57,27 @@ SB.useAuth = function (_annoScolastico: string) {
     console.error('[auth] Firebase Auth not available. App will start in offline mode.');
   } else {
     auth = firebase.auth();
-  }// Tipo strutturale dell'utente: matcha l'interfaccia `User` (storica in
-// types.ts, rimossa perché mai importata). Nessun import qui: auth.ts è uno
-// script UMD — un import lo convertirebbe in module rompendo l'export globale
-// SB.useAuth. I campi di Firestore sono opzionali: il merge con il doc users/{}
-// li completa (nascono dai dati Google).
-type AuthUser = {
-  uid: string;
-  nome?: string;
-  cognome?: string;
-  photoURL?: string | null;
-  email?: string;
-  role?: 'studente' | 'prof';
-  classe?: string | null;
-  classiPerAnno?: Record<string, string>;
-  displayName?: string | null;
-  [key: string]: any; // campi extra da Firestore (provider, ...)
-};
+  } // Tipo strutturale dell'utente: matcha l'interfaccia `User` (storica in
+  // types.ts, rimossa perché mai importata). Nessun import qui: auth.ts è uno
+  // script UMD — un import lo convertirebbe in module rompendo l'export globale
+  // SB.useAuth. I campi di Firestore sono opzionali: il merge con il doc users/{}
+  // li completa (nascono dai dati Google).
+  type AuthUser = {
+    uid: string;
+    nome?: string;
+    cognome?: string;
+    photoURL?: string | null;
+    email?: string;
+    role?: 'studente' | 'prof';
+    classe?: string | null;
+    classiPerAnno?: Record<string, string>;
+    displayName?: string | null;
+    [key: string]: any; // campi extra da Firestore (provider, ...)
+  };
 
-var db = firebase.firestore();
-SB.LS = SB.LS || {};
-useEffect(
-  function () {
+  var db = firebase.firestore();
+  SB.LS = SB.LS || {};
+  useEffect(function () {
     if (!auth) {
       setAuthLoad(false);
       return;
@@ -119,7 +118,11 @@ useEffect(
             }
           })
           .catch(function (err: any) {
-            console.error('[auth] getRedirectResult: lettura profilo users/{uid} fallita:', err && err.code, err && err.message);
+            console.error(
+              '[auth] getRedirectResult: lettura profilo users/{uid} fallita:',
+              err && err.code,
+              err && err.message
+            );
           });
       })
       .catch(function (err: any) {
@@ -168,13 +171,11 @@ useEffect(
         setAuthLoad(false);
       }
     });
-      return function () {
-        if (typeof unsub === 'function') unsub();
-        clearTimeout(authTimeout);
-      };
-    },
-    []
-  );
+    return function () {
+      if (typeof unsub === 'function') unsub();
+      clearTimeout(authTimeout);
+    };
+  }, []);
   async function loginGoogle() {
     if (!auth) {
       if (window.SB_DEBUG) console.warn('[auth] Firebase auth not available; login aborted.');

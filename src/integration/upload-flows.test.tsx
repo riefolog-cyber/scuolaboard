@@ -102,16 +102,14 @@ describe('Upload immagini (prof)', () => {
   // Regressione: in CardDetail la galleria usava `src={img}` con img = oggetto
   // {id,url,didascalia} → renderizzava "[object Object]" e l'immagine (con la
   // sua didascalia) non si vedeva quando la card aveva anche una copertina.
-  it('mostra la seconda immagine con didascalia nel dettaglio quando c\'è già una copertina', async () => {
+  it("mostra la seconda immagine con didascalia nel dettaglio quando c'è già una copertina", async () => {
     const seed = {
       users: { prof1: PROF_DOC },
       cards: {
         c1: mkCard('c1', {
           titolo: 'Card con copertina e galleria',
           copertina: 'data:image/png;base64,COPERTINA',
-          immagini: [
-            { id: 'img1', url: 'data:image/png;base64,IMMAGINE2', didascalia: 'Seconda immagine' },
-          ],
+          immagini: [{ id: 'img1', url: 'data:image/png;base64,IMMAGINE2', didascalia: 'Seconda immagine' }],
         }),
       },
     };
@@ -122,9 +120,7 @@ describe('Upload immagini (prof)', () => {
     expect(await screen.findByText('Seconda immagine', {}, { timeout: 4000 })).toBeTruthy();
 
     // L'immagine galleria usa img.url (non l'oggetto intero)
-    const galleryImg = screen
-      .getAllByRole('img')
-      .find((i) => i.getAttribute('alt') === 'Seconda immagine');
+    const galleryImg = screen.getAllByRole('img').find((i) => i.getAttribute('alt') === 'Seconda immagine');
     expect(galleryImg).toBeTruthy();
     expect(galleryImg.getAttribute('src')).toBe('data:image/png;base64,IMMAGINE2');
   });

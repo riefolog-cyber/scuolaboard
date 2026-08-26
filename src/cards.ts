@@ -29,7 +29,12 @@ SB.useCards = function (user: any, annoScolastico: string) {
         // altrimenti useSyncExternalStore entra in loop infinito (Object.is fail).
         // [] as any[]: evita che i campi siano inferiti come never[] (trappola
         // latente quando lo store verrà tipizzato — allCards deve restare any[]).
-        var emptySnap = { allCards: [] as any[], classiCustom: [] as any[], classiNascoste: [] as any[], preferiti: [] as any[] };
+        var emptySnap = {
+          allCards: [] as any[],
+          classiCustom: [] as any[],
+          classiNascoste: [] as any[],
+          preferiti: [] as any[],
+        };
         var empty = {
           subscribe: function (_cb: any) {
             return function () {};
@@ -119,7 +124,11 @@ SB.useCards = function (user: any, annoScolastico: string) {
   // Classe corrente dello studente per l'anno selezionato: fonte di verità è la
   // mappa classiPerAnno[anno] (per-anno), con fallback sul campo piatto legacy.
   var classeCorrente =
-    user && user.classiPerAnno ? user.classiPerAnno[annoScolastico] || user.classe || null : user ? user.classe || null : null;
+    user && user.classiPerAnno
+      ? user.classiPerAnno[annoScolastico] || user.classe || null
+      : user
+        ? user.classe || null
+        : null;
 
   // Inizializza seenRef da localStorage
   useEffect(function () {

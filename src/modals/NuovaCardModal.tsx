@@ -573,7 +573,8 @@ function NuovaCardModal(props: any) {
                       kb += Math.round((a.size || 0) / 1024);
                     });
                     var color = kb > 500 ? '#f87171' : kb > 200 ? '#fbbf24' : 'rgba(255,255,255,.40)';
-                    var warn = kb > 500 ? ' ⚠️ attento al limite (700KB/file)' : kb > 200 ? ' — attento alle dimensioni' : '';
+                    var warn =
+                      kb > 500 ? ' ⚠️ attento al limite (700KB/file)' : kb > 200 ? ' — attento alle dimensioni' : '';
                     return kb > 0 ? (
                       <span style={{ fontSize: 11, color: color, fontWeight: 700 }}>{kb + ' KB' + warn}</span>
                     ) : (

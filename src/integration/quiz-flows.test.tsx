@@ -172,7 +172,7 @@ describe('Quiz interattivo (studente)', () => {
     expect(screen.getAllByText(/La tua risposta:/).length).toBeGreaterThan(0);
   });
 
-  it('dopo il completamento lo studente vede l\'esito giusto/sbagliato e la valutazione AI del prof', async () => {
+  it("dopo il completamento lo studente vede l'esito giusto/sbagliato e la valutazione AI del prof", async () => {
     const seed = {
       users: { stud1: STUD_DOC },
       cards: {

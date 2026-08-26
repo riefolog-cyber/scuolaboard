@@ -423,23 +423,26 @@ SB.useAI = function (user: any) {
   var [sondaggioAiResult, setSondaggioAiResult] = useState<any>({});
   var [sondaggioAiLoading, setSondaggioAiLoading] = useState<any>(null);
 
-  useEffect(function () {
-    // Fase 4c: la collezione ai_results (analisi + domande AI) è prof-only.
-    // Prima veniva scaricata per TUTTI al mount; ora la carichiamo SOLO per
-    // il prof, con dipendenza reattiva su `user`: l'auth è async (nei test e
-    // in produzione onAuthStateChanged arriva dopo il primo render) quindi al
-    // mount user è null e il caricamento parte quando il prof è autenticato.
-    // Gli studenti non scaricano più la collezione → meno letture Firestore;
-    // vedono comunque l'analisi via card.aiAnalisi (campo sulla card).
-    if (!user || user.role !== 'prof') {
-      setAiMap({});
-      return;
-    }
-    var u = _aiLoad(function (m) {
-      setAiMap(m);
-    });
-    return u;
-  }, [user]);
+  useEffect(
+    function () {
+      // Fase 4c: la collezione ai_results (analisi + domande AI) è prof-only.
+      // Prima veniva scaricata per TUTTI al mount; ora la carichiamo SOLO per
+      // il prof, con dipendenza reattiva su `user`: l'auth è async (nei test e
+      // in produzione onAuthStateChanged arriva dopo il primo render) quindi al
+      // mount user è null e il caricamento parte quando il prof è autenticato.
+      // Gli studenti non scaricano più la collezione → meno letture Firestore;
+      // vedono comunque l'analisi via card.aiAnalisi (campo sulla card).
+      if (!user || user.role !== 'prof') {
+        setAiMap({});
+        return;
+      }
+      var u = _aiLoad(function (m) {
+        setAiMap(m);
+      });
+      return u;
+    },
+    [user]
+  );
 
   async function performAnalysis(cards: any) {
     var det = cards

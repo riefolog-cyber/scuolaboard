@@ -44,16 +44,8 @@ function CopiaAnnoModal(props: any) {
             e.stopPropagation();
           }}
         >
-          {
-            <div style={{ fontSize: 34, marginBottom: 8 }}>
-              📅
-            </div>
-          }
-          {
-            <h3 style={{ margin: '0 0 4px', color: '#f1f5f9', fontSize: 16, fontWeight: 800 }}>
-              Copia in altro anno
-            </h3>
-          }
+          {<div style={{ fontSize: 34, marginBottom: 8 }}>📅</div>}
+          {<h3 style={{ margin: '0 0 4px', color: '#f1f5f9', fontSize: 16, fontWeight: 800 }}>Copia in altro anno</h3>}
           {
             <p style={{ color: 'rgba(255,255,255,.52)', fontSize: 12, margin: '0 0 6px', lineHeight: 1.5 }}>
               {'"' + (card.titolo || '') + '"'}
@@ -137,9 +129,7 @@ function CopiaAnnoModal(props: any) {
                     fontSize: 14,
                     fontWeight: 800,
                     cursor: copiaAnnoTarget ? 'pointer' : 'not-allowed',
-                    background: copiaAnnoTarget
-                      ? 'linear-gradient(135deg,#8b5cf6,#a855f7)'
-                      : 'rgba(255,255,255,.06)',
+                    background: copiaAnnoTarget ? 'linear-gradient(135deg,#8b5cf6,#a855f7)' : 'rgba(255,255,255,.06)',
                     color: copiaAnnoTarget ? '#fff' : 'rgba(255,255,255,.25)',
                   }}
                 >

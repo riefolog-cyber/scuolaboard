@@ -8,13 +8,7 @@
 // invariati e i test di integrazione (che iniettano il proprio fake via
 // harness.ts) non vengono toccati.
 import { initializeApp, getApp, getApps } from 'firebase/app';
-import {
-  getAuth,
-  signInWithPopup,
-  signInWithRedirect,
-  getRedirectResult,
-  GoogleAuthProvider,
-} from 'firebase/auth';
+import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider } from 'firebase/auth';
 import {
   initializeFirestore,
   collection,

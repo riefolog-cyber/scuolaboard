@@ -82,7 +82,7 @@ describe('Flussi principali — prof', () => {
 // Il nome canonico dell'utente studente è myName() = safeDocId(displayName),
 // che preserva gli spazi → 'Luca Bianchi' (stesso valore usato da addCom).
 describe('Modifica ed elimina il proprio commento', () => {
-  it("lo studente modifica il proprio commento (non quello altrui)", async () => {
+  it('lo studente modifica il proprio commento (non quello altrui)', async () => {
     const seed = {
       users: { stud1: STUD_DOC },
       cards: {
@@ -121,7 +121,7 @@ describe('Modifica ed elimina il proprio commento', () => {
     });
   });
 
-  it("lo studente elimina il proprio commento con conferma", async () => {
+  it('lo studente elimina il proprio commento con conferma', async () => {
     const seed = {
       users: { stud1: STUD_DOC },
       cards: {
@@ -148,7 +148,7 @@ describe('Modifica ed elimina il proprio commento', () => {
     expect(screen.queryByText('Da eliminare')).toBeNull();
   });
 
-  it("il prof può modificare qualsiasi commento (moderazione)", async () => {
+  it('il prof può modificare qualsiasi commento (moderazione)', async () => {
     const seed = {
       users: { prof1: PROF_DOC },
       cards: {
@@ -194,7 +194,7 @@ describe('Modifica ed elimina il proprio commento', () => {
 
 // ── RISPONDI AI COMMENTI (thread nidificati) ──────────────────────────────
 describe('Rispondi ai commenti', () => {
-  it("lo studente risponde a un commento e la risposta appare nel thread", async () => {
+  it('lo studente risponde a un commento e la risposta appare nel thread', async () => {
     const seed = {
       users: { stud1: STUD_DOC },
       cards: {
@@ -225,7 +225,7 @@ describe('Rispondi ai commenti', () => {
     });
   });
 
-  it("lo studente elimina la propria risposta (non quella altrui) con conferma", async () => {
+  it('lo studente elimina la propria risposta (non quella altrui) con conferma', async () => {
     const seed = {
       users: { stud1: STUD_DOC },
       cards: {
@@ -268,7 +268,7 @@ describe('Rispondi ai commenti', () => {
     expect(screen.queryByText('La mia risposta')).toBeNull();
   });
 
-  it("lo studente modifica la propria risposta", async () => {
+  it('lo studente modifica la propria risposta', async () => {
     const seed = {
       users: { stud1: STUD_DOC },
       cards: {

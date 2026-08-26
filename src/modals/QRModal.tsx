@@ -38,16 +38,8 @@ function QRModal(props: any) {
             e.stopPropagation();
           }}
         >
-          {
-            <div style={{ fontSize: 40, marginBottom: 12 }}>
-              ◆
-            </div>
-          }
-          {
-            <h3 style={{ margin: '0 0 4px', color: '#f1f5f9', fontSize: 16, fontWeight: 800 }}>
-              QR Code Bacheca
-            </h3>
-          }
+          {<div style={{ fontSize: 40, marginBottom: 12 }}>◆</div>}
+          {<h3 style={{ margin: '0 0 4px', color: '#f1f5f9', fontSize: 16, fontWeight: 800 }}>QR Code Bacheca</h3>}
           {
             <p style={{ color: 'rgba(255,255,255,.52)', fontSize: 12, margin: '0 0 20px' }}>
               Scannerizza per accedere alla bacheca dal tuo dispositivo

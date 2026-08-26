@@ -65,7 +65,7 @@ function Header__({ $ }: any) {
           {$.classeCorrente || $.user.classe}
         </span>
       )}
-      {!$.isProf && !(($.user.classiPerAnno || {})[$.annoScolastico]) && (
+      {!$.isProf && !($.user.classiPerAnno || {})[$.annoScolastico] && (
         <button
           onClick={function () {
             $.setShowClasseModal(true);
@@ -81,7 +81,7 @@ function Header__({ $ }: any) {
           ⚠️ Scegli classe
         </button>
       )}
-      {!$.isProf && !(($.user.classiPerAnno || {})[$.annoScolastico]) && (
+      {!$.isProf && !($.user.classiPerAnno || {})[$.annoScolastico] && (
         <button
           onClick={function () {
             $.setShowClasseModal(true);

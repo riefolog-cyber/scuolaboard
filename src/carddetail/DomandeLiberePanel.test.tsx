@@ -2,13 +2,13 @@
 // quando $.aiMap è undefined (bug reale: refreshCallback() passava undefined a
 // setAiMap → aiMap = undefined → "Cannot read properties of undefined (reading
 // '<cardId>')" in DomandeLiberePanel).
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
-import React from "react";
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import React from 'react';
 
-import DomandeLiberePanel from "./DomandeLiberePanel.tsx";
+import DomandeLiberePanel from './DomandeLiberePanel.tsx';
 
-describe("DomandeLiberePanel", () => {
+describe('DomandeLiberePanel', () => {
   let $: any;
   let card: any;
 
@@ -18,15 +18,15 @@ describe("DomandeLiberePanel", () => {
       simulaSt: false,
       aiMap: undefined, // ← condizione del crash reale
       cardQOpen: { c1: true },
-      cardQ: "",
+      cardQ: '',
       setCardQ: vi.fn(),
       cardQLoad: false,
       setCardQOpen: vi.fn(),
       runCardQ: vi.fn(),
-      cardQErr: "",
+      cardQErr: '',
       eliminaDomandeAI: vi.fn(),
     };
-    card = { id: "c1", titolo: "Lezione X" };
+    card = { id: 'c1', titolo: 'Lezione X' };
   });
 
   function renderPanel(overrides = {}) {
@@ -38,7 +38,7 @@ describe("DomandeLiberePanel", () => {
     );
   }
 
-  it("NON crasha con aiMap undefined e pannello aperto (regressione crash)", () => {
+  it('NON crasha con aiMap undefined e pannello aperto (regressione crash)', () => {
     // Prima del fix questo render esplodeva con
     // TypeError: Cannot read properties of undefined (reading 'c1')
     renderPanel();
@@ -50,13 +50,13 @@ describe("DomandeLiberePanel", () => {
     expect(screen.queryByText(/DOMANDE ALL'AI/)).toBeNull();
   });
 
-  it("mostra la cronologia delle domande quando aiMap ha la voce della card", () => {
+  it('mostra la cronologia delle domande quando aiMap ha la voce della card', () => {
     renderPanel({
       aiMap: {
         c1: {
           domande: [
-            { id: 1, q: "Cos'è una variabile?", risposta: "Un contenitore" },
-            { id: 2, q: "A cosa serve?", risposta: "A memorizzare" },
+            { id: 1, q: "Cos'è una variabile?", risposta: 'Un contenitore' },
+            { id: 2, q: 'A cosa serve?', risposta: 'A memorizzare' },
           ],
         },
       },

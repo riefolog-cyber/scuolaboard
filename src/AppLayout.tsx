@@ -165,7 +165,8 @@ SB.AppLayout = function (props: any) {
                 justifyContent: 'center',
                 gap: 6,
                 padding: '6px 14px',
-                background: 'linear-gradient(90deg,rgba(99,102,241,.05) 0%,rgba(168,85,247,.05) 50%,rgba(99,102,241,.05) 100%)',
+                background:
+                  'linear-gradient(90deg,rgba(99,102,241,.05) 0%,rgba(168,85,247,.05) 50%,rgba(99,102,241,.05) 100%)',
                 borderBottom: '1px solid rgba(255,255,255,.05)',
                 cursor: 'pointer',
                 transition: 'background .2s',
@@ -174,7 +175,8 @@ SB.AppLayout = function (props: any) {
                 e.currentTarget.style.background = 'rgba(99,102,241,.1)';
               }}
               onMouseLeave={function (e: any) {
-                e.currentTarget.style.background = 'linear-gradient(90deg,rgba(99,102,241,.05) 0%,rgba(168,85,247,.05) 50%,rgba(99,102,241,.05) 100%)';
+                e.currentTarget.style.background =
+                  'linear-gradient(90deg,rgba(99,102,241,.05) 0%,rgba(168,85,247,.05) 50%,rgba(99,102,241,.05) 100%)';
               }}
             >
               <span style={{ fontSize: 13 }}>🛡️</span>
@@ -244,7 +246,11 @@ SB.AppLayout = function (props: any) {
                         >
                           {<option value="tutte">📊 Analisi unica (tutte le classi)</option>}
                           {<option value="suddivisa">📋 Analisi suddivisa per classe</option>}
-                          {<option disabled value="">──────────────</option>}
+                          {
+                            <option disabled value="">
+                              ──────────────
+                            </option>
+                          }
                           {$.CLASSI_LIST.map(function (cl: any) {
                             return (
                               <option key={cl} value={cl}>
@@ -263,9 +269,7 @@ SB.AppLayout = function (props: any) {
                           className="btn btn-primary"
                           style={{
                             padding: '9px 22px',
-                            background: $.aiRunning
-                              ? 'rgba(99,102,241,.2)'
-                              : 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+                            background: $.aiRunning ? 'rgba(99,102,241,.2)' : 'linear-gradient(135deg,#6366f1,#8b5cf6)',
                             fontWeight: 800,
                             cursor: $.aiRunning ? 'not-allowed' : 'pointer',
                             opacity: $.aiRunning ? 0.6 : 1,
@@ -295,7 +299,8 @@ SB.AppLayout = function (props: any) {
                   {'⚠️ ' + $.aiErr}
                 </div>
               )}
-              {$.aiResult && !$.aiRunning &&
+              {$.aiResult &&
+                !$.aiRunning &&
                 (function () {
                   // Se è un risultato singolo (non suddiviso per classe)
                   if ($.aiTarget !== 'suddivisa' || $.aiResult.riepilogo) {
@@ -451,9 +456,20 @@ SB.AppLayout = function (props: any) {
                             })}
                           </div>
                         )}
-                        <div style={{ marginTop: 14, paddingTop: 10, borderTop: '1px solid rgba(99,102,241,.15)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <div
+                          style={{
+                            marginTop: 14,
+                            paddingTop: 10,
+                            borderTop: '1px solid rgba(99,102,241,.15)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 5,
+                          }}
+                        >
                           <span style={{ fontSize: 10, color: 'rgba(255,255,255,.35)' }}>🤖</span>
-                          <span style={{ fontSize: 10, color: 'rgba(255,255,255,.35)', fontStyle: 'italic' }}>Analisi generata con IA – revisionata dal docente</span>
+                          <span style={{ fontSize: 10, color: 'rgba(255,255,255,.35)', fontStyle: 'italic' }}>
+                            Analisi generata con IA – revisionata dal docente
+                          </span>
                         </div>
                       </div>
                     );
@@ -526,29 +542,33 @@ SB.AppLayout = function (props: any) {
                             })}
                           </div>
                         )}
-                        <div style={{ marginTop: 10, paddingTop: 8, borderTop: '1px solid rgba(99,102,241,.15)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <div
+                          style={{
+                            marginTop: 10,
+                            paddingTop: 8,
+                            borderTop: '1px solid rgba(99,102,241,.15)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 5,
+                          }}
+                        >
                           <span style={{ fontSize: 10, color: 'rgba(255,255,255,.35)' }}>🤖</span>
-                          <span style={{ fontSize: 10, color: 'rgba(255,255,255,.35)', fontStyle: 'italic' }}>Analisi generata con IA – revisionata dal docente</span>
+                          <span style={{ fontSize: 10, color: 'rgba(255,255,255,.35)', fontStyle: 'italic' }}>
+                            Analisi generata con IA – revisionata dal docente
+                          </span>
                         </div>
                       </div>
                     );
                   });
                 })()}
               {!$.aiResult && !$.aiRunning && !$.aiErr && (
-                <div
-                  className="empty-state"
-                  style={{ padding: '48px 24px' }}
-                >
+                <div className="empty-state" style={{ padding: '48px 24px' }}>
                   {
                     <div className="empty-state-icon" style={{ fontSize: 56 }}>
                       🤖
                     </div>
                   }
-                  {
-                    <div className="empty-state-title">
-                      Analisi AI disponibile
-                    </div>
-                  }
+                  {<div className="empty-state-title">Analisi AI disponibile</div>}
                   {
                     <div className="empty-state-sub">
                       Clicca "Avvia analisi AI" per ottenere un riepilogo didattico, punti chiave e spunti di dibattito
@@ -658,20 +678,13 @@ SB.AppLayout = function (props: any) {
                 </div>
               }
               {$.studenti.length === 0 && (
-                <div
-                  className="empty-state"
-                  style={{ padding: '48px 24px' }}
-                >
+                <div className="empty-state" style={{ padding: '48px 24px' }}>
                   {
                     <div className="empty-state-icon" style={{ fontSize: 56 }}>
                       👥
                     </div>
                   }
-                  {
-                    <div className="empty-state-title">
-                      Nessuno studente caricato
-                    </div>
-                  }
+                  {<div className="empty-state-title">Nessuno studente caricato</div>}
                   {
                     <div className="empty-state-sub">
                       Clicca "Carica studenti" per visualizzare l'elenco degli studenti registrati sulla piattaforma.

@@ -343,7 +343,8 @@ function CardItem__({ $, c }: any) {
               )}
               {c.tipo === 'sondaggio' && c.opzioni && (
                 <div style={{ marginTop: 8 }}>
-                  {c.opzioni.map(function (o: any) {
+                  {c.opzioni
+                    .map(function (o: any) {
                       var pct = totV > 0 ? Math.round(((o.voti || []).length / totV) * 100) : 0;
                       return (
                         <div key={o.id} style={{ marginBottom: 4 }}>

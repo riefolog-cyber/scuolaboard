@@ -130,12 +130,8 @@ function DomandeLiberePanel({ $, c }: any) {
                         marginBottom: 6,
                       }}
                     >
-                      <div style={{ fontSize: 11, fontWeight: 700, color: '#a5b4fc', marginBottom: 4 }}>
-                        ❓ {dq.q}
-                      </div>
-                      <div style={{ fontSize: 12, color: 'rgba(255,255,255,.75)', lineHeight: 1.5 }}>
-                        {dq.risposta}
-                      </div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: '#a5b4fc', marginBottom: 4 }}>❓ {dq.q}</div>
+                      <div style={{ fontSize: 12, color: 'rgba(255,255,255,.75)', lineHeight: 1.5 }}>{dq.risposta}</div>
                     </div>
                   );
                 })}

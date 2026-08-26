@@ -82,7 +82,8 @@ function EditAmmModal(props: any) {
               {
                 <button
                   onClick={function () {
-                    var val = ((document.getElementById('editamm-input') || {}) as any)['value']; if (val) val = val.trim();
+                    var val = ((document.getElementById('editamm-input') || {}) as any)['value'];
+                    if (val) val = val.trim();
                     if (val) {
                       props.modificaAmm(editAmm.nome, editAmm.id, val);
                       // FIX (bug E2E): la modale si chiude da sola dopo il salvataggio,
