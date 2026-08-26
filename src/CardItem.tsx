@@ -376,7 +376,7 @@ function CardItem__({ $, c }: any) {
                     ])}
                 </div>
               )}
-              {c.tipo === 'quiz' && c.quizDomande && (
+              {(c.tipo === 'quiz' || (c.quizDomande && c.quizDomande.length > 0)) && c.quizDomande && (
                 <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
                   {
                     <span style={{ fontSize: 11, color: 'rgba(236,72,153,.8)', fontWeight: 700 }}>

@@ -96,8 +96,18 @@ export function buildEditCard(
     allegati: form.allegati || [],
   });
   if (opzioni) c.opzioni = opzioni;
-  if (quizDomande) c.quizDomande = quizDomande;
-  if (form.tipo === 'quiz') c.quizTimer = form.quizTimer || 10;
+  if (quizDomande) {
+    c.quizDomande = quizDomande;
+    if (form.tipo === 'quiz') c.quizTimer = form.quizTimer || 10;
+  } else {
+    // La card NON è (più) un quiz: rimuovi quizDomande e quizTimer ereditati
+    // dall'oggetto vecchio (Object.assign sopra). Altrimenti la card salva
+    // tipo diverso da 'quiz' ma con quizDomande ancora presenti → il pannello
+    // quiz (gated da c.tipo === 'quiz') non compare nel dettaglio né nella
+    // griglia, mentre la modifica (gated solo su form.quizDomande) le mostra.
+    delete c.quizDomande;
+    delete c.quizTimer;
+  }
   return c;
 }
 

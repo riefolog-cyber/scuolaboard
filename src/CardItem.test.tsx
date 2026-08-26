@@ -213,4 +213,13 @@ describe('CardItem', () => {
     expect(screen.getByText(/3 domande/)).toBeInTheDocument();
     expect(screen.getByText(/10 min/)).toBeInTheDocument();
   });
+
+  it('mostra il chip quiz anche se tipo NON è "quiz" ma quizDomande esiste (reintegro card orfane)', () => {
+    renderCard({
+      tipo: 'domanda',
+      quizDomande: [{ testo: 'Domanda 1' }, { testo: 'Domanda 2' }],
+      quizTimer: 10,
+    });
+    expect(screen.getByText(/2 domande/)).toBeInTheDocument();
+  });
 });

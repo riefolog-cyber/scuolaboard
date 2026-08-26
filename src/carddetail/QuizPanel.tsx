@@ -4,8 +4,12 @@ var h = SB.h || React.createElement;
 var Fragment = SB.Fragment || React.Fragment;
 
 function QuizPanel({ $, c }: any) {
+  // Tratta come quiz ogni card che ha domande salvate (c.quizDomande non vuote),
+  // anche se tipo non è esattamente 'quiz': card create/modificate tempo fa
+  // possono avere quizDomande orfane con tipo diverso (bug fixato in
+  // buildEditCard) — il dettaglio le mostrava solo tramite Modifica.
   return (
-    c.tipo === 'quiz' && c.quizDomande && (
+    c.quizDomande && c.quizDomande.length > 0 && (
                 <div style={{ marginBottom: 14 }}>
                   <div
                     style={{
@@ -238,6 +242,86 @@ function QuizPanel({ $, c }: any) {
                                 </div>
                               );
                             })}
+                          {/* ANTEPRIMA DOMANDE (sempre visibile al prof) */}
+                          <div style={{ marginTop: 14 }}>
+                            <div
+                              style={{
+                                fontSize: 11,
+                                fontWeight: 800,
+                                color: 'rgba(236,72,153,.9)',
+                                letterSpacing: 1,
+                                marginBottom: 8,
+                              }}
+                            >
+                              {'📝 DOMANDE (' + domProf.length + ')'}
+                            </div>
+                            {domProf.map(function (d: any, di: number) {
+                              return (
+                                <div
+                                  key={di}
+                                  style={{
+                                    background: 'rgba(236,72,153,.05)',
+                                    border: '1px solid rgba(236,72,153,.15)',
+                                    borderRadius: 10,
+                                    padding: '9px 12px',
+                                    marginBottom: 6,
+                                  }}
+                                >
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                                    <span
+                                      style={{
+                                        background: '#ec4899',
+                                        color: '#fff',
+                                        borderRadius: '50%',
+                                        width: 18,
+                                        height: 18,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontSize: 11,
+                                        fontWeight: 800,
+                                        flexShrink: 0,
+                                      }}
+                                    >
+                                      {di + 1}
+                                    </span>
+                                    <span style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,.85)' }}>
+                                      {d.testo}
+                                    </span>
+                                  </div>
+                                  {(d.tipo === 'multipla' || d.tipo === 'verofalso') && (
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 2 }}>
+                                      {(d.opzioni || []).map(function (opt: any, oi: number) {
+                                        var isCorretta = String(d.corretta) === String(oi);
+                                        return (
+                                          <span
+                                            key={oi}
+                                            style={{
+                                              background: isCorretta ? 'rgba(34,197,94,.18)' : 'rgba(255,255,255,.05)',
+                                              border: '1px solid ' + (isCorretta ? 'rgba(34,197,94,.3)' : 'rgba(255,255,255,.1)'),
+                                              borderRadius: 6,
+                                              padding: '2px 7px',
+                                              fontSize: 11,
+                                              color: isCorretta ? '#4ade80' : 'rgba(255,255,255,.6)',
+                                              fontWeight: isCorretta ? 700 : 500,
+                                            }}
+                                          >
+                                            {opt}
+                                            {isCorretta ? ' ✓' : ''}
+                                          </span>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                  {d.tipo === 'aperta' && (
+                                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,.5)', fontStyle: 'italic', marginTop: 2 }}>
+                                      Risposta aperta (AI)
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
                       );
                     })()
@@ -253,28 +337,155 @@ function QuizPanel({ $, c }: any) {
                     ($.quizRisposte || []).forEach(function (r: any) {
                       if (r.studente === $.myName($.user)) miaRisposta = r;
                     });
-                    var giaRisposto = miaRisposta && miaRisposta.risposte;
+                    // Badge di chiusura: mostra "Quiz completato" sia quando il
+                    // doc dal listener è arrivato (miaRisposta) sia subito dopo
+                    // l'invio (qInviato) — feedback immediato senza aspettare il
+                    // roundtrip Firestore (che prima falliva per permission-denied).
+                    var giaRisposto = (miaRisposta && miaRisposta.risposte) || $.qInviato;
                     return giaRisposto ? (
-                      <div
-                        style={{
-                          background: 'rgba(34,197,94,.1)',
-                          border: '1px solid rgba(34,197,94,.25)',
-                          borderRadius: 10,
-                          padding: '10px 14px',
-                        }}
-                      >
-                        <div style={{ fontWeight: 800, color: '#4ade80', marginBottom: 6, fontSize: 12 }}>
-                          ✅ Quiz completato
+                      <div>
+                        <div
+                          style={{
+                            background: 'rgba(34,197,94,.1)',
+                            border: '1px solid rgba(34,197,94,.25)',
+                            borderRadius: 10,
+                            padding: '10px 14px',
+                          }}
+                        >
+                          <div style={{ fontWeight: 800, color: '#4ade80', marginBottom: 6, fontSize: 12 }}>
+                            ✅ Quiz completato
+                          </div>
+                          <div style={{ fontSize: 12, color: 'rgba(255,255,255,.7)' }}>
+                            Punteggio:{' '}
+                            <strong>
+                              {((miaRisposta || {}).punteggio && miaRisposta.punteggio.score != null
+                                ? miaRisposta.punteggio.score
+                                : 0)}
+                              /{c.quizDomande.length}
+                            </strong>
+                          </div>
                         </div>
-                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,.7)' }}>
-                          Punteggio:{' '}
-                          <strong>
-                            {(miaRisposta.punteggio && miaRisposta.punteggio.score != null
-                              ? miaRisposta.punteggio.score
-                              : 0)}
-                            /{c.quizDomande.length}
-                          </strong>
-                        </div>
+                        {/* ── RIEPILOGO: esiti + valutazione AI del prof ── */}
+                        {miaRisposta && miaRisposta.risposte && (
+                          <div style={{ marginTop: 12 }}>
+                            <div
+                              style={{
+                                fontSize: 11,
+                                fontWeight: 800,
+                                color: 'rgba(255,255,255,.5)',
+                                letterSpacing: 1,
+                                marginBottom: 8,
+                              }}
+                            >
+                              📋 ESITO
+                            </div>
+                            {c.quizDomande.map(function (d: any, di: number) {
+                              var risp = miaRisposta.risposte[di];
+                              if (d.tipo === 'aperta') {
+                                // Valutazione AI del prof (se già fatta)
+                                var s =
+                                  miaRisposta.aiScores &&
+                                  (miaRisposta.aiScores[di] ||
+                                    miaRisposta.aiScores[di + 1] ||
+                                    (function () {
+                                      var k = Object.keys(miaRisposta.aiScores || {});
+                                      var oi =
+                                        c.quizDomande
+                                          .slice(0, di + 1)
+                                          .filter(function (x: any) {
+                                            return x.tipo === 'aperta';
+                                          }).length - 1;
+                                      return miaRisposta.aiScores[k[oi]] || null;
+                                    })());
+                                return (
+                                  <div
+                                    key={di}
+                                    style={{
+                                      background: 'rgba(255,255,255,.04)',
+                                      border: '1px solid rgba(255,255,255,.08)',
+                                      borderRadius: 10,
+                                      padding: '9px 12px',
+                                      marginBottom: 8,
+                                    }}
+                                  >
+                                    <div
+                                      style={{
+                                        fontSize: 11,
+                                        fontWeight: 800,
+                                        color: 'rgba(255,255,255,.58)',
+                                        marginBottom: 4,
+                                      }}
+                                    >
+                                      {'D' + (di + 1) + ' (aperta): ' + d.testo}
+                                    </div>
+                                    {risp ? (
+                                      <div
+                                        style={{
+                                          fontSize: 12,
+                                          color: 'rgba(255,255,255,.7)',
+                                          fontStyle: 'italic',
+                                          lineHeight: 1.6,
+                                          marginBottom: 6,
+                                        }}
+                                      >
+                                        {'"' + risp + '"'}
+                                      </div>
+                                    ) : (
+                                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,.40)' }}>
+                                        (nessuna risposta)
+                                      </div>
+                                    )}
+                                    {miaRisposta.aiValutato && s ? (
+                                      <Fragment key={di}>{$.ValutazioneApertaAI(h, s, risp, di, d, true)}</Fragment>
+                                    ) : (
+                                      <div style={{ fontSize: 11, color: '#fbbf24', fontWeight: 700 }}>
+                                        ⏳ attende la valutazione del prof
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              }
+                              var corretta = String(risp) === String(d.corretta);
+                              var corrIdx = parseInt(risp);
+                              var rispTxt =
+                                d.tipo === 'multipla'
+                                  ? d.opzioni && !isNaN(corrIdx) && d.opzioni[corrIdx]
+                                    ? d.opzioni[corrIdx]
+                                    : risp || '—'
+                                  : risp || '—';
+                              return (
+                                <div
+                                  key={di}
+                                  style={{
+                                    background: corretta ? 'rgba(34,197,94,.08)' : 'rgba(239,68,68,.08)',
+                                    border: '1px solid ' + (corretta ? 'rgba(34,197,94,.25)' : 'rgba(239,68,68,.22)'),
+                                    borderRadius: 8,
+                                    padding: '8px 12px',
+                                    marginBottom: 6,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 8,
+                                  }}
+                                >
+                                  <span style={{ fontSize: 14, flexShrink: 0 }}>{corretta ? '✅' : '❌'}</span>
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,.85)' }}>
+                                      {di + 1 + '. ' + d.testo}
+                                    </div>
+                                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,.55)', marginTop: 2 }}>
+                                      La tua risposta: <strong style={{ color: 'rgba(255,255,255,.8)' }}>{rispTxt}</strong>
+                                      {!corretta && d.corretta != null && d.corretta !== '' && (
+                                        <span style={{ color: '#4ade80' }}>
+                                          {' — corretta: ' + (d.opzioni && d.opzioni[d.corretta] ? d.opzioni[d.corretta] : d.corretta)}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div>
@@ -329,34 +540,70 @@ function QuizPanel({ $, c }: any) {
                                   </button>
                                 );
                               })}
+                              {d.tipo === 'aperta' && (
+                                <textarea
+                                  value={typeof rispostaUtente === 'string' ? rispostaUtente : ''}
+                                  onInput={function (e: any) {
+                                    var nuovo = Object.assign({}, risposteUtente);
+                                    nuovo[di] = e.target.value;
+                                    $.setQRisposte(function (p: any) {
+                                      var nr = Object.assign({}, p);
+                                      nr[String(c.id)] = nuovo;
+                                      return nr;
+                                    });
+                                  }}
+                                  placeholder="Scrivi qui la tua risposta…"
+                                  aria-label={'Risposta aperta alla domanda ' + (di + 1)}
+                                  rows={3}
+                                  style={{
+                                    width: '100%',
+                                    background: 'rgba(255,255,255,.04)',
+                                    border: '1px solid rgba(255,255,255,.12)',
+                                    borderRadius: 8,
+                                    padding: '8px 10px',
+                                    color: '#f1f5f9',
+                                    fontSize: 13,
+                                    fontFamily: 'inherit',
+                                    resize: 'vertical',
+                                    boxSizing: 'border-box',
+                                  }}
+                                />
+                              )}
                             </div>
                           );
                         })}
                         {!$.isProf && (
-                          <button
-                            onClick={function () {
-                              $.inviaRisposteQuiz(c.id);
-                            }}
-                            disabled={Object.keys(risposteUtente).length < c.quizDomande.length}
-                            style={{
-                              width: '100%',
-                              padding: 10,
-                              marginTop: 4,
-                              background:
-                                Object.keys(risposteUtente).length >= c.quizDomande.length
-                                  ? 'linear-gradient(135deg,#6366f1,#a855f7)'
-                                  : 'rgba(255,255,255,.08)',
-                              border: 'none',
-                              borderRadius: 10,
-                              color: '#fff',
-                              fontSize: 13,
-                              fontWeight: 800,
-                              cursor:
-                                Object.keys(risposteUtente).length >= c.quizDomande.length ? 'pointer' : 'not-allowed',
-                            }}
-                          >
-                            Invia risposte
-                          </button>
+                          (function () {
+                            var complete = c.quizDomande.every(function (q: any, qi: number) {
+                              var r = risposteUtente[qi];
+                              if (q.tipo === 'aperta') return typeof r === 'string' && r.trim().length > 0;
+                              return r !== undefined && r !== null;
+                            });
+                            return (
+                              <button
+                                onClick={function () {
+                                  $.inviaRisposteQuiz(c.id);
+                                }}
+                                disabled={!complete}
+                                style={{
+                                  width: '100%',
+                                  padding: 10,
+                                  marginTop: 4,
+                                  background: complete
+                                    ? 'linear-gradient(135deg,#6366f1,#a855f7)'
+                                    : 'rgba(255,255,255,.08)',
+                                  border: 'none',
+                                  borderRadius: 10,
+                                  color: '#fff',
+                                  fontSize: 13,
+                                  fontWeight: 800,
+                                  cursor: complete ? 'pointer' : 'not-allowed',
+                                }}
+                              >
+                                Invia risposte
+                              </button>
+                            );
+                          })()
                         )}
                       </div>
                     );

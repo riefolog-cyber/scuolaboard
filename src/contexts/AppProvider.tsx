@@ -840,6 +840,24 @@ function AppProvider({ children }: any) {
     [cardsHook.cards]
   );
 
+  // Sincronizza showCard con lo snapshot Firestore: se la card aperta viene
+  // aggiornata mentre il dettaglio è visibile (es. quizDomande aggiunte con
+  // Modifica da un'altra scheda/sessione, commenti, like, ...), il dettaglio
+  // deve mostrare i dati freschi, non l'oggetto del momento dell'apertura.
+  // L'effetto deep-link sopra non basta: una volta consumato (deepLinkDone)
+  // non aggiorna più showCard, quindi una card aperta via ?card=... restava
+  // stale per sempre (es. quiz non visibili nel dettaglio pur essendo salvati).
+  useEffect(
+    function () {
+      if (!showCard) return;
+      var fresh = cardsHook.cards.find(function (x: any) {
+        return String(x.id) === String(showCard.id);
+      });
+      if (fresh && fresh !== showCard) setShowCard(fresh);
+    },
+    [cardsHook.cards, showCard]
+  );
+
   // Allarmi scadenze
   useEffect(
     function () {

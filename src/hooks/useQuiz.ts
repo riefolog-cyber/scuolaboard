@@ -57,9 +57,14 @@ function useQuiz(deps: QuizDeps) {
       }
       var cardIdSnapshot = String(showCard.id);
       var active = true;
+      // Studente: filtra la query per `studente` (le regole Firestore non sono
+      // filtri — senza il vincolo in query il read viene rifiutato con
+      // permission-denied e le risposte non si ricaricano al refresh).
+      // Prof: nessun filtro, deve vedere tutte le risposte per statistiche/AI.
+      var studenteNome = user && user.role === 'studente' ? myName(user) : null;
       quizUnsubRef.current = quizListenRisposte(cardIdSnapshot, function (arr: any[]) {
         if (active) setQuizRisposte(arr);
-      });
+      }, studenteNome);
       return function () {
         active = false;
         if (quizUnsubRef.current) {

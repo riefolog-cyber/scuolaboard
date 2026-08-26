@@ -207,17 +207,22 @@ function compressImage(file: File, maxW: number, maxH: number, quality?: number,
 // aiSave è definita canonicamente in ai-services.ts (con invalidazione cache
 // SB.LS). NON ridefinire qui per evitare conflitti di override su
 // window.SB.aiSave. Se serve chiamarla qui, usare: SB.aiSave(cardId, data)
-function quizListenRisposte(cardId: any, cb: (_arr: any[]) => void) {
-  return db
-    .collection('quiz_risposte')
-    .where('cardId', '==', String(cardId))
-    .onSnapshot(function (s: any) {
-      var arr: any[] = [];
-      s.forEach(function (d: any) {
-        arr.push(d.data());
-      });
-      cb(arr);
+function quizListenRisposte(cardId: any, cb: (_arr: any[]) => void, studenteNome?: string | null) {
+  // ⚠️ Le regole Firestore NON sono filtri: la query dello studente deve
+  // vincolare il campo `studente` in QUERY, altrimenti la regola read
+  // (isOwnQuizDoc: resource.data.studente == token.name) non è soddisfacibile
+  // per tutti i doc e Firestore rifiuta l'INTERA query con permission-denied
+  // → lo studente non vedeva le proprie risposte al refresh (quiz che ripartiva
+  // da zero). Il prof (isProf, senza vincoli sul doc) continua a leggere tutto.
+  var q: any = db.collection('quiz_risposte').where('cardId', '==', String(cardId));
+  if (studenteNome) q = q.where('studente', '==', studenteNome);
+  return q.onSnapshot(function (s: any) {
+    var arr: any[] = [];
+    s.forEach(function (d: any) {
+      arr.push(d.data());
     });
+    cb(arr);
+  });
 }
 
 var S = {
