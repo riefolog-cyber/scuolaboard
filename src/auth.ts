@@ -214,7 +214,16 @@ SB.useAuth = function (_annoScolastico: string) {
         }
       }
     } catch (e: any) {
-      if (e.code === 'auth/popup-blocked') {
+      // Fallback robusto al redirect (signInWithRedirect NON apre un popup
+      // cross-origin, quindi non è affetto da COOP/Cross-Origin-Opener-Policy:
+      // su dispositivi/browser dove il popup fallisce — popup bloccato, rete,
+      // o COOP che impedisce la comunicazione con window.opener (warning
+      // "Cross-Origin-Opener-Policy policy would block the window.closed") —
+      // il login proseguirebbe senza esito. Unico caso in cui NON si ripiega:
+      // l'utente ha annullato esplicitamente (chiuso il popup o seconda
+      // richiesta cancellata) — in quel caso rispettiamo la sua scelta.
+      var noFallback = e && (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request');
+      if (!noFallback) {
         try {
           await auth.signInWithRedirect(new firebase.auth.GoogleAuthProvider());
         } catch (e2) {}

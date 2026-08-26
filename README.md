@@ -124,6 +124,34 @@ Le regole permettono le scritture (creare/duplicare/copiare/eliminare card) **so
 > Limite noto: `frame-ancestors`/`X-Frame-Options`/`Permissions-Policy` non sono esprimibili via `<meta>`; se in futuro serviranno, metti Cloudflare davanti a Pages.
 > Il **backend AI resta su Cloudflare Workers** (come nella versione precedente): GitHub Pages non può eseguire codice server, quindi il proxy `scuolaboard-groq-proxy` continua a essere indispensabile per le funzioni AI.
 
+## Backup (consigliato)
+
+Il codice è su GitHub (quindi già versionato), ma **i dati** (card, utenti, risposte
+quiz, analisi AI) vivono solo su Firestore: se si perdono, non si recuperano.
+Per questo è disponibile uno script che fa un backup **completo** (codice + tutti
+i dati Firestore, tutti gli anni) in un'unica cartella datata:
+
+```bash
+bash scripts/backup-completo.sh
+```
+
+Crea (accanto al progetto, sul Desktop) `scuolaboard-backup-completo-YYYYMMDD-HHMM/` con:
+
+- `codice/` — sorgente + config + `migrations/service-account.json` (senza `node_modules`, `docs/`, `.git`)
+- `dati-firestore/` — export JSON di tutte le collezioni (`cards`, `users`, `quiz_risposte`, `ai_results`, …)
+
+**Ripristino dati** (solo in caso di necessità, sovrascrive i documenti esistenti):
+
+```bash
+node migrations/import-firestore.js --dir "<cartella>/dati-firestore"
+```
+
+> ⚠️ Il backup contiene dati personali di studenti: custodiscilo al sicuro
+> (disco esterno / cloud personale) e non committarlo mai su GitHub.
+> Consiglio: eseguilo a inizio/fine quadrimestre o dopo modifiche importanti.
+
+---
+
 ## Variabili d'ambiente del Worker (Cloudflare)
 
 Nel dashboard di Cloudflare devono essere configurate le seguenti variabili:
@@ -211,6 +239,12 @@ I contenuti utente vengono incapsulati in delimitatori rigidi `<USER_DATA>` con 
   → ⚠️ dopo ogni modifica alle regole, pubblicarle su Firebase Console
 - Il ruolo `prof` viene verificato lato server sia dal Worker AI che dalle regole Firestore
 - Il ruolo `studente` è il default e non ha accesso alla scrittura card
+
+> **Nota su localhost**: in sviluppo può comparire in console il warning
+> `Cross-Origin-Opener-Policy policy would block the window.closed call` durante il
+> login Google. È un warning del popup cross-origin (accounts.google.com) — innocuo se
+> il login riesce. Se il popup fallisce, l'app ripiega automaticamente su
+> `signInWithRedirect` (non usa `window.opener`, quindi non è affetto da COOP).
 
 ---
 
