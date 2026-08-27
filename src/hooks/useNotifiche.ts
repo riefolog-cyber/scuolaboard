@@ -1,0 +1,93 @@
+// useNotifiche.ts · ScuolaBoard · hook notifiche in-app (solo app aperta)
+// Pattern analogo a useAmmonizioni.ts / preferiti store.
+// Collezione: notifiche/{uid} doc { lista: Notification[], aggiornato: ISO }
+
+var useState = React.useState;
+var useEffect = React.useEffect;
+var useCallback = React.useCallback;
+var useMemo = React.useMemo;
+
+var dbN = (window as any).db;
+
+type Notifica = {
+  id: string;
+  tipo: 'nuova_card' | 'proposta_esito' | 'risposta' | 'ammonizione';
+  cardId: string;
+  cmId?: string;
+  titolo: string;
+  msg: string;
+  createdAt: string;
+  letta: boolean;
+  annoScolastico?: string;
+};
+
+function useNotifiche(deps: { user: any }) {
+  var user = deps.user;
+  var [lista, setLista] = useState<Notifica[]>([]);
+
+  useEffect(
+    function () {
+      if (!user || !user.uid || !dbN) {
+        setLista([]);
+        return;
+      }
+      var unsub = dbN
+        .collection('notifiche')
+        .doc(user.uid)
+        .onSnapshot(function (doc: any) {
+          if (doc.exists) setLista((doc.data().lista || []) as Notifica[]);
+          else setLista([]);
+        });
+      return function () {
+        if (unsub) unsub();
+      };
+    },
+    [user && user.uid]
+  );
+
+  var nonLette = useMemo(
+    function () {
+      return lista.filter(function (n) {
+        return !n.letta;
+      }).length;
+    },
+    [lista]
+  );
+
+  var segnaLetta = useCallback(
+    function (id: string) {
+      if (!user || !user.uid) return;
+      var next = lista.map(function (n) {
+        return n.id === id ? Object.assign({}, n, { letta: true }) : n;
+      });
+      // se già letta, evita write
+      var target = lista.find(function (n) { return n.id === id; });
+      if (!target || target.letta) return;
+      dbN.collection('notifiche').doc(user.uid).set({ lista: next, aggiornato: new Date().toISOString() }, { merge: true });
+    },
+    [lista, user]
+  );
+
+  var segnaTutteLette = useCallback(
+    function () {
+      if (!user || !user.uid || !lista.length) return;
+      if (nonLette === 0) return;
+      var next = lista.map(function (n) {
+        return Object.assign({}, n, { letta: true });
+      });
+      dbN.collection('notifiche').doc(user.uid).set({ lista: next, aggiornato: new Date().toISOString() }, { merge: true });
+    },
+    [lista, nonLette, user]
+  );
+
+  return {
+    notifiche: lista,
+    nonLette: nonLette,
+    segnaLetta: segnaLetta,
+    segnaTutteLette: segnaTutteLette,
+    setNotifiche: setLista,
+  };
+}
+
+export default useNotifiche;
+export type { Notifica };

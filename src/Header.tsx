@@ -258,6 +258,82 @@ function Header__({ $ }: any) {
         </div>
       }
       {<div style={{ flex: 1 }} />}
+      {/* Campanella notifiche in-app (solo app aperta) */}
+      <div style={{ position: 'relative' }}>
+        <button
+          aria-label="Notifiche"
+          title={($.nonLette || 0) > 0 ? $.nonLette + ' notifiche non lette' : 'Notifiche'}
+          onClick={function (e: any) {
+            e.stopPropagation();
+            $.setShowNotifiche(function (v: any) { return !v; });
+          }}
+          style={{
+            background: ($.nonLette || 0) > 0 ? 'rgba(99,102,241,.25)' : 'rgba(255,255,255,.06)',
+            border: '1px solid ' + (($.nonLette || 0) > 0 ? 'rgba(99,102,241,.45)' : 'rgba(255,255,255,.1)'),
+            borderRadius: 8,
+            padding: '5px 9px',
+            cursor: 'pointer',
+            fontSize: 14,
+            color: ($.nonLette || 0) > 0 ? '#a5b4fc' : 'rgba(255,255,255,.7)',
+            position: 'relative',
+          }}
+        >
+          🔔
+          {($.nonLette || 0) > 0 && (
+            <span style={{ position: 'absolute', top: -6, right: -6, background: '#ef4444', color: '#fff', fontSize: 10, fontWeight: 800, minWidth: 16, height: 16, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px', border: '1px solid rgba(0,0,0,.2)' }}>
+              {$.nonLette > 9 ? '9+' : $.nonLette}
+            </span>
+          )}
+        </button>
+        {$.showNotifiche && (
+          <div
+            onClick={function (e: any) { e.stopPropagation(); }}
+            style={{
+              position: 'absolute', top: 'calc(100% + 8px)', right: 0,
+              width: 320, maxHeight: 380, overflow: 'auto',
+              background: 'rgba(13,13,30,.98)', border: '1px solid rgba(99,102,241,.35)', borderRadius: 14,
+              boxShadow: '0 12px 40px rgba(0,0,0,.6)', zIndex: 400, padding: 8,
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 4px 8px', borderBottom: '1px solid rgba(255,255,255,.08)', marginBottom: 6 }}>
+              <span style={{ fontSize: 12, fontWeight: 800, color: 'rgba(255,255,255,.85)', letterSpacing: .5 }}>🔔 NOTIFICHE</span>
+              {($.nonLette || 0) > 0 && (
+                <button onClick={function () { $.segnaTutteLette(); }} style={{ background: 'rgba(99,102,241,.15)', border: '1px solid rgba(99,102,241,.3)', borderRadius: 6, padding: '3px 8px', fontSize: 11, color: '#a5b4fc', cursor: 'pointer', fontWeight: 700 }}>Segna lette</button>
+              )}
+            </div>
+            {(!$.notifiche || $.notifiche.length === 0) && (
+              <div style={{ textAlign: 'center', padding: 20, color: 'rgba(255,255,255,.4)', fontSize: 12 }}>Nessuna notifica</div>
+            )}
+            {($.notifiche || []).slice().reverse().slice(0, 30).map(function (n: any) {
+              var icon = n.tipo === 'nuova_card' ? '📌' : n.tipo === 'proposta_esito' ? '✅' : n.tipo === 'ammonizione' ? '⚠️' : '💬';
+              return (
+                <div
+                  key={n.id}
+                  onClick={function () {
+                    $.segnaLetta(n.id);
+                    $.setShowNotifiche(false);
+                    var card = ($.cards || $.visibleSorted || []).find(function (c: any) { return String(c.id) === String(n.cardId); });
+                    if (card && $.openCard) $.openCard(card);
+                  }}
+                  style={{
+                    display: 'flex', gap: 8, padding: '8px 8px', borderRadius: 8, cursor: 'pointer',
+                    background: n.letta ? 'transparent' : 'rgba(99,102,241,.10)', border: '1px solid ' + (n.letta ? 'transparent' : 'rgba(99,102,241,.18)'),
+                    marginBottom: 4, alignItems: 'flex-start',
+                  }}
+                >
+                  <span style={{ fontSize: 14, flexShrink: 0, marginTop: 1 }}>{icon}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, fontWeight: n.letta ? 500 : 700, color: n.letta ? 'rgba(255,255,255,.72)' : '#e0e7ff', lineHeight: 1.35, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.titolo}</div>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,.5)', lineHeight: 1.4 }}>{n.msg}</div>
+                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,.35)', marginTop: 2 }}>{$.timeAgo ? $.timeAgo(n.createdAt) : ''}</div>
+                  </div>
+                  {!n.letta && <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#6366f1', flexShrink: 0, marginTop: 6 }} />}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
       {$.isProf && !$.simulaSt && (
         <button
           aria-label="Cerca nelle card"

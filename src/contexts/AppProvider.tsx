@@ -8,6 +8,8 @@ import useToast from '../hooks/useToast.ts';
 import useQuiz from '../hooks/useQuiz.ts';
 import useAmmonizioni from '../hooks/useAmmonizioni.ts';
 import useClassi from '../hooks/useClassi.ts';
+import useNotifiche from '../hooks/useNotifiche.ts';
+import '../notifiche-service.ts';
 import {
   playAlarm,
   classeCorrenteOf,
@@ -178,6 +180,9 @@ function AppProvider({ children }: any) {
     loadStudenti = classi.loadStudenti,
     aggiornaClasseStudente = classi.aggiornaClasseStudente,
     rimuoviStudente = classi.rimuoviStudente;
+
+  var notificheHook = useNotifiche({ user: user });
+  var [showNotifiche, setShowNotifiche] = useState(false);
 
   var seenRef = cardsHook.seenRef;
   function markSeen(id: any) {
@@ -466,7 +471,13 @@ function AppProvider({ children }: any) {
       });
       if (!guardSize(newCard)) return;
       cardsHook.nextOrd.current++;
-      fbSave(newCard);
+      fbSave(newCard).then(function () {
+        try {
+          if (isProf && (window as any).SB && (window as any).SB.notifyClasse) {
+            (window as any).SB.notifyClasse({ classi: newCard.classi || ['TUTTE'], annoScolastico: annoScolastico, cardId: String(newCard.id), titolo: newCard.titolo, msg: 'Nuova card per la tua classe', excludeUid: user.uid });
+          }
+        } catch (e) {}
+      }).catch(function () {});
       showToast(isProf ? 'Card pubblicata ✓' : 'Proposta inviata al prof ✓', 'ok');
     }
     modals.setShowModal(false);
@@ -611,7 +622,20 @@ function AppProvider({ children }: any) {
       return x.id === id;
     });
     if (c) {
-      fbSave(Object.assign({}, c, { proposta: false }));
+      fbSave(Object.assign({}, c, { proposta: false })).then(function () {
+        try {
+          if ((window as any).SB && (window as any).SB.notifyUser) {
+            var dbP = (window as any).db;
+            if (dbP) dbP.collection('users').get().then(function (snap: any) {
+              snap.forEach(function (d: any) {
+                var ud = d.data() || {};
+                var name = ud.displayName || ((ud.nome||'') + ' ' + (ud.cognome||'')).trim();
+                if (name === c.autore) (window as any).SB.notifyUser(d.id, { tipo: 'proposta_esito', cardId: c.id, titolo: c.titolo, msg: 'Proposta approvata: ' + c.titolo, annoScolastico: c.annoScolastico });
+              });
+            });
+          }
+        } catch (e) {}
+      }).catch(function () {});
       showToast('Proposta approvata ✓', 'ok');
     }
   }
@@ -620,7 +644,20 @@ function AppProvider({ children }: any) {
     var c = cardsHook.cards.find(function (x: any) {
       return x.id === id;
     });
-    if (c) fbSave(Object.assign({}, c, { proposta: 'rifiutata', motivazioneRifiuto: mot || '' }));
+    if (c) fbSave(Object.assign({}, c, { proposta: 'rifiutata', motivazioneRifiuto: mot || '' })).then(function () {
+      try {
+        if ((window as any).SB && (window as any).SB.notifyUser) {
+          var dbR = (window as any).db;
+          if (dbR) dbR.collection('users').get().then(function (snap: any) {
+            snap.forEach(function (d: any) {
+              var ud = d.data() || {};
+              var name = ud.displayName || ((ud.nome||'') + ' ' + (ud.cognome||'')).trim();
+              if (name === c.autore) (window as any).SB.notifyUser(d.id, { tipo: 'proposta_esito', cardId: c.id, titolo: c.titolo, msg: 'Proposta rifiutata: ' + c.titolo + (mot ? ' ('+mot+')' : ''), annoScolastico: c.annoScolastico });
+            });
+          });
+        }
+      } catch (e) {}
+    }).catch(function () {});
     modals.setShowRifiutaModal(null);
     setRifiutaInput('');
     showToast('Proposta rifiutata', 'warn');
@@ -1304,6 +1341,13 @@ function AppProvider({ children }: any) {
         setAmmonizioni: setAmmonizioni,
         ammonizioniMap: ammonizioniMap,
         setAmmonizioniMap: setAmmonizioniMap,
+        // Notifiche in-app
+        notifiche: notificheHook.notifiche,
+        nonLette: notificheHook.nonLette,
+        segnaLetta: notificheHook.segnaLetta,
+        segnaTutteLette: notificheHook.segnaTutteLette,
+        showNotifiche: showNotifiche,
+        setShowNotifiche: setShowNotifiche,
         // Refs
         myLikes: myLikes,
         alarmFiredRef: alarmFiredRef,
@@ -1443,6 +1487,9 @@ function AppProvider({ children }: any) {
       bulkSelected,
       ammonizioni,
       ammonizioniMap,
+      notificheHook.notifiche,
+      notificheHook.nonLette,
+      showNotifiche,
       simulaSt,
       CLASSI_LIST,
       totC,

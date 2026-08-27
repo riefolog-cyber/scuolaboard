@@ -375,10 +375,11 @@ SB.createAppHandlers = function (ctx: any) {
       // solo quando si costruisce il prompt per l'AI (ai-services lo rifà al
       // momento della chiamata). Escapare qui corromperebbe il testo con
       // backslash davanti ad apostrofi/virgolette in tutta la UI.
+      var cmIdNew = Date.now();
       var nextCard = Object.assign({}, card, {
         commenti: (card.commenti || []).concat([
           {
-            id: Date.now(),
+            id: cmIdNew,
             autore: getMyName()(user),
             testo: getNc().testo.trim(),
             data: new Date().toISOString(),
@@ -386,7 +387,20 @@ SB.createAppHandlers = function (ctx: any) {
           },
         ]),
       });
-      saveCard(nextCard);
+      saveCard(nextCard).then(function () {
+        try {
+          // Notifica al prof se studente commenta (solo app aperta)
+          if (user.role !== 'prof' && (window as any).SB && (window as any).SB.notifyUser) {
+            // trova uid prof (primo prof trovato)
+            var dbN = (window as any).db;
+            if (dbN) dbN.collection('users').where('role', '==', 'prof').get().then(function (snap: any) {
+              snap.forEach(function (d: any) {
+                (window as any).SB.notifyUser(d.id, { tipo: 'risposta', cardId: card.id, cmId: cmIdNew, titolo: card.titolo, msg: getMyName()(user) + ' ha commentato: ' + card.titolo, annoScolastico: card.annoScolastico });
+              });
+            });
+          }
+        } catch (e) {}
+      }).catch(function () {});
       if (ctx.setNc) ctx.setNc({ testo: '' });
       if (ctx.showToast) ctx.showToast('Commento inviato ✓', 'ok');
     },
@@ -419,7 +433,35 @@ SB.createAppHandlers = function (ctx: any) {
         });
       }
       var nextCard = Object.assign({}, card, { commenti: ins(card.commenti) });
-      saveCard(nextCard);
+      saveCard(nextCard).then(function () {
+        try {
+          // Notifica all'autore del commento parent se diverso da chi risponde
+          var parent = (card.commenti || []).find(function (x: any) { return String(x.id) === String(cmId); });
+          // cerca anche nelle risposte annidate
+          if (!parent) {
+            (function find(list: any) {
+              for (var i=0;i<list.length;i++) {
+                if (String(list[i].id) === String(cmId)) { parent = list[i]; break; }
+                if (list[i].risposte) find(list[i].risposte);
+              }
+            })(card.commenti || []);
+          }
+          var destAutore = parent ? parent.autore : null;
+          if (destAutore && destAutore !== getMyName()(user) && (window as any).SB && (window as any).SB.notifyUser) {
+            var dbN2 = (window as any).db;
+            if (dbN2) dbN2.collection('users').get().then(function (snap: any) {
+              snap.forEach(function (d: any) {
+                var ud = d.data() || {};
+                var name = ud.displayName || ((ud.nome||'') + ' ' + (ud.cognome||'')).trim() || ud.email;
+                // match per nome visualizzato
+                if (name === destAutore || (window as any).SB.safeDocId && (window as any).SB.safeDocId(name) === destAutore) {
+                  (window as any).SB.notifyUser(d.id, { tipo: 'risposta', cardId: card.id, cmId: cmId, titolo: card.titolo, msg: getMyName()(user) + ' ha risposto al tuo commento', annoScolastico: card.annoScolastico });
+                }
+              });
+            });
+          }
+        } catch (e) {}
+      }).catch(function () {});
       if (ctx.setReplyTo) ctx.setReplyTo(null);
       if (ctx.setReplyTesto) ctx.setReplyTesto('');
       if (ctx.showToast) ctx.showToast('Risposta inviata ✓', 'ok');
@@ -474,8 +516,24 @@ SB.createAppHandlers = function (ctx: any) {
         if (ctx.showToast)
           ctx.showToast('Errore salvataggio ammonizione: ' + (e && e.message ? e.message : 'errore'), 'err');
       }
+      var notifyAmm = function () {
+        try {
+          if ((window as any).SB && (window as any).SB.notifyUser) {
+            var dbA = (window as any).db;
+            if (dbA) dbA.collection('users').get().then(function (snap: any) {
+              snap.forEach(function (d: any) {
+                var ud = d.data() || {};
+                var name = ud.displayName || ((ud.nome||'') + ' ' + (ud.cognome||'')).trim() || ud.email;
+                if (name === autore) {
+                  (window as any).SB.notifyUser(d.id, { tipo: 'ammonizione', cardId: cardId, cmId: cmId, titolo: 'Ammonizione', msg: 'Hai ricevuto un ammonimento: ' + motivazione, annoScolastico: null });
+                }
+              });
+            });
+          }
+        } catch (e) {}
+      };
       if (cardServices.addAmmonizione) {
-        cardServices.addAmmonizione(autore, nuova).catch(errAmm);
+        cardServices.addAmmonizione(autore, nuova).then(notifyAmm).catch(errAmm);
       } else {
         try {
           if (db && db.collection) {
@@ -485,6 +543,7 @@ SB.createAppHandlers = function (ctx: any) {
                 { lista: firebase.firestore.FieldValue.arrayUnion(nuova), aggiornato: new Date().toISOString() },
                 { merge: true }
               )
+              .then(notifyAmm)
               .catch(errAmm);
           }
         } catch (e: any) {

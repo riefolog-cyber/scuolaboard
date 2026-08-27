@@ -133,6 +133,8 @@ Regole di formattazione tassative (NON USARE TAG HTML O TABELLE):
 
       let aiSuccess = false;
       let aiText = null;
+      let aiProvider = null;
+      let aiModel = null;
 
       // 1. Prova prima GROQ, iterando i modelli candidati in ordine di priorità.
       //    Se un modello fallisce (HTTP 4xx/5xx o risposta vuota), si passa al
@@ -155,6 +157,8 @@ Regole di formattazione tassative (NON USARE TAG HTML O TABELLE):
           if (r.ok) {
             aiText = r.text;
             aiSuccess = true;
+            aiProvider = 'groq';
+            aiModel = model;
             break;
           }
           groqDiagnostics = { status: r.status, error: r.error, model: model };
@@ -164,13 +168,17 @@ Regole di formattazione tassative (NON USARE TAG HTML O TABELLE):
       }
 
       // 2. OpenRouter Fallback (stessa logica di iterazione sui candidati)
+      // Solo modelli free: getModelCatalog filtra già su pricing 0/0, fallback
+      // esplicito è il primo della priority free (non 'openrouter/free' generico).
       if (!aiSuccess && env.OPENROUTER_API_KEY) {
-        const models = await getModelCandidates('openrouter', env, 'openrouter/free');
+        const models = await getModelCandidates('openrouter', env, OPENROUTER_PRIORITY[0]);
         for (const model of models) {
           const r = await callProvider('openrouter', env, allowedOrigin, model, callParams);
           if (r.ok) {
             aiText = r.text;
             aiSuccess = true;
+            aiProvider = 'openrouter';
+            aiModel = model;
             break;
           }
           openrouterDiagnostics = { status: r.status, error: r.error, model: model };
@@ -198,8 +206,19 @@ Regole di formattazione tassative (NON USARE TAG HTML O TABELLE):
         aiText = aiText.trim();
       }
 
-      // Mantieni il formato di risposta atteso dal client: {success: true, data: ...}
-      return new Response(JSON.stringify({ success: true, data: aiText }), {
+      // Risposta successo: diagnostica visibile solo con ?debug=1 (query Worker o ?debug=1 nel frontend)
+      // così il Network del browser mostra direttamente quale provider/modello ha vinto.
+      const debugOn = new URL(request.url).searchParams.get('debug') === '1';
+      const successBody = { success: true, data: aiText };
+      if (debugOn) {
+        successBody.diagnostics = {
+          provider: aiProvider,
+          model: aiModel,
+          groq: groqDiagnostics,
+          openrouter: openrouterDiagnostics
+        };
+      }
+      return new Response(JSON.stringify(successBody), {
         status: 200, headers: { ...makeCorsHeaders(origin), 'Content-Type': 'application/json' }
       });
 
@@ -245,20 +264,37 @@ const GROQ_PRIORITY = [
 ];
 
 // Modelli OpenRouter gratuiti (:free) ordinati per capacità.
+// Aggiornati al catalogo live 2026-08: solo modelli con pricing 0/0 (verificati
+// via https://openrouter.ai/api/v1/models). I precedenti deepseek/llama/qwen
+// non sono più free → sostituiti. L'ordine privilegia modelli chat istruiti
+// e grandi (550B/120B) poi generalisti. Esclusi lyria (TTS) e openrouter/free
+// generico (non deterministico).
 const OPENROUTER_PRIORITY = [
-  'deepseek/deepseek-v3.1:free',
-  'deepseek/deepseek-v3:free',
-  'meta-llama/llama-4-scout:free',
-  'google/gemini-flash:free',
-  'qwen/qwen3-235b-a22b:free',
-  'meta-llama/llama-3.3-70b-instruct:free',
-  'mistralai/mistral-7b-instruct:free',
+  'z-ai/glm-5.2:free',
+  'nvidia/nemotron-3-ultra-550b-a55b:free',
+  'nvidia/nemotron-3-super-120b-a12b:free',
+  'minimax/minimax-m3:free',
+  'minimax/minimax-m2.7:free',
+  'google/gemma-4-26b-a4b-it:free',
+  'google/gemma-4-31b-it:free',
+  'nvidia/nemotron-3.5-lightning:free',
+  'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
+  'cohere/north-mini-code:free',
+  'liquid/lfm-2.5-2.6b:free',
+  'dots-studio/dots-3-note-preview:free',
+  'poolside/laguna-s-2.1:free',
+  'poolside/laguna-xs-2.1:free',
+  'thinkingmachines/inkling:free',
+  'thinkingmachines/inkling-small:free',
+  'nvidia/nemotron-3.5-content-safety:free',
 ];
 
-// Prefissi di modelli "chat" conosciuti, usati come fallback quando nessun
-// candidato della lista prioritaria è presente nel catalogo. NON includere
-// qui modelli non-chat (es. whisper STT): una chiamata chat fallirebbe.
-const KNOWN_MODEL_PREFIX = /^(llama|openai\/gpt-oss|qwen|deepseek|gemma|mistral)/;
+// Fallback per modelli chat: qualsiasi modello che termina con :free.
+// Sostituisce la precedente whitelist per prefisso (llama/qwen/...) che non
+// copriva i provider attuali (nvidia, z-ai, cohere, liquid...). Garantisce
+// che il fallback resti sempre su un modello gratuito anche se la priority
+// diventa obsoleta in futuro.
+const KNOWN_MODEL_PREFIX = /:free$/;
 
 // Scarica l'elenco dei modelli dal provider, escludendo i modelli dismessi.
 // Per OpenRouter filtra SOLO i modelli gratuiti (pricing 0/0) per non finire

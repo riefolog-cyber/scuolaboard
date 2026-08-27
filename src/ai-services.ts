@@ -235,7 +235,16 @@ async function chiamaAI(type: any, content: any, options: any) {
 
   async function doFetch(forceRefresh: any) {
     var idToken = await currentUser.getIdToken(forceRefresh);
-    return fetch(WORKER_URL, {
+    var debugOn = false;
+    try {
+      debugOn = !!(
+        (typeof window !== 'undefined' && (window as any).SB_DEBUG) ||
+        SB_DEBUG_AI ||
+        new URLSearchParams(location.search).get('debug') === '1'
+      );
+    } catch (e) {}
+    var url = debugOn ? WORKER_URL + '?debug=1' : WORKER_URL;
+    return fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -288,6 +297,10 @@ async function chiamaAI(type: any, content: any, options: any) {
   if (!data.success) {
     aiLog('[ScuolaBoard] chiamaAI fallito', data);
     throw new Error("Risposta dell'AI non riuscita");
+  }
+
+  if (data.diagnostics && (SB_DEBUG_AI || (typeof window !== 'undefined' && (window as any).SB_DEBUG))) {
+    console.warn('[ScuolaBoard] AI diagnostics:', data.diagnostics);
   }
 
   return data.data;
