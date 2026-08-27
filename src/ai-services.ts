@@ -85,11 +85,33 @@ function pseudonimizeComments(
 }
 
 // Ripristina i nomi reali nella risposta dell'IA usando la mappa dei pseudonimi.
+// Robusto: gestisce "Studente 2", "Studente\u00A02", "Studente\u202F2",
+// "lo studente 2", maiuscole/minuscole, spazi multipli (AI normalizza diversamente).
+// Capitalizza le iniziali se il nome in mappa è tutto minuscolo (es. displayName salvato in lowercase).
 function restoreNames(testo: string, mappaNomi: Record<string, string>): string {
   var result = testo;
+  function capWords(s: string) {
+    // Se già contiene una maiuscola, rispetta il dato originale (es. "De Luca", "D'Amico")
+    if (/[A-ZÀ-Ù]/.test(s)) return s;
+    return s.replace(/\b([a-zà-ù])/gi, function (c) { return c.toUpperCase(); });
+  }
   Object.keys(mappaNomi).forEach(function (alias) {
-    var regex = new RegExp('\\b' + alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'g');
-    result = result.replace(regex, mappaNomi[alias]);
+    var real = capWords(mappaNomi[alias]);
+    // alias = "Studente N" -> estrai numero
+    var m = alias.match(/(\d+)/);
+    var num = m ? m[1] : null;
+    // 1) sostituzione esatta "Studente N" (case-sensitive, per compatibilità)
+    try {
+      var exact = new RegExp('\\b' + alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'g');
+      result = result.replace(exact, real);
+    } catch (e) {}
+    // 2) sostituzione flessibile: (lo)? studente + spazi unicode + numero
+    if (num) {
+      try {
+        var flex = new RegExp('(?:\\b(?:lo\\s+)?studente[\\s\\u00A0\\u202F]*0*' + num + '\\b)', 'gi');
+        result = result.replace(flex, real);
+      } catch (e) {}
+    }
   });
   return result;
 }
@@ -793,7 +815,7 @@ SB.useAI = function (user: any) {
       '\n</USER_DATA>';
 
     try {
-      var res = await _callGroqText(null, prompt, 600);
+      var res = await _callGroqText(null, prompt, 1200);
       // Ripristina i nomi reali nella risposta dell'IA
       var rispostaConNomi = restoreNames(res, mappaNomi);
       setSommarioResult(function (p: any) {

@@ -3,6 +3,10 @@ var SB = window.SB || {};
 var h = SB.h || React.createElement;
 
 function SommarioModal__({ $ }: any) {
+  var [expanded, setExpanded] = (React as any).useState(false);
+  // reset espansione quando cambia card
+  var _showId = $.showSommario;
+  ;(React as any).useEffect(function () { setExpanded(false); }, [_showId]);
   if (!$.showSommario) return null;
   var card = $.cards.find(function (c: any) {
     return String(c.id) === String($.showSommario);
@@ -76,22 +80,48 @@ function SommarioModal__({ $ }: any) {
             <div style={{ marginTop: 8, fontSize: 12 }}>Analisi in corso…</div>
           </div>
         )}
-        {!loading && res && (
-          <div
-            style={{
-              background: 'rgba(34,197,94,.07)',
-              border: '1px solid rgba(34,197,94,.2)',
-              borderRadius: 12,
-              padding: '14px 16px',
-              fontSize: 13,
-              color: 'rgba(255,255,255,.85)',
-              lineHeight: 1.8,
-              whiteSpace: 'pre-wrap',
-            }}
-          >
-            {res}
-          </div>
-        )}
+        {!loading && res && (function () {
+          var isLong = String(res).length > 900;
+          var text = !isLong || expanded ? res : String(res).slice(0, 900) + '…';
+          return (
+            <div>
+              <div
+                style={{
+                  background: 'rgba(34,197,94,.07)',
+                  border: '1px solid rgba(34,197,94,.2)',
+                  borderRadius: 12,
+                  padding: '14px 16px',
+                  fontSize: 13,
+                  color: 'rgba(255,255,255,.85)',
+                  lineHeight: 1.8,
+                  whiteSpace: 'pre-wrap',
+                }}
+              >
+                {text}
+              </div>
+              {isLong && (
+                <button
+                  onClick={function () {
+                    setExpanded(function (v: any) { return !v; });
+                  }}
+                  style={{
+                    marginTop: 8,
+                    background: 'rgba(34,197,94,.12)',
+                    border: '1px solid rgba(34,197,94,.28)',
+                    borderRadius: 8,
+                    padding: '6px 12px',
+                    fontSize: 12,
+                    color: '#4ade80',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {expanded ? '▲ Mostra meno' : '▼ Continua a leggere'}
+                </button>
+              )}
+            </div>
+          );
+        })()}
         {!loading && res && (
           <div
             style={{
