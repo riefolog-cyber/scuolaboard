@@ -39,7 +39,7 @@ function useNotifiche(deps: { user: any }) {
           if (doc.exists) setLista((doc.data().lista || []) as Notifica[]);
           else setLista([]);
         }, function (err: any) {
-          console.warn('[notifiche] onSnapshot', err && err.code);
+          if ((window as any).SB_DEBUG) console.warn('[notifiche] onSnapshot', err && err.code);
         });
       return function () {
         if (unsub) unsub();
@@ -62,11 +62,10 @@ function useNotifiche(deps: { user: any }) {
       if (!user || !user.uid) return;
       var db = getDbN();
       if (!db) return;
+      var sid = String(id);
       var next = lista.map(function (n) {
-        return n.id === id ? Object.assign({}, n, { letta: true }) : n;
+        return String(n.id) === sid ? Object.assign({}, n, { letta: true }) : n;
       });
-      var target = lista.find(function (n) { return n.id === id; });
-      if (!target || target.letta) return;
       db.collection('notifiche').doc(user.uid).set({ lista: next, aggiornato: new Date().toISOString() }, { merge: true });
     },
     [lista, user]
@@ -75,7 +74,6 @@ function useNotifiche(deps: { user: any }) {
   var segnaTutteLette = useCallback(
     function () {
       if (!user || !user.uid || !lista.length) return;
-      if (nonLette === 0) return;
       var db = getDbN();
       if (!db) return;
       var next = lista.map(function (n) {
@@ -83,7 +81,7 @@ function useNotifiche(deps: { user: any }) {
       });
       db.collection('notifiche').doc(user.uid).set({ lista: next, aggiornato: new Date().toISOString() }, { merge: true });
     },
-    [lista, nonLette, user]
+    [lista, user]
   );
 
   return {

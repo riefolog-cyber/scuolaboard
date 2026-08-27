@@ -297,8 +297,11 @@ function Header__({ $ }: any) {
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 4px 8px', borderBottom: '1px solid rgba(255,255,255,.08)', marginBottom: 6 }}>
               <span style={{ fontSize: 12, fontWeight: 800, color: 'rgba(255,255,255,.85)', letterSpacing: .5 }}>🔔 NOTIFICHE</span>
-              {($.nonLette || 0) > 0 && (
-                <button onClick={function () { $.segnaTutteLette(); }} style={{ background: 'rgba(99,102,241,.15)', border: '1px solid rgba(99,102,241,.3)', borderRadius: 6, padding: '3px 8px', fontSize: 11, color: '#a5b4fc', cursor: 'pointer', fontWeight: 700 }}>Segna lette</button>
+              {($.notifiche || []).length > 0 && (
+                <span style={{ display: 'flex', gap: 6 }}>
+                  <button onClick={function () { $.segnaTutteLette(); }} title="Segna tutte come lette" style={{ background: 'rgba(99,102,241,.15)', border: '1px solid rgba(99,102,241,.3)', borderRadius: 6, padding: '3px 8px', fontSize: 11, color: '#a5b4fc', cursor: 'pointer', fontWeight: 700 }}>Segna già lette</button>
+                  <button onClick={function () { if (confirm('Eliminare tutte le notifiche?')) { var dbc:any=(window as any).db; if(dbc) dbc.collection('notifiche').doc($.user.uid).delete(); } }} title="Pulisci notifiche" style={{ background: 'rgba(239,68,68,.12)', border: '1px solid rgba(239,68,68,.3)', borderRadius: 6, padding: '3px 8px', fontSize: 11, color: '#f87171', cursor: 'pointer', fontWeight: 700 }}>✕</button>
+                </span>
               )}
             </div>
             {(!$.notifiche || $.notifiche.length === 0) && (
