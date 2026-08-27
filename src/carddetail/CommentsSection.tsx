@@ -132,23 +132,23 @@ function CommentsSection({ $, c }: any) {
                   });
                   try {
                     e.target.style.height = 'auto';
-                    e.target.style.height = Math.min(e.target.scrollHeight, 140) + 'px';
+                    e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
                   } catch (err) {}
                 }}
-                rows={3}
+                rows={5}
                 maxLength={1000}
                 placeholder="Modifica il commento…"
                 aria-label="Testo del commento da modificare"
                 style={{
                   width: '100%',
-                  minHeight: 64,
-                  maxHeight: 140,
-                  padding: '8px 10px',
-                  background: 'rgba(255,255,255,.06)',
-                  border: '1px solid rgba(99,102,241,.45)',
-                  borderRadius: 8,
-                  fontSize: 12,
-                  lineHeight: 1.5,
+                  minHeight: 110,
+                  maxHeight: 200,
+                  padding: '12px 14px',
+                  background: 'rgba(255,255,255,.09)',
+                  border: '1.5px solid rgba(99,102,241,.5)',
+                  borderRadius: 12,
+                  fontSize: 14,
+                  lineHeight: 1.6,
                   color: '#f1f5f9',
                   resize: 'vertical',
                   overflowY: 'auto',
@@ -231,24 +231,24 @@ function CommentsSection({ $, c }: any) {
                   $.setReplyTesto(e.target.value);
                   try {
                     e.target.style.height = 'auto';
-                    e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+                    e.target.style.height = Math.min(e.target.scrollHeight, 180) + 'px';
                   } catch (err) {}
                 }}
-                rows={3}
+                rows={5}
                 maxLength={500}
                 placeholder="Scrivi una risposta…"
                 title="Invio per inviare, Shift+Invio per nuova riga"
                 aria-label="Testo della risposta"
                 style={{
                   width: '100%',
-                  minHeight: 64,
-                  maxHeight: 120,
-                  padding: '8px 10px',
-                  background: 'rgba(255,255,255,.06)',
-                  border: '1px solid rgba(255,255,255,.12)',
-                  borderRadius: 8,
-                  fontSize: 12,
-                  lineHeight: 1.5,
+                  minHeight: 110,
+                  maxHeight: 180,
+                  padding: '12px 14px',
+                  background: 'rgba(255,255,255,.09)',
+                  border: '1.5px solid rgba(99,102,241,.28)',
+                  borderRadius: 12,
+                  fontSize: 14,
+                  lineHeight: 1.6,
                   color: '#f1f5f9',
                   resize: 'vertical',
                   overflowY: 'auto',
@@ -375,16 +375,15 @@ function CommentsSection({ $, c }: any) {
         </div>
       )}
 
-      {/* Comment input - area ingrandita per maggiore visibilità */}
-      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+      {/* Comment input - extra large per Android */}
+      <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
         <textarea
           value={$.nc.testo || ''}
           onInput={function (e: any) {
             $.setNc({ testo: e.target.value });
-            // auto-resize fino a max 140px
             try {
               e.target.style.height = 'auto';
-              e.target.style.height = Math.min(e.target.scrollHeight, 140) + 'px';
+              e.target.style.height = Math.min(e.target.scrollHeight, 220) + 'px';
             } catch (err) {}
           }}
           onKeyDown={function (e: any) {
@@ -395,19 +394,19 @@ function CommentsSection({ $, c }: any) {
           }}
           placeholder="Scrivi un commento…"
           title="Invio per inviare, Shift+Invio per nuova riga"
-          rows={3}
+          rows={5}
           maxLength={1000}
           aria-label="Scrivi un commento"
           style={{
-            flex: 1,
-            minHeight: 72,
-            maxHeight: 140,
-            padding: '10px 12px',
-            background: 'rgba(255,255,255,.06)',
-            border: '1px solid rgba(255,255,255,.12)',
-            borderRadius: 10,
-            fontSize: 13,
-            lineHeight: 1.5,
+            flex: '1 1 220px',
+            minHeight: 120,
+            maxHeight: 220,
+            padding: '14px 16px',
+            background: 'rgba(255,255,255,.09)',
+            border: '1.5px solid rgba(99,102,241,.35)',
+            borderRadius: 14,
+            fontSize: 15,
+            lineHeight: 1.6,
             color: '#f1f5f9',
             resize: 'vertical',
             overflowY: 'auto',
@@ -420,18 +419,20 @@ function CommentsSection({ $, c }: any) {
           }}
           disabled={!($.nc.testo || '').trim()}
           style={{
-            padding: '10px 18px',
-            height: 42,
+            padding: '14px 22px',
+            height: 52,
+            minWidth: 80,
             alignSelf: 'flex-end',
             background:
               $.nc.testo && $.nc.testo.trim() ? 'linear-gradient(135deg,#6366f1,#a855f7)' : 'rgba(255,255,255,.08)',
             border: 'none',
-            borderRadius: 10,
+            borderRadius: 14,
             color: '#fff',
-            fontSize: 12,
-            fontWeight: 700,
+            fontSize: 14,
+            fontWeight: 800,
             cursor: $.nc.testo && $.nc.testo.trim() ? 'pointer' : 'not-allowed',
             whiteSpace: 'nowrap',
+            flexShrink: 0,
           }}
         >
           Invia
