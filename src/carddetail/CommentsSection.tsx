@@ -136,7 +136,7 @@ function CommentsSection({ $, c }: any) {
                   } catch (err) {}
                 }}
                 rows={5}
-                maxLength={1000}
+                maxLength={2000}
                 placeholder="Modifica il commento…"
                 aria-label="Testo del commento da modificare"
                 style={{
@@ -235,7 +235,7 @@ function CommentsSection({ $, c }: any) {
                   } catch (err) {}
                 }}
                 rows={5}
-                maxLength={500}
+                maxLength={2000}
                 placeholder="Scrivi una risposta…"
                 title="Invio per inviare, Shift+Invio per nuova riga"
                 aria-label="Testo della risposta"
@@ -395,7 +395,7 @@ function CommentsSection({ $, c }: any) {
           placeholder="Scrivi un commento…"
           title="Invio per inviare, Shift+Invio per nuova riga"
           rows={5}
-          maxLength={1000}
+          maxLength={2000}
           aria-label="Scrivi un commento"
           style={{
             flex: '1 1 220px',

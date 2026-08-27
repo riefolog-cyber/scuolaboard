@@ -1,33 +1,39 @@
 // notifiche-service.ts · ScuolaBoard · fan-out notifiche in-app (solo app aperta)
 // Usato dagli handler dopo fbSave riuscito. Nessuna email/push.
 
-var dbNS: any = (window as any).db;
+function getDbNS() { return (window as any).db; }
 
 function notificaId() {
   return Date.now() + '_' + Math.random().toString(36).slice(2, 6);
 }
 
 function pushNotifica(uid: string, n: any) {
-  if (!uid || !dbNS) return Promise.resolve();
+  var dbNS: any = getDbNS();
+  if (!uid || !dbNS) {
+    console.warn('[notifiche] push no db');
+    return Promise.resolve();
+  }
   try {
     return dbNS
       .collection('notifiche')
       .doc(uid)
       .set({ lista: (window as any).firebase.firestore.FieldValue.arrayUnion(n), aggiornato: new Date().toISOString() }, { merge: true })
-      .catch(function () {
-        // fallback merge manuale se arrayUnion non disponibile (test)
+      .then(function () { console.warn('[notifiche] push ok', uid, n.tipo); })
+      .catch(function (err: any) {
+        console.warn('[notifiche] arrayUnion fail', err && err.code, 'fallback manual');
         return dbNS
           .collection('notifiche')
           .doc(uid)
           .get()
           .then(function (d: any) {
             var lista = d.exists ? d.data().lista || [] : [];
-            // tronca a 50
             var next = (lista.concat([n]) as any[]).slice(-50);
             return dbNS.collection('notifiche').doc(uid).set({ lista: next, aggiornato: new Date().toISOString() }, { merge: true });
-          });
+          })
+          .catch(function (e2: any) { console.warn('[notifiche] fallback fail', e2 && e2.code); });
       });
-  } catch (e) {
+  } catch (e: any) {
+    console.warn('[notifiche] push exception', e);
     return Promise.resolve();
   }
 }
@@ -50,6 +56,7 @@ function notifyUser(uid: string, data: { tipo: string; cardId: string; cmId?: st
 
 // Fan-out per classe: notifica tutti gli studenti di una classe (o TUTTE)
 async function notifyClasse(opts: { classi: string[]; annoScolastico: string; cardId: string; titolo: string; msg: string; tipo?: string; excludeUid?: string }) {
+  var dbNS: any = getDbNS();
   if (!dbNS) return;
   var classi = opts.classi || ['TUTTE'];
   var anno = opts.annoScolastico;

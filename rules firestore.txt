@@ -59,7 +59,10 @@ service cloud.firestore {
     // - Lo studente legge SOLO il proprio profilo
     // - Il prof legge tutti (serve per gestire classi/visualizzare studenti)
     match /users/{uid} {
-      allow read: if isAuth() && (request.auth.uid == uid || isProf());
+      // Lettura profili prof permessa a tutti gli autenticati: serve per
+      // fan-out notifiche in-app (studente deve trovare uid del prof per
+      // notificargli un nuovo commento). Dati prof (nome/email) non sensibili.
+      allow read: if isAuth() && (request.auth.uid == uid || isProf() || resource.data.role == "prof");
 
       // Create: lo studente PUÒ creare il proprio profilo, ma SOLO con role "studente"
       allow create: if isAuth()
@@ -236,12 +239,13 @@ service cloud.firestore {
     // - Il prof può scrivere sul doc di qualsiasi studente per fan-out (nuova card, proposta esito, risposta, ammonizione)
     // - Lo studente può marcare letta (solo campo letta -> true, senza cambiare altro)
     match /notifiche/{uid} {
+      // Lettura: solo proprietario (privacy). Scrittura: qualsiasi autenticato
+      // può creare/accodare una notifica per un altro utente (es. studente
+      // notifica prof su nuovo commento). Senza questo lo studente avrebbe
+      // permission-denied su notifiche/{profUid}.
       allow read: if isAuth() && request.auth.uid == uid;
-      allow create: if isAuth() && (request.auth.uid == uid || isProf());
-      allow update: if isAuth() && (
-        request.auth.uid == uid
-        || isProf()
-      );
+      allow create: if isAuth();
+      allow update: if isAuth();
       allow delete: if isAuth() && request.auth.uid == uid;
     }
 

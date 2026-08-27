@@ -125,7 +125,7 @@ function NuovaCardModal(props: any) {
               {
                 <input
                   value={form.titolo}
-                  maxLength={100}
+                  maxLength={250}
                   onInput={function (e: any) {
                     setForm(function (p: any) {
                       return Object.assign({}, p, { titolo: e.target.value });
@@ -244,7 +244,7 @@ function NuovaCardModal(props: any) {
                   style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}
                 >
                   {<label className="u-label">🔗 LINK</label>}
-                  {(form.links || []).length < 5 && (
+                  {(form.links || []).length < 10 && (
                     <button
                       onClick={function () {
                         setForm(function (p: any) {

@@ -7,7 +7,7 @@ var useEffect = React.useEffect;
 var useCallback = React.useCallback;
 var useMemo = React.useMemo;
 
-var dbN = (window as any).db;
+function getDbN() { return (window as any).db; }
 
 type Notifica = {
   id: string;
@@ -27,16 +27,19 @@ function useNotifiche(deps: { user: any }) {
 
   useEffect(
     function () {
-      if (!user || !user.uid || !dbN) {
+      var db = getDbN();
+      if (!user || !user.uid || !db) {
         setLista([]);
         return;
       }
-      var unsub = dbN
+      var unsub = db
         .collection('notifiche')
         .doc(user.uid)
         .onSnapshot(function (doc: any) {
           if (doc.exists) setLista((doc.data().lista || []) as Notifica[]);
           else setLista([]);
+        }, function (err: any) {
+          console.warn('[notifiche] onSnapshot', err && err.code);
         });
       return function () {
         if (unsub) unsub();
@@ -57,13 +60,14 @@ function useNotifiche(deps: { user: any }) {
   var segnaLetta = useCallback(
     function (id: string) {
       if (!user || !user.uid) return;
+      var db = getDbN();
+      if (!db) return;
       var next = lista.map(function (n) {
         return n.id === id ? Object.assign({}, n, { letta: true }) : n;
       });
-      // se già letta, evita write
       var target = lista.find(function (n) { return n.id === id; });
       if (!target || target.letta) return;
-      dbN.collection('notifiche').doc(user.uid).set({ lista: next, aggiornato: new Date().toISOString() }, { merge: true });
+      db.collection('notifiche').doc(user.uid).set({ lista: next, aggiornato: new Date().toISOString() }, { merge: true });
     },
     [lista, user]
   );
@@ -72,10 +76,12 @@ function useNotifiche(deps: { user: any }) {
     function () {
       if (!user || !user.uid || !lista.length) return;
       if (nonLette === 0) return;
+      var db = getDbN();
+      if (!db) return;
       var next = lista.map(function (n) {
         return Object.assign({}, n, { letta: true });
       });
-      dbN.collection('notifiche').doc(user.uid).set({ lista: next, aggiornato: new Date().toISOString() }, { merge: true });
+      db.collection('notifiche').doc(user.uid).set({ lista: next, aggiornato: new Date().toISOString() }, { merge: true });
     },
     [lista, nonLette, user]
   );

@@ -17,9 +17,9 @@ SB.createAppHandlers = function (ctx: any) {
     // Input length cap difensivo: titolo card <= 200. La motivazione ammonizioni
     // è capped in ammonisci() (mostra toast). Se vuoi UX visibile qui, passare
     // ctx.showToast via closure o spostare il check al livello UI.
-    if (card.titolo && String(card.titolo).length > 200) {
-      if (window.SB_DEBUG) console.warn('[ScuolaBoard] saveCard rejected: titolo > 200 chars');
-      return Promise.reject(new Error('Titolo troppo lungo (max 200 caratteri).'));
+    if (card.titolo && String(card.titolo).length > 250) {
+      if (window.SB_DEBUG) console.warn('[ScuolaBoard] saveCard rejected: titolo > 250 chars');
+      return Promise.reject(new Error('Titolo troppo lungo (max 250 caratteri).'));
     }
     if (!card.ordine && cardServices.createCardWithOrder) return cardServices.createCardWithOrder(card);
     if (cardServices.saveCard) return cardServices.saveCard(card);
@@ -363,8 +363,8 @@ SB.createAppHandlers = function (ctx: any) {
     addCom: function () {
       var user = getUser();
       if (!user || !getNc().testo.trim()) return;
-      if (getNc().testo.length > 1000) {
-        if (ctx.showToast) ctx.showToast('Commento troppo lungo (max 1000 caratteri).', 'warn');
+      if (getNc().testo.length > 2000) {
+        if (ctx.showToast) ctx.showToast('Commento troppo lungo (max 2000 caratteri).', 'warn');
         return;
       }
       var card = getCards().find(function (c: any) {
@@ -389,15 +389,20 @@ SB.createAppHandlers = function (ctx: any) {
       });
       saveCard(nextCard).then(function () {
         try {
-          // Notifica al prof se studente commenta (solo app aperta)
-          if (user.role !== 'prof' && (window as any).SB && (window as any).SB.notifyUser) {
-            // trova uid prof (primo prof trovato)
-            var dbN = (window as any).db;
-            if (dbN) dbN.collection('users').where('role', '==', 'prof').get().then(function (snap: any) {
+          var SBn: any = (window as any).SB;
+          var dbN: any = (window as any).db;
+          if (!SBn || !dbN) return;
+          // Ogni nuovo commento notifica: 1) tutti i prof (se autore non è prof), 2) autore della card se diverso
+          if (user.role !== 'prof') {
+            dbN.collection('users').where('role', '==', 'prof').get().then(function (snap: any) {
               snap.forEach(function (d: any) {
-                (window as any).SB.notifyUser(d.id, { tipo: 'risposta', cardId: card.id, cmId: cmIdNew, titolo: card.titolo, msg: getMyName()(user) + ' ha commentato: ' + card.titolo, annoScolastico: card.annoScolastico });
+                SBn.notifyUser(d.id, { tipo: 'risposta', cardId: card.id, cmId: cmIdNew, titolo: card.titolo, msg: getMyName()(user) + ' ha commentato: ' + card.titolo, annoScolastico: card.annoScolastico });
               });
-            });
+            }).catch(function () {});
+          }
+          // Notifica anche ai compagni di classe della card (se card ha classi target)
+          if (SBn.notifyClasse) {
+            SBn.notifyClasse({ classi: card.classi || ['TUTTE'], annoScolastico: card.annoScolastico, cardId: card.id, titolo: card.titolo, msg: getMyName()(user) + ' ha commentato', excludeUid: user.uid });
           }
         } catch (e) {}
       }).catch(function () {});
@@ -407,8 +412,8 @@ SB.createAppHandlers = function (ctx: any) {
     addReply: function (cmId: any) {
       var user = getUser();
       if (!user || !getReplyTesto().trim()) return;
-      if (getReplyTesto().length > 500) {
-        if (ctx.showToast) ctx.showToast('Risposta troppo lunga (max 500 caratteri).', 'warn');
+      if (getReplyTesto().length > 2000) {
+        if (ctx.showToast) ctx.showToast('Risposta troppo lunga (max 2000 caratteri).', 'warn');
         return;
       }
       var card = getCards().find(function (c: any) {
@@ -435,9 +440,11 @@ SB.createAppHandlers = function (ctx: any) {
       var nextCard = Object.assign({}, card, { commenti: ins(card.commenti) });
       saveCard(nextCard).then(function () {
         try {
-          // Notifica all'autore del commento parent se diverso da chi risponde
+          var SBn2: any = (window as any).SB;
+          var dbN2: any = (window as any).db;
+          if (!SBn2 || !dbN2) return;
+          // Risposta: notifica SEMPRE 1) autore parent, 2) prof (se studente risponde), 3) classe
           var parent = (card.commenti || []).find(function (x: any) { return String(x.id) === String(cmId); });
-          // cerca anche nelle risposte annidate
           if (!parent) {
             (function find(list: any) {
               for (var i=0;i<list.length;i++) {
@@ -447,19 +454,32 @@ SB.createAppHandlers = function (ctx: any) {
             })(card.commenti || []);
           }
           var destAutore = parent ? parent.autore : null;
-          if (destAutore && destAutore !== getMyName()(user) && (window as any).SB && (window as any).SB.notifyUser) {
-            var dbN2 = (window as any).db;
-            if (dbN2) dbN2.collection('users').get().then(function (snap: any) {
+          if (destAutore && destAutore !== getMyName()(user)) {
+            dbN2.collection('users').get().then(function (snap: any) {
+              var found = false;
               snap.forEach(function (d: any) {
                 var ud = d.data() || {};
                 var name = ud.displayName || ((ud.nome||'') + ' ' + (ud.cognome||'')).trim() || ud.email;
-                // match per nome visualizzato
-                if (name === destAutore || (window as any).SB.safeDocId && (window as any).SB.safeDocId(name) === destAutore) {
-                  (window as any).SB.notifyUser(d.id, { tipo: 'risposta', cardId: card.id, cmId: cmId, titolo: card.titolo, msg: getMyName()(user) + ' ha risposto al tuo commento', annoScolastico: card.annoScolastico });
+                if (name === destAutore || (SBn2.safeDocId && SBn2.safeDocId(name) === destAutore)) {
+                  found = true;
+                  SBn2.notifyUser(d.id, { tipo: 'risposta', cardId: card.id, cmId: cmId, titolo: card.titolo, msg: getMyName()(user) + ' ha risposto al tuo commento', annoScolastico: card.annoScolastico });
                 }
               });
-            });
+              // fallback: se autore non trovato (nome legacy), notifica comunque ai prof
+              if (!found && user.role !== 'prof') {
+                dbN2.collection('users').where('role', '==', 'prof').get().then(function (s2: any) {
+                  s2.forEach(function (d: any) { SBn2.notifyUser(d.id, { tipo: 'risposta', cardId: card.id, cmId: cmId, titolo: card.titolo, msg: getMyName()(user) + ' ha risposto', annoScolastico: card.annoScolastico }); });
+                });
+              }
+            }).catch(function () {});
+          } else if (user.role !== 'prof') {
+            // risposta a thread senza parent chiaro -> notifica prof
+            dbN2.collection('users').where('role', '==', 'prof').get().then(function (s2: any) {
+              s2.forEach(function (d: any) { SBn2.notifyUser(d.id, { tipo: 'risposta', cardId: card.id, cmId: cmId, titolo: card.titolo, msg: getMyName()(user) + ' ha risposto', annoScolastico: card.annoScolastico }); });
+            }).catch(function () {});
           }
+          // anche fan-out alla classe della card (per compagni)
+          if (SBn2.notifyClasse) SBn2.notifyClasse({ classi: card.classi || ['TUTTE'], annoScolastico: card.annoScolastico, cardId: card.id, titolo: card.titolo, msg: getMyName()(user) + ' ha risposto', excludeUid: user.uid });
         } catch (e) {}
       }).catch(function () {});
       if (ctx.setReplyTo) ctx.setReplyTo(null);
