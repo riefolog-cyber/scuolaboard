@@ -1,7 +1,8 @@
 // notifiche-service.ts · ScuolaBoard · fan-out notifiche in-app (solo app aperta)
 // Usato dagli handler dopo fbSave riuscito. Nessuna email/push.
 
-function getDbNS() { return (window as any).db; }
+function getDbNS() { return typeof window !== 'undefined' ? (window as any).db : null; }
+function getWindowSB() { return typeof window !== 'undefined' ? (window as any) : null; }
 
 function notificaId() {
   return Date.now() + '_' + Math.random().toString(36).slice(2, 6);
@@ -9,15 +10,17 @@ function notificaId() {
 
 function pushNotifica(uid: string, n: any) {
   var dbNS: any = getDbNS();
-  if (!uid || !dbNS) {
-    console.warn('[notifiche] push no db');
+  var w: any = getWindowSB();
+  if (!uid || !dbNS || !w) {
     return Promise.resolve();
   }
   try {
+    var fv = w.firebase && w.firebase.firestore && w.firebase.firestore.FieldValue;
+    if (!fv) return Promise.resolve();
     return dbNS
       .collection('notifiche')
       .doc(uid)
-      .set({ lista: (window as any).firebase.firestore.FieldValue.arrayUnion(n), aggiornato: new Date().toISOString() }, { merge: true })
+      .set({ lista: fv.arrayUnion(n), aggiornato: new Date().toISOString() }, { merge: true })
       .then(function () { console.warn('[notifiche] push ok', uid, n.tipo); })
       .catch(function (err: any) {
         console.warn('[notifiche] arrayUnion fail', err && err.code, 'fallback manual');
@@ -80,9 +83,11 @@ async function notifyClasse(opts: { classi: string[]; annoScolastico: string; ca
   } catch (e) {}
 }
 
-var SBNS: any = (window as any).SB || {};
-SBNS.notifyUser = notifyUser;
-SBNS.notifyClasse = notifyClasse;
-(window as any).SB = SBNS;
+if (typeof window !== 'undefined') {
+  var SBNS: any = (window as any).SB || {};
+  SBNS.notifyUser = notifyUser;
+  SBNS.notifyClasse = notifyClasse;
+  (window as any).SB = SBNS;
+}
 
 export { notifyUser, notifyClasse };

@@ -7,7 +7,7 @@ var useEffect = React.useEffect;
 var useCallback = React.useCallback;
 var useMemo = React.useMemo;
 
-function getDbN() { return (window as any).db; }
+function getDbN() { return typeof window !== 'undefined' ? (window as any).db : null; }
 
 type Notifica = {
   id: string;
@@ -39,7 +39,7 @@ function useNotifiche(deps: { user: any }) {
           if (doc.exists) setLista((doc.data().lista || []) as Notifica[]);
           else setLista([]);
         }, function (err: any) {
-          if ((window as any).SB_DEBUG) console.warn('[notifiche] onSnapshot', err && err.code);
+          if (typeof window !== 'undefined' && (window as any).SB_DEBUG) console.warn('[notifiche] onSnapshot', err && err.code);
         });
       return function () {
         if (unsub) unsub();
