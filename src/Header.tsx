@@ -286,13 +286,13 @@ function Header__({ $ }: any) {
             $.setShowNotifiche(function (v: any) { return !v; });
           }}
           style={{
-            background: ($.nonLette || 0) > 0 ? 'rgba(99,102,241,.25)' : 'rgba(255,255,255,.06)',
-            border: '1px solid ' + (($.nonLette || 0) > 0 ? 'rgba(99,102,241,.45)' : 'rgba(255,255,255,.1)'),
+            background: ($.nonLette || 0) > 0 ? (isLight ? 'rgba(79,70,229,.12)' : 'rgba(99,102,241,.25)') : (isLight ? 'rgba(15,23,42,.06)' : 'rgba(255,255,255,.06)'),
+            border: '1px solid ' + (($.nonLette || 0) > 0 ? (isLight ? 'rgba(79,70,229,.22)' : 'rgba(99,102,241,.45)') : (isLight ? 'rgba(15,23,42,.10)' : 'rgba(255,255,255,.1)')),
             borderRadius: 8,
             padding: '5px 9px',
             cursor: 'pointer',
             fontSize: 14,
-            color: ($.nonLette || 0) > 0 ? '#a5b4fc' : 'rgba(255,255,255,.7)',
+            color: ($.nonLette || 0) > 0 ? (isLight ? '#4f46e5' : '#a5b4fc') : (isLight ? '#334155' : 'rgba(255,255,255,.7)'),
             position: 'relative',
           }}
         >
@@ -309,12 +309,12 @@ function Header__({ $ }: any) {
             style={{
               position: 'absolute', top: 'calc(100% + 8px)', right: 0,
               width: 320, maxHeight: 380, overflow: 'auto',
-              background: 'rgba(13,13,30,.98)', border: '1px solid rgba(99,102,241,.35)', borderRadius: 14,
-              boxShadow: '0 12px 40px rgba(0,0,0,.6)', zIndex: 400, padding: 8,
+              background: isLight ? '#ffffff' : 'rgba(13,13,30,.98)', border: isLight ? '1px solid rgba(15,23,42,.12)' : '1px solid rgba(99,102,241,.35)', borderRadius: 14,
+              boxShadow: isLight ? '0 12px 32px rgba(15,23,42,.12)' : '0 12px 40px rgba(0,0,0,.6)', zIndex: 400, padding: 8,
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 4px 8px', borderBottom: '1px solid rgba(255,255,255,.08)', marginBottom: 6 }}>
-              <span style={{ fontSize: 12, fontWeight: 800, color: 'rgba(255,255,255,.85)', letterSpacing: .5 }}>🔔 NOTIFICHE</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 4px 8px', borderBottom: isLight ? '1px solid rgba(15,23,42,.08)' : '1px solid rgba(255,255,255,.08)', marginBottom: 6 }}>
+              <span style={{ fontSize: 12, fontWeight: 800, color: isLight ? '#0f172a' : 'rgba(255,255,255,.85)', letterSpacing: .5 }}>🔔 NOTIFICHE</span>
               {($.notifiche || []).length > 0 && (
                 <span style={{ display: 'flex', gap: 6 }}>
                   <button onClick={function () { $.segnaTutteLette(); }} title="Segna tutte come lette" style={{ background: 'rgba(99,102,241,.15)', border: '1px solid rgba(99,102,241,.3)', borderRadius: 6, padding: '3px 8px', fontSize: 11, color: '#a5b4fc', cursor: 'pointer', fontWeight: 700 }}>Segna già lette</button>
@@ -323,7 +323,7 @@ function Header__({ $ }: any) {
               )}
             </div>
             {(!$.notifiche || $.notifiche.length === 0) && (
-              <div style={{ textAlign: 'center', padding: 20, color: 'rgba(255,255,255,.4)', fontSize: 12 }}>Nessuna notifica</div>
+              <div style={{ textAlign: 'center', padding: 20, color: isLight ? '#64748b' : 'rgba(255,255,255,.4)', fontSize: 12 }}>Nessuna notifica</div>
             )}
             {($.notifiche || []).slice().reverse().slice(0, 30).map(function (n: any) {
               var icon = n.tipo === 'nuova_card' ? '📌' : n.tipo === 'proposta_esito' ? '✅' : n.tipo === 'ammonizione' ? '⚠️' : '💬';
@@ -338,15 +338,15 @@ function Header__({ $ }: any) {
                   }}
                   style={{
                     display: 'flex', gap: 8, padding: '8px 8px', borderRadius: 8, cursor: 'pointer',
-                    background: n.letta ? 'transparent' : 'rgba(99,102,241,.10)', border: '1px solid ' + (n.letta ? 'transparent' : 'rgba(99,102,241,.18)'),
+                    background: n.letta ? 'transparent' : (isLight ? 'rgba(79,70,229,.08)' : 'rgba(99,102,241,.10)'), border: '1px solid ' + (n.letta ? 'transparent' : (isLight ? 'rgba(79,70,229,.14)' : 'rgba(99,102,241,.18)')),
                     marginBottom: 4, alignItems: 'flex-start',
                   }}
                 >
                   <span style={{ fontSize: 14, flexShrink: 0, marginTop: 1 }}>{icon}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12, fontWeight: n.letta ? 500 : 700, color: n.letta ? 'rgba(255,255,255,.72)' : '#e0e7ff', lineHeight: 1.35, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.titolo}</div>
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,.5)', lineHeight: 1.4 }}>{n.msg}</div>
-                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,.35)', marginTop: 2 }}>{$.timeAgo ? $.timeAgo(n.createdAt) : ''}</div>
+                    <div style={{ fontSize: 12, fontWeight: n.letta ? 500 : 700, color: n.letta ? (isLight ? '#475569' : 'rgba(255,255,255,.72)') : (isLight ? '#312e81' : '#e0e7ff'), lineHeight: 1.35, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.titolo}</div>
+                    <div style={{ fontSize: 11, color: isLight ? '#475569' : 'rgba(255,255,255,.5)', lineHeight: 1.4 }}>{n.msg}</div>
+                    <div style={{ fontSize: 10, color: isLight ? '#64748b' : 'rgba(255,255,255,.35)', marginTop: 2 }}>{$.timeAgo ? $.timeAgo(n.createdAt) : ''}</div>
                   </div>
                   {!n.letta && <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#6366f1', flexShrink: 0, marginTop: 6 }} />}
                 </div>

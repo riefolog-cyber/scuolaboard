@@ -3,6 +3,7 @@ var SB = window.SB || {};
 var h = SB.h || React.createElement;
 
 function CommentsSection({ $, c }: any) {
+  var isLight = !!$.isLight;
   // Rendering ricorsivo di un commento e delle sue risposte (thread nidificato).
   // parentId = id dell'item GENITORE (usato da executeDelReply per cancellare
   // una risposta dalla lista del genitore, a qualsiasi profondità).
@@ -17,7 +18,7 @@ function CommentsSection({ $, c }: any) {
     var isReplying = $.replyTo && String($.replyTo.id) === String(item.id);
     var isReply = depth > 0;
     var itemKey = item.id != null ? String(item.id) : 'it-' + depth + '-' + (idx == null ? 'x' : idx);
-    var bubbleBg = isReply ? 'rgba(99,102,241,.05)' : 'rgba(255,255,255,.03)';
+    var bubbleBg = isLight ? (isReply ? 'rgba(79,70,229,.06)' : '#f8fafc') : (isReply ? 'rgba(99,102,241,.05)' : 'rgba(255,255,255,.03)');
     var bubbleBorder = isReply ? 'rgba(99,102,241,.15)' : 'rgba(255,255,255,.06)';
     return (
       <div
@@ -312,9 +313,10 @@ function CommentsSection({ $, c }: any) {
                 marginTop: 4,
                 background: 'none',
                 border: 'none',
-                color: 'rgba(255,255,255,.35)',
+                color: isLight ? '#b45309' : 'rgba(255,255,255,.35)',
                 cursor: 'pointer',
                 fontSize: 10,
+                fontWeight: 700,
               }}
             >
               ⚠️ Ammonisci
