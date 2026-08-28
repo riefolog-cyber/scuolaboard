@@ -363,13 +363,13 @@ function Header__({ $ }: any) {
             $.setShowCerca(true);
           }}
           style={{
-            background: 'rgba(99,102,241,.12)',
-            border: '1px solid rgba(99,102,241,.35)',
+            background: isLight ? 'rgba(79,70,229,.08)' : 'rgba(99,102,241,.12)',
+            border: isLight ? '1px solid rgba(79,70,229,.20)' : '1px solid rgba(99,102,241,.35)',
             borderRadius: 8,
             padding: '5px 9px',
             cursor: 'pointer',
             fontSize: 14,
-            color: '#a5b4fc',
+            color: isLight ? '#4f46e5' : '#a5b4fc',
           }}
         >
           🔍
@@ -382,13 +382,13 @@ function Header__({ $ }: any) {
             $.setShowAmm({ autore: null, cardId: null, cmId: null });
           }}
           style={{
-            background: 'rgba(245,158,11,.12)',
-            border: '1px solid rgba(245,158,11,.3)',
+            background: isLight ? 'rgba(245,158,11,.10)' : 'rgba(245,158,11,.12)',
+            border: isLight ? '1px solid rgba(245,158,11,.22)' : '1px solid rgba(245,158,11,.3)',
             borderRadius: 8,
             padding: '5px 9px',
             cursor: 'pointer',
             fontSize: 14,
-            color: '#fbbf24',
+            color: isLight ? '#92400e' : '#fbbf24',
           }}
         >
           ⚠️
