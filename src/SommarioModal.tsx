@@ -3,6 +3,7 @@ var SB = window.SB || {};
 var h = SB.h || React.createElement;
 
 function SommarioModal__({ $ }: any) {
+  var isLight = !!$.isLight;
   var [expanded, setExpanded] = (React as any).useState(false);
   // reset espansione quando cambia card
   var _showId = $.showSommario;
@@ -22,7 +23,7 @@ function SommarioModal__({ $ }: any) {
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(0,0,0,.8)',
+        background: isLight ? 'rgba(15,23,42,.45)' : 'rgba(0,0,0,.8)',
         backdropFilter: 'blur(4px)',
         zIndex: 600,
         display: 'flex',
@@ -33,14 +34,15 @@ function SommarioModal__({ $ }: any) {
     >
       <div
         style={{
-          background: '#1c1a2e',
-          border: '1px solid rgba(34,197,94,.35)',
+          background: isLight ? '#ffffff' : '#1c1a2e',
+          border: isLight ? '1px solid rgba(15,23,42,.10)' : '1px solid rgba(34,197,94,.35)',
           borderRadius: 20,
           padding: 26,
           maxWidth: 500,
           width: '100%',
           maxHeight: '80vh',
           overflowY: 'auto',
+          boxShadow: isLight ? '0 20px 60px rgba(15,23,42,.15)' : 'none',
         }}
         onClick={function (e: any) {
           e.stopPropagation();
@@ -48,10 +50,10 @@ function SommarioModal__({ $ }: any) {
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
           <div>
-            <h3 style={{ margin: '0 0 4px', color: '#f1f5f9', fontSize: 15, fontWeight: 800 }}>
+            <h3 style={{ margin: '0 0 4px', color: isLight ? '#0f172a' : '#f1f5f9', fontSize: 15, fontWeight: 800 }}>
               📝 Riassunto discussione
             </h3>
-            <p style={{ margin: 0, color: 'rgba(255,255,255,.45)', fontSize: 11 }}>
+            <p style={{ margin: 0, color: isLight ? '#64748b' : 'rgba(255,255,255,.45)', fontSize: 11 }}>
               {'"' + card.titolo + '" · ' + (card.commenti || []).length + ' commenti'}
             </p>
           </div>
@@ -75,7 +77,7 @@ function SommarioModal__({ $ }: any) {
           </button>
         </div>
         {loading && (
-          <div style={{ textAlign: 'center', padding: 30, color: 'rgba(255,255,255,.58)' }}>
+          <div style={{ textAlign: 'center', padding: 30, color: isLight ? '#475569' : 'rgba(255,255,255,.58)' }}>
             <div style={{ fontSize: 28, animation: 'spin 1.5s linear infinite', display: 'inline-block' }}>⚙️</div>
             <div style={{ marginTop: 8, fontSize: 12 }}>Analisi in corso…</div>
           </div>
@@ -87,12 +89,12 @@ function SommarioModal__({ $ }: any) {
             <div>
               <div
                 style={{
-                  background: 'rgba(34,197,94,.07)',
-                  border: '1px solid rgba(34,197,94,.2)',
+                  background: isLight ? 'rgba(34,197,94,.06)' : 'rgba(34,197,94,.07)',
+                  border: isLight ? '1px solid rgba(34,197,94,.14)' : '1px solid rgba(34,197,94,.2)',
                   borderRadius: 12,
                   padding: '14px 16px',
                   fontSize: 13,
-                  color: 'rgba(255,255,255,.85)',
+                  color: isLight ? '#1e293b' : 'rgba(255,255,255,.85)',
                   lineHeight: 1.8,
                   whiteSpace: 'pre-wrap',
                 }}
@@ -127,20 +129,20 @@ function SommarioModal__({ $ }: any) {
             style={{
               marginTop: 10,
               paddingTop: 8,
-              borderTop: '1px solid rgba(34,197,94,.15)',
+              borderTop: isLight ? '1px solid rgba(15,23,42,.08)' : '1px solid rgba(34,197,94,.15)',
               display: 'flex',
               alignItems: 'center',
               gap: 5,
             }}
           >
-            <span style={{ fontSize: 10, color: 'rgba(255,255,255,.35)' }}>🤖</span>
-            <span style={{ fontSize: 10, color: 'rgba(255,255,255,.35)', fontStyle: 'italic' }}>
+            <span style={{ fontSize: 10, color: isLight ? '#64748b' : 'rgba(255,255,255,.35)' }}>🤖</span>
+            <span style={{ fontSize: 10, color: isLight ? '#64748b' : 'rgba(255,255,255,.35)', fontStyle: 'italic' }}>
               Generato con IA – revisionato dal docente
             </span>
           </div>
         )}
         {!loading && !res && (
-          <div style={{ textAlign: 'center', color: 'rgba(255,255,255,.45)', padding: 20 }}>
+          <div style={{ textAlign: 'center', color: isLight ? '#64748b' : 'rgba(255,255,255,.45)', padding: 20 }}>
             Clicca Rigenera per avviare l'analisi
           </div>
         )}
@@ -152,9 +154,9 @@ function SommarioModal__({ $ }: any) {
             width: '100%',
             marginTop: 14,
             padding: 10,
-            background: 'rgba(255,255,255,.08)',
-            color: 'rgba(255,255,255,.6)',
-            border: 'none',
+            background: isLight ? 'rgba(15,23,42,.06)' : 'rgba(255,255,255,.08)',
+            color: isLight ? '#334155' : 'rgba(255,255,255,.6)',
+            border: isLight ? '1px solid rgba(15,23,42,.08)' : 'none',
             borderRadius: 11,
             fontSize: 13,
             fontWeight: 700,
