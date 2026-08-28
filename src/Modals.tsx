@@ -10,8 +10,6 @@ import ClasseModal from './modals/ClasseModal.tsx';
 import AiQuizGenModal from './modals/AiQuizGenModal.tsx';
 import AmmModal from './modals/AmmModal.tsx';
 import EditAmmModal from './modals/EditAmmModal.tsx';
-import ProfiloModal from './modals/ProfiloModal.tsx';
-import TimerModal from './modals/TimerModal.tsx';
 import NuovaCardModal from './modals/NuovaCardModal.tsx';
 import RifiutaModal from './modals/RifiutaModal.tsx';
 import ConfirmDelModal from './modals/ConfirmDelModal.tsx';
@@ -43,6 +41,12 @@ var LazyCopiaAnnoModal = lazy(function () {
 var LazyCercaModal = lazy(function () {
   return import('./modals/CercaModal.tsx');
 });
+var LazyProfiloModal = lazy(function () {
+  return import('./modals/ProfiloModal.tsx');
+});
+var LazyTimerModal = lazy(function () {
+  return import('./modals/TimerModal.tsx');
+});
 
 // ── AGGREGATOR: renders all modals ──
 SB.Modals = function ({ $ }: any) {
@@ -57,11 +61,19 @@ SB.Modals = function ({ $ }: any) {
         <AiQuizGenModal {...$} />
         <AmmModal {...$} />
         <EditAmmModal {...$} />
-        <ProfiloModal {...$} />
-        <TimerModal {...$} />
         <NuovaCardModal {...$} />
         <RifiutaModal {...$} />
         <ConfirmDelModal {...$} />
+        {$.showProfilo && (
+          <Suspense fallback={null}>
+            <LazyProfiloModal {...$} />
+          </Suspense>
+        )}
+        {$.showTimerModal && (
+          <Suspense fallback={null}>
+            <LazyTimerModal {...$} />
+          </Suspense>
+        )}
         {$.showWordCloud && $.isProf && (
           <Suspense fallback={null}>
             <LazyWordCloudModal {...$} />

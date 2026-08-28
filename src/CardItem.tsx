@@ -102,6 +102,8 @@ function CardItem__({ $, c }: any) {
                 <img
                   src={c.copertina}
                   alt=""
+                  loading="lazy"
+                  decoding="async"
                   style={{ width: '100%', maxHeight: 200, objectFit: 'contain', display: 'block' }}
                 />
               }

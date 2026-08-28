@@ -113,6 +113,8 @@ function CardDetail__({ $ }: any) {
             <img
               src={c.copertina}
               alt=""
+              loading="lazy"
+              decoding="async"
               style={{ width: '100%', maxHeight: 240, objectFit: 'contain', display: 'block' }}
             />
           </div>
@@ -230,6 +232,8 @@ function CardDetail__({ $ }: any) {
                     <img
                       src={url}
                       alt={dida}
+                      loading="lazy"
+                      decoding="async"
                       style={{
                         width: 80,
                         height: 80,

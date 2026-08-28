@@ -11,7 +11,9 @@
   --c-warn:#fbbf24;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Inter','Segoe UI',sans-serif;background:var(--c-bg)}
+html{transition:background-color .25s ease, color .25s ease}
+body{font-family:'Inter','Segoe UI',sans-serif;background:var(--c-bg);transition:background .25s ease, color .25s ease}
+.card-wrap, .modal-inner, .scuola-header{transition:background .25s ease, border-color .25s ease, box-shadow .25s ease, color .25s ease}
 textarea,input,select,button{font-family:inherit}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
 @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
