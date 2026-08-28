@@ -11,6 +11,7 @@ import RifiutaModal from './carddetail/RifiutaModal.tsx';
 
 function CardDetail__({ $ }: any) {
   if (!$.showCard) return null;
+  var isLight = !!$.isLight;
   var c = $.showCard;
   var totV = c.opzioni
     ? c.opzioni.reduce(function (a: any, o: any) {
@@ -41,12 +42,12 @@ function CardDetail__({ $ }: any) {
       <div
         className="modal-inner"
         style={{
-          background: 'rgba(15,23,42,.96)',
+          background: isLight ? '#ffffff' : 'rgba(15,23,42,.96)',
           backdropFilter: 'blur(24px)',
           WebkitBackdropFilter: 'blur(24px)',
-          border: '1px solid rgba(255,255,255,.11)',
+          border: isLight ? '1px solid rgba(15,23,42,.10)' : '1px solid rgba(255,255,255,.11)',
           borderRadius: '20px 20px 0 0',
-          boxShadow: '0 -8px 60px rgba(0,0,0,.6)',
+          boxShadow: isLight ? '0 -8px 40px rgba(15,23,42,.12)' : '0 -8px 60px rgba(0,0,0,.6)',
           width: '100%',
           maxWidth: 560,
           maxHeight: '92vh',
@@ -65,7 +66,7 @@ function CardDetail__({ $ }: any) {
             display: 'flex',
             justifyContent: 'center',
             padding: '10px 12px 6px',
-            background: 'linear-gradient(180deg, rgba(15,23,42,.97) 0%, rgba(15,23,42,.97) 55%, rgba(15,23,42,0) 100%)',
+            background: isLight ? 'linear-gradient(180deg, #ffffff 0%, #ffffff 55%, rgba(255,255,255,0) 100%)' : 'linear-gradient(180deg, rgba(15,23,42,.97) 0%, rgba(15,23,42,.97) 55%, rgba(15,23,42,0) 100%)',
           }}
         >
           <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,.25)', marginTop: 6 }} />
@@ -182,7 +183,7 @@ function CardDetail__({ $ }: any) {
               margin: '0 0 8px',
               fontWeight: 800,
               fontSize: 17,
-              color: '#f1f5f9',
+              color: isLight ? '#0f172a' : '#f1f5f9',
               lineHeight: 1.35,
               letterSpacing: 0.1,
             }}
@@ -191,8 +192,8 @@ function CardDetail__({ $ }: any) {
           </h2>
 
           {/* Autor */}
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', marginBottom: 10 }}>
-            di <strong style={{ color: 'rgba(255,255,255,.7)' }}>{c.autore || 'Prof'}</strong> · {$.timeAgo(c.data)}
+          <div style={{ fontSize: 11, color: isLight ? '#64748b' : 'rgba(255,255,255,.4)', marginBottom: 10 }}>
+            di <strong style={{ color: isLight ? '#0f172a' : 'rgba(255,255,255,.7)' }}>{c.autore || 'Prof'}</strong> · {$.timeAgo(c.data)}
           </div>
 
           {/* Testo */}
@@ -200,7 +201,7 @@ function CardDetail__({ $ }: any) {
             <div
               style={{
                 fontSize: 13,
-                color: 'rgba(255,255,255,.78)',
+                color: isLight ? '#1e293b' : 'rgba(255,255,255,.78)',
                 lineHeight: 1.7,
                 marginBottom: 14,
                 whiteSpace: 'pre-wrap',

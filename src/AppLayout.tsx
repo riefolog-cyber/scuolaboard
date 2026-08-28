@@ -83,11 +83,12 @@ SB.AppLayout = function (props: any) {
 
   if (!$.user) return <LoginScreen $={$} />;
 
+  var isLight = !!$.isLight;
   return (
     <div
       style={{
         minHeight: '100vh',
-        background: 'linear-gradient(160deg,#12111a 0%,#161320 50%,#1a1528 100%)',
+        background: isLight ? 'linear-gradient(160deg,#f8fafc 0%,#eef2ff 50%,#f1f5f9 100%)' : 'linear-gradient(160deg,#12111a 0%,#161320 50%,#1a1528 100%)',
         display: 'flex',
         flexDirection: 'column',
       }}
@@ -109,9 +110,10 @@ SB.AppLayout = function (props: any) {
                 justifyContent: 'center',
                 gap: 8,
                 padding: '7px 14px',
-                background:
-                  'linear-gradient(90deg,rgba(99,102,241,.06) 0%,rgba(255,255,255,.03) 40%,rgba(34,197,94,.05) 100%)',
-                borderBottom: '1px solid rgba(255,255,255,.07)',
+                background: isLight
+                  ? 'linear-gradient(90deg,rgba(79,70,229,.05) 0%,#f8fafc 40%,rgba(34,197,94,.06) 100%)'
+                  : 'linear-gradient(90deg,rgba(99,102,241,.06) 0%,rgba(255,255,255,.03) 40%,rgba(34,197,94,.05) 100%)',
+                borderBottom: isLight ? '1px solid rgba(15,23,42,.08)' : '1px solid rgba(255,255,255,.07)',
                 flexWrap: 'wrap',
               }}
             >
@@ -122,20 +124,20 @@ SB.AppLayout = function (props: any) {
                 />
               }
               {
-                <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: 3, color: 'rgba(255,255,255,.65)' }}>
+                <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: 3, color: isLight ? '#475569' : 'rgba(255,255,255,.65)' }}>
                   LIVE
                 </span>
               }
-              {<span style={{ fontSize: 11, color: 'rgba(255,255,255,.45)' }}>•</span>}
+              {<span style={{ fontSize: 11, color: isLight ? '#94a3b8' : 'rgba(255,255,255,.45)' }}>•</span>}
               {
-                <span style={{ fontSize: 11, color: 'rgba(255,255,255,.58)' }}>
+                <span style={{ fontSize: 11, color: isLight ? '#334155' : 'rgba(255,255,255,.58)' }}>
                   {$.cards.filter(function (c: any) {
                     return !c.proposta;
                   }).length + ' card'}
                 </span>
               }
-              {<span style={{ fontSize: 11, color: 'rgba(255,255,255,.45)' }}>•</span>}
-              {<span style={{ fontSize: 11, color: 'rgba(255,255,255,.58)' }}>{$.totC + ' commenti'}</span>}
+              {<span style={{ fontSize: 11, color: isLight ? '#94a3b8' : 'rgba(255,255,255,.45)' }}>•</span>}
+              {<span style={{ fontSize: 11, color: isLight ? '#334155' : 'rgba(255,255,255,.58)' }}>{$.totC + ' commenti'}</span>}
               {$.isProf && !$.simulaSt && $.proposte.length > 0 && (
                 <span
                   style={{
@@ -165,18 +167,20 @@ SB.AppLayout = function (props: any) {
                 justifyContent: 'center',
                 gap: 6,
                 padding: '6px 14px',
-                background:
-                  'linear-gradient(90deg,rgba(99,102,241,.05) 0%,rgba(168,85,247,.05) 50%,rgba(99,102,241,.05) 100%)',
-                borderBottom: '1px solid rgba(255,255,255,.05)',
+                background: isLight
+                  ? 'linear-gradient(90deg,rgba(79,70,229,.06) 0%,rgba(168,85,247,.06) 50%,rgba(79,70,229,.06) 100%)'
+                  : 'linear-gradient(90deg,rgba(99,102,241,.05) 0%,rgba(168,85,247,.05) 50%,rgba(99,102,241,.05) 100%)',
+                borderBottom: isLight ? '1px solid rgba(15,23,42,.08)' : '1px solid rgba(255,255,255,.05)',
                 cursor: 'pointer',
                 transition: 'background .2s',
               }}
               onMouseEnter={function (e: any) {
-                e.currentTarget.style.background = 'rgba(99,102,241,.1)';
+                e.currentTarget.style.background = isLight ? 'rgba(79,70,229,.10)' : 'rgba(99,102,241,.1)';
               }}
               onMouseLeave={function (e: any) {
-                e.currentTarget.style.background =
-                  'linear-gradient(90deg,rgba(99,102,241,.05) 0%,rgba(168,85,247,.05) 50%,rgba(99,102,241,.05) 100%)';
+                e.currentTarget.style.background = isLight
+                  ? 'linear-gradient(90deg,rgba(79,70,229,.06) 0%,rgba(168,85,247,.06) 50%,rgba(79,70,229,.06) 100%)'
+                  : 'linear-gradient(90deg,rgba(99,102,241,.05) 0%,rgba(168,85,247,.05) 50%,rgba(99,102,241,.05) 100%)';
               }}
             >
               <span style={{ fontSize: 13 }}>🛡️</span>
@@ -184,13 +188,13 @@ SB.AppLayout = function (props: any) {
                 style={{
                   fontSize: 11,
                   fontWeight: 600,
-                  color: 'rgba(199,210,254,.7)',
+                  color: isLight ? '#4338ca' : 'rgba(199,210,254,.7)',
                   letterSpacing: 0.3,
                 }}
               >
                 La tua privacy è protetta — nomi anonimi, IA trasparente, tutto revisionato dal docente
               </span>
-              <span style={{ fontSize: 10, color: 'rgba(99,102,241,.6)' }}>▶</span>
+              <span style={{ fontSize: 10, color: isLight ? '#6366f1' : 'rgba(99,102,241,.6)' }}>▶</span>
             </div>
           }
           {<FilterBar $={$} />}

@@ -4,6 +4,7 @@ var h = SB.h || React.createElement;
 var normalizeLinks = window.normalizeLinks;
 
 function CardItem__({ $, c }: any) {
+  var isLight = !!$.isLight;
   var totV = c.opzioni
     ? c.opzioni.reduce(function (a: any, o: any) {
         return a + (o.voti || []).length;
@@ -258,7 +259,7 @@ function CardItem__({ $, c }: any) {
                   style={{
                     fontWeight: 800,
                     fontSize: 14,
-                    color: nascosta ? 'rgba(255,255,255,.58)' : '#f1f5f9',
+                    color: nascosta ? (isLight ? '#64748b' : 'rgba(255,255,255,.58)') : (isLight ? '#0f172a' : '#f1f5f9'),
                     lineHeight: 1.35,
                     marginBottom: 5,
                     letterSpacing: 0.1,
@@ -271,7 +272,7 @@ function CardItem__({ $, c }: any) {
                 <div
                   style={{
                     fontSize: 11,
-                    color: 'rgba(255,255,255,.58)',
+                    color: isLight ? '#475569' : 'rgba(255,255,255,.58)',
                     lineHeight: 1.5,
                     overflow: 'hidden',
                     display: '-webkit-box',

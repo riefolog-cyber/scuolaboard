@@ -9,6 +9,7 @@ import useQuiz from '../hooks/useQuiz.ts';
 import useAmmonizioni from '../hooks/useAmmonizioni.ts';
 import useClassi from '../hooks/useClassi.ts';
 import useNotifiche from '../hooks/useNotifiche.ts';
+import useTheme from '../hooks/useTheme.ts';
 import '../notifiche-service.ts';
 import {
   playAlarm,
@@ -183,6 +184,11 @@ function AppProvider({ children }: any) {
 
   var notificheHook = useNotifiche({ user: user });
   var [showNotifiche, setShowNotifiche] = useState(false);
+
+  var themeHook = useTheme();
+  var theme = themeHook.theme;
+  var isLight = themeHook.isLight;
+  var toggleTheme = themeHook.toggleTheme;
 
   var seenRef = cardsHook.seenRef;
   function markSeen(id: any) {
@@ -1453,6 +1459,10 @@ function AppProvider({ children }: any) {
         // Modifica ammonizioni
         modificaAmm: modificaAmm,
         eliminaAmm: eliminaAmm,
+        // Tema chiaro/scuro
+        theme: theme,
+        isLight: isLight,
+        toggleTheme: toggleTheme,
       };
     },
     [
@@ -1490,6 +1500,8 @@ function AppProvider({ children }: any) {
       notificheHook.notifiche,
       notificheHook.nonLette,
       showNotifiche,
+      theme,
+      isLight,
       simulaSt,
       CLASSI_LIST,
       totC,

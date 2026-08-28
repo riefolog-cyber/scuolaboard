@@ -1,3 +1,19 @@
+// Tema chiaro/scuro: applica data-theme prima del render per evitare flash
+(function(){
+  try {
+    var k='sb_theme';
+    var t=null;
+    try{ t=localStorage.getItem(k);}catch(e){}
+    if(t!=='light' && t!=='dark'){
+      try{ t=window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'; }catch(e2){ t='dark'; }
+    }
+    if(t==='light' || t==='dark'){
+      try{ document.documentElement.setAttribute('data-theme', t); }catch(e3){}
+      try{ if(document.body) document.body.setAttribute('data-theme', t); else document.addEventListener('DOMContentLoaded', function(){ try{ document.body.setAttribute('data-theme', t);}catch(e){} }); }catch(e4){}
+    }
+  }catch(e){}
+})();
+
 // VERSION: 2026-05-26-FIX-v2
 if (window._appVersionLoaded && window._appVersionLoaded !== '2026-05-26-FIX-v2') {
   console.error('CACHE MISMATCH - Reloading page with cache bypass...');

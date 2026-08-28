@@ -3,13 +3,15 @@ var SB = window.SB || {};
 var h = SB.h || React.createElement;
 
 function Header__({ $ }: any) {
+  var isLight = !!$.isLight;
+  var toggleTheme = $.toggleTheme || function(){};
   return (
     <div
       className="scuola-header"
       style={{
-        background: 'rgba(15,20,40,.85)',
+        background: isLight ? 'rgba(255,255,255,.92)' : 'rgba(15,20,40,.85)',
         backdropFilter: 'blur(16px)',
-        borderBottom: '1px solid rgba(99,102,241,.18)',
+        borderBottom: isLight ? '1px solid rgba(15,23,42,.08)' : '1px solid rgba(99,102,241,.18)',
         padding: '8px 14px',
         display: 'flex',
         alignItems: 'center',
@@ -18,12 +20,12 @@ function Header__({ $ }: any) {
         top: 0,
         zIndex: 50,
         flexWrap: 'wrap',
-        boxShadow: '0 2px 20px rgba(0,0,0,.3)',
+        boxShadow: isLight ? '0 2px 20px rgba(15,23,42,.06)' : '0 2px 20px rgba(0,0,0,.3)',
       }}
     >
       {
         <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
-          {<span style={{ fontWeight: 900, fontSize: 16, color: '#fff', letterSpacing: 2 }}>SCUOLA</span>}
+          {<span style={{ fontWeight: 900, fontSize: 16, color: isLight ? '#0f172a' : '#fff', letterSpacing: 2 }}>SCUOLA</span>}
           {
             <span
               style={{
@@ -258,6 +260,22 @@ function Header__({ $ }: any) {
         </div>
       }
       {<div style={{ flex: 1 }} />}
+      <button
+        aria-label={isLight ? 'Passa a tema scuro' : 'Passa a tema chiaro'}
+        title={isLight ? 'Tema scuro' : 'Tema chiaro'}
+        onClick={function(){ toggleTheme(); }}
+        style={{
+          background: isLight ? 'rgba(15,23,42,.06)' : 'rgba(255,255,255,.06)',
+          border: '1px solid ' + (isLight ? 'rgba(15,23,42,.12)' : 'rgba(255,255,255,.1)'),
+          borderRadius: 8,
+          padding: '5px 9px',
+          cursor: 'pointer',
+          fontSize: 14,
+          color: isLight ? '#0f172a' : 'rgba(255,255,255,.85)',
+        }}
+      >
+        {isLight ? '🌙' : '☀️'}
+      </button>
       {/* Campanella notifiche in-app (solo app aperta) */}
       <div style={{ position: 'relative' }}>
         <button
