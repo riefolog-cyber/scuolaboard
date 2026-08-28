@@ -9,6 +9,7 @@ import filterBtn from './filterBtn.ts';
 
 function NuovaCardModal(props: any) {
   if (!props.showModal) return null;
+  var isLight = !!props.isLight;
   var isProf = props.isProf,
     form = props.form,
     setForm = props.setForm;
@@ -30,7 +31,7 @@ function NuovaCardModal(props: any) {
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(0,0,0,.7)',
+        background: isLight ? 'rgba(15,23,42,.45)' : 'rgba(0,0,0,.7)',
         backdropFilter: 'blur(6px)',
         zIndex: 500,
         display: 'flex',
@@ -45,15 +46,16 @@ function NuovaCardModal(props: any) {
       {
         <div
           style={{
-            background: '#1c1a2e',
+            background: isLight ? '#ffffff' : '#1c1a2e',
             borderRadius: '20px 20px 0 0',
             padding: 20,
             width: '100%',
             maxWidth: 540,
             maxHeight: '90vh',
             overflow: 'auto',
-            border: '1px solid rgba(255,255,255,.1)',
+            border: isLight ? '1px solid rgba(15,23,42,.10)' : '1px solid rgba(255,255,255,.1)',
             borderBottom: 'none',
+            boxShadow: isLight ? '0 -8px 40px rgba(15,23,42,.12)' : 'none',
           }}
           onClick={function (e: any) {
             e.stopPropagation();
@@ -71,12 +73,12 @@ function NuovaCardModal(props: any) {
             />
           }
           {
-            <h3 style={{ margin: '0 0 4px', color: '#f1f5f9', fontSize: 15, fontWeight: 800 }}>
+            <h3 style={{ margin: '0 0 4px', color: isLight ? '#0f172a' : '#f1f5f9', fontSize: 15, fontWeight: 800 }}>
               {editMode ? '✏️ Modifica card' : !isProf ? '💡 Proponi una card' : '➕ Nuova card'}
             </h3>
           }
           {!isProf && !editMode && (
-            <p style={{ margin: '0 0 14px', color: 'rgba(255,255,255,.45)', fontSize: 11 }}>
+            <p style={{ margin: '0 0 14px', color: isLight ? '#64748b' : 'rgba(255,255,255,.45)', fontSize: 11 }}>
               La tua proposta sarà visibile dopo l'approvazione del prof
             </p>
           )}
