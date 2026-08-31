@@ -70,8 +70,8 @@ test.describe('Modali (verifica Chrome reale)', () => {
     await page.goto(HARNESS, { waitUntil: 'domcontentloaded' });
     await expect(page.getByText('⏳ PROPOSTE IN ATTESA').first()).toBeVisible({ timeout: 10000 });
 
-    // Bottone ✕ della proposta in attesa
-    await page.getByRole('button', { name: '✕', exact: true }).click();
+    // Bottone ✕ della proposta in attesa (accessibile come "Rifiuta proposta")
+    await page.getByRole('button', { name: 'Rifiuta proposta' }).click();
     await expect(page.getByText('Rifiuta proposta').first()).toBeVisible({ timeout: 5000 });
 
     // Scoping alla modale Rifiuta (z-index 500)

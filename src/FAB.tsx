@@ -5,6 +5,7 @@ function FAB__({ $ }: any) {
   if ($.simulaSt) return null;
   return (
     <button
+      aria-label={$.isProf ? 'Nuova card' : 'Proponi card'}
       onClick={function () {
         $.setEditMode(null);
         $.setForm(Object.assign({}, FORM0));

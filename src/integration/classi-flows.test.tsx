@@ -235,12 +235,12 @@ describe('Aggiungi classe dalla UI (FilterBar, flusso reale)', () => {
     await screen.findByText('🏫 FILTRA PER CLASSE', {}, { timeout: 4000 });
 
     const row = filterBarRow();
-    fireEvent.click(within(row).getByRole('button', { name: '+' }));
+    fireEvent.click(within(row).getByRole('button', { name: 'Aggiungi classe' }));
     const input = within(row).getByPlaceholderText('es. 1AX');
     // NB: l'input usa onInput (non onChange) → serve fireEvent.input, che
     // emette l'evento 'input' reale (fireEvent.change non lo scatena in jsdom).
     fireEvent.input(input, { target: { value: '1AX' } });
-    fireEvent.click(within(row).getByRole('button', { name: '✓' }));
+    fireEvent.click(within(row).getByRole('button', { name: 'Conferma nuova classe' }));
 
     // La classe appare come chip filtro
     await screen.findByText('1AX', {}, { timeout: 4000 });
@@ -259,10 +259,10 @@ describe('Aggiungi classe dalla UI (FilterBar, flusso reale)', () => {
     await screen.findByText('🏫 FILTRA PER CLASSE', {}, { timeout: 4000 });
 
     const row = filterBarRow();
-    fireEvent.click(within(row).getByRole('button', { name: '+' }));
+    fireEvent.click(within(row).getByRole('button', { name: 'Aggiungi classe' }));
     const input = within(row).getByPlaceholderText('es. 1AX');
     fireEvent.input(input, { target: { value: '5AI' } });
-    fireEvent.click(within(row).getByRole('button', { name: '✓' }));
+    fireEvent.click(within(row).getByRole('button', { name: 'Conferma nuova classe' }));
 
     await screen.findByText('5AI', {}, { timeout: 4000 });
     expect(db._get('config', 'classi_custom_2026_2027').nascoste).toEqual(['5BO']);

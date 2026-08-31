@@ -210,8 +210,8 @@ test('HARNESS prof: aggiungi nuova classe dalla FilterBar (+ → digita → ✓)
   const barra = page.getByText('🏫 FILTRA PER CLASSE').first();
   await expect(barra).toBeVisible({ timeout: 5000 });
 
-  // Clic su "+"
-  await page.getByRole('button', { name: '+', exact: true }).first().click();
+  // Clic su "+" (accessibile come "Aggiungi classe")
+  await page.getByRole('button', { name: 'Aggiungi classe' }).first().click();
 
   // Digita il nome della classe (7ZZ non esiste nelle predefinite)
   const input = page.getByPlaceholder('es. 1AX');
@@ -223,7 +223,7 @@ test('HARNESS prof: aggiungi nuova classe dalla FilterBar (+ → digita → ✓)
     .locator('div')
     .filter({ has: page.getByPlaceholder('es. 1AX') })
     .last();
-  await rigaInput.getByRole('button', { name: '✓', exact: true }).click();
+  await rigaInput.getByRole('button', { name: 'Conferma nuova classe' }).click();
 
   // La classe appare come chip filtro
   await expect(page.getByText('7ZZ', { exact: true }).first()).toBeVisible({ timeout: 5000 });
@@ -248,8 +248,8 @@ test('HARNESS prof: Rifiuta proposta, Ammonisci, EditAmm, quiz', async ({ page }
   await page.goto(HARNESS, { waitUntil: 'domcontentloaded' });
   await expect(page.getByText('Lezione su X').first()).toBeVisible({ timeout: 15000 });
 
-  // ── Rifiuta proposta ──
-  await page.getByRole('button', { name: '✕', exact: true }).click();
+  // ── Rifiuta proposta (il bottone ✕ è accessibile come "Rifiuta proposta") ──
+  await page.getByRole('button', { name: 'Rifiuta proposta' }).click();
   await expect(page.getByText('Rifiuta proposta').first()).toBeVisible({ timeout: 5000 });
   const rifiutaModal = page.locator('[style*="z-index: 500"]').filter({ hasText: 'Rifiuta proposta' }).first();
   await rifiutaModal.getByPlaceholder('Es. Argomento già trattato, fuori tema…').fill('Fuori programma');

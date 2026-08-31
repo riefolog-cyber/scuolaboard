@@ -273,6 +273,8 @@ export function renderLinks(card: any, setShowCard: any) {
             </a>
             {links.length > 1 && (
               <button
+                aria-label="Sposta link su"
+                title="Sposta su"
                 onClick={function (e: any) {
                   e.stopPropagation();
                   move(i, -1);
@@ -296,6 +298,8 @@ export function renderLinks(card: any, setShowCard: any) {
             )}
             {links.length > 1 && (
               <button
+                aria-label="Sposta link giù"
+                title="Sposta giù"
                 onClick={function (e: any) {
                   e.stopPropagation();
                   move(i, 1);

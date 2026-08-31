@@ -219,6 +219,8 @@ function ProposalsPanel__({ $ }: any) {
                 }
                 {
                   <button
+                    aria-label="Accetta proposta"
+                    title="Accetta proposta"
                     onClick={function () {
                       $.appCard(c.id);
                     }}
@@ -238,6 +240,8 @@ function ProposalsPanel__({ $ }: any) {
                 }
                 {
                   <button
+                    aria-label="Rifiuta proposta"
+                    title="Rifiuta proposta"
                     onClick={function () {
                       $.setShowRifiutaModal({ id: c.id, titolo: c.titolo });
                     }}

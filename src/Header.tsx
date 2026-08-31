@@ -411,6 +411,7 @@ function Header__({ $ }: any) {
                         if (dbc) dbc.collection('notifiche').doc($.user.uid).delete();
                       }
                     }}
+                    aria-label="Pulisci notifiche"
                     title="Pulisci notifiche"
                     style={{
                       background: 'rgba(239,68,68,.12)',

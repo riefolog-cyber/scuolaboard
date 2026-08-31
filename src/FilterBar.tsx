@@ -146,6 +146,7 @@ function FilterBar__({ $ }: any) {
                     }
                     {
                       <button
+                        aria-label="Conferma rinomina"
                         title="Conferma rinomina"
                         onClick={function () {
                           $.eseguiRinomina();
@@ -166,6 +167,7 @@ function FilterBar__({ $ }: any) {
                     }
                     {
                       <button
+                        aria-label="Annulla rinomina classe"
                         title="Annulla"
                         onClick={function () {
                           $.setRinominaClasse(null);
@@ -187,6 +189,8 @@ function FilterBar__({ $ }: any) {
                   </div>
                 ) : (
                   <button
+                    aria-label={'Rinomina classe ' + cl}
+                    title="Rinomina"
                     onClick={function (e: any) {
                       e.stopPropagation();
                       $.apriRinomina(cl);
@@ -279,6 +283,7 @@ function FilterBar__({ $ }: any) {
               }
               {
                 <button
+                  aria-label="Conferma nuova classe"
                   onClick={$.addClasseCustom}
                   style={{
                     background: '#6366f1',
@@ -296,6 +301,7 @@ function FilterBar__({ $ }: any) {
               }
               {
                 <button
+                  aria-label="Annulla aggiunta classe"
                   onClick={function () {
                     $.setAddingClasse(false);
                     $.setNewClasseInput('');
@@ -316,6 +322,7 @@ function FilterBar__({ $ }: any) {
             </div>
           ) : (
             <button
+              aria-label="Aggiungi classe"
               onClick={function () {
                 $.setAddingClasse(true);
               }}

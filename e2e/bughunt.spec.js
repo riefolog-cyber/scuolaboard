@@ -53,8 +53,9 @@ test('Rinomina classe: 3AO → 3AZ (chip, config e card aggiornate)', async ({ p
   await expect(chip).toBeVisible({ timeout: 5000 });
 
   // Clic ✏️ sulla riga del chip → input rinomina precompilato con 3AO
+  // (accessibile come "Rinomina classe 3AO")
   const rigaChip = chip.locator('..');
-  await rigaChip.getByRole('button', { name: '✏️' }).click();
+  await rigaChip.getByRole('button', { name: /Rinomina classe 3AO/ }).click();
   const renameInput = page.locator('input[value="3AO"]');
   await expect(renameInput).toBeVisible({ timeout: 5000 });
 
@@ -64,9 +65,9 @@ test('Rinomina classe: 3AO → 3AZ (chip, config e card aggiornate)', async ({ p
     .locator('div')
     .filter({ has: page.locator('input[value="3AZ"]') })
     .last();
-  await rigaInput.getByRole('button', { name: '✓', exact: true }).click();
-  await expect(page.getByRole('button', { name: '✓ Confermi?' })).toBeVisible({ timeout: 5000 });
-  await page.getByRole('button', { name: '✓ Confermi?' }).click();
+  await rigaInput.getByRole('button', { name: 'Conferma rinomina' }).click();
+  await expect(page.getByText('✓ Confermi?')).toBeVisible({ timeout: 5000 });
+  await page.getByRole('button', { name: 'Conferma rinomina' }).click();
 
   // 3AZ appare come chip, 3AO sparisce
   await expect(page.getByText('3AZ', { exact: true }).first()).toBeVisible({ timeout: 5000 });
