@@ -322,6 +322,9 @@ function AppProvider({ children }: any) {
         get annoScolastico() {
           return annoScolastico;
         },
+        get onOptimistic() {
+          return cardsHookRef.current.applyOptimistic;
+        },
         fbClassiSave: function (arr: any) {
           return fbClassiSave(arr, annoScolastico);
         },
@@ -987,6 +990,7 @@ function AppProvider({ children }: any) {
         cards: cardsHook.cards,
         visible: cardsHook.visible,
         visibleSorted: cardsHook.visibleSorted,
+        cardsLoaded: cardsHook.cardsLoaded,
         nextOrd: cardsHook.nextOrd,
         dragId: cardsHook.dragId,
         previewSt: cardsHook.previewSt,

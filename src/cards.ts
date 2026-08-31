@@ -164,7 +164,67 @@ export function useCards(user: any, annoScolastico: string) {
     [rawAllCards, user]
   );
 
-  // ── FILTRAGGIO PER ANNO SCOLASTICO ────────────────────────────────────
+  // ── OPTIMISTIC UI: overlay per-card ──────────────────────────────────────
+  // Manteniamo un overlay verbatim dei campi modificati in attesa della
+  // conferma Firestore. La UI fonde rawAllCards + overlay; quando lo snapshot
+  // del server converge ai valori ottimistici l'overlay viene rimosso (prune),
+  // così un aggiornamento esterno non resta mai mascherato da un patch stale.
+  var [pending, setPending] = useState<Record<string, { patch: any; fields: string[] }>>({});
+  function deepEq(a: any, b: any): boolean {
+    try {
+      return JSON.stringify(a) === JSON.stringify(b);
+    } catch (e) {
+      return a === b;
+    }
+  }
+  var allCards = useMemo(
+    function () {
+      var ids = Object.keys(pending);
+      if (!ids.length) return rawAllCards;
+      return rawAllCards.map(function (c: any) {
+        var e = pending[String(c.id)];
+        return e ? Object.assign({}, c, e.patch) : c;
+      });
+    },
+    [rawAllCards, pending]
+  );
+  // Prune alla convergenza: appena il server conferma i campi, togli l'overlay.
+  useEffect(
+    function () {
+      setPending(function (prev) {
+        var keys = Object.keys(prev);
+        if (!keys.length) return prev;
+        var next: any = {};
+        var removed = false;
+        keys.forEach(function (k: string) {
+          var e = prev[k];
+          var raw = rawAllCards.find(function (c: any) {
+            return String(c.id) === k;
+          });
+          if (
+            raw &&
+            e.fields.every(function (f: string) {
+              return deepEq(raw[f], e.patch[f]);
+            })
+          ) {
+            removed = true;
+          } else {
+            next[k] = e;
+          }
+        });
+        return removed ? next : prev;
+      });
+    },
+    [rawAllCards]
+  );
+  function applyOptimistic(id: any, patch: any, fields: string[]) {
+    setPending(function (prev) {
+      return Object.assign({}, prev, { [String(id)]: { patch: patch, fields: fields } });
+    });
+  }
+  var cardsLoaded = snap.loaded === undefined ? true : snap.loaded;
+
+  // ── FILTRAGGIO PER ANNO SCOLASTICO (sui dati ottimistici fusion) ────────
   var cards = useMemo(
     function () {
       function annoScolasticoDefault() {
@@ -173,16 +233,16 @@ export function useCards(user: any, annoScolastico: string) {
         var m = nowDate.getMonth() + 1;
         return m >= 9 ? y + '/' + (y + 1) : y - 1 + '/' + y;
       }
-      return rawAllCards.filter(function (c: any) {
+      return allCards.filter(function (c: any) {
         return (c.annoScolastico || annoScolasticoDefault()) === annoScolastico;
       });
     },
-    [rawAllCards, annoScolastico]
+    [allCards, annoScolastico]
   );
 
   // Fix #3: allCards mantiene il dataset completo (raw, non filtrato per anno)
   // cards è il subset filtrato per annoScolastico corrente
-  var allCards = rawAllCards;
+  // allCards è calcolato sopra (overlay ottimistico su rawAllCards).
 
   // ── TIMER TICK ────────────────────────────────────────────────────────
   useEffect(
@@ -242,6 +302,8 @@ export function useCards(user: any, annoScolastico: string) {
     cards: cards,
     visible: visible,
     visibleSorted: visibleSorted,
+    cardsLoaded: cardsLoaded,
+    applyOptimistic: applyOptimistic,
     nextOrd: nextOrd,
     dragId: dragId,
     previewSt: previewSt,

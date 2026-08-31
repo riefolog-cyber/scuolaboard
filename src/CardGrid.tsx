@@ -3,7 +3,9 @@ import CardItem from './CardItem.tsx';
 import { FORM0 } from './app-utils.tsx';
 
 function CardGrid__({ $ }: any) {
-  if ($.cards.length === 0) {
+  // Skeleton SOLO durante il caricamento. Una volta caricate le card (anche
+  // se zero), si scende allo stato vuoto → mai scheletri sur un account nuovo.
+  if ($.cards.length === 0 && $.cardsLoaded !== true) {
     return (
       <div style={{ padding: '10px 14px 18px' }}>
         {

@@ -79,6 +79,13 @@ describe('CardGrid', () => {
     expect(container.querySelectorAll('.skeleton').length).toBeGreaterThan(0);
   });
 
+  it('renders empty state (not skeleton) when cards are loaded but empty', () => {
+    var $ = make$({ cards: [], cardsLoaded: true });
+    var { container } = render(React.createElement(CardGrid, { $ }));
+    expect(container.querySelectorAll('.skeleton').length).toBe(0);
+    expect(screen.getByText('Nessun contenuto visibile')).toBeTruthy();
+  });
+
   it('renders empty state when visibleSorted is empty but cards exist', () => {
     var $ = make$({
       cards: [{ id: 1, titolo: 'Test', tipo: 'domanda', classi: ['TUTTE'], commenti: [], likes: 0 }],

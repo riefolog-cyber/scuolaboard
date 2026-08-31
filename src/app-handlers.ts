@@ -315,13 +315,12 @@ export function createAppHandlers(ctx: any) {
         return n !== vn;
       });
       if (!liked) likesBy = likesBy.concat([vn]);
+      var ottimo = Object.assign({}, card, { likes: (card.likes || 0) + (liked ? -1 : 1), likesBy: likesBy });
+      // Ottimistic UI: riflette subito contatore + likeBy, prima del round-trip.
+      if (ctx.onOptimistic) ctx.onOptimistic(cardId, ottimo, ['likes', 'likesBy']);
       // Restituisce la Promise in modo che i chiamanti possano fare await/then.
-      return updateCard(
-        cardId,
-        { likes: (card.likes || 0) + (liked ? -1 : 1), likesBy: likesBy },
-        Object.assign({}, card, { likes: (card.likes || 0) + (liked ? -1 : 1), likesBy: likesBy })
-      ).catch(function () {
-        if (fbSave) fbSave(Object.assign({}, card, { likes: (card.likes || 0) + (liked ? -1 : 1), likesBy: likesBy }));
+      return updateCard(cardId, { likes: ottimo.likes, likesBy: ottimo.likesBy }, ottimo).catch(function () {
+        if (fbSave) fbSave(ottimo);
       });
     },
     toggleReazione: function (cardId: any, emoji: any) {
@@ -337,8 +336,10 @@ export function createAppHandlers(ctx: any) {
       if (idx >= 0) lista.splice(idx, 1);
       else lista.push(vn);
       reaz[emoji] = lista;
-      updateCard(cardId, { reazioni: reaz }, Object.assign({}, card, { reazioni: reaz })).catch(function () {
-        if (fbSave) fbSave(Object.assign({}, card, { reazioni: reaz }));
+      var ottimo = Object.assign({}, card, { reazioni: reaz });
+      if (ctx.onOptimistic) ctx.onOptimistic(cardId, ottimo, ['reazioni']);
+      updateCard(cardId, { reazioni: reaz }, ottimo).catch(function () {
+        if (fbSave) fbSave(ottimo);
       });
     },
     vote: function (cid: any, oid: any) {
@@ -355,8 +356,10 @@ export function createAppHandlers(ctx: any) {
         if (o.id === oid) voti = voti.concat([vn]);
         return Object.assign({}, o, { voti: voti });
       });
-      updateCard(cid, { opzioni: nuoveOpzioni }, Object.assign({}, card, { opzioni: nuoveOpzioni })).catch(function () {
-        if (fbSave) fbSave(Object.assign({}, card, { opzioni: nuoveOpzioni }));
+      var ottimo = Object.assign({}, card, { opzioni: nuoveOpzioni });
+      if (ctx.onOptimistic) ctx.onOptimistic(cid, ottimo, ['opzioni']);
+      updateCard(cid, { opzioni: nuoveOpzioni }, ottimo).catch(function () {
+        if (fbSave) fbSave(ottimo);
       });
       if (ctx.showToast) ctx.showToast('Voto registrato ✓', 'ok');
     },
@@ -387,6 +390,8 @@ export function createAppHandlers(ctx: any) {
           },
         ]),
       });
+      // Ottimistic UI: il commento appare subito, Firestore conferma dietro.
+      if (ctx.onOptimistic) ctx.onOptimistic(card.id, nextCard, ['commenti']);
       saveCard(nextCard)
         .then(function () {
           try {
@@ -459,6 +464,7 @@ export function createAppHandlers(ctx: any) {
         });
       }
       var nextCard = Object.assign({}, card, { commenti: ins(card.commenti) });
+      if (ctx.onOptimistic) ctx.onOptimistic(card.id, nextCard, ['commenti']);
       saveCard(nextCard)
         .then(function () {
           try {
@@ -577,20 +583,22 @@ export function createAppHandlers(ctx: any) {
           return item;
         });
       }
-      saveCard(Object.assign({}, card, { commenti: rem(card.commenti) }));
+      var ottimo = Object.assign({}, card, { commenti: rem(card.commenti) });
+      if (ctx.onOptimistic) ctx.onOptimistic(cardId, ottimo, ['commenti']);
+      saveCard(ottimo);
     },
     executeDelCom: function (cid: any, cmid: any) {
       var card = getCards().find(function (c: any) {
         return String(c.id) === String(cid);
       });
       if (!card) return;
-      saveCard(
-        Object.assign({}, card, {
-          commenti: card.commenti.filter(function (cm: any) {
-            return String(cm.id) !== String(cmid);
-          }),
-        })
-      );
+      var ottimo = Object.assign({}, card, {
+        commenti: card.commenti.filter(function (cm: any) {
+          return String(cm.id) !== String(cmid);
+        }),
+      });
+      if (ctx.onOptimistic) ctx.onOptimistic(cid, ottimo, ['commenti']);
+      saveCard(ottimo);
     },
     ammonisci: function (cardId: any, cmId: any, autore: any, motivazione: any) {
       if (!ctx.isProf) return;

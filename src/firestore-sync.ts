@@ -6,6 +6,7 @@ import { safeDocId } from './utils/format.ts';
 
 // ── MODULE-LEVEL SINGLETONS ────────────────────────────────────────────────
 var _cardsSnapshot: any[] = [];
+var _cardsLoaded = false;
 var _cardsListeners = new Set<() => void>();
 var _cardsUnsub: (() => void) | null = null;
 // Chiave = anno + ruolo: la query degli studenti (con where visibile==true)
@@ -30,8 +31,13 @@ var _preferitiUid: string | null = null;
 // React pensa sempre che lo store sia cambiato → re-render infiniti.
 // Cache: creiamo un nuovo oggetto solo quando i dati sottostanti cambiano.
 
-var _cachedCombined: { allCards: any[]; classiCustom: string[]; classiNascoste: string[]; preferiti: string[] } | null =
-  null;
+var _cachedCombined: {
+  allCards: any[];
+  classiCustom: string[];
+  classiNascoste: string[];
+  preferiti: string[];
+  loaded: boolean;
+} | null = null;
 
 var db = window.db;
 
@@ -57,6 +63,7 @@ function createCardsStore(user: any, anno: string | null) {
         }
         _cardsKey = key;
         _cardsSnapshot = [];
+        _cardsLoaded = false;
         _cachedCombined = null;
       }
       if (!_cardsUnsub && anno) {
@@ -73,6 +80,7 @@ function createCardsStore(user: any, anno: string | null) {
             a.push(d.data());
           });
           _cardsSnapshot = a;
+          _cardsLoaded = true;
           _cachedCombined = null; // invalida cache combinata
           _cardsListeners.forEach(function (l) {
             l();
@@ -86,12 +94,16 @@ function createCardsStore(user: any, anno: string | null) {
     getSnapshot: function () {
       return _cardsSnapshot;
     },
+    getLoaded: function () {
+      return _cardsLoaded;
+    },
     destroy: function () {
       if (_cardsUnsub) {
         _cardsUnsub();
         _cardsUnsub = null;
       }
       _cardsSnapshot = [];
+      _cardsLoaded = false;
       _cardsListeners.clear(); // Fix #2
       _cachedCombined = null;
       _cardsKey = null;
@@ -221,6 +233,7 @@ function createCombinedStore(user: any, annoScolastico: string | null) {
           classiCustom: classiData.custom,
           classiNascoste: classiData.nascoste,
           preferiti: favStore.getSnapshot(),
+          loaded: cardsStore.getLoaded(),
         };
       }
       return _cachedCombined;
