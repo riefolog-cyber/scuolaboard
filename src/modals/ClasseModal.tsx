@@ -1,11 +1,9 @@
 // ClasseModal.tsx  ·  estratto da Modals.tsx (split Fase 2a)
-var SB = window.SB || {};
-window.SB = SB;
 
+import { S as SGlobal } from '../app-utils.tsx';
 function ClasseModal(props: any) {
   if (!props.showClasseModal) return null;
-  var h = SB.h || React.createElement;
-  var S = props.S || window.S || {};
+  var S = props.S || SGlobal;
   var CLASSI_LIST = props.CLASSI_LIST || [];
   var CLASSI_DEFAULT = props.CLASSI_DEFAULT || [];
   var classeColor = props.classeColor;
@@ -106,7 +104,7 @@ function ClasseModal(props: any) {
                     var isCustom = CLASSI_DEFAULT.indexOf(cl) < 0;
                     var cc = isCustom ? classeColor(cl, classiCustom) : null;
                     return (
-                      <option key={cl} value={cl} style={isCustom ? { color: cc } : null}>
+                      <option key={cl} value={cl} style={isCustom ? { color: cc } : undefined}>
                         {isCustom ? '★ ' + cl : cl}
                       </option>
                     );

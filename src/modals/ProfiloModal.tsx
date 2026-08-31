@@ -1,7 +1,4 @@
 // ProfiloModal.tsx  ·  estratto da Modals.tsx (split Fase 2a)
-var SB = window.SB || {};
-window.SB = SB;
-var h = SB.h || React.createElement;
 
 function ProfiloModal(props: any) {
   if (!props.showProfilo || props.isProf) return null;

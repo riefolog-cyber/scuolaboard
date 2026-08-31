@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import React from 'react';
 
-import './CercaModal.tsx';
+import CercaModal from './CercaModal.tsx';
 
 describe('CercaModal', () => {
   let props: any;
@@ -77,7 +77,7 @@ describe('CercaModal', () => {
   });
 
   function renderModal(overrides = {}) {
-    return render(React.createElement(window.SB.CercaModal, Object.assign({}, props, overrides)));
+    return render(React.createElement(CercaModal, Object.assign({}, props, overrides)));
   }
 
   it('renders nothing when closed', () => {

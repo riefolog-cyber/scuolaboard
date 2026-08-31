@@ -1,7 +1,4 @@
 // filterBtn.ts  ·  helper stile pulsanti filtro (estratto da Modals.tsx)
-var SB = window.SB || {};
-window.SB = SB;
-
 function filterBtn(active: boolean) {
   return {
     border: '1px solid ' + (active ? 'rgba(99,102,241,.5)' : 'rgba(255,255,255,.1)'),

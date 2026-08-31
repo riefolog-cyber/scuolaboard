@@ -1,6 +1,5 @@
 // useToast.ts · ScuolaBoard · hook di dominio: toast globali
-var useState = React.useState;
-var useCallback = React.useCallback;
+import { useState, useCallback } from 'react';
 
 type Toast = { id: number; msg: string; type: string; undo?: boolean };
 

@@ -252,8 +252,6 @@ const userRef = { current: asStudent ? STUD : PROF };
 window.firebase = makeFakeFirebase(db, () => userRef.current);
 window.db = db;
 window.SB = window.SB || {};
-window.SB.h = React.createElement;
-window.SB.Fragment = React.Fragment;
 
 // Espone il fake db alle asserzioni Playwright
 window.__db = db;
@@ -263,7 +261,7 @@ async function boot() {
   const mods = [
     '../src/firebase-init.ts',
     '../src/app-state.ts',
-    '../src/app-utils.ts',
+    '../src/app-utils.tsx',
     '../src/ai-services.ts',
     '../src/firestore-services.ts',
     '../src/Modals.tsx',
@@ -273,13 +271,12 @@ async function boot() {
     '../src/app-handlers.ts',
     '../src/firestore-sync.ts',
     '../src/AppLayout.tsx',
-    '../src/app.ts',
+    '../src/app.tsx',
   ];
   for (const m of mods) {
     await import(/* @vite-ignore */ m);
   }
-  const App = window.App;
-  if (!App) throw new Error('window.App non definito: boot fallito');
+  const { default: App } = await import('../src/app.tsx');
   ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
 }
 

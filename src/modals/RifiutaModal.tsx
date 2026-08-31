@@ -1,14 +1,12 @@
+import { S as SGlobal } from '../app-utils.tsx';
 // RifiutaModal.tsx  ·  estratto da Modals.tsx (split Fase 2a)
-var SB = window.SB || {};
-window.SB = SB;
-var h = SB.h || React.createElement;
 
 function RifiutaModal(props: any) {
   if (!props.showRifiutaModal) return null;
   var setShowRifiutaModal = props.setShowRifiutaModal;
   var rifiutaInput = props.rifiutaInput;
   var setRifiutaInput = props.setRifiutaInput;
-  var S = props.S || window.S || {};
+  var S = props.S || SGlobal;
   var showRifiutaModal = props.showRifiutaModal;
   return (
     <div

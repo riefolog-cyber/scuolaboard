@@ -1,4 +1,5 @@
 // ai-services.ts  ·  ScuolaBoard  ·  AI Groq via Cloudflare Worker (pattern UMD)
+import { pseudonimizeComments, restoreNames, cleanAiMarkdown, cleanJsonStrings } from './utils/ai-text.ts';
 
 var db: any = window.SB && SB.db;
 var CFG = window.SB_CONFIG || { AI_CACHE_TTL_MS: 15 * 60 * 1000 };
@@ -31,91 +32,6 @@ function aiLog(...args: any[]): void {
 // URL del tuo Cloudflare Worker che fa da Proxy sicuro
 var WORKER_URL = 'https://scuolaboard-groq-proxy.scuolaboard.workers.dev';
 
-// ── Pseudonimizzazione dei commenti ──────────────────────────────────
-// Mappa i nomi reali degli studenti a identificativi anonimi (Studente 1, 2…)
-// prima di inviare i commenti all'API Groq. La mappa viene restituita
-// insieme al testo anonimizzato, così la risposta può essere "tradotta"
-// di nuovo con i nomi veri lato client.  GDPR Art. 4 par. 5.
-function pseudonimizeComments(
-  commenti: Array<{ autore: string; testo: string; [k: string]: any }>,
-  rispostePerCommento?: Record<number, Array<{ autore: string; testo: string }>>
-): { txt: string; mappaNomi: Record<string, string> } {
-  var mappaNomi: Record<string, string> = {};
-  var elenco: string[] = [];
-  var txt = commenti
-    .map(function (c: any) {
-      var autore = c.autore || 'Anonimo';
-      var idx = elenco.indexOf(autore);
-      if (idx === -1) {
-        elenco.push(autore);
-        idx = elenco.length; // 1-based
-      } else {
-        idx = idx + 1;
-      }
-      var alias = 'Studente ' + idx;
-      mappaNomi[alias] = autore;
-      var riga = alias + ': ' + SB.escapeForPrompt(c.testo || '');
-      // Aggiungi le risposte (thread) se presenti
-      if (rispostePerCommento) {
-        var risposte = rispostePerCommento[commenti.indexOf(c)];
-        if (risposte && risposte.length) {
-          riga +=
-            '\n' +
-            risposte
-              .map(function (r: any) {
-                var rAutore = r.autore || 'Anonimo';
-                var rIdx = elenco.indexOf(rAutore);
-                if (rIdx === -1) {
-                  elenco.push(rAutore);
-                  rIdx = elenco.length;
-                } else {
-                  rIdx = rIdx + 1;
-                }
-                var rAlias = 'Studente ' + rIdx;
-                mappaNomi[rAlias] = rAutore;
-                return '  ↳ ' + rAlias + ': ' + SB.escapeForPrompt(r.testo || '');
-              })
-              .join('\n');
-        }
-      }
-      return riga;
-    })
-    .join('\n');
-  return { txt: txt, mappaNomi: mappaNomi };
-}
-
-// Ripristina i nomi reali nella risposta dell'IA usando la mappa dei pseudonimi.
-// Robusto: gestisce "Studente 2", "Studente\u00A02", "Studente\u202F2",
-// "lo studente 2", maiuscole/minuscole, spazi multipli (AI normalizza diversamente).
-// Capitalizza le iniziali se il nome in mappa è tutto minuscolo (es. displayName salvato in lowercase).
-function restoreNames(testo: string, mappaNomi: Record<string, string>): string {
-  var result = testo;
-  function capWords(s: string) {
-    // Se già contiene una maiuscola, rispetta il dato originale (es. "De Luca", "D'Amico")
-    if (/[A-ZÀ-Ù]/.test(s)) return s;
-    return s.replace(/\b([a-zà-ù])/gi, function (c) { return c.toUpperCase(); });
-  }
-  Object.keys(mappaNomi).forEach(function (alias) {
-    var real = capWords(mappaNomi[alias]);
-    // alias = "Studente N" -> estrai numero
-    var m = alias.match(/(\d+)/);
-    var num = m ? m[1] : null;
-    // 1) sostituzione esatta "Studente N" (case-sensitive, per compatibilità)
-    try {
-      var exact = new RegExp('\\b' + alias.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'g');
-      result = result.replace(exact, real);
-    } catch (e) {}
-    // 2) sostituzione flessibile: (lo)? studente + spazi unicode + numero
-    if (num) {
-      try {
-        var flex = new RegExp('(?:\\b(?:lo\\s+)?studente[\\s\\u00A0\\u202F]*0*' + num + '\\b)', 'gi');
-        result = result.replace(flex, real);
-      } catch (e) {}
-    }
-  });
-  return result;
-}
-
 function cacheGet() {
   try {
     var at = SB.LS.aiCacheAt.get();
@@ -136,81 +52,6 @@ function cacheSetAll(m: any) {
 function cacheInvalidate() {
   SB.LS.aiCache.rm();
   SB.LS.aiCacheAt.rm();
-}
-
-/**
- * Pulisce il testo AI da markdown — implementazione locale (non dipende da
- * utility globali di app-utils.ts).
- */
-function _cleanAiMarkdown(txt: any) {
-  if (!txt) return '';
-  var lines = String(txt).split('\n');
-  var cleanLines = [];
-
-  for (var i = 0; i < lines.length; i++) {
-    var line = lines[i];
-
-    // Ignora le righe di separazione delle tabelle markdown (es: |---|---|)
-    if (line.match(/^[\s|:-]+$/)) {
-      continue;
-    }
-
-    // Se è presente una riga di tabella, rimuove i bordi "|" e unisce i dati in modo pulito
-    if (line.indexOf('|') !== -1) {
-      var parts = line
-        .split('|')
-        .map(function (p) {
-          return p.trim();
-        })
-        .filter(Boolean);
-      if (parts.length > 0) {
-        line = parts.join('  ·  ');
-      }
-    }
-
-    // Rimuove i titoli Markdown (#, ##, ###) lasciando solo il testo
-    line = line.replace(/^#+\s+/, '');
-
-    // Rimuove l'indicatore di citazione (>)
-    line = line.replace(/^>\s+/, '');
-
-    cleanLines.push(line);
-  }
-
-  var cleanTxt = cleanLines.join('\n');
-
-  // Rimuove gli asterischi di grassetto/corsivo e trattini bassi senza rovinare il testo
-  cleanTxt = cleanTxt.replace(/\*\*([^*]+)\*\*/g, '$1');
-  cleanTxt = cleanTxt.replace(/\*([^*]+)\*/g, '$1');
-  cleanTxt = cleanTxt.replace(/__([^_]+)__/g, '$1');
-  cleanTxt = cleanTxt.replace(/_([^_]+)_/g, '$1');
-
-  // Rimuove eventuali apici di codice rimasti
-  cleanTxt = cleanTxt.replace(/[`]{1,3}/g, '');
-
-  return cleanTxt.trim();
-}
-
-/**
- * Pulisce ricorsivamente tutte le stringhe di testo all'interno di un oggetto JSON
- * (utile per rimuovere simboli strani dalle spiegazioni o domande dei quiz).
- */
-function cleanJsonStrings(obj: any): any {
-  if (!obj) return obj;
-  if (Array.isArray(obj)) {
-    return obj.map(cleanJsonStrings);
-  } else if (typeof obj === 'object') {
-    for (var key in obj) {
-      if (obj.hasOwnProperty(key)) {
-        if (typeof obj[key] === 'string') {
-          obj[key] = _cleanAiMarkdown(obj[key]);
-        } else {
-          obj[key] = cleanJsonStrings(obj[key]);
-        }
-      }
-    }
-  }
-  return obj;
 }
 
 var _lastAiCall = 0;
@@ -332,7 +173,7 @@ async function chiamaAI(type: any, content: any, options: any) {
 async function callGroqText(_ignoredKey: any, prompt: any, mx: any) {
   return await chiamaAI('text', prompt, { max_tokens: mx || 2000 }).then(function (d) {
     var rawText = d.content || d || '';
-    return _cleanAiMarkdown(rawText);
+    return cleanAiMarkdown(rawText);
   });
 }
 
@@ -414,10 +255,9 @@ if (window.SB) {
   SB.aiCacheGet = cacheGet;
   SB.aiCacheSetAll = cacheSetAll;
 }
-var useState = React.useState;
-var useEffect = React.useEffect;
+import { useState, useEffect } from 'react';
 
-SB.useAI = function (user: any) {
+export function useAI(user: any) {
   // Cattura locale dei riferimenti con firma esplicita: nel pattern UMD le
   // function di modulo diventano globali e TS6 inferirebbe `() => ...`
   // (zero argomenti) sulle catture → TS2554. La firma esplicita mantiene il
@@ -600,7 +440,7 @@ SB.useAI = function (user: any) {
 
     // Pseudonimizzazione: i nomi reali NON vengono inviati a Groq
     var commenti = freshCard.commenti || [];
-    var pseudo = pseudonimizeComments(commenti);
+    var pseudo = pseudonimizeComments(commenti, SB.escapeForPrompt);
     var commTxt = pseudo.txt;
     var mappaNomi = pseudo.mappaNomi;
 
@@ -671,7 +511,7 @@ SB.useAI = function (user: any) {
     // Se ci sono commenti, li attacchiamo al prompt informando l'AI (pseudonimizzati)
     var mappaNomiQ: Record<string, string> = {};
     if (showCard.commenti && showCard.commenti.length > 0) {
-      var pseudoQ = pseudonimizeComments(showCard.commenti);
+      var pseudoQ = pseudonimizeComments(showCard.commenti, SB.escapeForPrompt);
       mappaNomiQ = pseudoQ.mappaNomi;
       userData += '--- COMMENTI DEGLI STUDENTI (pseudonimizzati) ---\n';
       userData +=
@@ -804,7 +644,7 @@ SB.useAI = function (user: any) {
     }
     setSommarioLoading(card.id);
     // Pseudonimizzazione: i nomi reali NON vengono inviati a Groq
-    var result = pseudonimizeComments(commenti);
+    var result = pseudonimizeComments(commenti, SB.escapeForPrompt);
     var txt = result.txt;
     var mappaNomi = result.mappaNomi;
     var prompt =
@@ -912,4 +752,4 @@ SB.useAI = function (user: any) {
     riassuntiCommentiRun: riassuntiCommentiRun,
     aiAnalisiSondaggio: aiAnalisiSondaggio,
   };
-};
+}

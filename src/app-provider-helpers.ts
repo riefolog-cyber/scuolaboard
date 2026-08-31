@@ -285,3 +285,35 @@ export function getProposte(cards: any[]): any[] {
     return c.proposta === true;
   });
 }
+
+// ── Notifica esito proposta all'autore ─────────────────────────────────────
+// Cerca l'utente per displayName e chiama SB.notifyUser. Estrae la logica
+// duplicata in AppProvider (appCard / rifiutaConMot): stesso lookup, stesso
+// payload, unica differenza il messaggio.
+export function notifyProposalAuthor(db: any, card: any, msg: string): Promise<void> {
+  if (!db || !card) return Promise.resolve();
+  return db
+    .collection('users')
+    .get()
+    .then(function (snap: any) {
+      snap.forEach(function (d: any) {
+        var ud = d.data() || {};
+        var name = ud.displayName || ((ud.nome || '') + ' ' + (ud.cognome || '')).trim();
+        if (
+          name === card.autore &&
+          typeof window !== 'undefined' &&
+          (window as any).SB &&
+          (window as any).SB.notifyUser
+        ) {
+          (window as any).SB.notifyUser(d.id, {
+            tipo: 'proposta_esito',
+            cardId: card.id,
+            titolo: card.titolo,
+            msg: msg,
+            annoScolastico: card.annoScolastico,
+          });
+        }
+      });
+    })
+    .catch(function () {});
+}

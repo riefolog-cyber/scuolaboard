@@ -1,4 +1,5 @@
 // AppProvider.jsx · ScuolaBoard · Provider combinato per tutti i Context
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import AuthContext from './AuthContext.tsx';
 import CardsContext from './CardsContext.tsx';
 import ModalsContext from './ModalsContext.tsx';
@@ -10,6 +11,31 @@ import useAmmonizioni from '../hooks/useAmmonizioni.ts';
 import useClassi from '../hooks/useClassi.ts';
 import useNotifiche from '../hooks/useNotifiche.ts';
 import useTheme from '../hooks/useTheme.ts';
+import useDragDrop from '../hooks/useDragDrop.ts';
+import { useAuth } from '../auth.ts';
+import { useCards } from '../cards.ts';
+import { useAI } from '../ai-services.ts';
+import { useModals } from '../modals.ts';
+import { createAppHandlers } from '../app-handlers.ts';
+import {
+  fbSave,
+  fbDel,
+  fbClassiSave,
+  fbNascosteSave,
+  fbFavSave,
+  fmt,
+  fmtDT,
+  timeAgo,
+  badgeBg,
+  tipoIcon,
+  normalizeLinks,
+  renderLinks,
+  CLASSI_DEFAULT,
+  classeColor,
+  buildWordCloud,
+  collectCloudStats,
+  FORM0,
+} from '../app-utils.tsx';
 import '../notifiche-service.ts';
 import {
   playAlarm,
@@ -25,6 +51,7 @@ import {
   buildCopiaAnno,
   countCommenti,
   getProposte,
+  notifyProposalAuthor,
   imgUsageKB,
   computeImageTargetKB,
   cardJsonSize,
@@ -32,32 +59,12 @@ import {
 } from '../app-provider-helpers.ts';
 
 var SB = window.SB || {};
-var useState = React.useState,
-  useEffect = React.useEffect,
-  useMemo = React.useMemo,
-  useRef = React.useRef,
-  useCallback = React.useCallback;
 
-// Funzioni globali dal window scope
-var fbSave = window.fbSave,
-  fbDel = window.fbDel,
-  fbClassiSave = window.fbClassiSave,
-  fbNascosteSave = window.fbNascosteSave,
-  fbFavSave = window.fbFavSave;
+// Globali ancora su window (mockati dai test); le utility sicure sono importate
+// da app-utils (migrazione UMD→ES).
 var db = window.db;
-var fmt = window.fmt,
-  fmtDT = window.fmtDT,
-  timeAgo = window.timeAgo,
-  badgeBg = window.badgeBg,
-  tipoIcon = window.tipoIcon;
-var normalizeLinks = window.normalizeLinks,
-  renderLinks = window.renderLinks;
-var ValutazioneApertaAI = window.ValutazioneApertaAI,
-  CLASSI_DEFAULT = window.CLASSI_DEFAULT;
-var buildWordCloud = window.buildWordCloud,
-  collectCloudStats = window.collectCloudStats;
-var ANNI_DISPONIBILI = window.ANNI_DISPONIBILI,
-  classeColor = window.classeColor;
+var ValutazioneApertaAI = window.ValutazioneApertaAI;
+var ANNI_DISPONIBILI = window.ANNI_DISPONIBILI;
 
 // Confronto risposta/corretta robusto: per le domande a scelta multipla
 // `corretta` è l'INDICE (stringa) dell'opzione giusta, per vero/falso è il
@@ -77,12 +84,12 @@ function AppProvider({ children }: any) {
   var [showAnnoMenu, setShowAnnoMenu] = useState(false);
 
   // ── HOOKS ──
-  var auth = SB.useAuth(annoScolastico);
-  var cardsHook = SB.useCards(auth.user, annoScolastico);
+  var auth = useAuth(annoScolastico);
+  var cardsHook = useCards(auth.user, annoScolastico);
   // Fase 4c: passa l'utente a useAI perché il caricamento di ai_results sia
   // reattivo (parte solo quando il prof è autenticato, non al mount con null).
-  var ai = SB.useAI(auth.user);
-  var modals = SB.useModals();
+  var ai = useAI(auth.user);
+  var modals = useModals();
 
   var isProf = auth.isProf;
   var user = auth.user;
@@ -97,7 +104,7 @@ function AppProvider({ children }: any) {
   var classeCorrente = classeCorrenteOf(user, annoScolastico);
 
   // ── STATI LOCALI RESIDUI ──
-  var [form, setForm] = useState(Object.assign({}, window.FORM0 || SB.FORM0));
+  var [form, setForm] = useState(Object.assign({}, FORM0));
   var [editMode, setEditMode] = useState(null);
   var [nc, setNc] = useState({ testo: '' });
   var [editingCm, setEditingCm] = useState<any>(null);
@@ -132,9 +139,11 @@ function AppProvider({ children }: any) {
   // ── REFS ──
   var myLikes = useRef(new Set());
   var deepLinkDone = useRef(false);
-  var dragId = useRef(null);
   var alarmFiredRef = useRef(new Set());
   var prevProposteCount = useRef(0);
+
+  // Drag & drop per il riordinamento card (estratto in useDragDrop)
+  var { dragId, onDragStart, onDragEnd, onDragOver, onDragLeave, onDrop } = useDragDrop(cardsHook.cards, fbSave);
 
   // ── HOOKS DI DOMINIO (estratti per ridurre la mole del provider) ──
   var quiz = useQuiz({
@@ -218,7 +227,7 @@ function AppProvider({ children }: any) {
     } catch (e) {}
   }, []);
 
-  var openCard = useCallback(function (c) {
+  var openCard = useCallback(function (c: any) {
     setShowCard(c);
     markSeen(c.id);
     try {
@@ -360,10 +369,10 @@ function AppProvider({ children }: any) {
   );
 
   // Handlers memoized per evitare ricreazione a ogni render
-  var __handlers = useMemo(
+  var __handlers: any = useMemo(
     function () {
       try {
-        if (SB.createAppHandlers) return SB.createAppHandlers(appHandlerCtx);
+        return createAppHandlers(appHandlerCtx);
       } catch (e) {
         console.error('[ScuolaBoard] createAppHandlers:', e);
       }
@@ -477,17 +486,26 @@ function AppProvider({ children }: any) {
       });
       if (!guardSize(newCard)) return;
       cardsHook.nextOrd.current++;
-      fbSave(newCard).then(function () {
-        try {
-          if (isProf && (window as any).SB && (window as any).SB.notifyClasse) {
-            (window as any).SB.notifyClasse({ classi: newCard.classi || ['TUTTE'], annoScolastico: annoScolastico, cardId: String(newCard.id), titolo: newCard.titolo, msg: 'Nuova card per la tua classe', excludeUid: user.uid });
-          }
-        } catch (e) {}
-      }).catch(function () {});
+      fbSave(newCard)
+        .then(function () {
+          try {
+            if (isProf && (window as any).SB && (window as any).SB.notifyClasse) {
+              (window as any).SB.notifyClasse({
+                classi: newCard.classi || ['TUTTE'],
+                annoScolastico: annoScolastico,
+                cardId: String(newCard.id),
+                titolo: newCard.titolo,
+                msg: 'Nuova card per la tua classe',
+                excludeUid: (user as any).uid,
+              });
+            }
+          } catch (e) {}
+        })
+        .catch(function () {});
       showToast(isProf ? 'Card pubblicata ✓' : 'Proposta inviata al prof ✓', 'ok');
     }
     modals.setShowModal(false);
-    setForm(Object.assign({}, window.FORM0 || SB.FORM0));
+    setForm(Object.assign({}, FORM0));
   }
 
   function editCard(card: any) {
@@ -628,20 +646,11 @@ function AppProvider({ children }: any) {
       return x.id === id;
     });
     if (c) {
-      fbSave(Object.assign({}, c, { proposta: false })).then(function () {
-        try {
-          if ((window as any).SB && (window as any).SB.notifyUser) {
-            var dbP = (window as any).db;
-            if (dbP) dbP.collection('users').get().then(function (snap: any) {
-              snap.forEach(function (d: any) {
-                var ud = d.data() || {};
-                var name = ud.displayName || ((ud.nome||'') + ' ' + (ud.cognome||'')).trim();
-                if (name === c.autore) (window as any).SB.notifyUser(d.id, { tipo: 'proposta_esito', cardId: c.id, titolo: c.titolo, msg: 'Proposta approvata: ' + c.titolo, annoScolastico: c.annoScolastico });
-              });
-            });
-          }
-        } catch (e) {}
-      }).catch(function () {});
+      fbSave(Object.assign({}, c, { proposta: false }))
+        .then(function () {
+          notifyProposalAuthor(db, c, 'Proposta approvata: ' + c.titolo);
+        })
+        .catch(function () {});
       showToast('Proposta approvata ✓', 'ok');
     }
   }
@@ -650,20 +659,12 @@ function AppProvider({ children }: any) {
     var c = cardsHook.cards.find(function (x: any) {
       return x.id === id;
     });
-    if (c) fbSave(Object.assign({}, c, { proposta: 'rifiutata', motivazioneRifiuto: mot || '' })).then(function () {
-      try {
-        if ((window as any).SB && (window as any).SB.notifyUser) {
-          var dbR = (window as any).db;
-          if (dbR) dbR.collection('users').get().then(function (snap: any) {
-            snap.forEach(function (d: any) {
-              var ud = d.data() || {};
-              var name = ud.displayName || ((ud.nome||'') + ' ' + (ud.cognome||'')).trim();
-              if (name === c.autore) (window as any).SB.notifyUser(d.id, { tipo: 'proposta_esito', cardId: c.id, titolo: c.titolo, msg: 'Proposta rifiutata: ' + c.titolo + (mot ? ' ('+mot+')' : ''), annoScolastico: c.annoScolastico });
-            });
-          });
-        }
-      } catch (e) {}
-    }).catch(function () {});
+    if (c)
+      fbSave(Object.assign({}, c, { proposta: 'rifiutata', motivazioneRifiuto: mot || '' }))
+        .then(function () {
+          notifyProposalAuthor(db, c, 'Proposta rifiutata: ' + c.titolo + (mot ? ' (' + mot + ')' : ''));
+        })
+        .catch(function () {});
     modals.setShowRifiutaModal(null);
     setRifiutaInput('');
     showToast('Proposta rifiutata', 'warn');
@@ -783,57 +784,6 @@ function AppProvider({ children }: any) {
     if (!card) return;
     alarmFiredRef.current.delete(String(cardId));
     fbSave(Object.assign({}, card, { scadenza: isoDeadline || null }));
-  }
-
-  // Drag & drop
-  function onDragStart(e: any, id: any) {
-    dragId.current = id;
-    e.dataTransfer.effectAllowed = 'move';
-    // Necessario per Firefox: senza setData il drag non parte proprio.
-    e.dataTransfer.setData('text/plain', String(id));
-  }
-  function onDragEnd(_e: any, _id: any) {
-    document.querySelectorAll('.drag-over').forEach(function (el) {
-      el.classList.remove('drag-over');
-    });
-  }
-  function onDragOver(e: any, id: any) {
-    e.preventDefault();
-    if (String(dragId.current) === String(id)) return;
-    var el = document.getElementById('card-' + id);
-    if (el) el.classList.add('drag-over');
-  }
-  function onDragLeave(e: any, id: any) {
-    var el = document.getElementById('card-' + id);
-    // Il dragleave scatta anche muovendosi tra i figli della stessa card:
-    // se il puntatore resta DENTRO la card, non rimuovere l'evidenziazione
-    // (evita lo sfarfallio dell'outline durante il passaggio).
-    if (el && e.relatedTarget && el.contains(e.relatedTarget)) return;
-    if (el) el.classList.remove('drag-over');
-  }
-  function onDrop(e: any, targetId: any) {
-    e.preventDefault();
-    document.querySelectorAll('.drag-over').forEach(function (el) {
-      el.classList.remove('drag-over');
-    });
-    var fromId = dragId.current;
-    if (!fromId || String(fromId) === String(targetId)) return;
-    var arr = cardsHook.cards.slice().sort(function (a: any, b: any) {
-      return (a.ordine || 0) - (b.ordine || 0);
-    });
-    var fi = arr.findIndex(function (c: any) {
-      return String(c.id) === String(fromId);
-    });
-    var ti = arr.findIndex(function (c: any) {
-      return String(c.id) === String(targetId);
-    });
-    if (fi < 0 || ti < 0) return;
-    var moved = arr.splice(fi, 1)[0];
-    arr.splice(ti, 0, moved);
-    arr.forEach(function (c: any, i: any) {
-      fbSave(Object.assign({}, c, { ordine: i + 1 }));
-    });
-    dragId.current = null;
   }
 
   function toggleBulkSelect(id: any) {
@@ -1058,7 +1008,6 @@ function AppProvider({ children }: any) {
         showBanner: cardsHook.showBanner,
         setShowBanner: cardsHook.setShowBanner,
         now: cardsHook.now,
-        setNow: cardsHook.setNow,
         view: cardsHook.view,
         setView: cardsHook.setView,
         viewStudenti: cardsHook.viewStudenti,
@@ -1068,8 +1017,6 @@ function AppProvider({ children }: any) {
         confirmRimuovi: cardsHook.confirmRimuovi,
         setConfirmRimuovi: cardsHook.setConfirmRimuovi,
         seenRef: cardsHook.seenRef,
-        setAllCards: cardsHook.setAllCards,
-        setCards: cardsHook.setCards,
         addingClasse: cardsHook.addingClasse,
         setAddingClasse: cardsHook.setAddingClasse,
         newClasseInput: cardsHook.newClasseInput,
@@ -1191,13 +1138,9 @@ function AppProvider({ children }: any) {
         showSommario: ai.showSommario,
         setShowSommario: ai.setShowSommario,
         sommarioResult: ai.sommarioResult,
-        setSommarioResult: ai.setSommarioResult,
         sommarioLoading: ai.sommarioLoading,
-        setSommarioLoading: ai.setSommarioLoading,
         sondaggioAiResult: ai.sondaggioAiResult,
         sondaggioAiLoading: ai.sondaggioAiLoading,
-        setSondaggioAiResult: ai.setSondaggioAiResult,
-        setSondaggioAiLoading: ai.setSondaggioAiLoading,
         runAI: function () {
           // Le chiamate AI sono riservate al prof (difesa in profondità oltre la UI)
           if (!isProf || simulaSt) return;
@@ -1511,22 +1454,16 @@ function AppProvider({ children }: any) {
     ]
   );
 
-  return React.createElement(
-    UIContext.Provider,
-    { value: uiValue },
-    React.createElement(
-      AuthContext.Provider,
-      { value: authValue },
-      React.createElement(
-        CardsContext.Provider,
-        { value: cardsValue },
-        React.createElement(
-          ModalsContext.Provider,
-          { value: modalsValue },
-          React.createElement(AIContext.Provider, { value: aiValue }, children)
-        )
-      )
-    )
+  return (
+    <UIContext.Provider value={uiValue as any}>
+      <AuthContext.Provider value={authValue as any}>
+        <CardsContext.Provider value={cardsValue as any}>
+          <ModalsContext.Provider value={modalsValue as any}>
+            <AIContext.Provider value={aiValue as any}>{children}</AIContext.Provider>
+          </ModalsContext.Provider>
+        </CardsContext.Provider>
+      </AuthContext.Provider>
+    </UIContext.Provider>
   );
 }
 

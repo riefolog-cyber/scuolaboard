@@ -3,8 +3,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import React from 'react';
 
-// Import the component (side-effect: attaches to window.SB)
-import './FAB.tsx';
+import FAB from './FAB.tsx';
 
 describe('FAB', () => {
   let $: any;
@@ -21,7 +20,7 @@ describe('FAB', () => {
 
   function renderFAB(props = {}) {
     const merged = Object.assign({}, $, props);
-    return render(React.createElement(window.SB.FAB, { $: merged }));
+    return render(React.createElement(FAB, { $: merged }));
   }
 
   it('renders the + button when simulaSt is false', () => {

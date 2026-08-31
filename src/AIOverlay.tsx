@@ -1,6 +1,4 @@
 // AIOverlay.jsx · ScuolaBoard
-var SB = window.SB || {};
-var h = SB.h || React.createElement;
 
 function AIOverlay__({ $ }: any) {
   if (!($.aiRunning || $.cardAiLoad || $.cardQLoad || $.sommarioLoading || $.sondaggioAiLoading)) return null;
@@ -58,5 +56,4 @@ function AIOverlay__({ $ }: any) {
     </div>
   );
 }
-SB.AIOverlay = AIOverlay__;
 export default AIOverlay__;

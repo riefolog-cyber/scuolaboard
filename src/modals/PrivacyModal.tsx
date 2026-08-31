@@ -1,8 +1,6 @@
 // PrivacyModal.tsx  ·  estratto da Modals.tsx (split Fase 2a)
 // Esteso: mostra procedura privacy completa quando showPrivacyInfo è attivo
 var SB = window.SB || {};
-window.SB = SB;
-var h = SB.h || React.createElement;
 
 function PrivacyModal(props: any) {
   var isLight = !!props.isLight;
@@ -139,9 +137,7 @@ function PrivacyModal(props: any) {
           <div style={{ fontWeight: 900, color: titleColor, fontSize: 18, marginBottom: 4 }}>
             La tua privacy è protetta
           </div>
-          <div style={{ fontSize: 12, color: subColor }}>
-            Come ScuolaBoard tutela i dati dei studenti
-          </div>
+          <div style={{ fontSize: 12, color: subColor }}>Come ScuolaBoard tutela i dati dei studenti</div>
         </div>
 
         {/* Step 1 */}

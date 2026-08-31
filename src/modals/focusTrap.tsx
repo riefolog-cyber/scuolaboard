@@ -3,7 +3,8 @@
 // first↔last) e il focus iniziale viene portato dentro al mount. Al
 // unmount il focus torna all'elemento che aveva aperto la modale.
 // Il wrapper usa display:contents → nessun impatto sul layout.
-var h = React.createElement;
+import { useRef, useEffect } from 'react';
+
 var FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
@@ -20,8 +21,8 @@ function getFocusables(container: Element | null): HTMLElement[] {
 }
 
 function FocusTrap(props: any) {
-  var wrapRef = React.useRef<HTMLElement | null>(null);
-  React.useEffect(function () {
+  var wrapRef = useRef<HTMLDivElement | null>(null);
+  useEffect(function () {
     var wrap = wrapRef.current;
     if (!wrap) return;
     var prevFocus = document.activeElement as HTMLElement | null;
@@ -67,7 +68,11 @@ function FocusTrap(props: any) {
       if (prevFocus && typeof prevFocus.focus === 'function') prevFocus.focus();
     };
   }, []);
-  return h('div', { ref: wrapRef, 'data-focus-trap': '', style: { display: 'contents' } }, props.children);
+  return (
+    <div ref={wrapRef} data-focus-trap="" style={{ display: 'contents' }}>
+      {props.children}
+    </div>
+  );
 }
 
 export default FocusTrap;

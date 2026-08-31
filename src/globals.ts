@@ -1,13 +1,10 @@
-// globals.js - expose npm packages to window for legacy IIFE compatibility
-// Fase 5: al posto dell'SDK compat (firebase/compat/*) usiamo il modular SDK
-// con un sottile shim compat (src/firebase-modular.ts): stessa superficie
-// namespaced, ma il vendor chunk perde i ~497 kB del compat layer.
-import React from 'react';
-import ReactDOM from 'react-dom/client';
+// globals.ts — expone il singleton firebase su window per i moduli legacy.
+// window.firebase è un TEST SEAM: l'harness di integrazione (integration/harness.ts)
+// e il test-setup lo mockano PRIMA di importare i moduli, che lo leggono come
+// global bare all'import. In produzione punta al compat shim (firebase-modular.ts).
+// I global React/ReactDOM sono stati rimossi: i componenti importano direttamente.
 import firebase from './firebase-modular.ts';
 
-window.React = React;
-window.ReactDOM = ReactDOM;
 window.firebase = firebase;
 
-export { React, ReactDOM, firebase };
+export { firebase };

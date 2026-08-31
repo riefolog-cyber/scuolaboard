@@ -1,6 +1,4 @@
 // Toasts.jsx · ScuolaBoard
-var SB = window.SB || {};
-var h = SB.h || React.createElement;
 
 function Toasts__({ $ }: any) {
   if (!$.toasts || $.toasts.length === 0) return null;
@@ -39,5 +37,4 @@ function Toasts__({ $ }: any) {
     </div>
   );
 }
-SB.Toasts = Toasts__;
 export default Toasts__;

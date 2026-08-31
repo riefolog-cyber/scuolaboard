@@ -1,7 +1,6 @@
 // CardGrid.jsx · ScuolaBoard
 import CardItem from './CardItem.tsx';
-var SB = window.SB || {};
-var h = SB.h || React.createElement;
+import { FORM0 } from './app-utils.tsx';
 
 function CardGrid__({ $ }: any) {
   if ($.cards.length === 0) {
@@ -128,11 +127,10 @@ function CardGrid__({ $ }: any) {
   return (
     <div className="card-grid" style={{ columns: '300px', columnGap: 16 }}>
       {$.visibleSorted.map(function (c: any) {
-        return h(CardItem, { key: c.id, $: $, c: c });
+        return <CardItem key={c.id} $={$} c={c} />;
       })}
     </div>
   );
 }
 
-SB.CardGrid = CardGrid__;
 export default CardGrid__;

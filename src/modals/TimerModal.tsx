@@ -1,7 +1,5 @@
+import { S as SGlobal } from '../app-utils.tsx';
 // TimerModal.tsx  ·  estratto da Modals.tsx (split Fase 2a)
-var SB = window.SB || {};
-window.SB = SB;
-var h = SB.h || React.createElement;
 
 function TimerModal(props: any) {
   if (!props.showTimerModal || !props.showCard) return null;
@@ -9,7 +7,7 @@ function TimerModal(props: any) {
   var timerInput = props.timerInput;
   var setTimerInput = props.setTimerInput;
   var setShowTimerModal = props.setShowTimerModal;
-  var S = props.S || window.S || {};
+  var S = props.S || SGlobal;
   return (
     <div
       style={{

@@ -9,46 +9,16 @@
 // ── CSS modules ────────────────────────────────────────────────────────────
 declare module '*.css' {}
 
-// ── Globals set by globals.ts (a module with import/export) ────────────────
+// ── Globals set by globals.ts / moduli legacy ─────────────────────────────
+// firebase è il singleton esposto su window (test seam: l'harness lo mocka).
 declare var firebase: any;
-declare var ReactDOM: any;
-declare var App: any;
-declare var ErrorBoundary: any;
 declare var SB: any;
 
-// ── React (firme reali degli hook usati, migrazione strict incrementale) ───
-// React è un global UMD (globals.ts fa window.React = React). Prima era `any`;
-// ora tipizzato con le firme dei membri usati dal codebase. I tipi generici
-// hanno default `any` per non rompere i file non ancora strict: un parametro
-// non annotato resta `any` come prima, ma dove il tipo è inferibile (o passato
-// esplicitamente) il check è reale. createElement/Fragment/Component/Suspense
-// restano volutamente permissivi: il JSX runtime è `h` e i consumer li usano
-// in modo dinamico (React.Component.call, Object.create(prototype), …).
-declare var React: {
-  createElement: (type: any, props?: any, ...children: any[]) => any;
-  Fragment: any;
-  Component: any;
-  Suspense: any;
-  lazy: (loader: () => Promise<{ default: any }>) => any;
-  memo: <T>(component: T) => T;
-  useState: <T = any>(initial: T | (() => T)) => [T, (value: T | ((prev: T) => T)) => void];
-  useEffect: (effect: () => void | (() => void), deps?: any[]) => void;
-  useRef: <T = any>(initial: T) => { current: T };
-  useCallback: <T extends (...args: any[]) => any>(fn: T, deps?: any[]) => T;
-  useMemo: <T = any>(factory: () => T, deps?: any[]) => T;
-  useReducer: <S, A>(reducer: (state: S, action: A) => S, initial: S, init?: (i: S) => S) => [S, (action: A) => void];
-  useLayoutEffect: (effect: () => void | (() => void), deps?: any[]) => void;
-  useContext: <T = any>(context: any) => T;
-  useSyncExternalStore: <T = any>(
-    subscribe: (onStoreChange: () => void) => (() => void) | void,
-    getSnapshot: () => T,
-    getServerSnapshot?: () => T
-  ) => T;
-  // Fallback permissivo: i membri NON dichiarati sopra (StrictMode, cloneElement,
-  // Children, isValidElement, startTransition, useId, …) restano `any` come prima,
-  // così il tipo chiuso non rompe i ~30 file UMD che usano React in modo dinamico.
-  [key: string]: any;
-};
+// ── React (global UMD per i file che ancora usano `React.X` nudo) ──────────
+// globals.ts fa window.React = React. La maggior parte dei componenti importa
+// i membri direttamente da 'react' (migrazione UMD→ES); questo global resta
+// come fallback permissivo per i file non ancora migrati.
+declare var React: any;
 
 // ── JSX (jsxFactory: 'h', jsxFragmentFactory: 'Fragment' — tsconfig.json) ──
 // Il progetto usa JSX "classico" UMD con factory `h`: senza questa
@@ -61,14 +31,10 @@ declare namespace JSX {
   }
 }
 
-// ── Globals esposti da app-utils.ts via window.* (ES MODULE COMPAT) ─────────
-// I consumer in stile UMD (CardGrid.tsx, CardItem.tsx, FAB.tsx, ...) li usano
-// come bare identifiers; a runtime risolvono via window.<name>. Tipi dichiarati
-// qui per non rompere tsc quando app-utils.ts è un ES module.
-declare var S: any;
-declare var FORM0: any;
-declare var fmtDT: (d: any) => string;
-declare var timeAgo: (d: any) => string;
+// ── Globals esposti da app-utils.tsx via window.* ─────────────────────────
+// Solo i nomi ancora letti via window.* (AppProvider, useQuiz) o mockati dai
+// test (compressImage, quizListenRisposte, ValutazioneApertaAI,
+// ANNI_DISPONIBILI, db). S e FORM0 sono ora importati direttamente.
 
 // ── Window extensions — fixes TS2339 Property does not exist on Window ──────
 interface Window {
@@ -77,19 +43,19 @@ interface Window {
   SB_CONFIG: any;
   SB_DEBUG: boolean;
   _SB_LS: any;
-  _appVersionLoaded: string;
-  _appRenderAttempts: number;
 
   // Runtime / librerie (impostati da globals.ts)
-  React: any;
-  ReactDOM: any;
   firebase: any;
 
   // Firebase instances
   db: any;
   __firestoreSync: any;
 
-  // Functions exposed via window.X = ... (needed for window.X access)
+  // Functions exposed via window.X = ... (needed for window.X access).
+  // Wave 2/3 UMD→ES: i globali migrati (fbSave, fmt, normalizeLinks, …) sono
+  // ora importati direttamente; restano quelli ancora usati via window.* o
+  // mockati dai test (db, FORM0, compressImage, quizListenRisposte,
+  // ValutazioneApertaAI, ANNI_DISPONIBILI, S, h, hook React, ErrorBoundary, App).
   callGroqJSON: (...args: any[]) => any;
   callGroqText: (...args: any[]) => any;
   aiLoad: any;
@@ -97,29 +63,10 @@ interface Window {
   aiCacheInvalidate: any;
   aiCacheGet: any;
   aiCacheSetAll: any;
-  fbSave: any;
-  fbDel: any;
-  fbClassiSave: any;
-  fbNascosteSave: any;
-  fbFavSave: any;
-  CLASSI_DEFAULT: string[];
   ANNI_DISPONIBILI: string[];
-  FORM0: any;
-  fmt: any;
-  fmtDT: any;
-  timeAgo: any;
-  badgeBg: any;
-  tipoIcon: any;
-  normalizeLinks: any;
-  renderLinks: any;
   compressImage: any;
   quizListenRisposte: any;
-  buildWordCloud: any;
-  collectCloudStats: any;
   ValutazioneApertaAI: any;
-  safeDocId: any;
-  escapeForPrompt: any;
-  S: any;
   h: any;
   useState: any;
   useEffect: any;
@@ -129,8 +76,6 @@ interface Window {
   useReducer: any;
   useLayoutEffect: any;
   Fragment: any;
-  sbSafeUrl: any;
-  classeColor: any;
   ErrorBoundary: any;
   App: any;
 

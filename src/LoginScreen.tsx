@@ -1,6 +1,4 @@
 // LoginScreen.jsx · ScuolaBoard
-var SB = window.SB || {};
-var h = SB.h || React.createElement;
 
 function LoginScreen__({ $ }: any) {
   return (
@@ -184,5 +182,4 @@ function LoginScreen__({ $ }: any) {
   );
 }
 
-SB.LoginScreen = LoginScreen__;
 export default LoginScreen__;

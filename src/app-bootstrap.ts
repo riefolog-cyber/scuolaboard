@@ -1,112 +1,56 @@
-// Tema chiaro/scuro: applica data-theme prima del render per evitare flash
-(function(): void {
+// app-bootstrap.ts — Avvio dell'app ScuolaBoard
+// 1) Applica il tema chiaro/scuro prima del primo paint (evita il "flash" di
+//    tema sbagliato all'apertura della pagina). La logica è in utils/theme.ts.
+// 2) Monta React (ErrorBoundary + App) gestendo gli errori in modo sicuro.
+//
+// Rimosso in questo refactor (era codice diagnostico legacy):
+// - cache-busting con data scritta a mano ("2026-05-26-FIX-v2"): in pratica
+//   non scattava mai, perché la variabile veniva scritta solo in fondo allo
+//   stesso script (in una finestra nuova era sempre indefinita al check).
+//   Lo stale-cache in produzione è gestito dal service worker (public/sw.js:
+//   bump di CACHE, skipWaiting, clients.claim, navigazioni network-first).
+// - rilevatore di "infinite render loop" (svuotava la pagina dopo 5 tentativi):
+//   in produzione il modulo viene valutato una sola volta per caricamento.
+// - diagnostica delle dipendenze + log di boot (in produzione tutto è bundle).
+import { createElement } from 'react';
+import { createRoot } from 'react-dom/client';
+import { getInitialTheme, applyTheme, type Theme } from './utils/theme.ts';
+import App from './app.tsx';
+import { ErrorBoundary } from './app-utils.tsx';
+
+// ── Tema chiaro/scuro: applica data-theme prima del render ─────────────────
+// Legge la preferenza salvata in localStorage ('sb_theme') o, in mancanza,
+// quella di sistema. Ogni accesso è protetto: un errore non deve bloccare
+// l'avvio (privacy mode, browser vecchi, DOM non ancora pronto).
+(function (): void {
   try {
-    var k: string = 'sb_theme';
-    var t: string | null = null;
-    try { t = localStorage.getItem(k); } catch (e: any) {}
-    if (t !== 'light' && t !== 'dark') {
-      try { t = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'; } catch (e2: any) { t = 'dark'; }
-    }
-    if (t === 'light' || t === 'dark') {
-      var theme: string = t;
-      try { document.documentElement.setAttribute('data-theme', theme); } catch (e3: any) {}
-      try {
-        if (document.body) document.body.setAttribute('data-theme', theme);
-        else document.addEventListener('DOMContentLoaded', function(): void { try { document.body.setAttribute('data-theme', theme); } catch (e: any) {} });
-      } catch (e4: any) {}
-    }
+    const theme: Theme = getInitialTheme();
+    applyTheme(theme);
+    // Se il body non esiste ancora (script nel <head>), applica data-theme
+    // anche al body appena il DOM è pronto.
+    try {
+      if (!document.body)
+        document.addEventListener('DOMContentLoaded', function (): void {
+          try {
+            applyTheme(theme);
+          } catch (e: any) {}
+        });
+    } catch (e: any) {}
   } catch (e: any) {}
 })();
 
-// VERSION: 2026-05-26-FIX-v2
-if (window._appVersionLoaded && window._appVersionLoaded !== '2026-05-26-FIX-v2') {
-  console.error('CACHE MISMATCH - Reloading page with cache bypass...');
-  window.location.href = window.location.href.split('?')[0] + '?cache_bust=' + Date.now();
-}
-window._appVersionLoaded = '2026-05-26-FIX-v2';
-
-// Debug flag: imposta a true per abilitare i log di avvio
-const SB_DEBUG_BOOT = false;
-function debugLog(...args: any[]) {
-  if (SB_DEBUG_BOOT) console.log(...args);
-}
-
-// Reset render counter su fresh load (previene falsi positivi con Vite HMR)
-var NOW = Date.now();
-if (!(window as any)._appRenderStartedAt || NOW - (window as any)._appRenderStartedAt > 5000) {
-  window._appRenderAttempts = 0;
-  (window as any)._appRenderStartedAt = NOW;
-}
-window._appRenderAttempts = (window._appRenderAttempts || 0) + 1;
-if (window._appRenderAttempts > 5) {
-  console.error('INFINITE RENDER LOOP DETECTED! Stopping.');
-  var errDiv = document.createElement('div');
-  errDiv.style.padding = '20px';
-  errDiv.style.color = 'red';
-  errDiv.style.fontFamily = 'monospace';
-  errDiv.appendChild(document.createTextNode('❌ Infinite render loop detected'));
-  errDiv.appendChild(document.createElement('br'));
-  errDiv.appendChild(document.createTextNode('Open DevTools Console for details'));
-  while (document.body.firstChild) document.body.removeChild(document.body.firstChild);
-  document.body.appendChild(errDiv);
-  throw new Error('App render loop exceeded 5 attempts');
-}
-
-debugLog('[ScuolaBoard] Startup: Beginning application boot');
-
-// Diagnostic: Check critical dependencies BEFORE render
-var diagnostics = [];
-if (typeof firebase !== 'undefined') {
-  if (firebase.auth && firebase.firestore) debugLog('[ScuolaBoard] Firebase services loaded successfully');
-  else diagnostics.push('Firebase auth/firestore missing');
-} else diagnostics.push('Firebase not loaded');
-if (typeof React !== 'undefined') debugLog('[ScuolaBoard] React loaded');
-else diagnostics.push('React missing');
-if (typeof ReactDOM !== 'undefined') debugLog('[ScuolaBoard] ReactDOM loaded');
-else diagnostics.push('ReactDOM missing');
-var hh = (window.SB && window.SB.h) || React.createElement;
-if (hh) debugLog('[ScuolaBoard] h bridge resolved');
-else diagnostics.push('h bridge missing (SB.h & React.createElement)');
-if (typeof SB !== 'undefined') debugLog('[ScuolaBoard] SB object loaded');
-else diagnostics.push('SB missing');
-if (typeof ErrorBoundary !== 'undefined') debugLog('[ScuolaBoard] ErrorBoundary loaded');
-else diagnostics.push('ErrorBoundary missing');
-if (typeof App !== 'undefined') debugLog('[ScuolaBoard] App component loaded');
-else diagnostics.push('App component missing');
-
-// Helper XSS-safe: scrive testo come nodi textContent, MAI innerHTML con concat.
-function _sbSetTextReport(root: any, lines: any[], color?: string) {
-  while (root.firstChild) root.removeChild(root.firstChild);
-  var wrap = document.createElement('div');
-  wrap.style.padding = '20px';
-  wrap.style.color = color || '#f87171';
-  wrap.style.fontFamily = 'monospace';
-  wrap.style.background = '#1a1a2e';
-  lines.forEach(function (line: any, idx: any) {
-    if (idx > 0) wrap.appendChild(document.createElement('br'));
-    // doc.createTextNode è sicuro: non interpreta HTML.
-    wrap.appendChild(document.createTextNode(line));
-  });
-  root.appendChild(wrap);
-}
-
-// Show diagnostic if critical dependencies missing
-if (diagnostics.length > 0) {
-  console.error('[ScuolaBoard] CRITICAL MISSING DEPENDENCIES:', diagnostics);
-  _sbSetTextReport(
-    document.getElementById('root'),
-    ['❌ ERROR: Critical dependencies missing: '].concat(diagnostics),
-    '#f87171'
-  );
-} else {
-  debugLog('[ScuolaBoard] All dependencies OK - proceeding to render');
+// ── Render dell'app con ErrorBoundary ──────────────────────────────────────
+// Gli errori React vengono intercettati da ErrorBoundary (definito in
+// AppLayout); il catch qui sotto copre l'eventuale fallimento del primo
+// render e mostra l'errore via textContent — mai innerHTML, per evitare XSS.
+(function (): void {
   try {
-    ReactDOM.createRoot(document.getElementById('root')).render(hh(ErrorBoundary, null, hh(App, null)));
+    createRoot(document.getElementById('root')!).render(
+      createElement(ErrorBoundary as any, null, createElement(App, null))
+    );
   } catch (e: any) {
-    console.error('[ScuolaBoard] Render error:', e.message, e.stack);
-    // FIX XSS: prima si concatenava e.message dentro innerHTML con += → vettore
-    // di stored/reflected XSS se il messaggio conteneva <script>. Ora usa
-    // textContent via _sbSetTextReport, che non interpreta HTML.
-    _sbSetTextReport(document.getElementById('root'), ['❌ Render Error: ' + String(e.message || e)], '#f87171');
+    console.error('[ScuolaBoard] Render error:', e && e.message, e && e.stack);
+    const root = document.getElementById('root');
+    if (root) root.textContent = '❌ Errore di avvio: ' + String((e && e.message) || e);
   }
-}
+})();

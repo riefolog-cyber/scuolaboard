@@ -1,6 +1,5 @@
 // CardDetail.jsx · ScuolaBoard
-var SB = window.SB || {};
-var h = SB.h || React.createElement;
+import { normalizeLinks } from './app-utils.tsx';
 
 import QuizPanel from './carddetail/QuizPanel.tsx';
 import AIPanel from './carddetail/AIPanel.tsx';
@@ -20,7 +19,7 @@ function CardDetail__({ $ }: any) {
     : 0;
   var liked = $.myLikes.current.has(String(c.id));
   var isOwner = !$.isProf && $.user && c.autore === $.myName($.user) && !c.proposta;
-  var cardLinks = window.normalizeLinks ? window.normalizeLinks(c) : [];
+  var cardLinks = normalizeLinks ? normalizeLinks(c) : [];
   var nascosta = c.visibile === false;
   var cc = c.classi || ['TUTTE'];
 
@@ -66,7 +65,9 @@ function CardDetail__({ $ }: any) {
             display: 'flex',
             justifyContent: 'center',
             padding: '10px 12px 6px',
-            background: isLight ? 'linear-gradient(180deg, #ffffff 0%, #ffffff 55%, rgba(255,255,255,0) 100%)' : 'linear-gradient(180deg, rgba(15,23,42,.97) 0%, rgba(15,23,42,.97) 55%, rgba(15,23,42,0) 100%)',
+            background: isLight
+              ? 'linear-gradient(180deg, #ffffff 0%, #ffffff 55%, rgba(255,255,255,0) 100%)'
+              : 'linear-gradient(180deg, rgba(15,23,42,.97) 0%, rgba(15,23,42,.97) 55%, rgba(15,23,42,0) 100%)',
           }}
         >
           <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,.25)', marginTop: 6 }} />
@@ -195,7 +196,8 @@ function CardDetail__({ $ }: any) {
 
           {/* Autor */}
           <div style={{ fontSize: 11, color: isLight ? '#64748b' : 'rgba(255,255,255,.4)', marginBottom: 10 }}>
-            di <strong style={{ color: isLight ? '#0f172a' : 'rgba(255,255,255,.7)' }}>{c.autore || 'Prof'}</strong> · {$.timeAgo(c.data)}
+            di <strong style={{ color: isLight ? '#0f172a' : 'rgba(255,255,255,.7)' }}>{c.autore || 'Prof'}</strong> ·{' '}
+            {$.timeAgo(c.data)}
           </div>
 
           {/* Testo */}
@@ -636,5 +638,4 @@ function CardDetail__({ $ }: any) {
     </div>
   );
 }
-SB.CardDetail = CardDetail__;
 export default CardDetail__;

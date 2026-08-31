@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import React from 'react';
 
-import './CardItem.tsx';
+import CardItem from './CardItem.tsx';
 
 describe('CardItem', () => {
   let $: any, card: any;
@@ -72,7 +72,7 @@ describe('CardItem', () => {
   function renderCard(overrides = {}, propOverrides = {}) {
     const c = Object.assign({}, card, overrides);
     const merged$ = Object.assign({}, $, propOverrides);
-    return render(React.createElement(window.SB.CardItem, { $: merged$, c: c }));
+    return render(React.createElement(CardItem, { $: merged$, c: c }));
   }
 
   // ── Rendering tests ──

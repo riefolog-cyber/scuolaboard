@@ -5,12 +5,11 @@ import React from 'react';
 
 beforeEach(() => {
   window.SB = window.SB || {};
-  window.SB.h = React.createElement;
-  window.SB.Fragment = React.Fragment;
   window.SB.LS = { privacy: { set: () => {} } };
 });
 
-import './Modals.tsx';
+import Modals from './Modals.tsx';
+import EditAmmModal from './modals/EditAmmModal.tsx';
 
 describe('Modals', () => {
   function make$(): any {
@@ -94,12 +93,12 @@ describe('Modals', () => {
   }
 
   it('SB.Modals exists and is a function', () => {
-    expect(typeof window.SB.Modals).toBe('function');
+    expect(typeof Modals).toBe('function');
   });
 
   it('renders nothing when all modals are hidden', () => {
     var $ = make$();
-    var container = render(React.createElement(window.SB.Modals, { $ })).container;
+    var container = render(React.createElement(Modals, { $ })).container;
     // Fase 8b: l'aggregatore è avvolto in un contenitore INVISIBILE
     // (FocusTrap, display:contents) → 1 figlio non visivo, nessuna modale.
     expect(container.children.length).toBe(1);
@@ -109,7 +108,7 @@ describe('Modals', () => {
   it('renders lightbox modal when lightbox is set', () => {
     var $ = make$();
     $.lightbox = { url: 'test.jpg', didascalia: 'Test' };
-    var container = render(React.createElement(window.SB.Modals, { $ })).container;
+    var container = render(React.createElement(Modals, { $ })).container;
     expect(container.querySelector('img')).toBeTruthy();
   });
 
@@ -117,14 +116,14 @@ describe('Modals', () => {
     var $ = make$();
     $.showPrivacy = true;
     $.user = { uid: '123' };
-    render(React.createElement(window.SB.Modals, { $ }));
+    render(React.createElement(Modals, { $ }));
     expect(document.body.textContent || '').toContain('Ho capito');
   });
 
   it('renders confirm del modal when confirmDel is set', () => {
     var $ = make$();
     $.confirmDel = { type: 'comment', cardId: '1', id: '999' };
-    var { container } = render(React.createElement(window.SB.Modals, { $ }));
+    var { container } = render(React.createElement(Modals, { $ }));
     expect(container.children.length).toBeGreaterThan(0);
   });
 
@@ -134,7 +133,7 @@ describe('Modals', () => {
     var modificaAmm = vi.fn();
     var setEditAmm = vi.fn();
     render(
-      React.createElement(window.SB.EditAmmModal, {
+      React.createElement(EditAmmModal, {
         editAmm: { nome: 'Luca Bianchi', id: 1701, motivazione: 'Fuori tema' },
         setEditAmm: setEditAmm,
         modificaAmm: modificaAmm,
@@ -154,7 +153,7 @@ describe('Modals', () => {
     var modificaAmm = vi.fn();
     var setEditAmm = vi.fn();
     render(
-      React.createElement(window.SB.EditAmmModal, {
+      React.createElement(EditAmmModal, {
         editAmm: { nome: 'Luca Bianchi', id: 1701, motivazione: 'Fuori tema' },
         setEditAmm: setEditAmm,
         modificaAmm: modificaAmm,

@@ -8,6 +8,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { screen, fireEvent, within } from '@testing-library/react';
 import { bootApp, renderApp } from './harness';
 import { PROF, PROF_DOC, setupTestEnv, teardownTestEnv } from './fixtures';
+import { createAppHandlers } from '../app-handlers';
 
 beforeEach(setupTestEnv);
 afterEach(teardownTestEnv);
@@ -94,7 +95,7 @@ describe('Rinomina classe (eseguiRinomina)', () => {
       rinominaInput: '5AI',
       rinominaConferma: true,
     });
-    window.SB.createAppHandlers(ctx).eseguiRinomina();
+    createAppHandlers(ctx).eseguiRinomina();
 
     // 5AO nascosta, 5AI non in custom (è una classe predefinita)
     expect(state.classiNascoste).toEqual(['5AO']);
@@ -117,7 +118,7 @@ describe('Rinomina classe (eseguiRinomina)', () => {
       rinominaInput: '1AX',
       rinominaConferma: true,
     });
-    window.SB.createAppHandlers(ctx).eseguiRinomina();
+    createAppHandlers(ctx).eseguiRinomina();
 
     expect(state.classiNascoste).toEqual(['5AO']);
     expect(state.classiCustom).toEqual(['1AX']);
@@ -132,7 +133,7 @@ describe('Rinomina classe (eseguiRinomina)', () => {
       rinominaInput: '5AI',
       rinominaConferma: true,
     });
-    window.SB.createAppHandlers(ctx).eseguiRinomina();
+    createAppHandlers(ctx).eseguiRinomina();
 
     // 5AI tolta da nascoste (era nascosta), 5AO nascosta, 5BO resta nascosta
     expect(state.classiNascoste.sort()).toEqual(['5AO', '5BO']);
@@ -148,7 +149,7 @@ describe('Rinomina classe (eseguiRinomina)', () => {
       rinominaInput: 'CORSO Y',
       rinominaConferma: true,
     });
-    window.SB.createAppHandlers(ctx).eseguiRinomina();
+    createAppHandlers(ctx).eseguiRinomina();
 
     expect(state.classiCustom).toEqual(['CORSO Y']);
     expect(state.classiNascoste).toEqual([]);
@@ -165,7 +166,7 @@ describe('Rinomina classe (eseguiRinomina)', () => {
       rinominaInput: '5AO',
       rinominaConferma: true,
     });
-    window.SB.createAppHandlers(ctx).eseguiRinomina();
+    createAppHandlers(ctx).eseguiRinomina();
 
     // "5AO" non può stare in classiCustom (è predefinita) e va tolta da nascoste
     expect(state.classiCustom).toEqual([]);
@@ -182,7 +183,7 @@ describe('Aggiungi classe (addClasseCustom)', () => {
       classiNascoste: ['5AI'],
       newClasseInput: '5AI',
     });
-    window.SB.createAppHandlers(ctx).addClasseCustom();
+    createAppHandlers(ctx).addClasseCustom();
 
     expect(state.classiNascoste).toEqual([]);
     expect(state.classiCustom).toEqual([]);
@@ -196,7 +197,7 @@ describe('Aggiungi classe (addClasseCustom)', () => {
     const { ctx, state } = buildCtx({
       newClasseInput: '1AX',
     });
-    window.SB.createAppHandlers(ctx).addClasseCustom();
+    createAppHandlers(ctx).addClasseCustom();
 
     expect(state.classiCustom).toEqual(['1AX']);
     expect(ctx.CLASSI_LIST.indexOf('1AX')).toBeGreaterThanOrEqual(0);
@@ -209,7 +210,7 @@ describe('Aggiungi classe (addClasseCustom)', () => {
     const { ctx, state } = buildCtx({
       newClasseInput: '3AO',
     });
-    window.SB.createAppHandlers(ctx).addClasseCustom();
+    createAppHandlers(ctx).addClasseCustom();
 
     // 3AO è già nella lista (predefinita non nascosta) → nessuna scrittura
     expect(state.calls.classiSave.length).toBe(0);

@@ -1,8 +1,6 @@
+import { Fragment } from 'react';
+import { fbDel } from './app-utils.tsx';
 // ProposalsPanel.jsx · ScuolaBoard
-var SB = window.SB || {};
-var h = SB.h || React.createElement;
-var Fragment = SB.Fragment || React.Fragment;
-var fbDel = window.fbDel;
 
 function ProposalsPanel__({ $ }: any) {
   return (
@@ -367,5 +365,4 @@ function ProposalsPanel__({ $ }: any) {
   );
 }
 
-SB.ProposalsPanel = ProposalsPanel__;
 export default ProposalsPanel__;

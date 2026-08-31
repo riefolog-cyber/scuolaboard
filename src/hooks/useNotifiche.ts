@@ -1,13 +1,11 @@
 // useNotifiche.ts · ScuolaBoard · hook notifiche in-app (solo app aperta)
 // Pattern analogo a useAmmonizioni.ts / preferiti store.
 // Collezione: notifiche/{uid} doc { lista: Notification[], aggiornato: ISO }
+import { useState, useEffect, useCallback, useMemo } from 'react';
 
-var useState = React.useState;
-var useEffect = React.useEffect;
-var useCallback = React.useCallback;
-var useMemo = React.useMemo;
-
-function getDbN() { return typeof window !== 'undefined' ? (window as any).db : null; }
+function getDbN() {
+  return typeof window !== 'undefined' ? (window as any).db : null;
+}
 
 type Notifica = {
   id: string;
@@ -35,12 +33,16 @@ function useNotifiche(deps: { user: any }) {
       var unsub = db
         .collection('notifiche')
         .doc(user.uid)
-        .onSnapshot(function (doc: any) {
-          if (doc.exists) setLista((doc.data().lista || []) as Notifica[]);
-          else setLista([]);
-        }, function (err: any) {
-          if (typeof window !== 'undefined' && (window as any).SB_DEBUG) console.warn('[notifiche] onSnapshot', err && err.code);
-        });
+        .onSnapshot(
+          function (doc: any) {
+            if (doc.exists) setLista((doc.data().lista || []) as Notifica[]);
+            else setLista([]);
+          },
+          function (err: any) {
+            if (typeof window !== 'undefined' && (window as any).SB_DEBUG)
+              console.warn('[notifiche] onSnapshot', err && err.code);
+          }
+        );
       return function () {
         if (unsub) unsub();
       };
@@ -66,7 +68,9 @@ function useNotifiche(deps: { user: any }) {
       var next = lista.map(function (n) {
         return String(n.id) === sid ? Object.assign({}, n, { letta: true }) : n;
       });
-      db.collection('notifiche').doc(user.uid).set({ lista: next, aggiornato: new Date().toISOString() }, { merge: true });
+      db.collection('notifiche')
+        .doc(user.uid)
+        .set({ lista: next, aggiornato: new Date().toISOString() }, { merge: true });
     },
     [lista, user]
   );
@@ -79,7 +83,9 @@ function useNotifiche(deps: { user: any }) {
       var next = lista.map(function (n) {
         return Object.assign({}, n, { letta: true });
       });
-      db.collection('notifiche').doc(user.uid).set({ lista: next, aggiornato: new Date().toISOString() }, { merge: true });
+      db.collection('notifiche')
+        .doc(user.uid)
+        .set({ lista: next, aggiornato: new Date().toISOString() }, { merge: true });
     },
     [lista, user]
   );

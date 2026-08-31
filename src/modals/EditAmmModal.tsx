@@ -1,13 +1,11 @@
 // EditAmmModal.tsx  ·  estratto da Modals.tsx (split Fase 2a)
-var SB = window.SB || {};
-window.SB = SB;
-var h = SB.h || React.createElement;
 
+import { S as SGlobal } from '../app-utils.tsx';
 function EditAmmModal(props: any) {
   if (!props.editAmm) return null;
   var editAmm = props.editAmm;
   var setEditAmm = props.setEditAmm;
-  var S = props.S || window.S || {};
+  var S = props.S || SGlobal;
   return (
     <div
       style={{
@@ -115,5 +113,4 @@ function EditAmmModal(props: any) {
   );
 }
 
-SB.EditAmmModal = EditAmmModal;
 export default EditAmmModal;

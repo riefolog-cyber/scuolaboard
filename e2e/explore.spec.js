@@ -62,17 +62,13 @@ test('PROD 4173: la login carica, la meta CSP cè e non ci sono violazioni', asy
   await expect(page.getByText(/SCUOLABOARD|SCUOLA/).first()).toBeVisible({ timeout: 15000 });
 
   // La meta CSP deve essere presente nella build
-  const hasCsp = await page.evaluate(() =>
-    !!document.querySelector('meta[http-equiv="Content-Security-Policy"]')
-  );
+  const hasCsp = await page.evaluate(() => !!document.querySelector('meta[http-equiv="Content-Security-Policy"]'));
   expect(hasCsp, 'meta CSP mancante nella build di produzione').toBe(true);
 
   // Guard di regressione QR: la meta CSP deve includere api.qrserver.com in img-src.
   // Il QR della modale è generato da quel servizio esterno — se manca dalla CSP,
   // il browser blocca l'immagine ('Refused to load the image...') e il QR è rotto.
-  const cspContent = await page
-    .locator('meta[http-equiv="Content-Security-Policy"]')
-    .getAttribute('content');
+  const cspContent = await page.locator('meta[http-equiv="Content-Security-Policy"]').getAttribute('content');
   // Il dominio deve stare DENTRO la direttiva img-src (non solo altrove nella CSP)
   expect(cspContent, 'img-src deve includere api.qrserver.com (QR)').toMatch(
     /img-src[^;]*https:\/\/api\.qrserver\.com/
@@ -162,9 +158,7 @@ test('HARNESS prof: Timer, Copia anno, QR, FAB nuova card', async ({ page }) => 
   await expect(page.getByText('Imposta scadenza card').first()).not.toBeVisible({ timeout: 5000 });
 
   // La scadenza è salvata nel fake db
-  await expect
-    .poll(() => page.evaluate(() => !!window.__db._get('cards', 'c1')?.scadenza))
-    .toBe(true);
+  await expect.poll(() => page.evaluate(() => !!window.__db._get('cards', 'c1')?.scadenza)).toBe(true);
 
   await closeCardDetail(page); // chiude CardDetail
   await expect(page.locator('[style*="z-index: 200"]')).not.toBeVisible();
@@ -176,7 +170,9 @@ test('HARNESS prof: Timer, Copia anno, QR, FAB nuova card', async ({ page }) => 
   await copiaModal.locator('select').selectOption('2027/2028');
   await copiaModal.getByRole('button', { name: 'Copia', exact: true }).click();
   await expect
-    .poll(() => page.evaluate(() => window.__db._all('cards').filter(([, c]) => c.annoScolastico === '2027/2028').length))
+    .poll(() =>
+      page.evaluate(() => window.__db._all('cards').filter(([, c]) => c.annoScolastico === '2027/2028').length)
+    )
     .toBe(1);
 
   // ── QR dalla Header ──
@@ -223,7 +219,10 @@ test('HARNESS prof: aggiungi nuova classe dalla FilterBar (+ → digita → ✓)
   await input.fill('7ZZ');
 
   // Clic su "✓" (scoping alla riga dell'input: in pagina c'è un altro ✓)
-  const rigaInput = page.locator('div').filter({ has: page.getByPlaceholder('es. 1AX') }).last();
+  const rigaInput = page
+    .locator('div')
+    .filter({ has: page.getByPlaceholder('es. 1AX') })
+    .last();
   await rigaInput.getByRole('button', { name: '✓', exact: true }).click();
 
   // La classe appare come chip filtro
@@ -255,9 +254,7 @@ test('HARNESS prof: Rifiuta proposta, Ammonisci, EditAmm, quiz', async ({ page }
   const rifiutaModal = page.locator('[style*="z-index: 500"]').filter({ hasText: 'Rifiuta proposta' }).first();
   await rifiutaModal.getByPlaceholder('Es. Argomento già trattato, fuori tema…').fill('Fuori programma');
   await rifiutaModal.getByRole('button', { name: '❌ Rifiuta' }).click();
-  await expect
-    .poll(() => page.evaluate(() => window.__db._get('cards', 'p1')?.proposta))
-    .toBe('rifiutata');
+  await expect.poll(() => page.evaluate(() => window.__db._get('cards', 'p1')?.proposta)).toBe('rifiutata');
 
   // ── Ammonisci dal commento della card c1 ──
   await page.getByText('Lezione su X').first().click();
@@ -266,16 +263,17 @@ test('HARNESS prof: Rifiuta proposta, Ammonisci, EditAmm, quiz', async ({ page }
   const ammModal = page.locator('[style*="z-index: 500"]').filter({ hasText: 'Ammonisci studente' }).first();
   await ammModal.getByPlaceholder('Scrivi la motivazione…').fill('Linguaggio inappropriato');
   await ammModal.getByRole('button', { name: '⚠️ Invia ammonizione' }).click();
-  await expect
-    .poll(() => page.evaluate(() => window.__db._get('ammonizioni', 'Luca Bianchi')?.lista?.length))
-    .toBe(2);
+  await expect.poll(() => page.evaluate(() => window.__db._get('ammonizioni', 'Luca Bianchi')?.lista?.length)).toBe(2);
 
   // ── EditAmm dal pannello ammonizioni ──
   await expect(page.getByText('⚠️ Ammoniti in questa card').first()).toBeVisible({ timeout: 5000 });
   const pannelloAmm = page.getByText('Ammoniti in questa card').locator('..');
   // .first(): dopo l'Ammonisci precedente ci sono 2 ammonizioni sulla card
   // (1 seed + 1 nuova) → 2 bottoni ✏️ con lo stesso aria-label.
-  await pannelloAmm.getByRole('button', { name: /Modifica ammonizione/ }).first().click();
+  await pannelloAmm
+    .getByRole('button', { name: /Modifica ammonizione/ })
+    .first()
+    .click();
   await expect(page.getByText('✏️ Modifica ammonizione').first()).toBeVisible({ timeout: 5000 });
   const editModal = page.locator('[style*="z-index: 600"]').filter({ hasText: 'Modifica ammonizione' }).first();
   await editModal.locator('#editamm-input').fill('Fuori tema (corretto)');

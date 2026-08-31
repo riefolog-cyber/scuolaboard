@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import React from 'react';
 
-import './Header.tsx';
+import Header from './Header.tsx';
 
 describe('Header', () => {
   let $: any;
@@ -31,7 +31,7 @@ describe('Header', () => {
 
   function renderHeader(props = {}) {
     const merged = Object.assign({}, $, props);
-    return render(React.createElement(window.SB.Header, { $: merged }));
+    return render(React.createElement(Header, { $: merged }));
   }
 
   it('renders SCUOLA BOARD branding', () => {

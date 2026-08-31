@@ -6,8 +6,6 @@ import { render, fireEvent } from '@testing-library/react';
 import FocusTrap from './focusTrap.tsx';
 
 // Il progetto usa jsxFactory `h` (vite.config.js): i sorgenti definiscono
-// sempre `var h = ...` prima di usare JSX. Lo stesso vale nei test.
-var h = React.createElement;
 
 // jsdom non calcola il layout: `offsetParent` è SEMPRE null → il filtro di
 // visibilità di getFocusables scarterebbe tutti gli elementi e il trap non

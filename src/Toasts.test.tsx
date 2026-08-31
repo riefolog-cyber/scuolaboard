@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import React from 'react';
 
-import './Toasts.tsx';
+import Toasts from './Toasts.tsx';
 
 describe('Toasts', () => {
   let $: any;
@@ -17,7 +17,7 @@ describe('Toasts', () => {
 
   function renderToasts(props = {}) {
     const merged = Object.assign({}, $, props);
-    return render(React.createElement(window.SB.Toasts, { $: merged }));
+    return render(React.createElement(Toasts, { $: merged }));
   }
 
   it('renders nothing when toasts array is empty', () => {

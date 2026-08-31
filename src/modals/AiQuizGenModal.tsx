@@ -1,12 +1,10 @@
 // AiQuizGenModal.tsx  ·  estratto da Modals.tsx (split Fase 2a)
-var SB = window.SB || {};
-window.SB = SB;
-var h = SB.h || React.createElement;
-var Fragment = SB.Fragment || React.Fragment;
+import { Fragment } from 'react';
+import { S as SGlobal } from '../app-utils.tsx';
 
 function AiQuizGenModal(props: any) {
   if (!props.showAiQuizGen) return null;
-  var S = props.S || window.S || {};
+  var S = props.S || SGlobal;
   var aqg = props.aqg || {};
   var setAqg = props.setAqg;
   function saqg(patch: any) {

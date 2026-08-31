@@ -1,9 +1,7 @@
 // useQuiz.ts · ScuolaBoard · hook di dominio: quiz (risposte interattive,
 // valutazione AI delle aperte, reset). Dipendenze passate via deps:
 // { user, myName, cards, showToast, showCard }
-var useState = React.useState;
-var useEffect = React.useEffect;
-var useRef = React.useRef;
+import { useState, useEffect, useRef } from 'react';
 
 var db = window.db;
 var quizListenRisposte = window.quizListenRisposte;

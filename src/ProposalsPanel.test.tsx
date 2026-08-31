@@ -5,12 +5,10 @@ import React from 'react';
 
 beforeEach(() => {
   window.SB = window.SB || {};
-  window.SB.h = React.createElement;
-  window.SB.Fragment = React.Fragment;
-  window.fbDel = () => Promise.resolve();
+  (window as any).fbDel = () => Promise.resolve();
 });
 
-import './ProposalsPanel.tsx';
+import ProposalsPanel from './ProposalsPanel.tsx';
 
 function make$(overrides = {}) {
   return Object.assign(
@@ -39,7 +37,7 @@ function make$(overrides = {}) {
 describe('ProposalsPanel', () => {
   it('renders nothing when no relevant content', () => {
     var $ = make$();
-    var { container } = render(React.createElement(window.SB.ProposalsPanel, { $ }));
+    var { container } = render(React.createElement(ProposalsPanel, { $ }));
     expect(container.innerHTML).toBe('');
   });
 
@@ -48,7 +46,7 @@ describe('ProposalsPanel', () => {
       isProf: true,
       proposte: [{ id: 1, titolo: 'Mia proposta', autore: 'Studente', proposta: true }],
     });
-    render(React.createElement(window.SB.ProposalsPanel, { $ }));
+    render(React.createElement(ProposalsPanel, { $ }));
     expect(screen.getByText(/PROPOSTE IN ATTESA/)).toBeTruthy();
     expect(screen.getByText('Mia proposta')).toBeTruthy();
   });
@@ -59,7 +57,7 @@ describe('ProposalsPanel', () => {
       user: { uid: '123' },
       cards: [{ id: 1, titolo: 'La mia proposta', autore: 'Studente Test', proposta: true }],
     });
-    render(React.createElement(window.SB.ProposalsPanel, { $ }));
+    render(React.createElement(ProposalsPanel, { $ }));
     expect(screen.getByText(/LE TUE PROPOSTE IN ATTESA/)).toBeTruthy();
     expect(screen.getByText('La mia proposta')).toBeTruthy();
   });
@@ -78,7 +76,7 @@ describe('ProposalsPanel', () => {
         },
       ],
     });
-    render(React.createElement(window.SB.ProposalsPanel, { $ }));
+    render(React.createElement(ProposalsPanel, { $ }));
     expect(screen.getByText(/PROPOSTE RIFIUTATE/)).toBeTruthy();
     expect(screen.getByText('Proposta rifiutata')).toBeTruthy();
     expect(screen.getByText(/Non pertinente/)).toBeTruthy();
@@ -90,7 +88,7 @@ describe('ProposalsPanel', () => {
       preferiti: ['1'],
       visible: [{ id: 1, titolo: 'Card Preferita', tipo: 'domanda', classi: ['TUTTE'], commenti: [], likes: 0 }],
     });
-    render(React.createElement(window.SB.ProposalsPanel, { $ }));
+    render(React.createElement(ProposalsPanel, { $ }));
     expect(screen.getByText(/I TUOI PREFERITI/)).toBeTruthy();
     expect(screen.getByText('Card Preferita')).toBeTruthy();
   });
@@ -101,14 +99,14 @@ describe('ProposalsPanel', () => {
       showBanner: true,
       newCardsBanner: [{ id: 3, titolo: 'Nuova card!' }],
     });
-    render(React.createElement(window.SB.ProposalsPanel, { $ }));
+    render(React.createElement(ProposalsPanel, { $ }));
     expect(screen.getByText(/nuova card!/)).toBeTruthy();
     expect(screen.getByText('Nuova card!')).toBeTruthy();
   });
 
   it('renders nothing for professor with no pending proposals', () => {
     var $ = make$({ isProf: true, proposte: [] });
-    var { container } = render(React.createElement(window.SB.ProposalsPanel, { $ }));
+    var { container } = render(React.createElement(ProposalsPanel, { $ }));
     expect(container.innerHTML).toBe('');
   });
 });

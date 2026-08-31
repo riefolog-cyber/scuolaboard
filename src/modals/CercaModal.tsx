@@ -2,55 +2,8 @@
 // Cerca tra TUTTE le card (tutte le classi, incluse le "Solo prof") in titolo,
 // testo, commenti, domande quiz e opzioni sondaggio. Scopo: verificare che un
 // argomento esista già prima di creare una nuova card.
-var SB = window.SB || {};
-window.SB = SB;
-var h = SB.h || React.createElement;
-var useState = React.useState;
-var useEffect = React.useEffect;
-var useMemo = React.useMemo;
-
-// Normalizza per il match: minuscolo + rimozione accenti (è→e, à→a…).
-function norm(s: any) {
-  return String(s || '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
-}
-
-// Evidenzia i termini nel testo (case-insensitive sul testo ORIGINALE: la
-// normalizzazione NFD sposterebbe gli indici con i caratteri accentati).
-function hilite(text: string, terms: string[]) {
-  var t = String(text || '');
-  if (!t || !terms.length) return t;
-  var lower = t.toLowerCase();
-  var out: any[] = [];
-  var i = 0;
-  while (i < t.length) {
-    var best: any = null;
-    terms.forEach(function (term: string) {
-      if (!term) return;
-      var idx = lower.indexOf(term, i);
-      if (idx >= 0 && (best === null || idx < best.idx)) best = { idx: idx, len: term.length };
-    });
-    if (!best) {
-      out.push(t.slice(i));
-      break;
-    }
-    if (best.idx > i) out.push(t.slice(i, best.idx));
-    out.push(
-      h(
-        'mark',
-        {
-          key: out.length,
-          style: { background: 'rgba(99,102,241,.4)', color: '#fff', borderRadius: 3, padding: '0 2px' },
-        },
-        t.slice(best.idx, best.idx + best.len)
-      )
-    );
-    i = best.idx + best.len;
-  }
-  return out;
-}
+import { useState, useEffect, useMemo, createElement } from 'react';
+import { norm, hilite } from '../utils/search.ts';
 
 function CercaModal(props: any) {
   if (!props.showCerca || !props.isProf) return null;
@@ -314,11 +267,23 @@ function CercaModal(props: any) {
           }}
         >
           {
-            <div style={{ padding: '16px 18px 12px', borderBottom: isLight ? '1px solid rgba(15,23,42,.08)' : '1px solid rgba(255,255,255,.08)' }}>
+            <div
+              style={{
+                padding: '16px 18px 12px',
+                borderBottom: isLight ? '1px solid rgba(15,23,42,.08)' : '1px solid rgba(255,255,255,.08)',
+              }}
+            >
               {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                   {
-                    <span style={{ fontSize: 15, fontWeight: 900, color: isLight ? '#0f172a' : '#f1f5f9', letterSpacing: 0.5 }}>
+                    <span
+                      style={{
+                        fontSize: 15,
+                        fontWeight: 900,
+                        color: isLight ? '#0f172a' : '#f1f5f9',
+                        letterSpacing: 0.5,
+                      }}
+                    >
                       🔍 Cerca nelle card
                     </span>
                   }
@@ -375,13 +340,33 @@ function CercaModal(props: any) {
                             });
                           }}
                           style={{
-                            background: !tuttiAnni ? (isLight ? 'rgba(79,70,229,.12)' : 'rgba(99,102,241,.3)') : (isLight ? 'rgba(15,23,42,.05)' : 'rgba(255,255,255,.05)'),
-                            border: '1px solid ' + (!tuttiAnni ? (isLight ? 'rgba(79,70,229,.22)' : 'rgba(99,102,241,.55)') : (isLight ? 'rgba(15,23,42,.10)' : 'rgba(255,255,255,.12)')),
+                            background: !tuttiAnni
+                              ? isLight
+                                ? 'rgba(79,70,229,.12)'
+                                : 'rgba(99,102,241,.3)'
+                              : isLight
+                                ? 'rgba(15,23,42,.05)'
+                                : 'rgba(255,255,255,.05)',
+                            border:
+                              '1px solid ' +
+                              (!tuttiAnni
+                                ? isLight
+                                  ? 'rgba(79,70,229,.22)'
+                                  : 'rgba(99,102,241,.55)'
+                                : isLight
+                                  ? 'rgba(15,23,42,.10)'
+                                  : 'rgba(255,255,255,.12)'),
                             borderRadius: 8,
                             padding: '4px 10px',
                             fontSize: 11,
                             fontWeight: 700,
-                            color: !tuttiAnni ? (isLight ? '#4338ca' : '#e0e7ff') : (isLight ? '#475569' : 'rgba(255,255,255,.6)'),
+                            color: !tuttiAnni
+                              ? isLight
+                                ? '#4338ca'
+                                : '#e0e7ff'
+                              : isLight
+                                ? '#475569'
+                                : 'rgba(255,255,255,.6)',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
@@ -477,13 +462,33 @@ function CercaModal(props: any) {
                         setAnnoMenuOpen(false);
                       }}
                       style={{
-                        background: tuttiAnni ? (isLight ? 'rgba(79,70,229,.12)' : 'rgba(99,102,241,.3)') : (isLight ? 'rgba(15,23,42,.05)' : 'rgba(255,255,255,.05)'),
-                        border: '1px solid ' + (tuttiAnni ? (isLight ? 'rgba(79,70,229,.22)' : 'rgba(99,102,241,.55)') : (isLight ? 'rgba(15,23,42,.10)' : 'rgba(255,255,255,.12)')),
+                        background: tuttiAnni
+                          ? isLight
+                            ? 'rgba(79,70,229,.12)'
+                            : 'rgba(99,102,241,.3)'
+                          : isLight
+                            ? 'rgba(15,23,42,.05)'
+                            : 'rgba(255,255,255,.05)',
+                        border:
+                          '1px solid ' +
+                          (tuttiAnni
+                            ? isLight
+                              ? 'rgba(79,70,229,.22)'
+                              : 'rgba(99,102,241,.55)'
+                            : isLight
+                              ? 'rgba(15,23,42,.10)'
+                              : 'rgba(255,255,255,.12)'),
                         borderRadius: 8,
                         padding: '4px 10px',
                         fontSize: 11,
                         fontWeight: 700,
-                        color: tuttiAnni ? (isLight ? '#4338ca' : '#e0e7ff') : (isLight ? '#475569' : 'rgba(255,255,255,.6)'),
+                        color: tuttiAnni
+                          ? isLight
+                            ? '#4338ca'
+                            : '#e0e7ff'
+                          : isLight
+                            ? '#475569'
+                            : 'rgba(255,255,255,.6)',
                         cursor: 'pointer',
                       }}
                     >
@@ -562,12 +567,21 @@ function CercaModal(props: any) {
             </div>
           }
           {
-            <div style={{ flex: 1, overflow: 'auto', padding: '6px 0', background: isLight ? '#ffffff' : 'transparent' }}>
+            <div
+              style={{ flex: 1, overflow: 'auto', padding: '6px 0', background: isLight ? '#ffffff' : 'transparent' }}
+            >
               {!q.trim() && (
                 <div style={{ padding: '34px 20px', textAlign: 'center' }}>
                   {<div style={{ fontSize: 34, marginBottom: 8, opacity: 0.7 }}>🔎</div>}
                   {
-                    <div style={{ fontSize: 13, fontWeight: 700, color: isLight ? '#334155' : 'rgba(255,255,255,.55)', marginBottom: 4 }}>
+                    <div
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 700,
+                        color: isLight ? '#334155' : 'rgba(255,255,255,.55)',
+                        marginBottom: 4,
+                      }}
+                    >
                       Digita una parola chiave
                     </div>
                   }
@@ -582,7 +596,9 @@ function CercaModal(props: any) {
                 <div style={{ padding: '34px 20px', textAlign: 'center' }}>
                   {<div style={{ fontSize: 30, marginBottom: 8, opacity: 0.6 }}>🕳️</div>}
                   {
-                    <div style={{ fontSize: 13, fontWeight: 700, color: isLight ? '#334155' : 'rgba(255,255,255,.55)' }}>
+                    <div
+                      style={{ fontSize: 13, fontWeight: 700, color: isLight ? '#334155' : 'rgba(255,255,255,.55)' }}
+                    >
                       Nessuna card trovata per «{q.trim()}»
                     </div>
                   }
@@ -713,8 +729,15 @@ function CercaModal(props: any) {
                       </div>
                     }
                     {
-                      <div style={{ fontWeight: 800, fontSize: 13, color: isLight ? '#0f172a' : '#f1f5f9', marginBottom: 2 }}>
-                        {hilite(c.titolo, rawTerms)}
+                      <div
+                        style={{
+                          fontWeight: 800,
+                          fontSize: 13,
+                          color: isLight ? '#0f172a' : '#f1f5f9',
+                          marginBottom: 2,
+                        }}
+                      >
+                        {hilite(c.titolo, rawTerms, createElement)}
                       </div>
                     }
                     {snip && (
@@ -729,7 +752,7 @@ function CercaModal(props: any) {
                           lineHeight: 1.5,
                         }}
                       >
-                        {hilite(snip, rawTerms)}
+                        {hilite(snip, rawTerms, createElement)}
                       </div>
                     )}
                   </div>
@@ -743,5 +766,4 @@ function CercaModal(props: any) {
   );
 }
 
-SB.CercaModal = CercaModal;
 export default CercaModal;

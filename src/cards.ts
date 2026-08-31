@@ -2,16 +2,9 @@
 // Sostituisce useState+useEffect(onSnapshot) con useSyncExternalStore
 // per sottoscrizioni Firestore gestite nativamente da React 18.
 
-var SB = window.SB || {};
-window.SB = SB;
-var useState = React.useState;
-var useEffect = React.useEffect;
-var useMemo = React.useMemo;
-var useRef = React.useRef;
-var useCallback = React.useCallback;
-var useSyncExternalStore = React.useSyncExternalStore;
+import { useState, useEffect, useMemo, useRef, useCallback, useSyncExternalStore } from 'react';
 
-SB.useCards = function (user: any, annoScolastico: string) {
+export function useCards(user: any, annoScolastico: string) {
   // ── STORE (useSyncExternalStore) ──────────────────────────────────────
   // any: lo store è `empty` (locale) o quello di createCombinedStore (compat,
   // non tipizzato) — la superficie comune è subscribe/getSnapshot/destroy.
@@ -63,7 +56,9 @@ SB.useCards = function (user: any, annoScolastico: string) {
   }, []);
 
   // ── UNICA CHIAMATA useSyncExternalStore ───────────────────────────────
-  var snap = useSyncExternalStore(store.subscribe, store.getSnapshot);
+  // any: lo store è non tipizzato (vedi sopra) — la superficie è
+  // subscribe/getSnapshot/destroy. Stesso comportamento del vecchio UMD.
+  var snap: any = useSyncExternalStore<any>(store.subscribe, store.getSnapshot);
   var rawAllCards = snap.allCards;
   var classiCustom = snap.classiCustom;
   var classiNascoste = snap.classiNascoste;
@@ -282,4 +277,4 @@ SB.useCards = function (user: any, annoScolastico: string) {
     classiNascoste: _localClassiNascoste,
     setClassiNascoste: setLocalClassiNascoste,
   };
-};
+}

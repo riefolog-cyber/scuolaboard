@@ -5,7 +5,7 @@
 var SB: any = window.SB || {};
 window.SB = SB;
 
-SB.createAppHandlers = function (ctx: any) {
+export function createAppHandlers(ctx: any) {
   ctx = ctx || {};
   var fbClassiSave = ctx.fbClassiSave;
   var fbSave = ctx.fbSave;
@@ -387,25 +387,46 @@ SB.createAppHandlers = function (ctx: any) {
           },
         ]),
       });
-      saveCard(nextCard).then(function () {
-        try {
-          var SBn: any = (window as any).SB;
-          var dbN: any = (window as any).db;
-          if (!SBn || !dbN) return;
-          // Ogni nuovo commento notifica: 1) tutti i prof (se autore non è prof), 2) autore della card se diverso
-          if (user.role !== 'prof') {
-            dbN.collection('users').where('role', '==', 'prof').get().then(function (snap: any) {
-              snap.forEach(function (d: any) {
-                SBn.notifyUser(d.id, { tipo: 'risposta', cardId: card.id, cmId: cmIdNew, titolo: card.titolo, msg: getMyName()(user) + ' ha commentato: ' + card.titolo, annoScolastico: card.annoScolastico });
+      saveCard(nextCard)
+        .then(function () {
+          try {
+            var SBn: any = (window as any).SB;
+            var dbN: any = (window as any).db;
+            if (!SBn || !dbN) return;
+            // Ogni nuovo commento notifica: 1) tutti i prof (se autore non è prof), 2) autore della card se diverso
+            if (user.role !== 'prof') {
+              dbN
+                .collection('users')
+                .where('role', '==', 'prof')
+                .get()
+                .then(function (snap: any) {
+                  snap.forEach(function (d: any) {
+                    SBn.notifyUser(d.id, {
+                      tipo: 'risposta',
+                      cardId: card.id,
+                      cmId: cmIdNew,
+                      titolo: card.titolo,
+                      msg: getMyName()(user) + ' ha commentato: ' + card.titolo,
+                      annoScolastico: card.annoScolastico,
+                    });
+                  });
+                })
+                .catch(function () {});
+            }
+            // Notifica anche ai compagni di classe della card (se card ha classi target)
+            if (SBn.notifyClasse) {
+              SBn.notifyClasse({
+                classi: card.classi || ['TUTTE'],
+                annoScolastico: card.annoScolastico,
+                cardId: card.id,
+                titolo: card.titolo,
+                msg: getMyName()(user) + ' ha commentato',
+                excludeUid: user.uid,
               });
-            }).catch(function () {});
-          }
-          // Notifica anche ai compagni di classe della card (se card ha classi target)
-          if (SBn.notifyClasse) {
-            SBn.notifyClasse({ classi: card.classi || ['TUTTE'], annoScolastico: card.annoScolastico, cardId: card.id, titolo: card.titolo, msg: getMyName()(user) + ' ha commentato', excludeUid: user.uid });
-          }
-        } catch (e) {}
-      }).catch(function () {});
+            }
+          } catch (e) {}
+        })
+        .catch(function () {});
       if (ctx.setNc) ctx.setNc({ testo: '' });
       if (ctx.showToast) ctx.showToast('Commento inviato ✓', 'ok');
     },
@@ -438,50 +459,103 @@ SB.createAppHandlers = function (ctx: any) {
         });
       }
       var nextCard = Object.assign({}, card, { commenti: ins(card.commenti) });
-      saveCard(nextCard).then(function () {
-        try {
-          var SBn2: any = (window as any).SB;
-          var dbN2: any = (window as any).db;
-          if (!SBn2 || !dbN2) return;
-          // Risposta: notifica SEMPRE 1) autore parent, 2) prof (se studente risponde), 3) classe
-          var parent = (card.commenti || []).find(function (x: any) { return String(x.id) === String(cmId); });
-          if (!parent) {
-            (function find(list: any) {
-              for (var i=0;i<list.length;i++) {
-                if (String(list[i].id) === String(cmId)) { parent = list[i]; break; }
-                if (list[i].risposte) find(list[i].risposte);
-              }
-            })(card.commenti || []);
-          }
-          var destAutore = parent ? parent.autore : null;
-          if (destAutore && destAutore !== getMyName()(user)) {
-            dbN2.collection('users').get().then(function (snap: any) {
-              var found = false;
-              snap.forEach(function (d: any) {
-                var ud = d.data() || {};
-                var name = ud.displayName || ((ud.nome||'') + ' ' + (ud.cognome||'')).trim() || ud.email;
-                if (name === destAutore || (SBn2.safeDocId && SBn2.safeDocId(name) === destAutore)) {
-                  found = true;
-                  SBn2.notifyUser(d.id, { tipo: 'risposta', cardId: card.id, cmId: cmId, titolo: card.titolo, msg: getMyName()(user) + ' ha risposto al tuo commento', annoScolastico: card.annoScolastico });
+      saveCard(nextCard)
+        .then(function () {
+          try {
+            var SBn2: any = (window as any).SB;
+            var dbN2: any = (window as any).db;
+            if (!SBn2 || !dbN2) return;
+            // Risposta: notifica SEMPRE 1) autore parent, 2) prof (se studente risponde), 3) classe
+            var parent = (card.commenti || []).find(function (x: any) {
+              return String(x.id) === String(cmId);
+            });
+            if (!parent) {
+              (function find(list: any) {
+                for (var i = 0; i < list.length; i++) {
+                  if (String(list[i].id) === String(cmId)) {
+                    parent = list[i];
+                    break;
+                  }
+                  if (list[i].risposte) find(list[i].risposte);
                 }
+              })(card.commenti || []);
+            }
+            var destAutore = parent ? parent.autore : null;
+            if (destAutore && destAutore !== getMyName()(user)) {
+              dbN2
+                .collection('users')
+                .get()
+                .then(function (snap: any) {
+                  var found = false;
+                  snap.forEach(function (d: any) {
+                    var ud = d.data() || {};
+                    var name = ud.displayName || ((ud.nome || '') + ' ' + (ud.cognome || '')).trim() || ud.email;
+                    if (name === destAutore || (SBn2.safeDocId && SBn2.safeDocId(name) === destAutore)) {
+                      found = true;
+                      SBn2.notifyUser(d.id, {
+                        tipo: 'risposta',
+                        cardId: card.id,
+                        cmId: cmId,
+                        titolo: card.titolo,
+                        msg: getMyName()(user) + ' ha risposto al tuo commento',
+                        annoScolastico: card.annoScolastico,
+                      });
+                    }
+                  });
+                  // fallback: se autore non trovato (nome legacy), notifica comunque ai prof
+                  if (!found && user.role !== 'prof') {
+                    dbN2
+                      .collection('users')
+                      .where('role', '==', 'prof')
+                      .get()
+                      .then(function (s2: any) {
+                        s2.forEach(function (d: any) {
+                          SBn2.notifyUser(d.id, {
+                            tipo: 'risposta',
+                            cardId: card.id,
+                            cmId: cmId,
+                            titolo: card.titolo,
+                            msg: getMyName()(user) + ' ha risposto',
+                            annoScolastico: card.annoScolastico,
+                          });
+                        });
+                      });
+                  }
+                })
+                .catch(function () {});
+            } else if (user.role !== 'prof') {
+              // risposta a thread senza parent chiaro -> notifica prof
+              dbN2
+                .collection('users')
+                .where('role', '==', 'prof')
+                .get()
+                .then(function (s2: any) {
+                  s2.forEach(function (d: any) {
+                    SBn2.notifyUser(d.id, {
+                      tipo: 'risposta',
+                      cardId: card.id,
+                      cmId: cmId,
+                      titolo: card.titolo,
+                      msg: getMyName()(user) + ' ha risposto',
+                      annoScolastico: card.annoScolastico,
+                    });
+                  });
+                })
+                .catch(function () {});
+            }
+            // anche fan-out alla classe della card (per compagni)
+            if (SBn2.notifyClasse)
+              SBn2.notifyClasse({
+                classi: card.classi || ['TUTTE'],
+                annoScolastico: card.annoScolastico,
+                cardId: card.id,
+                titolo: card.titolo,
+                msg: getMyName()(user) + ' ha risposto',
+                excludeUid: user.uid,
               });
-              // fallback: se autore non trovato (nome legacy), notifica comunque ai prof
-              if (!found && user.role !== 'prof') {
-                dbN2.collection('users').where('role', '==', 'prof').get().then(function (s2: any) {
-                  s2.forEach(function (d: any) { SBn2.notifyUser(d.id, { tipo: 'risposta', cardId: card.id, cmId: cmId, titolo: card.titolo, msg: getMyName()(user) + ' ha risposto', annoScolastico: card.annoScolastico }); });
-                });
-              }
-            }).catch(function () {});
-          } else if (user.role !== 'prof') {
-            // risposta a thread senza parent chiaro -> notifica prof
-            dbN2.collection('users').where('role', '==', 'prof').get().then(function (s2: any) {
-              s2.forEach(function (d: any) { SBn2.notifyUser(d.id, { tipo: 'risposta', cardId: card.id, cmId: cmId, titolo: card.titolo, msg: getMyName()(user) + ' ha risposto', annoScolastico: card.annoScolastico }); });
-            }).catch(function () {});
-          }
-          // anche fan-out alla classe della card (per compagni)
-          if (SBn2.notifyClasse) SBn2.notifyClasse({ classi: card.classi || ['TUTTE'], annoScolastico: card.annoScolastico, cardId: card.id, titolo: card.titolo, msg: getMyName()(user) + ' ha risposto', excludeUid: user.uid });
-        } catch (e) {}
-      }).catch(function () {});
+          } catch (e) {}
+        })
+        .catch(function () {});
       if (ctx.setReplyTo) ctx.setReplyTo(null);
       if (ctx.setReplyTesto) ctx.setReplyTesto('');
       if (ctx.showToast) ctx.showToast('Risposta inviata ✓', 'ok');
@@ -540,15 +614,26 @@ SB.createAppHandlers = function (ctx: any) {
         try {
           if ((window as any).SB && (window as any).SB.notifyUser) {
             var dbA = (window as any).db;
-            if (dbA) dbA.collection('users').get().then(function (snap: any) {
-              snap.forEach(function (d: any) {
-                var ud = d.data() || {};
-                var name = ud.displayName || ((ud.nome||'') + ' ' + (ud.cognome||'')).trim() || ud.email;
-                if (name === autore) {
-                  (window as any).SB.notifyUser(d.id, { tipo: 'ammonizione', cardId: cardId, cmId: cmId, titolo: 'Ammonizione', msg: 'Hai ricevuto un ammonimento: ' + motivazione, annoScolastico: null });
-                }
-              });
-            });
+            if (dbA)
+              dbA
+                .collection('users')
+                .get()
+                .then(function (snap: any) {
+                  snap.forEach(function (d: any) {
+                    var ud = d.data() || {};
+                    var name = ud.displayName || ((ud.nome || '') + ' ' + (ud.cognome || '')).trim() || ud.email;
+                    if (name === autore) {
+                      (window as any).SB.notifyUser(d.id, {
+                        tipo: 'ammonizione',
+                        cardId: cardId,
+                        cmId: cmId,
+                        titolo: 'Ammonizione',
+                        msg: 'Hai ricevuto un ammonimento: ' + motivazione,
+                        annoScolastico: null,
+                      });
+                    }
+                  });
+                });
           }
         } catch (e) {}
       };
@@ -696,4 +781,4 @@ SB.createAppHandlers = function (ctx: any) {
       });
     },
   };
-};
+}

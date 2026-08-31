@@ -1,6 +1,4 @@
 // CommentsSection.tsx · ScuolaBoard · pannello estratto da CardDetail
-var SB = window.SB || {};
-var h = SB.h || React.createElement;
 
 function CommentsSection({ $, c }: any) {
   var isLight = !!$.isLight;
@@ -18,7 +16,13 @@ function CommentsSection({ $, c }: any) {
     var isReplying = $.replyTo && String($.replyTo.id) === String(item.id);
     var isReply = depth > 0;
     var itemKey = item.id != null ? String(item.id) : 'it-' + depth + '-' + (idx == null ? 'x' : idx);
-    var bubbleBg = isLight ? (isReply ? 'rgba(79,70,229,.06)' : '#f8fafc') : (isReply ? 'rgba(99,102,241,.05)' : 'rgba(255,255,255,.03)');
+    var bubbleBg = isLight
+      ? isReply
+        ? 'rgba(79,70,229,.06)'
+        : '#f8fafc'
+      : isReply
+        ? 'rgba(99,102,241,.05)'
+        : 'rgba(255,255,255,.03)';
     var bubbleBorder = isReply ? 'rgba(99,102,241,.15)' : 'rgba(255,255,255,.06)';
     return (
       <div

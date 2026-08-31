@@ -7,9 +7,9 @@ firebase.initializeApp({
   appId: '1:249372381209:web:737697d4d10b3ae06eda88',
 });
 
-// Define SB (firebase-init.js è il PRIMO script caricato, window.SB non
+// Define SB (firebase-init.ts è il PRIMO modulo caricato, window.SB non
 // esiste ancora — va creato qui.)
-var SB = window.SB || {};
+var SB: any = window.SB || {};
 window.SB = SB;
 
 // Firestore instance

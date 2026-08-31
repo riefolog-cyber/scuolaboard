@@ -18,7 +18,7 @@ const CSP_META = [
   "base-uri 'self'",
   "form-action 'self' https://*.firebaseapp.com https://accounts.google.com",
   "manifest-src 'self' data:",
-  "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com https://*.gstatic.com https://*.googleusercontent.com https://accounts.google.com https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/ wss://*.firebaseio.com wss://*.firestore.googleapis.com https://api.groq.com https://openrouter.ai https://*.workers.dev"
+  "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com https://*.firebaseapp.com https://*.gstatic.com https://*.googleusercontent.com https://accounts.google.com https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/ wss://*.firebaseio.com wss://*.firestore.googleapis.com https://api.groq.com https://openrouter.ai https://*.workers.dev",
 ].join('; ');
 
 function injectCspMeta() {
@@ -30,23 +30,16 @@ function injectCspMeta() {
         {
           tag: 'meta',
           attrs: { 'http-equiv': 'Content-Security-Policy', content: CSP_META },
-          injectTo: 'head-prepend'
-        }
+          injectTo: 'head-prepend',
+        },
       ];
-    }
+    },
   };
 }
 
 export default defineConfig({
   base: '/scuolaboard/',
-  plugins: [react({
-    jsxRuntime: 'classic',
-    babel: {
-      plugins: [
-        ['@babel/plugin-transform-react-jsx', { pragma: 'h', pragmaFrag: 'Fragment' }]
-      ]
-    }
-  }), injectCspMeta()],
+  plugins: [react(), injectCspMeta()],
   build: {
     outDir: 'docs',
     emptyOutDir: true,
@@ -61,5 +54,5 @@ export default defineConfig({
       },
     },
   },
-  server: { port: 5173, open: false }
+  server: { port: 5173, open: false },
 });

@@ -1,20 +1,24 @@
 // test-setup.js — Set up React globals and mocks for Vitest
 import React from 'react';
-import ReactDOM from 'react-dom/client';
 import '@testing-library/jest-dom';
 
 // Expose React globally (matching globals.js)
 window.React = React;
-window.ReactDOM = ReactDOM;
 
 // Set up SB namespace (matching firebase-init.js)
 window.SB = window.SB || {};
-window.SB.h = React.createElement;
-window.SB.Fragment = React.Fragment;
 
 // Mock useSyncExternalStore (React 18+)
 window.React.useSyncExternalStore = function (_subscribe: any, getSnapshot: any) {
   return getSnapshot();
+};
+
+// Mock Firebase: app-utils chiama firebase.firestore()/auth() all'import.
+// firestore() restituisce il mock window.db così le utility importate usano
+// lo stesso db finto dei test (coerenza con il pattern pre-migrazione).
+window.firebase = {
+  firestore: () => window.db,
+  auth: () => undefined,
 };
 
 // Mock Firebase (components may reference db, fbSave, etc.)
@@ -50,42 +54,13 @@ window.__firestoreSync = {
     };
   },
 };
-window.fbSave = () => Promise.resolve();
-window.fbDel = () => Promise.resolve();
-window.fbClassiSave = () => Promise.resolve();
-window.fbNascosteSave = () => Promise.resolve();
-window.fbFavSave = () => Promise.resolve();
-
-// Mock globale per funzioni di utilità
-window.CLASSI_DEFAULT = ['1A', '1B', '2A', '2B', '3A', '3B', '4A', '4B', '5A', '5B'];
-window.classeColor = () => '#6366f1';
-window.fmt = (d: any) => d || '';
-window.fmtDT = (d: any) => d || '';
-window.timeAgo = () => '1g fa';
-window.badgeBg = () => '#6366f1';
-window.tipoIcon = () => '📌';
-window.normalizeLinks = () => [];
-window.renderLinks = () => '';
-window.buildWordCloud = () => [];
-window.collectCloudStats = () => ({ cardCount: 0, commentCount: 0, studentCount: 0 });
+// Wave 2/3 UMD→ES: fbSave/fmt/normalizeLinks/… sono importati direttamente dai
+// componenti, quindi i loro mock su window non servono più. Restano i mock dei
+// nomi ancora letti via window.* (db, ANNI_DISPONIBILI, compressImage,
+// quizListenRisposte, ValutazioneApertaAI, callGroqJSON/Text).
 window.ANNI_DISPONIBILI = ['2025/2026', '2026/2027'];
 window.compressImage = () => Promise.resolve('');
 window.quizListenRisposte = () => () => {};
 window.callGroqJSON = () => Promise.resolve(null);
 window.callGroqText = () => Promise.resolve('');
 window.ValutazioneApertaAI = () => null;
-
-// Mock FORM0 globale
-window.FORM0 = {
-  tipo: 'nota',
-  titolo: '',
-  testo: '',
-  classi: ['TUTTE'],
-  opzioni: ['', ''],
-  links: [{ url: '', label: '' }],
-  immagini: [],
-  allegati: [],
-  quizDomande: [],
-  quizTimer: 10,
-  copertina: null,
-};

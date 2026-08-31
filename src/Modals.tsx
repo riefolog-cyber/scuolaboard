@@ -3,7 +3,7 @@
 // Le 11 modali eager sotto vengono importate subito (side-effect: registrano
 // SB.<Name>); le 5 rare (WordCloud, QR, Duplica, CopiaAnno, Cerca) sono lazy:
 // la registrazione SB.<Name> avviene alla PRIMA apertura, non all'avvio.
-import './modals/filterBtn.ts';
+import { Fragment, lazy, Suspense } from 'react';
 import LightboxModal from './modals/LightboxModal.tsx';
 import PrivacyModal from './modals/PrivacyModal.tsx';
 import ClasseModal from './modals/ClasseModal.tsx';
@@ -16,16 +16,9 @@ import ConfirmDelModal from './modals/ConfirmDelModal.tsx';
 // Fase 8b: trappola di focus condivisa per TUTTE le modali (Tab resta dentro).
 import FocusTrap from './modals/focusTrap.tsx';
 
-var SB = window.SB || {};
-window.SB = SB;
-var h = SB.h || React.createElement;
-var Fragment = SB.Fragment || React.Fragment;
-
 // ── Modali rare: lazy-loaded (Fase 3c) ──
 // Il chunk si scarica solo alla prima apertura. Guard sul flag di visibilità
 // per non montare (e non caricare) la modal quando è chiusa.
-var lazy = React.lazy;
-var Suspense = React.Suspense;
 var LazyWordCloudModal = lazy(function () {
   return import('./modals/WordCloudModal.tsx');
 });
@@ -49,7 +42,7 @@ var LazyTimerModal = lazy(function () {
 });
 
 // ── AGGREGATOR: renders all modals ──
-SB.Modals = function ({ $ }: any) {
+function Modals({ $ }: any) {
   return (
     // Fase 8b: le modali chiuse rendono null → il trap trova solo i focusable
     // della modale aperta. display:contents non altera il layout.
@@ -102,6 +95,6 @@ SB.Modals = function ({ $ }: any) {
       </Fragment>
     </FocusTrap>
   );
-};
+}
 
-export default SB.Modals;
+export default Modals;

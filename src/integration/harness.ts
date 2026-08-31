@@ -4,12 +4,7 @@
 // `window.db` al PRIMO import. Quindi l'harness deve fare boot UNA SOLA volta
 // per file di test e riusare lo stesso db (resettandolo) tra i test.
 import React from 'react';
-import ReactDOM from 'react-dom/client';
 import { createFakeDb } from './fake-firestore';
-
-// Espone React global (come globals.ts, ma senza caricare il firebase reale)
-window.React = React;
-window.ReactDOM = ReactDOM;
 
 // test-setup.ts sostituisce useSyncExternalStore con una versione NON
 // sottoscrivente (per i test unitari isolati). Per l'integrazione serve una
@@ -130,13 +125,11 @@ export async function bootApp({ seed = {}, user = null } = {}) {
   window.firebase = makeFakeFirebase(db, () => userRef.current);
   window.db = db;
   window.SB = window.SB || {};
-  window.SB.h = React.createElement;
-  window.SB.Fragment = React.Fragment;
 
   // Ordine di import = main.tsx (senza globals/styles/app-bootstrap)
   await import('../firebase-init.ts');
   await import('../app-state.ts');
-  await import('../app-utils.ts');
+  await import('../app-utils.tsx');
   await import('../ai-services.ts');
   await import('../firestore-services.ts');
   await import('../Modals.tsx');
@@ -146,7 +139,7 @@ export async function bootApp({ seed = {}, user = null } = {}) {
   await import('../app-handlers.ts');
   await import('../firestore-sync.ts');
   await import('../AppLayout.tsx');
-  await import('../app.ts');
+  await import('../app.tsx');
 
   _booted = { db, setUser: (u) => (userRef.current = u) };
   return _booted;
@@ -155,8 +148,7 @@ export async function bootApp({ seed = {}, user = null } = {}) {
 // ── Render dell'app vera ──────────────────────────────────────────────────
 export async function renderApp({ seed = {}, user = null } = {}) {
   await bootApp({ seed, user });
-  const App = window.App;
-  if (!App) throw new Error('window.App non definito: boot fallito');
+  const { default: App } = await import('../app.tsx');
   const { render } = await import('@testing-library/react');
   const result = render(React.createElement(App));
   return {

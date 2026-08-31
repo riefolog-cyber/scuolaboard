@@ -60,7 +60,10 @@ test('Rinomina classe: 3AO → 3AZ (chip, config e card aggiornate)', async ({ p
 
   // Digita il nuovo nome e conferma (1° click → "✓ Confermi?", 2° click → esegui)
   await renameInput.fill('3AZ');
-  const rigaInput = page.locator('div').filter({ has: page.locator('input[value="3AZ"]') }).last();
+  const rigaInput = page
+    .locator('div')
+    .filter({ has: page.locator('input[value="3AZ"]') })
+    .last();
   await rigaInput.getByRole('button', { name: '✓', exact: true }).click();
   await expect(page.getByRole('button', { name: '✓ Confermi?' })).toBeVisible({ timeout: 5000 });
   await page.getByRole('button', { name: '✓ Confermi?' }).click();
@@ -101,9 +104,7 @@ test('Duplica card: la modale si apre, seleziona classe e crea la copia', async 
   await modal.getByRole('button', { name: 'Duplica in 1 classe' }).click();
 
   // La copia è stata creata (card in più) e appartiene a 3AO, con commenti NON copiati
-  await expect
-    .poll(() => page.evaluate(() => window.__db._all('cards').length))
-    .toBe(nCardsPrima + 1);
+  await expect.poll(() => page.evaluate(() => window.__db._all('cards').length)).toBe(nCardsPrima + 1);
   // NB: la copia ha titolo "Lezione su X [3AO]" (suffisso classe) e classi [3AO]
   const copie = await page.evaluate(() =>
     window.__db
@@ -127,9 +128,7 @@ test('Like + reazione emoji dalla griglia (senza aprire la card)', async ({ page
 
   await card.getByRole('button', { name: 'Reagisci con 🤔' }).click();
   // Il like è persistito nel fake db
-  await expect
-    .poll(() => page.evaluate(() => window.__db._get('cards', 'c1').likes))
-    .toBe(1);
+  await expect.poll(() => page.evaluate(() => window.__db._get('cards', 'c1').likes)).toBe(1);
 
   expect(fatalErrors(errors), 'Errori fatali: ' + JSON.stringify(fatalErrors(errors))).toEqual([]);
 });
@@ -145,9 +144,7 @@ test('Commento da prof sulla card (addCom) con conteggio aggiornato', async ({ p
   await expect(page.getByText('Commento di prova prof E2E').first()).toBeVisible({ timeout: 5000 });
 
   // Persistito nel db (1 seed + 1 nuovo = 2 commenti)
-  await expect
-    .poll(() => page.evaluate(() => window.__db._get('cards', 'c1').commenti.length))
-    .toBe(2);
+  await expect.poll(() => page.evaluate(() => window.__db._get('cards', 'c1').commenti.length)).toBe(2);
 
   expect(fatalErrors(errors), 'Errori fatali: ' + JSON.stringify(fatalErrors(errors))).toEqual([]);
 });
@@ -193,7 +190,7 @@ test('Simula studente dal prof: sparisce la FilterBar, resta la vista bacheca', 
   expect(fatalErrors(errors), 'Errori fatali: ' + JSON.stringify(fatalErrors(errors))).toEqual([]);
 });
 
-test('Copia link: il bottone 🔗 copia l\'URL con #card- e mostra il toast', async ({ page }) => {
+test("Copia link: il bottone 🔗 copia l'URL con #card- e mostra il toast", async ({ page }) => {
   const errors = collectErrors(page);
   await page.goto(HARNESS, { waitUntil: 'domcontentloaded' });
   await expect(page.getByText('Lezione su X').first()).toBeVisible({ timeout: 15000 });
@@ -234,7 +231,7 @@ test('Ricerca card (solo prof): 🔍 trova per parola chiave e apre la card', as
   expect(fatalErrors(errors), 'Errori fatali: ' + JSON.stringify(fatalErrors(errors))).toEqual([]);
 });
 
-test('Drag & drop: trascina la card c1 sotto p1 e l\'ordine viene salvato', async ({ page }) => {
+test("Drag & drop: trascina la card c1 sotto p1 e l'ordine viene salvato", async ({ page }) => {
   const errors = collectErrors(page);
   await page.goto(HARNESS, { waitUntil: 'domcontentloaded' });
   await expect(page.getByText('Lezione su X').first()).toBeVisible({ timeout: 15000 });
@@ -253,12 +250,8 @@ test('Drag & drop: trascina la card c1 sotto p1 e l\'ordine viene salvato', asyn
   await page.mouse.up();
 
   // onDrop riordina: c1 (era ordine 1) finisce dopo p1 (ordine 2)
-  await expect
-    .poll(() => page.evaluate(() => window.__db._get('cards', 'c1').ordine))
-    .toBe(2);
-  await expect
-    .poll(() => page.evaluate(() => window.__db._get('cards', 'p1').ordine))
-    .toBe(1);
+  await expect.poll(() => page.evaluate(() => window.__db._get('cards', 'c1').ordine)).toBe(2);
+  await expect.poll(() => page.evaluate(() => window.__db._get('cards', 'p1').ordine)).toBe(1);
 
   // Nessun errore console
   expect(fatalErrors(errors), 'Errori fatali: ' + JSON.stringify(fatalErrors(errors))).toEqual([]);

@@ -20,9 +20,7 @@ function collectConsoleErrors(page) {
 }
 
 function expectNoFatalErrors(consoleErrors) {
-  const fatal = consoleErrors.filter(
-    (e) => !e.includes('Download the React DevTools') && !e.includes('favicon')
-  );
+  const fatal = consoleErrors.filter((e) => !e.includes('Download the React DevTools') && !e.includes('favicon'));
   expect(fatal, 'Errori console fatali: ' + JSON.stringify(fatal)).toEqual([]);
 }
 

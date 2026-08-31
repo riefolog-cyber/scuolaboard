@@ -1,6 +1,5 @@
 // FAB.jsx · ScuolaBoard
-var SB = window.SB || {};
-var h = SB.h || React.createElement;
+import { FORM0 } from './app-utils.tsx';
 
 function FAB__({ $ }: any) {
   if ($.simulaSt) return null;
@@ -37,5 +36,4 @@ function FAB__({ $ }: any) {
     </button>
   );
 }
-SB.FAB = FAB__;
 export default FAB__;

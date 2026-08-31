@@ -18,8 +18,6 @@ test("l'app carica e mostra la schermata di login senza errori console", async (
   await expect(page.getByText(/SCUOLABOARD|SCUOLA/).first()).toBeVisible({ timeout: 10000 });
 
   // Nessun errore console fatale: gli unici accettabili sono warning (React DevTools)
-  const fatal = consoleErrors.filter(
-    (e) => !e.includes('Download the React DevTools') && !e.includes('favicon')
-  );
+  const fatal = consoleErrors.filter((e) => !e.includes('Download the React DevTools') && !e.includes('favicon'));
   expect(fatal, 'Errori console fatali: ' + JSON.stringify(fatal)).toEqual([]);
 });

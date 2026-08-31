@@ -1,7 +1,4 @@
 // CopiaAnnoModal.tsx  ·  estratto da Modals.tsx (split Fase 2a)
-var SB = window.SB || {};
-window.SB = SB;
-var h = SB.h || React.createElement;
 
 function CopiaAnnoModal(props: any) {
   if (!props.showCopiaAnno) return null;

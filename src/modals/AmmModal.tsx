@@ -1,14 +1,12 @@
 // AmmModal.tsx  ·  estratto da Modals.tsx (split Fase 2a)
-var SB = window.SB || {};
-window.SB = SB;
-var h = SB.h || React.createElement;
 
+import { S as SGlobal } from '../app-utils.tsx';
 function AmmModal(props: any) {
   if (!props.showAmm) return null;
   var isLight = !!props.isLight;
   var showAmm = props.showAmm;
   var setShowAmm = props.setShowAmm;
-  var S = props.S || window.S || {};
+  var S = props.S || SGlobal;
   var cards = props.cards || [];
   return (
     <div
@@ -44,19 +42,41 @@ function AmmModal(props: any) {
         >
           {<div style={{ fontSize: 36, textAlign: 'center', marginBottom: 8 }}>⚠️</div>}
           {
-            <h3 style={{ margin: '0 0 4px', color: isLight ? '#92400e' : '#fbbf24', fontSize: 16, fontWeight: 800, textAlign: 'center' }}>
+            <h3
+              style={{
+                margin: '0 0 4px',
+                color: isLight ? '#92400e' : '#fbbf24',
+                fontSize: 16,
+                fontWeight: 800,
+                textAlign: 'center',
+              }}
+            >
               Ammonisci studente
             </h3>
           }
           {
-            <p style={{ color: isLight ? '#475569' : 'rgba(255,255,255,.65)', fontSize: 12, textAlign: 'center', marginBottom: 16 }}>
+            <p
+              style={{
+                color: isLight ? '#475569' : 'rgba(255,255,255,.65)',
+                fontSize: 12,
+                textAlign: 'center',
+                marginBottom: 16,
+              }}
+            >
               Lo studente riceverà una notifica con la motivazione.
             </p>
           }
           {
             <div style={{ marginBottom: 12 }}>
               {
-                <div style={{ fontSize: 11, color: isLight ? '#475569' : 'rgba(255,255,255,.58)', marginBottom: 6, fontWeight: 700 }}>
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: isLight ? '#475569' : 'rgba(255,255,255,.58)',
+                    marginBottom: 6,
+                    fontWeight: 700,
+                  }}
+                >
                   STUDENTE
                 </div>
               }
@@ -125,7 +145,14 @@ function AmmModal(props: any) {
           {
             <div style={{ marginBottom: 16 }}>
               {
-                <div style={{ fontSize: 11, color: isLight ? '#475569' : 'rgba(255,255,255,.58)', marginBottom: 6, fontWeight: 700 }}>
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: isLight ? '#475569' : 'rgba(255,255,255,.58)',
+                    marginBottom: 6,
+                    fontWeight: 700,
+                  }}
+                >
                   MOTIVAZIONE
                 </div>
               }
@@ -168,7 +195,13 @@ function AmmModal(props: any) {
                   aria-label="Motivazione"
                   rows={3}
                   placeholder="Scrivi la motivazione…"
-                  style={Object.assign({}, S.input, { resize: 'none', fontSize: 12, background: isLight ? '#ffffff' : undefined, color: isLight ? '#0f172a' : undefined, borderColor: isLight ? 'rgba(15,23,42,.15)' : undefined })}
+                  style={Object.assign({}, S.input, {
+                    resize: 'none',
+                    fontSize: 12,
+                    background: isLight ? '#ffffff' : undefined,
+                    color: isLight ? '#0f172a' : undefined,
+                    borderColor: isLight ? 'rgba(15,23,42,.15)' : undefined,
+                  })}
                 />
               }
             </div>

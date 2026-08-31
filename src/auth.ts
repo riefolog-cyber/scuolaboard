@@ -1,9 +1,6 @@
 // auth.ts — hook di autenticazione (pattern globali UMD: React, firebase via window)
 
-var SB = window.SB || {};
-window.SB = SB;
-var useState = React.useState;
-var useEffect = React.useEffect;
+import { useState, useEffect } from 'react';
 
 // ── Filtro accesso: dominio scuola + whitelist docente ─────────────────────
 // Minimizzazione dei dati (GDPR Art. 5): solo gli account istituzionali del
@@ -46,7 +43,7 @@ function negaAccesso(authInst: any): void {
   );
 }
 
-SB.useAuth = function (_annoScolastico: string) {
+export function useAuth(_annoScolastico: string) {
   // AuthUser | null: stato autenticato (merge doc users/{uid}) o non autenticato
   var [user, setUser] = useState<AuthUser | null>(null);
   var [authLoad, setAuthLoad] = useState(true);
@@ -241,5 +238,5 @@ SB.useAuth = function (_annoScolastico: string) {
     setUser(null);
     setIsProf(false);
   }
-  return { user, isProf, loginGoogle, logout, authLoad };
-};
+  return { user, isProf, loginGoogle, logout, authLoad, setUser };
+}

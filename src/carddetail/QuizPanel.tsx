@@ -1,7 +1,5 @@
 // QuizPanel.tsx · ScuolaBoard · pannello estratto da CardDetail
-var SB = window.SB || {};
-var h = SB.h || React.createElement;
-var Fragment = SB.Fragment || React.Fragment;
+import { Fragment } from 'react';
 
 function QuizPanel({ $, c }: any) {
   // Tratta come quiz ogni card che ha domande salvate (c.quizDomande non vuote),
@@ -217,9 +215,7 @@ function QuizPanel({ $, c }: any) {
                                       return r.aiScores[k[oi]] || null;
                                     })());
                                 var risposta = r.risposte && r.risposte[di];
-                                return (
-                                  <Fragment key={di}>{$.ValutazioneApertaAI(h, s, risposta, di, d, true)}</Fragment>
-                                );
+                                return <Fragment key={di}>{$.ValutazioneApertaAI(s, risposta, di, d, true)}</Fragment>;
                               })}
                             </div>
                           )}
@@ -465,7 +461,7 @@ function QuizPanel({ $, c }: any) {
                                 <div style={{ fontSize: 11, color: 'rgba(255,255,255,.40)' }}>(nessuna risposta)</div>
                               )}
                               {miaRisposta.aiValutato && s ? (
-                                <Fragment key={di}>{$.ValutazioneApertaAI(h, s, risp, di, d, true)}</Fragment>
+                                <Fragment key={di}>{$.ValutazioneApertaAI(s, risp, di, d, true)}</Fragment>
                               ) : (
                                 <div style={{ fontSize: 11, color: '#fbbf24', fontWeight: 700 }}>
                                   ⏳ attende la valutazione del prof

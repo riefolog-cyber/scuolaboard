@@ -1,62 +1,34 @@
 // app-utils.ts — utility globali e servizi Firestore (pattern UMD)
-import {
-  CLASSI_DEFAULT,
-  classeColor,
-  fmt,
-  fmtDT,
-  timeAgo,
-  badgeBg,
-  tipoIcon,
-  sbSafeUrl,
-  safeDocId,
-  normalizeLinks,
-  escapeForPrompt,
-} from './utils/format.ts';
-import { buildWordCloud, collectCloudStats } from './utils/cloud.ts';
+// Import solo dei nomi usati internamente: fmt/fmtDT/timeAgo/badgeBg/tipoIcon e
+// buildWordCloud/collectCloudStats sono solo re-export (vedi fondo file, Wave 2).
+import { Component } from 'react';
+import { CLASSI_DEFAULT, classeColor, sbSafeUrl, safeDocId, normalizeLinks, escapeForPrompt } from './utils/format.ts';
 
 var SB = window.SB || {};
 window.SB = SB;
 SB.db = firebase.firestore();
 SB.auth = firebase.auth();
-SB.h = React.createElement;
-SB.useState = React.useState;
-SB.useEffect = React.useEffect;
-SB.useRef = React.useRef;
-SB.useCallback = React.useCallback;
-SB.useMemo = React.useMemo;
-SB.useReducer = React.useReducer;
-SB.useLayoutEffect = React.useLayoutEffect;
-SB.Fragment = React.Fragment;
 var db = SB.db;
-var h = SB.h,
-  useState = SB.useState,
-  useEffect = SB.useEffect,
-  useRef = SB.useRef,
-  useCallback = SB.useCallback,
-  useMemo = SB.useMemo,
-  useReducer = SB.useReducer,
-  useLayoutEffect = SB.useLayoutEffect,
-  Fragment = SB.Fragment;
 
 SB.CLASSI_DEFAULT = CLASSI_DEFAULT;
 SB.classeColor = classeColor;
 // ── DESIGN TOKENS ───────────────────────────────────────────────────
-function fbClassiSave(arr: string[], anno: string) {
+export function fbClassiSave(arr: string[], anno: string) {
   return db
     .collection('config')
     .doc('classi_custom_' + safeDocId(anno || ''))
     .set({ lista: arr, aggiornato: new Date().toISOString() }, { merge: true });
 }
-function fbNascosteSave(arr: string[], anno: string) {
+export function fbNascosteSave(arr: string[], anno: string) {
   return db
     .collection('config')
     .doc('classi_custom_' + safeDocId(anno || ''))
     .set({ nascoste: arr, aggiornato: new Date().toISOString() }, { merge: true });
 }
-function fbFavSave(uid: string, ids: string[]) {
+export function fbFavSave(uid: string, ids: string[]) {
   return db.collection('preferiti').doc(uid).set({ ids: ids, aggiornato: new Date().toISOString() });
 }
-var FORM0 = {
+export var FORM0 = {
   tipo: 'domanda',
   titolo: '',
   testo: '',
@@ -91,7 +63,7 @@ function fbErrTxt(e: any) {
   }
   return 'Errore di salvataggio: ' + ((e && e.message) || 'errore sconosciuto');
 }
-function fbSave(c: any) {
+export function fbSave(c: any) {
   var p = db.collection('cards').doc(String(c.id)).set(c);
   // Safety-net centralizzato: mostra il toast su OGNI percorso di scrittura,
   // non solo su quelli che chiamano .catch() esplicitamente.
@@ -101,14 +73,14 @@ function fbSave(c: any) {
   return p;
 }
 SB.fbSave = fbSave;
-function fbDel(id: any) {
+export function fbDel(id: any) {
   var p = db.collection('cards').doc(String(id)).delete();
   p.catch(function (e: any) {
     if (SB.showToast) SB.showToast(fbErrTxt(e), 'err');
   });
   return p;
 }
-function compressImage(file: File, maxW: number, maxH: number, quality?: number, targetKB?: number) {
+export function compressImage(file: File, maxW: number, maxH: number, quality?: number, targetKB?: number) {
   if (!file.type.startsWith('image/'))
     return Promise.reject(new Error("Il file selezionato non è un'immagine valida."));
   var CFG = window.SB_CONFIG || {};
@@ -207,7 +179,7 @@ function compressImage(file: File, maxW: number, maxH: number, quality?: number,
 // aiSave è definita canonicamente in ai-services.ts (con invalidazione cache
 // SB.LS). NON ridefinire qui per evitare conflitti di override su
 // window.SB.aiSave. Se serve chiamarla qui, usare: SB.aiSave(cardId, data)
-function quizListenRisposte(cardId: any, cb: (_arr: any[]) => void, studenteNome?: string | null) {
+export function quizListenRisposte(cardId: any, cb: (_arr: any[]) => void, studenteNome?: string | null) {
   // ⚠️ Le regole Firestore NON sono filtri: la query dello studente deve
   // vincolare il campo `studente` in QUERY, altrimenti la regola read
   // (isOwnQuizDoc: resource.data.studente == token.name) non è soddisfacibile
@@ -225,7 +197,7 @@ function quizListenRisposte(cardId: any, cb: (_arr: any[]) => void, studenteNome
   });
 }
 
-var S = {
+export var S = {
   input: {
     width: '100%',
     padding: '8px 10px',
@@ -241,7 +213,7 @@ SB.sbSafeUrl = sbSafeUrl;
 
 SB.safeDocId = safeDocId;
 // ── myName helper: ora definito in app-state.js ──
-function renderLinks(card: any, setShowCard: any) {
+export function renderLinks(card: any, setShowCard: any) {
   // Aggiunto setShowCard come parametro
   var links = normalizeLinks(card);
   if (!links.length) return null;
@@ -272,161 +244,142 @@ function renderLinks(card: any, setShowCard: any) {
       console.warn('SB.fbSave not available. Links reordering will not be persisted.');
     }
   }
-  return h(
-    'div',
-    { style: { marginTop: 8, display: 'flex', flexDirection: 'column', gap: 5 } },
-    links.map(function (l: any, i: number) {
-      if (!l.url || !sbSafeUrl(l.url)) return null;
-      return h(
-        'div',
-        { key: l.url + '-' + i, style: { display: 'flex', alignItems: 'center', gap: 4 } },
-        h(
-          'a',
-          {
-            href: l.url,
-            target: '_blank',
-            rel: 'noopener noreferrer',
-            style: {
-              flex: 1,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              background: 'rgba(59,130,246,.15)',
-              color: '#60a5fa',
-              padding: '5px 10px',
-              borderRadius: 7,
-              textDecoration: 'none',
-              fontSize: 11,
-              fontWeight: 600,
-              border: '1px solid rgba(59,130,246,.3)',
-            },
-          },
-          '🔗 ' + (l.label || 'Approfondisci')
-        ),
-        links.length > 1 &&
-          h(
-            'button',
-            {
-              onClick: function (e: any) {
-                e.stopPropagation();
-                move(i, -1);
-              },
-              style: {
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                color: 'rgba(255,255,255,.5)',
-                fontSize: 16,
-                padding: 0,
-                width: 20,
-                height: 20,
-                display: 'flex',
+  return (
+    <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 5 }}>
+      {links.map(function (l: any, i: number) {
+        if (!l.url || !sbSafeUrl(l.url)) return null;
+        return (
+          <div key={l.url + '-' + i} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <a
+              href={l.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                flex: 1,
+                display: 'inline-flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-              },
-            },
-            '⬆️'
-          ),
-        links.length > 1 &&
-          h(
-            'button',
-            {
-              onClick: function (e: any) {
-                e.stopPropagation();
-                move(i, 1);
-              },
-              style: {
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                color: 'rgba(255,255,255,.5)',
-                fontSize: 16,
-                padding: 0,
-                width: 20,
-                height: 20,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              },
-            },
-            '⬇️'
-          )
-      );
-    })
+                gap: 6,
+                background: 'rgba(59,130,246,.15)',
+                color: '#60a5fa',
+                padding: '5px 10px',
+                borderRadius: 7,
+                textDecoration: 'none',
+                fontSize: 11,
+                fontWeight: 600,
+                border: '1px solid rgba(59,130,246,.3)',
+              }}
+            >
+              {'🔗 ' + (l.label || 'Approfondisci')}
+            </a>
+            {links.length > 1 && (
+              <button
+                onClick={function (e: any) {
+                  e.stopPropagation();
+                  move(i, -1);
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: 'rgba(255,255,255,.5)',
+                  fontSize: 16,
+                  padding: 0,
+                  width: 20,
+                  height: 20,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                ⬆️
+              </button>
+            )}
+            {links.length > 1 && (
+              <button
+                onClick={function (e: any) {
+                  e.stopPropagation();
+                  move(i, 1);
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: 'rgba(255,255,255,.5)',
+                  fontSize: 16,
+                  padding: 0,
+                  width: 20,
+                  height: 20,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                ⬇️
+              </button>
+            )}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
 // ── Componente valutazione AI aperta (riusato da prof e studente) ──
-function ValutazioneApertaAI(h: any, s: any, risposta: any, di: number, d: any, isProf: boolean) {
+export function ValutazioneApertaAI(s: any, risposta: any, di: number, d: any, isProf: boolean) {
   if (!s) return null;
   var colore = s.voto >= 0.75 ? '#4ade80' : s.voto >= 0.5 ? '#fbbf24' : '#f87171';
   var etichetta = s.voto >= 0.75 ? 'Ottima risposta' : s.voto >= 0.5 ? 'Risposta parziale' : 'Da rivedere';
   var icona = s.voto >= 0.75 ? '✅' : s.voto >= 0.5 ? '⚠️' : '❌';
-  return h(
-    'div',
-    {
-      style: {
+  return (
+    <div
+      style={{
         background: 'rgba(99,102,241,.07)',
         border: '1px solid rgba(99,102,241,.2)',
         borderRadius: 10,
         padding: '12px 14px',
         marginBottom: 8,
-      },
-    },
-    // Intestazione domanda
-    h(
-      'div',
-      { style: { fontSize: 11, fontWeight: 800, color: 'rgba(255,255,255,.58)', marginBottom: 6, letterSpacing: 0.5 } },
-      'D' + (di + 1) + ': ' + d.testo
-    ),
-    // Risposta studente
-    risposta
-      ? h(
-          'div',
-          {
-            style: {
-              fontSize: 12,
-              color: 'rgba(255,255,255,.65)',
-              fontStyle: 'italic',
-              background: 'rgba(255,255,255,.04)',
-              borderRadius: 7,
-              padding: '7px 10px',
-              marginBottom: 10,
-              lineHeight: 1.6,
-            },
-          },
-          '"' + risposta + '"'
-        )
-      : h(
-          'div',
-          { style: { fontSize: 11, color: 'rgba(255,255,255,.40)', marginBottom: 10 } },
-          '(nessuna risposta fornita)'
-        ),
-    // Voto sintetico
-    h(
-      'div',
-      { style: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 } },
-      h('span', { style: { fontSize: 22 } }, icona),
-      h(
-        'div',
-        null,
-        h('div', { style: { fontWeight: 800, fontSize: 13, color: colore } }, etichetta),
-        h(
-          'div',
-          { style: { fontSize: 11, color: 'rgba(255,255,255,.52)' } },
-          'Punteggio: ' + Math.round(s.voto * 100) + '/100'
-        )
-      )
-    ),
-    // Punti di forza
-    s.punti_forza &&
-      h(
-        'div',
-        { style: { marginBottom: 8 } },
-        h(
-          'div',
-          {
-            style: {
+      }}
+    >
+      {/* Intestazione domanda */}
+      <div
+        style={{ fontSize: 11, fontWeight: 800, color: 'rgba(255,255,255,.58)', marginBottom: 6, letterSpacing: 0.5 }}
+      >
+        {'D' + (di + 1) + ': ' + d.testo}
+      </div>
+      {/* Risposta studente */}
+      {risposta ? (
+        <div
+          style={{
+            fontSize: 12,
+            color: 'rgba(255,255,255,.65)',
+            fontStyle: 'italic',
+            background: 'rgba(255,255,255,.04)',
+            borderRadius: 7,
+            padding: '7px 10px',
+            marginBottom: 10,
+            lineHeight: 1.6,
+          }}
+        >
+          {'"' + risposta + '"'}
+        </div>
+      ) : (
+        <div style={{ fontSize: 11, color: 'rgba(255,255,255,.40)', marginBottom: 10 }}>(nessuna risposta fornita)</div>
+      )}
+      {/* Voto sintetico */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+        <span style={{ fontSize: 22 }}>{icona}</span>
+        <div>
+          <div style={{ fontWeight: 800, fontSize: 13, color: colore }}>{etichetta}</div>
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,.52)' }}>
+            {'Punteggio: ' + Math.round(s.voto * 100) + '/100'}
+          </div>
+        </div>
+      </div>
+      {/* Punti di forza */}
+      {s.punti_forza && (
+        <div style={{ marginBottom: 8 }}>
+          <div
+            style={{
               fontSize: 11,
               fontWeight: 800,
               color: '#4ade80',
@@ -435,15 +388,13 @@ function ValutazioneApertaAI(h: any, s: any, risposta: any, di: number, d: any, 
               display: 'flex',
               alignItems: 'center',
               gap: 5,
-            },
-          },
-          h('span', null, '💪'),
-          'PUNTI DI FORZA'
-        ),
-        h(
-          'div',
-          {
-            style: {
+            }}
+          >
+            <span>💪</span>
+            PUNTI DI FORZA
+          </div>
+          <div
+            style={{
               fontSize: 12,
               color: 'rgba(255,255,255,.8)',
               lineHeight: 1.7,
@@ -451,20 +402,17 @@ function ValutazioneApertaAI(h: any, s: any, risposta: any, di: number, d: any, 
               borderRadius: 7,
               padding: '7px 10px',
               borderLeft: '3px solid rgba(34,197,94,.4)',
-            },
-          },
-          s.punti_forza
-        )
-      ),
-    // Lacune
-    s.lacune &&
-      h(
-        'div',
-        { style: { marginBottom: 8 } },
-        h(
-          'div',
-          {
-            style: {
+            }}
+          >
+            {s.punti_forza}
+          </div>
+        </div>
+      )}
+      {/* Lacune */}
+      {s.lacune && (
+        <div style={{ marginBottom: 8 }}>
+          <div
+            style={{
               fontSize: 11,
               fontWeight: 800,
               color: '#f87171',
@@ -473,15 +421,13 @@ function ValutazioneApertaAI(h: any, s: any, risposta: any, di: number, d: any, 
               display: 'flex',
               alignItems: 'center',
               gap: 5,
-            },
-          },
-          h('span', null, '🔍'),
-          'ASPETTI DA MIGLIORARE'
-        ),
-        h(
-          'div',
-          {
-            style: {
+            }}
+          >
+            <span>🔍</span>
+            ASPETTI DA MIGLIORARE
+          </div>
+          <div
+            style={{
               fontSize: 12,
               color: 'rgba(255,255,255,.8)',
               lineHeight: 1.7,
@@ -489,21 +435,17 @@ function ValutazioneApertaAI(h: any, s: any, risposta: any, di: number, d: any, 
               borderRadius: 7,
               padding: '7px 10px',
               borderLeft: '3px solid rgba(239,68,68,.4)',
-            },
-          },
-          s.lacune
-        )
-      ),
-    // Suggerimento didattico (solo prof)
-    isProf &&
-      s.suggerimento &&
-      h(
-        'div',
-        null,
-        h(
-          'div',
-          {
-            style: {
+            }}
+          >
+            {s.lacune}
+          </div>
+        </div>
+      )}
+      {/* Suggerimento didattico (solo prof) */}
+      {isProf && s.suggerimento && (
+        <div>
+          <div
+            style={{
               fontSize: 11,
               fontWeight: 800,
               color: '#fbbf24',
@@ -512,15 +454,13 @@ function ValutazioneApertaAI(h: any, s: any, risposta: any, di: number, d: any, 
               display: 'flex',
               alignItems: 'center',
               gap: 5,
-            },
-          },
-          h('span', null, '💡'),
-          'SUGGERIMENTO DIDATTICO'
-        ),
-        h(
-          'div',
-          {
-            style: {
+            }}
+          >
+            <span>💡</span>
+            SUGGERIMENTO DIDATTICO
+          </div>
+          <div
+            style={{
               fontSize: 12,
               color: 'rgba(255,255,255,.8)',
               lineHeight: 1.7,
@@ -529,21 +469,23 @@ function ValutazioneApertaAI(h: any, s: any, risposta: any, di: number, d: any, 
               padding: '7px 10px',
               borderLeft: '3px solid rgba(245,158,11,.4)',
               fontStyle: 'italic',
-            },
-          },
-          s.suggerimento
-        )
-      )
+            }}
+          >
+            {s.suggerimento}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
 // ── ERROR BOUNDARY ──────────────────────────────────────────────────────────
-var ErrorBoundary = (function () {
+export var ErrorBoundary = (function () {
   function ErrorBoundary(this: any, props: any) {
-    React.Component.call(this, props);
+    Component.call(this, props, null);
     this.state = { hasError: false, error: null };
   }
-  ErrorBoundary.prototype = Object.create(React.Component.prototype);
+  ErrorBoundary.prototype = Object.create(Component.prototype);
   ErrorBoundary.prototype.constructor = ErrorBoundary;
   ErrorBoundary.getDerivedStateFromError = function (error: any) {
     return { hasError: true, error: error };
@@ -552,13 +494,11 @@ var ErrorBoundary = (function () {
     console.error('[ScuolaBoard] Crash:', error, info);
   };
   ErrorBoundary.prototype.render = function () {
-    var h = React.createElement;
     if (this.state.hasError) {
       var self = this;
-      return h(
-        'div',
-        {
-          style: {
+      return (
+        <div
+          style={{
             minHeight: '100vh',
             display: 'flex',
             flexDirection: 'column',
@@ -569,22 +509,18 @@ var ErrorBoundary = (function () {
             fontFamily: 'Inter,sans-serif',
             gap: 16,
             padding: 32,
-          },
-        },
-        h('div', { style: { fontSize: 56 } }, '⚠️'),
-        h('h2', { style: { fontSize: 22, fontWeight: 800, margin: 0 } }, 'Qualcosa è andato storto'),
-        h(
-          'p',
-          { style: { opacity: 0.6, fontSize: 14, margin: 0, textAlign: 'center', maxWidth: 380 } },
-          (this.state.error && this.state.error.message) || 'Errore imprevisto'
-        ),
-        h(
-          'button',
-          {
-            onClick: function () {
+          }}
+        >
+          <div style={{ fontSize: 56 }}>⚠️</div>
+          <h2 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>Qualcosa è andato storto</h2>
+          <p style={{ opacity: 0.6, fontSize: 14, margin: 0, textAlign: 'center', maxWidth: 380 }}>
+            {(this.state.error && this.state.error.message) || 'Errore imprevisto'}
+          </p>
+          <button
+            onClick={function () {
               self.setState({ hasError: false, error: null });
-            },
-            style: {
+            }}
+            style={{
               marginTop: 8,
               padding: '10px 24px',
               background: '#6366f1',
@@ -594,17 +530,17 @@ var ErrorBoundary = (function () {
               cursor: 'pointer',
               fontSize: 15,
               fontWeight: 700,
-            },
-          },
-          '↩ Riprova'
-        )
+            }}
+          >
+            ↩ Riprova
+          </button>
+        </div>
       );
     }
     return this.props.children;
   };
   return ErrorBoundary;
 })();
-window.ErrorBoundary = ErrorBoundary;
 
 // SB.LS — localStorage centralizzato (opt. #6)
 (function () {
@@ -744,39 +680,29 @@ window.ErrorBoundary = ErrorBoundary;
 
 SB.escapeForPrompt = escapeForPrompt;
 
-// ── ES MODULE COMPAT: expose module-scoped vars to window ──
-// In IIFE mode these were global; ES modules need explicit window assignment.
-window.classeColor = classeColor;
-window.fbSave = fbSave;
-window.fbDel = fbDel;
-window.fbClassiSave = fbClassiSave;
-window.fbNascosteSave = fbNascosteSave;
-window.fbFavSave = fbFavSave;
-window.FORM0 = FORM0;
-window.fmt = fmt;
-window.fmtDT = fmtDT;
-window.timeAgo = timeAgo;
-window.badgeBg = badgeBg;
-window.tipoIcon = tipoIcon;
-window.normalizeLinks = normalizeLinks;
-window.renderLinks = renderLinks;
+// ── ES MODULE COMPAT (Wave 2/3 UMD→ES) ──
+// I globali migrati (fbSave, fmt, normalizeLinks, S, FORM0, …) sono ora
+// importati direttamente dai consumatori. Restano su window SOLO i nomi
+// usati via window.* o mockati dai test a call-time: compressImage,
+// quizListenRisposte, ValutazioneApertaAI, ANNI_DISPONIBILI, db.
 window.compressImage = compressImage;
 window.quizListenRisposte = quizListenRisposte;
-window.buildWordCloud = buildWordCloud;
-window.collectCloudStats = collectCloudStats;
 window.ValutazioneApertaAI = ValutazioneApertaAI;
-window.safeDocId = safeDocId;
-window.escapeForPrompt = escapeForPrompt;
-window.S = S;
 window.db = db;
-window.h = h;
-window.useState = useState;
-window.useEffect = useEffect;
-window.useRef = useRef;
-window.useCallback = useCallback;
-window.useMemo = useMemo;
-window.useReducer = useReducer;
-window.useLayoutEffect = useLayoutEffect;
-window.Fragment = Fragment;
-window.CLASSI_DEFAULT = CLASSI_DEFAULT;
 window.ANNI_DISPONIBILI = ANNI_DISPONIBILI;
+
+// ── Re-export ES per i consumatori migrati (Wave 2 UMD→ES) ───────────────
+export {
+  CLASSI_DEFAULT,
+  classeColor,
+  fmt,
+  fmtDT,
+  timeAgo,
+  badgeBg,
+  tipoIcon,
+  sbSafeUrl,
+  safeDocId,
+  normalizeLinks,
+  escapeForPrompt,
+} from './utils/format.ts';
+export { buildWordCloud, collectCloudStats } from './utils/cloud.ts';

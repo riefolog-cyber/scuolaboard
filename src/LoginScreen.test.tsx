@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import React from 'react';
 
-import './LoginScreen.tsx';
+import LoginScreen from './LoginScreen.tsx';
 
 describe('LoginScreen', () => {
   let $: any;
@@ -16,7 +16,7 @@ describe('LoginScreen', () => {
 
   function renderLogin(props = {}) {
     const merged = Object.assign({}, $, props);
-    return render(React.createElement(window.SB.LoginScreen, { $: merged }));
+    return render(React.createElement(LoginScreen, { $: merged }));
   }
 
   it('renders the SCUOLA BOARD branding', () => {

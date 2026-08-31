@@ -1,7 +1,5 @@
 // DomandeLiberePanel.tsx · ScuolaBoard · pannello estratto da CardDetail
-var SB = window.SB || {};
-var h = SB.h || React.createElement;
-var Fragment = SB.Fragment || React.Fragment;
+import { Fragment } from 'react';
 
 function DomandeLiberePanel({ $, c }: any) {
   return (

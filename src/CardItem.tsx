@@ -1,7 +1,5 @@
+import { normalizeLinks } from './app-utils.tsx';
 // CardItem.jsx · ScuolaBoard
-var SB = window.SB || {};
-var h = SB.h || React.createElement;
-var normalizeLinks = window.normalizeLinks;
 
 function CardItem__({ $, c }: any) {
   var isLight = !!$.isLight;
@@ -261,7 +259,7 @@ function CardItem__({ $, c }: any) {
                   style={{
                     fontWeight: 800,
                     fontSize: 14,
-                    color: nascosta ? (isLight ? '#64748b' : 'rgba(255,255,255,.58)') : (isLight ? '#0f172a' : '#f1f5f9'),
+                    color: nascosta ? (isLight ? '#64748b' : 'rgba(255,255,255,.58)') : isLight ? '#0f172a' : '#f1f5f9',
                     lineHeight: 1.35,
                     marginBottom: 5,
                     letterSpacing: 0.1,
@@ -618,7 +616,7 @@ function CardItem__({ $, c }: any) {
           )}
           {<span style={{ flex: 1 }} />}
           {
-            <span style={{ fontSize: 11, color: 'rgba(255,255,255,.45)', title: $.fmt(c.data) }}>
+            <span title={$.fmt(c.data)} style={{ fontSize: 11, color: 'rgba(255,255,255,.45)' }}>
               {$.timeAgo(c.data)}
             </span>
           }
@@ -749,5 +747,4 @@ function CardItem__({ $, c }: any) {
   );
 }
 
-SB.CardItem = CardItem__;
 export default CardItem__;

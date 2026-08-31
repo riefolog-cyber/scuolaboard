@@ -32,13 +32,10 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint
+      # Typecheck: tutto il codice gira con `strict: true` (tsconfig.json);
+      # la migrazione strict incrementale è completata.
       - name: Typecheck
         run: npx tsc --noEmit
-      # Typecheck STRICT incrementale: i moduli puri in tsconfig.strict.json
-      # devono restare `strict: true`-puliti. La lista cresce nel tempo; il
-      # gate impedisce regressioni sui file già migrati.
-      - name: Typecheck strict (moduli puri)
-        run: npm run typecheck:strict
       - name: Unit & integration tests
         run: npm test
 

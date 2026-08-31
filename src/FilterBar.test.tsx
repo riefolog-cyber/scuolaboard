@@ -5,11 +5,9 @@ import React from 'react';
 
 beforeEach(() => {
   window.SB = window.SB || {};
-  window.SB.h = React.createElement;
-  window.SB.Fragment = React.Fragment;
 });
 
-import './FilterBar.tsx';
+import FilterBar from './FilterBar.tsx';
 
 function make$(overrides = {}) {
   return Object.assign(
@@ -40,25 +38,25 @@ function make$(overrides = {}) {
 describe('FilterBar', () => {
   it('renders nothing when not professor', () => {
     var $ = make$({ isProf: false });
-    var { container } = render(React.createElement(window.SB.FilterBar, { $ }));
+    var { container } = render(React.createElement(FilterBar, { $ }));
     expect(container.innerHTML).toBe('');
   });
 
   it('renders nothing when simulaSt is active', () => {
     var $ = make$({ simulaSt: true });
-    var { container } = render(React.createElement(window.SB.FilterBar, { $ }));
+    var { container } = render(React.createElement(FilterBar, { $ }));
     expect(container.innerHTML).toBe('');
   });
 
   it('renders filtro header with default state', () => {
     var $ = make$();
-    render(React.createElement(window.SB.FilterBar, { $ }));
+    render(React.createElement(FilterBar, { $ }));
     expect(screen.getByText(/FILTRA PER CLASSE/)).toBeTruthy();
   });
 
   it('shows selected class when filter is active', () => {
     var $ = make$({ filterClasse: '2A' });
-    render(React.createElement(window.SB.FilterBar, { $ }));
+    render(React.createElement(FilterBar, { $ }));
     expect(screen.getByText('2A')).toBeTruthy();
     expect(screen.getByText(/CLASSE:/)).toBeTruthy();
   });
@@ -70,14 +68,14 @@ describe('FilterBar', () => {
         opened = true;
       }),
     });
-    render(React.createElement(window.SB.FilterBar, { $ }));
+    render(React.createElement(FilterBar, { $ }));
     fireEvent.click(screen.getByText(/FILTRA PER CLASSE/));
     expect(opened).toBe(true);
   });
 
   it('shows class chips when filtroBarOpen is true', () => {
     var $ = make$({ filtroBarOpen: true });
-    render(React.createElement(window.SB.FilterBar, { $ }));
+    render(React.createElement(FilterBar, { $ }));
     expect(screen.getByText('1A')).toBeTruthy();
     expect(screen.getByText('1B')).toBeTruthy();
     expect(screen.getByText('2A')).toBeTruthy();
@@ -91,7 +89,7 @@ describe('FilterBar', () => {
         selected = cl;
       }),
     });
-    render(React.createElement(window.SB.FilterBar, { $ }));
+    render(React.createElement(FilterBar, { $ }));
     fireEvent.click(screen.getByText('1B'));
     expect(selected).toBe('1B');
   });

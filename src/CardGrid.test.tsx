@@ -16,21 +16,10 @@ beforeEach(() => {
     allegati: [],
     quizDomande: [],
   });
-  window.SB = window.SB || {};
-  window.SB.h = React.createElement;
-  window.SB.Fragment = React.Fragment;
-  window.SB.badgeBg = () => '#6366f1';
-  window.SB.tipoIcon = () => '';
-  window.SB.timeAgo = () => '1h fa';
-  window.SB.fmt = () => '';
-  window.SB.fmtDT = () => '';
-  window.SB.classeColor = () => '#fb923c';
-  window.SB.myName = () => 'Test';
-  window.normalizeLinks = () => [];
 });
 
-import './CardItem.tsx';
-import './CardGrid.tsx';
+import CardItem from './CardItem.tsx';
+import CardGrid from './CardGrid.tsx';
 
 describe('CardGrid', () => {
   function make$(overrides = {}) {
@@ -86,7 +75,7 @@ describe('CardGrid', () => {
 
   it('renders skeleton when cards array is empty', () => {
     var $ = make$({ cards: [] });
-    var { container } = render(React.createElement(window.SB.CardGrid, { $ }));
+    var { container } = render(React.createElement(CardGrid, { $ }));
     expect(container.querySelectorAll('.skeleton').length).toBeGreaterThan(0);
   });
 
@@ -95,7 +84,7 @@ describe('CardGrid', () => {
       cards: [{ id: 1, titolo: 'Test', tipo: 'domanda', classi: ['TUTTE'], commenti: [], likes: 0 }],
       visibleSorted: [],
     });
-    render(React.createElement(window.SB.CardGrid, { $ }));
+    render(React.createElement(CardGrid, { $ }));
     expect(screen.getByText('Nessun contenuto visibile')).toBeTruthy();
   });
 
@@ -105,7 +94,7 @@ describe('CardGrid', () => {
       visibleSorted: [],
       filterClasse: '1A',
     });
-    render(React.createElement(window.SB.CardGrid, { $ }));
+    render(React.createElement(CardGrid, { $ }));
     expect(screen.getByText(/Nessuna card per la classe/)).toBeTruthy();
   });
 
@@ -129,7 +118,7 @@ describe('CardGrid', () => {
       visible: [card],
       visibleSorted: [card],
     });
-    render(React.createElement(window.SB.CardGrid, { $ }));
+    render(React.createElement(CardGrid, { $ }));
     expect(screen.getByText('Mia Card')).toBeTruthy();
   });
 
@@ -140,7 +129,7 @@ describe('CardGrid', () => {
       isProf: true,
       simulaSt: false,
     });
-    render(React.createElement(window.SB.CardGrid, { $ }));
+    render(React.createElement(CardGrid, { $ }));
     expect(screen.getByText(/Aggiungi la prima card/)).toBeTruthy();
   });
 });

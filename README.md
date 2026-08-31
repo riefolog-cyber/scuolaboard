@@ -120,7 +120,7 @@ Le regole permettono le scritture (creare/duplicare/copiare/eliminare card) **so
 
 4. Aggiungi `riefolog-cyber.github.io` ai domini autorizzati nella console Firebase (Authentication → Settings → Authorized domains).
 
-> **Hosting: solo GitHub Pages.** GitHub Pages è un hosting **statico**: il file `_headers` (meccanismo di Cloudflare Pages) viene **ignorato**. La CSP di produzione viene quindi iniettata come `<meta>` direttamente nella build (`docs/index.html`) dal plugin `injectCspMeta` in `vite.config.js` — nessuna azione necessaria.
+> **Hosting: solo GitHub Pages.** GitHub Pages è un hosting **statico** e non supporta header HTTP custom (il meccanismo `_headers` di Cloudflare Pages non si applica). La CSP di produzione viene quindi iniettata come `<meta>` direttamente nella build (`docs/index.html`) dal plugin `injectCspMeta` in `vite.config.js` — nessuna azione necessaria.
 > Limite noto: `frame-ancestors`/`X-Frame-Options`/`Permissions-Policy` non sono esprimibili via `<meta>`; se in futuro serviranno, metti Cloudflare davanti a Pages.
 > Il **backend AI resta su Cloudflare Workers** (come nella versione precedente): GitHub Pages non può eseguire codice server, quindi il proxy `scuolaboard-groq-proxy` continua a essere indispensabile per le funzioni AI.
 

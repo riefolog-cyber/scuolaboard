@@ -1,6 +1,4 @@
 // PartecipazionePanel.tsx · ScuolaBoard · pannello estratto da CardDetail
-var SB = window.SB || {};
-var h = SB.h || React.createElement;
 
 function PartecipazionePanel({ $, c }: any) {
   return (function () {

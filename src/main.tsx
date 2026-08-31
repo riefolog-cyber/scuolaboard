@@ -1,23 +1,26 @@
 // ScuolaBoard - Vite Entry Point
 /// <reference types="vite/client" />
-import './globals.ts'; // window.React, window.ReactDOM, window.firebase
+import './globals.ts'; // window.firebase (test seam, letto dai moduli legacy all'import)
 import './styles.css'; // Global styles
 
-// Legacy files in dependency order (matching build.js)
-import './firebase-init.ts'; // window.SB, window.db
-import './app-state.ts'; // window.SB_CONFIG, window._SB_LS, SB.safeDocId, SB.myName, etc.
-import './app-utils.ts'; // Utilities, CLASSI_DEFAULT, fbSave, etc.
-import './ai-services.ts'; // AI module (callGroqJSON, callGroqText, etc.)
-import './firestore-services.ts'; // SB.services
-import './Modals.tsx'; // Modal components (JSX)
-import './modals.ts'; // useModals hook
-import './auth.ts'; // useAuth hook
-import './cards.ts'; // useCards hook
-import './app-handlers.ts'; // SB.createAppHandlers — DEVE essere prima di AppLayout!
-import './firestore-sync.ts'; // useSyncExternalStore adapter per Firestore
-import './AppLayout.tsx'; // SB.AppLayout (JSX) + all sub-components
-import './app.ts'; // window.App
-import './app-bootstrap.ts'; // ReactDOM.createRoot render
+// Setup dell'ambiente legacy in ordine di dipendenza: alcuni moduli leggono i
+// global su window AL MOMENTO DELL'IMPORT, quindi l'ordine qui sotto conta.
+// - globals → window.firebase
+// - firebase-init → window.SB, window.db
+// - app-state → window.SB_CONFIG, SB.LS
+// - app-utils → legge SB_CONFIG/SB all'import
+// - firestore-services → SB.services (letto da app-handlers a runtime)
+// - firestore-sync → window.__firestoreSync (letto da useCards a runtime)
+// I moduli React (auth, cards, ai-services, modals, app-handlers, AppLayout,
+// Modals) sono importati direttamente da AppProvider/AppLayout: qui non servono.
+import './firebase-init.ts';
+import './app-state.ts';
+import './app-utils.tsx';
+import './firestore-services.ts';
+import './firestore-sync.ts';
+
+// ── Render dell'app (AppProvider + AppLayout via import diretti ES) ────────
+import './app-bootstrap.ts';
 
 // ── PWA: registrazione del service worker (solo in produzione) ──
 // In sviluppo il service worker è disattivato per evitare cache stale durante

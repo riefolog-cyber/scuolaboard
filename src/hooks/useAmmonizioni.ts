@@ -1,8 +1,6 @@
 // useAmmonizioni.ts · ScuolaBoard · hook di dominio: ammonizioni (stato,
 // listener Firestore, modifica/eliminazione). Dipendenze: { user, myName }
-var useState = React.useState;
-var useEffect = React.useEffect;
-var useCallback = React.useCallback;
+import { useState, useEffect, useCallback } from 'react';
 
 var db = window.db;
 

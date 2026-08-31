@@ -22,43 +22,9 @@ beforeEach(() => {
     allegati: [],
     quizDomande: [],
   });
-  window.SB = window.SB || {};
-  window.SB.h = React.createElement;
-  window.SB.Fragment = React.Fragment;
-  window.SB.badgeBg = () => '#6366f1';
-  window.SB.tipoIcon = () => '';
-  window.SB.timeAgo = () => '1h fa';
-  window.SB.fmt = () => '';
-  window.SB.fmtDT = () => '';
-  window.SB.classeColor = () => '#fb923c';
-  window.SB.myName = () => 'Test';
-  window.SB.services = {};
-  window.normalizeLinks = () => [];
-  window.SB.Modals = () => null;
-  window.SB.FAB = () => null;
-  window.SB.Toasts = () => null;
-  window.db = {};
-  window.fbSave = () => {};
-  window.fbDel = () => {};
-  window.fbClassiSave = () => {};
-  window.fbNascosteSave = () => {};
-  window.fbFavSave = () => {};
-  window.CLASSI_DEFAULT = [];
-  window.ANNI_DISPONIBILI = ['2026/2027'];
 });
 
-// Load components as side-effect (sets window.SB.AppLayout etc.)
-import './LoginScreen.tsx';
-import './Header.tsx';
-import './AIOverlay.tsx';
-import './FilterBar.tsx';
-import './ProposalsPanel.tsx';
-import './CardItem.tsx';
-import './CardGrid.tsx';
-import './FAB.tsx';
-import './Toasts.tsx';
-import './Modals.tsx';
-import './AppLayout.tsx';
+import AppLayout from './AppLayout.tsx';
 
 // Sensible defaults for all contexts
 var emptyAuth = { user: null, isProf: false, authLoad: true, loginGoogle: () => {}, logout: () => {} };
@@ -189,13 +155,13 @@ function wrap(authOverrides: any = {}, cardsOverrides: any = {}) {
 describe('AppLayout', () => {
   it('renders loading spinner when authLoad is true', () => {
     var Wrapper = wrap({ authLoad: true });
-    render(React.createElement(window.SB.AppLayout), { wrapper: Wrapper });
+    render(React.createElement(AppLayout), { wrapper: Wrapper });
     expect(screen.getByText('SCUOLABOARD')).toBeTruthy();
   });
 
   it('renders login screen when no user and authLoad is false', () => {
     var Wrapper = wrap({ user: null, authLoad: false });
-    render(React.createElement(window.SB.AppLayout), { wrapper: Wrapper });
+    render(React.createElement(AppLayout), { wrapper: Wrapper });
     expect(screen.getByText('Accedi con Google')).toBeTruthy();
   });
 
@@ -205,7 +171,7 @@ describe('AppLayout', () => {
       isProf: true,
       authLoad: false,
     });
-    render(React.createElement(window.SB.AppLayout), { wrapper: Wrapper });
+    render(React.createElement(AppLayout), { wrapper: Wrapper });
     expect(screen.getByText('SCUOLA')).toBeTruthy();
     expect(screen.getByText('BOARD')).toBeTruthy();
   });
@@ -216,7 +182,7 @@ describe('AppLayout', () => {
       isProf: true,
       authLoad: false,
     });
-    render(React.createElement(window.SB.AppLayout), { wrapper: Wrapper });
+    render(React.createElement(AppLayout), { wrapper: Wrapper });
     expect(screen.getByText('LIVE')).toBeTruthy();
   });
 });

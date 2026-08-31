@@ -1,7 +1,4 @@
 // ConfirmDelModal.tsx  ·  estratto da Modals.tsx (split Fase 2a)
-var SB = window.SB || {};
-window.SB = SB;
-var h = SB.h || React.createElement;
 
 function ConfirmDelModal(props: any) {
   var confirmDel = props.confirmDel;

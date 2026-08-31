@@ -1,7 +1,4 @@
 // LightboxModal.tsx  ·  estratto da Modals.tsx (split Fase 2a)
-var SB = window.SB || {};
-window.SB = SB;
-var h = SB.h || React.createElement;
 
 function LightboxModal(props: any) {
   if (!props.lightbox) return null;
