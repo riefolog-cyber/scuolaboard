@@ -1,6 +1,14 @@
 // ScuolaBoard - Vite Entry Point
 /// <reference types="vite/client" />
 import './globals.ts'; // window.firebase (test seam, letto dai moduli legacy all'import)
+// Font Inter self-hosted (niente Google Fonts: zero richieste terze parti e
+// offline-friendly). @fontsource include font-display:swap, come prima.
+import '@fontsource/inter/400.css';
+import '@fontsource/inter/500.css';
+import '@fontsource/inter/600.css';
+import '@fontsource/inter/700.css';
+import '@fontsource/inter/800.css';
+import '@fontsource/inter/900.css';
 import './styles.css'; // Global styles
 
 // Setup dell'ambiente legacy in ordine di dipendenza: alcuni moduli leggono i

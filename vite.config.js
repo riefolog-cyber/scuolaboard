@@ -10,8 +10,10 @@ import react from '@vitejs/plugin-react';
 const CSP_META = [
   "default-src 'self' https://cdn.jsdelivr.net https://www.gstatic.com https://apis.google.com https://*.firebaseio.com https://*.googleapis.com https://*.workers.dev",
   "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.gstatic.com https://apis.google.com https://*.firebaseapp.com https://cdnjs.cloudflare.com",
-  "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com https://fonts.gstatic.com",
-  "font-src 'self' https://fonts.gstatic.com",
+  // Font self-hosted (@fontsource): style-src/font-src non hanno più bisogno
+  // di fonts.googleapis.com / fonts.gstatic.com.
+  "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
+  "font-src 'self'",
   "img-src 'self' data: blob: https://www.gstatic.com https://*.googleusercontent.com https://api.qrserver.com",
   "frame-src 'self' https://*.firebaseapp.com https://*.google.com https://accounts.google.com",
   "object-src 'none'",

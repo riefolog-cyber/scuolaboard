@@ -77,7 +77,9 @@ describe('CercaModal', () => {
   });
 
   function renderModal(overrides = {}) {
-    return render(React.createElement(CercaModal, Object.assign({}, props, overrides)));
+    // debounceMs: 0 → ricerca immediata nei test (il debounce è verificato
+    // separatamente nel test dedicato).
+    return render(React.createElement(CercaModal, Object.assign({}, props, { debounceMs: 0 }, overrides)));
   }
 
   it('renders nothing when closed', () => {
@@ -88,6 +90,19 @@ describe('CercaModal', () => {
   it('renders nothing for students', () => {
     renderModal({ isProf: false });
     expect(screen.queryByText(/Cerca nelle card/)).toBeNull();
+  });
+
+  it('debounces la ricerca: nessun risultato prima del delay, poi appare', () => {
+    vi.useFakeTimers();
+    renderModal({ debounceMs: 300 });
+    fireEvent.input(screen.getByLabelText('Cerca card'), { target: { value: 'Roma' } });
+    // Subito dopo la digitazione non c'è ancora alcun risultato
+    expect(screen.queryByRole('button', { name: /Roma antica/ })).toBeNull();
+    act(function () {
+      vi.advanceTimersByTime(350);
+    });
+    expect(screen.getByRole('button', { name: /Roma antica/ })).toBeTruthy();
+    vi.useRealTimers();
   });
 
   it('finds cards by title', () => {

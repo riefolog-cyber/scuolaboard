@@ -12,6 +12,27 @@ function CercaModal(props: any) {
   var cards = props.cards || [];
   var allCards = props.allCards || cards;
   var [q, setQ] = useState('');
+  // Ricerca debounced: si batte Firestore/memoria solo dopo una pausa di
+  // digitazione (300ms), non a ogni tasto. Il campo input resta istantaneo.
+  // `debounceMs` è configurabile per i test (0 = immediato).
+  var debounceMs = props.debounceMs == null ? 300 : props.debounceMs;
+  var [debouncedQ, setDebouncedQ] = useState('');
+  useEffect(
+    function () {
+      // debounceMs <= 0 (test): aggiorna subito, senza rimandare al macrotask.
+      if (debounceMs <= 0) {
+        setDebouncedQ(q);
+        return;
+      }
+      var t = setTimeout(function () {
+        setDebouncedQ(q);
+      }, debounceMs);
+      return function () {
+        clearTimeout(t);
+      };
+    },
+    [q, debounceMs]
+  );
   var [tuttiAnni, setTuttiAnni] = useState(false);
   // Anno scolastico scelto per la ricerca (default: quello attivo in bacheca).
   // Il pulsante 📅 apre un menu con gli anni disponibili per la ricerca.
@@ -146,14 +167,14 @@ function CercaModal(props: any) {
     [tuttiAnni, annoScelto, annoCorrente, mergedAll, cards]
   );
 
-  var rawTerms = String(q || '')
+  var rawTerms = String(debouncedQ || '')
     .trim()
     .split(/\s+/)
     .filter(Boolean);
 
   var results = useMemo(
     function () {
-      var query = norm(q).trim();
+      var query = norm(debouncedQ).trim();
       if (!query) return [];
       var terms = query.split(/\s+/);
       return base
@@ -177,7 +198,7 @@ function CercaModal(props: any) {
           return (a.ordine || 0) - (b.ordine || 0);
         });
     },
-    [base, q]
+    [base, debouncedQ]
   );
 
   function open(c: any) {
@@ -209,7 +230,7 @@ function CercaModal(props: any) {
   }
 
   var normTerms = (function () {
-    var qn = norm(q).trim();
+    var qn = norm(debouncedQ).trim();
     return qn ? qn.split(/\s+/) : [];
   })();
 
@@ -592,14 +613,14 @@ function CercaModal(props: any) {
                   }
                 </div>
               )}
-              {q.trim() && results.length === 0 && !(needsAll && allYears === null) && (
+              {debouncedQ.trim() && results.length === 0 && !(needsAll && allYears === null) && (
                 <div style={{ padding: '34px 20px', textAlign: 'center' }}>
                   {<div style={{ fontSize: 30, marginBottom: 8, opacity: 0.6 }}>🕳️</div>}
                   {
                     <div
                       style={{ fontSize: 13, fontWeight: 700, color: isLight ? '#334155' : 'rgba(255,255,255,.55)' }}
                     >
-                      Nessuna card trovata per «{q.trim()}»
+                      Nessuna card trovata per «{debouncedQ.trim()}»
                     </div>
                   }
                   {
