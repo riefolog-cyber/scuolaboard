@@ -1,6 +1,14 @@
 // test-setup.js — Set up React globals and mocks for Vitest
 import React from 'react';
 import '@testing-library/jest-dom';
+import { configure } from '@testing-library/dom';
+
+// I test di INTEGRAZIONE montano l'app VERA (lazy CardDetail + moduli) e,
+// sotto coverage, lo strumento v8 rallenta il rendering: il default di 1s
+// per findBy/waitFor diventava flaky (fallimenti sporadici in CI).
+// 12s dà margine sotto coverage senza nascondere veri deadlock (restano
+// < testTimeout 15s).
+configure({ asyncUtilTimeout: 12000 });
 
 // Expose React globally (matching globals.js)
 window.React = React;
