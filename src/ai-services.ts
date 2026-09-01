@@ -154,6 +154,13 @@ async function chiamaAI(type: any, content: any, options: any) {
 
   if (!res.ok) {
     aiLog('[ScuolaBoard] chiamaAI errore server', res.status, data);
+    // 403 dal worker = origine non autorizzata (porta locale fuori dalla
+    // whitelist ALLOWED_ORIGINS) oppure accesso riservato ai docenti. Il
+    // worker include error + hint utili per la diagnosi: li mostriamo invece
+    // del generico "status 403".
+    if (res.status === 403 && data && data.hint) {
+      throw new Error((data.error || 'Accesso negato') + ' — ' + data.hint);
+    }
     throw new Error((data && data.error) || 'Errore del server AI (status ' + res.status + ')');
   }
 

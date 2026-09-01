@@ -48,11 +48,28 @@ scuolaboard/
 npm install        # Installa dipendenze
 npm run dev        # Avvia server sviluppo su http://localhost:5173
 npm run build      # Build di produzione in docs/
-npm test           # Esegue i test (157 test, 22 file)
+npm test           # Esegue i test (~349 test, 36 file)
 npm run lint       # ESLint
 npx tsc --noEmit   # Typecheck
 npm run test:e2e   # Test E2E (Playwright, usa il Chrome di sistema)
 ```
+
+### ⚠️ Porta del dev server: SOLO 5173
+
+Il dev server **deve** girare su **`http://localhost:5173`**: è l'unica porta locale
+inclusa nella whitelist `ALLOWED_ORIGINS` del Cloudflare Worker AI
+(`scuolaboard-groq-proxy`, vedi `worker cloudflare.txt`). Se Vite parte su
+un'altra porta (es. 5174 perché la 5173 è occupata), **tutte le chiamate AI
+falliscono con `403 Forbidden` "Origine non autorizzata"**.
+
+- Per forzare la porta: `npx vite --port 5173 --strictPort` (o libera la 5173
+  prima di `npm run dev`).
+- Se la 5173 è occupata: trova e chiudi il processo che la blocca
+  (es. `netstat -ano | findstr :5173`, poi `taskkill /PID <pid> /F`).
+- In produzione la whitelist va allargata con il dominio reale di deploy:
+  variabile `ALLOWED_ORIGINS` del Worker (dashboard Cloudflare).
+- Se un 403 AI compare comunque, il toast ora mostra il body del worker
+  (error + hint + allowedOrigins) per diagnosticare subito la causa.
 
 ## CI/CD (GitHub Actions)
 
