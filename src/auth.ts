@@ -72,10 +72,20 @@ export function useAuth(_annoScolastico: string) {
     [key: string]: any; // campi extra da Firestore (provider, ...)
   };
 
-  var db = firebase.firestore();
+  // Guard offline: come per auth, anche firestore può mancare (es. SDK non
+  // caricato) → prima questo punto crashava con ReferenceError appena montato
+  // il provider, invece di partire in modalità offline con la login.
+  var db: any = null;
+  try {
+    if (typeof firebase !== 'undefined' && typeof firebase.firestore === 'function') {
+      db = firebase.firestore();
+    }
+  } catch (e) {
+    console.error('[auth] Firebase Firestore not available. Offline mode.');
+  }
   SB.LS = SB.LS || {};
   useEffect(function () {
-    if (!auth) {
+    if (!auth || !db) {
       setAuthLoad(false);
       return;
     }
@@ -140,28 +150,47 @@ export function useAuth(_annoScolastico: string) {
           setAuthLoad(false);
           return;
         }
-        db.collection('users')
-          .doc(fu.uid)
-          .get()
-          .then(function (doc: any) {
-            var base = { uid: fu.uid, email: fu.email, displayName: fu.displayName, photoURL: fu.photoURL };
-            if (doc.exists) {
-              var d = doc.data();
-              var finalUser = Object.assign({}, base, d) as AuthUser;
-              setUser(finalUser);
-              setIsProf(finalUser.role === 'prof');
-            } else {
-              setUser(null);
-              setIsProf(false);
-            }
-            setAuthLoad(false);
-          })
-          .catch(function (err: any) {
-            // Es. permission-denied (regole non pubblicate / token senza email):
-            // non lasciare l'app sullo spinner 10s, mostra la login e logga.
-            console.error('[auth] lettura profilo users/{uid} fallita:', err && err.code, err && err.message);
-            setAuthLoad(false);
-          });
+        // FIX race redirect: getRedirectResult crea il doc users/{uid} in modo
+        // asincrono; se onAuthStateChanged legge PRIMA della creazione, il doc
+        // non esiste ancora → prima l'utente autenticato restava "fantasma"
+        // sulla login fino al refresh. Riprova la lettura con backoff prima di
+        // dichiararlo assente.
+        function loadProfilo(fu: any, retries: number): void {
+          db.collection('users')
+            .doc(fu.uid)
+            .get()
+            .then(function (doc: any) {
+              var base = { uid: fu.uid, email: fu.email, displayName: fu.displayName, photoURL: fu.photoURL };
+              if (doc.exists) {
+                var d = doc.data();
+                var finalUser = Object.assign({}, base, d) as AuthUser;
+                setUser(finalUser);
+                setIsProf(finalUser.role === 'prof');
+                setAuthLoad(false);
+              } else if (retries > 0) {
+                setTimeout(function () {
+                  loadProfilo(fu, retries - 1);
+                }, 500);
+              } else {
+                setUser(null);
+                setIsProf(false);
+                setAuthLoad(false);
+              }
+            })
+            .catch(function (err: any) {
+              if (retries > 0) {
+                setTimeout(function () {
+                  loadProfilo(fu, retries - 1);
+                }, 500);
+                return;
+              }
+              // Es. permission-denied (regole non pubblicate / token senza email):
+              // non lasciare l'app sullo spinner 10s, mostra la login e logga.
+              console.error('[auth] lettura profilo users/{uid} fallita:', err && err.code, err && err.message);
+              setAuthLoad(false);
+            });
+        }
+        loadProfilo(fu, 5);
       } else {
         setUser(null);
         setIsProf(false);
@@ -174,8 +203,8 @@ export function useAuth(_annoScolastico: string) {
     };
   }, []);
   async function loginGoogle() {
-    if (!auth) {
-      if (window.SB_DEBUG) console.warn('[auth] Firebase auth not available; login aborted.');
+    if (!auth || !db) {
+      if (window.SB_DEBUG) console.warn('[auth] Firebase auth/firestore not available; login aborted.');
       return;
     }
     try {

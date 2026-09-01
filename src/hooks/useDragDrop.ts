@@ -1,7 +1,32 @@
 // useDragDrop.ts · ScuolaBoard · hook drag & drop per il riordinamento delle
 // card. Estratto da AppProvider per alleggerire il provider: riceve le card e
 // la funzione di salvataggio come parametri, possiede il ref dragId.
+// Il salvataggio del riordino usa un unico writeBatch (atomico) invece di N
+// scritture separate.
 import { useRef } from 'react';
+
+// Riordinamento PURO e testabile: riordina l'INTERA lista dell'anno (non solo
+// le card visibili) e ricompatta ordine a 1..N. Con un filtro classe attivo le
+// card nascoste NON restano con ordine duplicati o stale: vengono riscritte in
+// sequenza, e l'ordine relativo delle card visibili segue il drop dell'utente.
+// Ritorna [] se fromId/toId non sono nella lista (nessun salvataggio).
+export function reorderCards(cards: any[], fromId: any, toId: any): any[] {
+  var arr = cards.slice().sort(function (a: any, b: any) {
+    return (a.ordine || 0) - (b.ordine || 0);
+  });
+  var fi = arr.findIndex(function (c: any) {
+    return String(c.id) === String(fromId);
+  });
+  var ti = arr.findIndex(function (c: any) {
+    return String(c.id) === String(toId);
+  });
+  if (fi < 0 || ti < 0) return [];
+  var moved = arr.splice(fi, 1)[0];
+  arr.splice(ti, 0, moved);
+  return arr.map(function (c: any, i: number) {
+    return Object.assign({}, c, { ordine: i + 1 });
+  });
+}
 
 export function useDragDrop(cards: any[], fbSave: (_c: any) => any) {
   var dragId = useRef<any>(null);
@@ -42,21 +67,36 @@ export function useDragDrop(cards: any[], fbSave: (_c: any) => any) {
     });
     var fromId = dragId.current;
     if (!fromId || String(fromId) === String(targetId)) return;
-    var arr = cards.slice().sort(function (a: any, b: any) {
-      return (a.ordine || 0) - (b.ordine || 0);
-    });
-    var fi = arr.findIndex(function (c: any) {
-      return String(c.id) === String(fromId);
-    });
-    var ti = arr.findIndex(function (c: any) {
-      return String(c.id) === String(targetId);
-    });
-    if (fi < 0 || ti < 0) return;
-    var moved = arr.splice(fi, 1)[0];
-    arr.splice(ti, 0, moved);
-    arr.forEach(function (c: any, i: number) {
-      fbSave(Object.assign({}, c, { ordine: i + 1 }));
-    });
+    var reordered = reorderCards(cards, fromId, targetId);
+    if (!reordered.length) return;
+    // Salvataggio ATOMICO in un unico writeBatch: N update → 1 commit.
+    // Merge-set del solo campo ordine: payload minimo e nessun rischio di
+    // sovrascrivere campi con dati stale (fbSave scriveva l'intero doc).
+    // Fallback al vecchio fbSave per card se batch() non è disponibile
+    // (stub/fake senza supporto) o se il commit fallisce (i batch sono
+    // atomici: se il commit fallisce nulla è stato scritto, il retry è sicuro).
+    var db = (window as any).db;
+    var saveAll = function () {
+      reordered.forEach(function (c: any) {
+        fbSave(c);
+      });
+    };
+    if (db && typeof db.batch === 'function') {
+      try {
+        var b = db.batch();
+        reordered.forEach(function (c: any) {
+          b.set(db.collection('cards').doc(String(c.id)), { ordine: c.ordine }, { merge: true });
+        });
+        b.commit().catch(function (err: any) {
+          console.error('[useDragDrop] batch commit fallito, ritento per card:', err && err.code);
+          saveAll();
+        });
+      } catch (err) {
+        saveAll();
+      }
+    } else {
+      saveAll();
+    }
     dragId.current = null;
   }
 

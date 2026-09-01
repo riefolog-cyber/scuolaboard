@@ -10,12 +10,13 @@ export function useCards(user: any, annoScolastico: string) {
   // non tipizzato) — la superficie comune è subscribe/getSnapshot/destroy.
   var storeRef = useRef<any>(null);
 
-  // Ricrea lo store combinato quando user o anno cambiano
+  // Ricrea lo store combinato quando user o anno cambiano.
+  // NIENTE destroy qui: distruggere durante il render (useMemo) è un side
+  // effect illegale — con StrictMode il doppio render può distruggere lo
+  // store appena creato. Il destroy del vecchio store avviene nell'effect
+  // qui sotto (prevStoreRef), dove React garantisce l'ordine cleanup→setup.
   var store = useMemo(
     function () {
-      // Distruggi store precedente
-      if (storeRef.current) storeRef.current.destroy();
-
       if (!user) {
         // Nessun utente: store vuoto (no listener Firestore)
         // IMPORTANTE: getSnapshot deve restituire lo STESSO riferimento ogni volta
@@ -48,12 +49,23 @@ export function useCards(user: any, annoScolastico: string) {
     [!!user, annoScolastico]
   );
 
-  // Cleanup all'unmount del componente
-  useEffect(function () {
-    return function () {
-      if (storeRef.current) storeRef.current.destroy();
-    };
-  }, []);
+  // Destroy dello store PRECEDENTE al cambio (user/anno) e all'unmount.
+  // Mai durante render: il cleanup di questo effect gira prima del setup del
+  // nuovo, quindi il vecchio store (prevStoreRef) viene distrutto solo dopo
+  // che il nuovo è stato creato e renderizzato — niente listener appesi.
+  var prevStoreRef = useRef<any>(null);
+  useEffect(
+    function () {
+      if (prevStoreRef.current && prevStoreRef.current !== store) {
+        prevStoreRef.current.destroy();
+      }
+      prevStoreRef.current = store;
+      return function () {
+        if (prevStoreRef.current) prevStoreRef.current.destroy();
+      };
+    },
+    [store]
+  );
 
   // ── UNICA CHIAMATA useSyncExternalStore ───────────────────────────────
   // any: lo store è non tipizzato (vedi sopra) — la superficie è

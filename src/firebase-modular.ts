@@ -54,7 +54,8 @@ function wrapRef(ref: any): any {
     set: (data: any, opts?: any) => setDoc(ref, data, opts || {}),
     update: (patch: any) => updateDoc(ref, patch),
     delete: () => deleteDoc(ref),
-    onSnapshot: (cb: (_d: any) => void) => onSnapshot(ref, (d: any) => cb(compatDocSnap(d))),
+    onSnapshot: (cb: (_d: any) => void, err?: (_e: any) => void) =>
+      onSnapshot(ref, (d: any) => cb(compatDocSnap(d)), err),
   };
 }
 
@@ -81,8 +82,8 @@ function compatCollection(db: any, name: string) {
       async get() {
         return compatQuerySnap(await getDocs(make(conds, orders)));
       },
-      onSnapshot(cb: (_s: any) => void) {
-        return onSnapshot(make(conds, orders), (s: any) => cb(compatQuerySnap(s)));
+      onSnapshot(cb: (_s: any) => void, err?: (_e: any) => void) {
+        return onSnapshot(make(conds, orders), (s: any) => cb(compatQuerySnap(s)), err);
       },
     };
   }

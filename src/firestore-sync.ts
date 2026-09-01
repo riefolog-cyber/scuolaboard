@@ -39,7 +39,12 @@ var _cachedCombined: {
   loaded: boolean;
 } | null = null;
 
-var db = window.db;
+// Accesso LAZY a window.db: letto al momento della sottoscrizione, non
+// all'import. Se questo modulo viene valutato prima di app-utils/firebase-init
+// (che assegnano window.db), tutte le query partirebbero con db undefined.
+function getDb(): any {
+  return window.db;
+}
 
 // ── STORE: CARDS ───────────────────────────────────────────────────────────
 // Fase 4 (perf): filtro server-side per anno scolastico. Prima scaricavamo
@@ -72,20 +77,33 @@ function createCardsStore(user: any, anno: string | null) {
         // e le regole NON sono filtri → senza il vincolo in query l'intera lettura
         // viene rifiutata con permission-denied (studente non vedeva NESSUNA card).
         // Il prof legge tutto (isProf() nella regola, query senza filtri).
-        var q: any = db.collection('cards').where('annoScolastico', '==', anno);
+        var q: any = getDb().collection('cards').where('annoScolastico', '==', anno);
         if (!isProf) q = q.where('visibile', '==', true);
-        _cardsUnsub = q.onSnapshot(function (s: any) {
-          var a: any[] = [];
-          s.forEach(function (d: any) {
-            a.push(d.data());
-          });
-          _cardsSnapshot = a;
-          _cardsLoaded = true;
-          _cachedCombined = null; // invalida cache combinata
-          _cardsListeners.forEach(function (l) {
-            l();
-          });
-        });
+        _cardsUnsub = q.onSnapshot(
+          function (s: any) {
+            var a: any[] = [];
+            s.forEach(function (d: any) {
+              a.push(d.data());
+            });
+            _cardsSnapshot = a;
+            _cardsLoaded = true;
+            _cachedCombined = null; // invalida cache combinata
+            _cardsListeners.forEach(function (l) {
+              l();
+            });
+          },
+          function (err: any) {
+            // Senza error handler un permission-denied/errore di rete lasciava
+            // _cardsLoaded=false per sempre → UI bloccata sullo skeleton.
+            console.error('[firestore-sync] cards onSnapshot:', err && err.code, err && err.message);
+            _cardsSnapshot = [];
+            _cardsLoaded = true; // stato vuoto invece dello spinner infinito
+            _cachedCombined = null;
+            _cardsListeners.forEach(function (l) {
+              l();
+            });
+          }
+        );
       }
       return function () {
         _cardsListeners.delete(onStoreChange);
@@ -128,18 +146,27 @@ function createClassiStore(anno: string | null) {
     subscribe: function (onStoreChange: () => void) {
       _classiListeners.add(onStoreChange);
       if (!_classiUnsub && anno) {
-        _classiUnsub = db
+        _classiUnsub = getDb()
           .collection('config')
           .doc('classi_custom_' + safeDocId(anno))
-          .onSnapshot(function (doc: any) {
-            var d = doc.exists ? doc.data() : {};
-            _classiCustom = d.lista || [];
-            _classiNascoste = d.nascoste || [];
-            _cachedCombined = null; // invalida cache combinata
-            _classiListeners.forEach(function (l) {
-              l();
-            });
-          });
+          .onSnapshot(
+            function (doc: any) {
+              var d = doc.exists ? doc.data() : {};
+              _classiCustom = d.lista || [];
+              _classiNascoste = d.nascoste || [];
+              _cachedCombined = null; // invalida cache combinata
+              _classiListeners.forEach(function (l) {
+                l();
+              });
+            },
+            function (err: any) {
+              console.error('[firestore-sync] classi onSnapshot:', err && err.code, err && err.message);
+              _cachedCombined = null;
+              _classiListeners.forEach(function (l) {
+                l();
+              });
+            }
+          );
       }
       return function () {
         _classiListeners.delete(onStoreChange);
@@ -177,16 +204,25 @@ function createFavStore(uid: string | null) {
     subscribe: function (onStoreChange: () => void) {
       _preferitiListeners.add(onStoreChange);
       if (!_preferitiUnsub && uid) {
-        _preferitiUnsub = db
+        _preferitiUnsub = getDb()
           .collection('preferiti')
           .doc(uid)
-          .onSnapshot(function (doc: any) {
-            _preferiti = doc.exists && doc.data().ids ? doc.data().ids : [];
-            _cachedCombined = null; // invalida cache combinata
-            _preferitiListeners.forEach(function (l) {
-              l();
-            });
-          });
+          .onSnapshot(
+            function (doc: any) {
+              _preferiti = doc.exists && doc.data().ids ? doc.data().ids : [];
+              _cachedCombined = null; // invalida cache combinata
+              _preferitiListeners.forEach(function (l) {
+                l();
+              });
+            },
+            function (err: any) {
+              console.error('[firestore-sync] preferiti onSnapshot:', err && err.code, err && err.message);
+              _cachedCombined = null;
+              _preferitiListeners.forEach(function (l) {
+                l();
+              });
+            }
+          );
       }
       return function () {
         _preferitiListeners.delete(onStoreChange);

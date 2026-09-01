@@ -154,6 +154,31 @@ export function createFakeDb(seed = {}) {
       };
       return fn(tx);
     },
+    batch() {
+      // writeBatch compat: accumula le operazioni e le applica tutte al commit
+      // (il commit è "atomico" quanto il set diretto nel fake: ogni op notifica
+      // i listener come farebbe un'operazione singola).
+      const ops = [];
+      const b = {
+        set: (ref, data, opts) => {
+          ops.push({ kind: 'set', ref, data, opts });
+        },
+        update: (ref, patch) => {
+          ops.push({ kind: 'update', ref, patch });
+        },
+        delete: (ref) => {
+          ops.push({ kind: 'delete', ref });
+        },
+        async commit() {
+          for (const op of ops) {
+            if (op.kind === 'set') await op.ref.set(op.data, op.opts);
+            else if (op.kind === 'update') await op.ref.update(op.patch);
+            else await op.ref.delete();
+          }
+        },
+      };
+      return b;
+    },
     collection(name) {
       return new FakeQuery(name);
     },

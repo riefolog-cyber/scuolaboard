@@ -63,31 +63,50 @@ function useNotifiche(deps: { user: any }) {
     function (id: string) {
       if (!user || !user.uid) return;
       var db = getDbN();
-      if (!db) return;
+      if (!db || typeof db.runTransaction !== 'function') return;
       var sid = String(id);
-      var next = lista.map(function (n) {
-        return String(n.id) === sid ? Object.assign({}, n, { letta: true }) : n;
+      var uid = user.uid;
+      var ref = db.collection('notifiche').doc(uid);
+      // Transaction: il vecchio read-modify-write sull'intero doc perdeva le
+      // notifiche arrivate tra snapshot e scrittura (lost-update).
+      db.runTransaction(function (t: any) {
+        return t.get(ref).then(function (doc: any) {
+          var lista = doc.exists && doc.data().lista ? doc.data().lista : [];
+          var next = lista.map(function (n: any) {
+            return String(n.id) === sid ? Object.assign({}, n, { letta: true }) : n;
+          });
+          return t.set(ref, { lista: next, aggiornato: new Date().toISOString() }, { merge: true });
+        });
+      }).catch(function (e: any) {
+        if (typeof window !== 'undefined' && (window as any).SB_DEBUG)
+          console.warn('[notifiche] segnaLetta', e && e.code);
       });
-      db.collection('notifiche')
-        .doc(user.uid)
-        .set({ lista: next, aggiornato: new Date().toISOString() }, { merge: true });
     },
-    [lista, user]
+    [user]
   );
 
   var segnaTutteLette = useCallback(
     function () {
-      if (!user || !user.uid || !lista.length) return;
+      if (!user || !user.uid) return;
       var db = getDbN();
-      if (!db) return;
-      var next = lista.map(function (n) {
-        return Object.assign({}, n, { letta: true });
+      if (!db || typeof db.runTransaction !== 'function') return;
+      var uid = user.uid;
+      var ref = db.collection('notifiche').doc(uid);
+      db.runTransaction(function (t: any) {
+        return t.get(ref).then(function (doc: any) {
+          var lista = doc.exists && doc.data().lista ? doc.data().lista : [];
+          if (!lista.length) return null;
+          var next = lista.map(function (n: any) {
+            return Object.assign({}, n, { letta: true });
+          });
+          return t.set(ref, { lista: next, aggiornato: new Date().toISOString() }, { merge: true });
+        });
+      }).catch(function (e: any) {
+        if (typeof window !== 'undefined' && (window as any).SB_DEBUG)
+          console.warn('[notifiche] segnaTutteLette', e && e.code);
       });
-      db.collection('notifiche')
-        .doc(user.uid)
-        .set({ lista: next, aggiornato: new Date().toISOString() }, { merge: true });
     },
-    [lista, user]
+    [user]
   );
 
   return {

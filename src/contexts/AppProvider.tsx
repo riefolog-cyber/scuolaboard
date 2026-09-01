@@ -933,6 +933,9 @@ function AppProvider({ children }: any) {
   // Era codice morto: la modale esisteva ma nessun trigger apriva showPrivacy.
   // L'accettazione viene salvata in SB.LS.privacy (per uid) e il popup classe
   // viene rimandato finché la privacy non è accettata (evita due modali sovrapposte).
+  // NOTA (voluto): la modale è OBBLIGATORIA — se l'utente la chiude senza
+  // accettare, `modals.showPrivacy` nel dep riattiva l'effetto e la riapre.
+  // Non "correggere" il loop: è il comportamento richiesto dal GDPR.
   useEffect(
     function () {
       if (!user) return;
