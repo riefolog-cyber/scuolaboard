@@ -15,9 +15,11 @@ declare var firebase: any;
 declare var SB: any;
 
 // ── React (global UMD per i file che ancora usano `React.X` nudo) ──────────
-// globals.ts fa window.React = React. La maggior parte dei componenti importa
-// i membri direttamente da 'react' (migrazione UMD→ES); questo global resta
-// come fallback permissivo per i file non ancora migrati.
+// NOTA: i global React/ReactDOM sono stati RIMOSSI da globals.ts (migrazione
+// UMD→ES) — window.React NON esiste più. I componenti devono importare i
+// membri direttamente da 'react'; un uso di `React` nudo a runtime è un bug
+// (ReferenceError, es. SommarioModal.tsx). Questa dichiarazione resta solo
+// per compatibilità di tipo nei file non ancora migrati.
 declare var React: any;
 
 // ── JSX (jsxFactory: 'h', jsxFragmentFactory: 'Fragment' — tsconfig.json) ──

@@ -4,6 +4,24 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback, useSyncExternalStore } from 'react';
 
+// Confronto STRUTTURALE (per chiavi, non per ordine): JSON.stringify falliva
+// il prune dell'overlay ottimistico quando il server restituiva le chiavi in
+// ordine diverso (patch convergente ma mai riconosciuta → overlay fantasma).
+// Esposta per i test unitari.
+export function deepEq(a: any, b: any): boolean {
+  if (a === b) return true;
+  if (a === null || b === null || typeof a !== 'object' || typeof b !== 'object') return false;
+  var ka = Object.keys(a);
+  var kb = Object.keys(b);
+  if (ka.length !== kb.length) return false;
+  for (var i = 0; i < ka.length; i++) {
+    var k = ka[i];
+    if (!Object.prototype.hasOwnProperty.call(b, k)) return false;
+    if (!deepEq(a[k], b[k])) return false;
+  }
+  return true;
+}
+
 export function useCards(user: any, annoScolastico: string) {
   // ── STORE (useSyncExternalStore) ──────────────────────────────────────
   // any: lo store è `empty` (locale) o quello di createCombinedStore (compat,
@@ -181,13 +199,6 @@ export function useCards(user: any, annoScolastico: string) {
   // del server converge ai valori ottimistici l'overlay viene rimosso (prune),
   // così un aggiornamento esterno non resta mai mascherato da un patch stale.
   var [pending, setPending] = useState<Record<string, { patch: any; fields: string[] }>>({});
-  function deepEq(a: any, b: any): boolean {
-    try {
-      return JSON.stringify(a) === JSON.stringify(b);
-    } catch (e) {
-      return a === b;
-    }
-  }
   var allCards = useMemo(
     function () {
       var ids = Object.keys(pending);

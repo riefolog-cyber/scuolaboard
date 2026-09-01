@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { normalizeLinks } from './app-utils.tsx';
 import Countdown from './Countdown.tsx';
 // CardItem.jsx · ScuolaBoard
@@ -712,4 +713,36 @@ function CardItem__({ $, c }: any) {
   );
 }
 
-export default CardItem__;
+// Memo con comparatore mirato (C3): CardItem legge SOLO un sottoinsieme di `$`
+// (scalari + refs stabili) oltre alla card `c`. Il comparatore ignora le
+// funzioni: i handler in `$` sono stabili per identità o leggono via ref
+// (cardsHookRef.current), quindi un riferimento vecchio continua a lavorare
+// su dati freschi. Senza questo, ogni cambio di uiValue (es. likeHoverCard,
+// toasts, bulkMode) ri-renderizzava TUTTE le card della griglia.
+function cardItemAreEqual(prev: any, next: any) {
+  if (prev.c !== next.c) return false;
+  var a = prev.$;
+  var b = next.$;
+  // Campi scalari/ref che la card renderizza direttamente
+  if (a.isLight !== b.isLight) return false;
+  if (a.isProf !== b.isProf) return false;
+  if (a.simulaSt !== b.simulaSt) return false;
+  if (a.bulkMode !== b.bulkMode) return false;
+  if (a.bulkSelected !== b.bulkSelected) return false;
+  if (a.likeHoverCard !== b.likeHoverCard) return false;
+  if (a.likeAnimCard !== b.likeAnimCard) return false;
+  if (a.myLikes !== b.myLikes) return false;
+  if (a.seenRef !== b.seenRef) return false;
+  if (a.user !== b.user) return false;
+  // `classiCustom` guida il colore delle chip classe; `preferiti` lo stato ★
+  if (a.classiCustom !== b.classiCustom) return false;
+  if (a.preferiti !== b.preferiti) return false;
+  // aiMap è un oggetto che cambia identità a ogni update AI: se cambia, la
+  // card può mostrare/ nascondere "Analisi disponibile" / riassunti.
+  if (a.aiMap !== b.aiMap) return false;
+  // sommarioResult guida la visibilità del bottone "📝 Riassumi" per il prof.
+  if (a.sommarioResult !== b.sommarioResult) return false;
+  return true;
+}
+
+export default memo(CardItem__, cardItemAreEqual);

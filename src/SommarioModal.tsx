@@ -1,11 +1,15 @@
 // SommarioModal.jsx · ScuolaBoard
+// Fix: import diretti di useState/useEffect — il refactor UMD→ES ha rimosso
+// i global React (window.React) e questo file lazy usava ancora `React` nudo
+// → ReferenceError "React is not defined" al click su "📝 Riassumi".
+import { useState, useEffect } from 'react';
 
 function SommarioModal__({ $ }: any) {
   var isLight = !!$.isLight;
-  var [expanded, setExpanded] = (React as any).useState(false);
+  var [expanded, setExpanded] = useState(false);
   // reset espansione quando cambia card
   var _showId = $.showSommario;
-  (React as any).useEffect(
+  useEffect(
     function () {
       setExpanded(false);
     },

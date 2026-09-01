@@ -94,8 +94,15 @@ function AppProvider({ children }: any) {
 
   var isProf = auth.isProf;
   var user = auth.user;
-  // Espone l'utente autenticato per consentire ad altri moduli di leggere il ruolo
-  if (window.SB) window.SB.user = user;
+  // Espone l'utente autenticato per consentire ad altri moduli di leggere il ruolo.
+  // In un EFFECT (mai durante il render): nessun codice legge window.SB.user nel
+  // primo render (ai-services usa la prop reattiva user, con fallback 'studente').
+  useEffect(
+    function () {
+      if (window.SB) window.SB.user = user;
+    },
+    [user]
+  );
 
   var simulaSt = isProf && cardsHook.previewSt;
 
@@ -608,6 +615,21 @@ function AppProvider({ children }: any) {
     modals.setConfirmDel({ type: 'quiz_reset', cardId: cardId });
   }
 
+  // Ref del timer di undo: serve a fare clearTimeout anche se il componente
+  // smonta prima dello scadere dei 5s (timer orfano → fbDel post-smontaggio).
+  var undoDeleteTimerRef = useRef<any>(null);
+  useEffect(
+    function () {
+      return function () {
+        if (undoDeleteTimerRef.current) {
+          clearTimeout(undoDeleteTimerRef.current);
+          undoDeleteTimerRef.current = null;
+        }
+      };
+    },
+    []
+  );
+
   var delCardWithUndo = useCallback(
     function (id: any) {
       var card = cardsHook.cards.find(function (c: any) {
@@ -617,6 +639,7 @@ function AppProvider({ children }: any) {
       setShowCard(null);
       var toastId = Date.now();
       var timer = setTimeout(function () {
+        undoDeleteTimerRef.current = null;
         fbDel(id);
         setUndoDelete(null);
         setToasts(function (p) {
@@ -625,6 +648,7 @@ function AppProvider({ children }: any) {
           });
         });
       }, 5000);
+      undoDeleteTimerRef.current = timer;
       setUndoDelete({ card: card, timer: timer, toastId: toastId });
       setToasts(function (p) {
         return p.concat([{ id: toastId, msg: 'Card eliminata', type: 'warn', undo: true }]);
@@ -802,18 +826,25 @@ function AppProvider({ children }: any) {
   }
 
   function bulkHide(vis: any) {
-    bulkSelected.forEach(function (id: any) {
-      db.collection('cards')
+    var ids = bulkSelected.slice();
+    var ops = ids.map(function (id: any) {
+      return db
+        .collection('cards')
         .doc(id)
         .update({ visibile: vis })
         .catch(function () {
+          // Fallback: se l'update diretto fallisce, salva l'intera card
           var card = cardsHook.cards.find(function (c: any) {
             return String(c.id) === id;
           });
-          if (card) fbSave(Object.assign({}, card, { visibile: vis }));
+          if (card) return fbSave(Object.assign({}, card, { visibile: vis }));
+          return Promise.resolve();
         });
     });
-    showToast(bulkSelected.length + ' card modificate', 'ok');
+    // Toast di conferma SOLO quando tutte le scritture sono concluse
+    Promise.all(ops).then(function () {
+      showToast(ids.length + ' card modificate', 'ok');
+    });
     setBulkSelected([]);
     setBulkMode(false);
   }
@@ -968,8 +999,11 @@ function AppProvider({ children }: any) {
   );
 
   // ── COMPUTED VALUES (memoized) ──
+  // QR del link alla bacheca: SOLO origin+pathname, senza ?card=... né #hash
+  // (privacy: il QR server terzo non deve ricevere l'identificativo della card).
   var qrUrl = useMemo(function () {
-    return 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(window.location.href);
+    var base = window.location.origin + window.location.pathname;
+    return 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(base);
   }, []);
   var CHUNK = 4;
   var totC = useMemo(
@@ -1298,6 +1332,15 @@ function AppProvider({ children }: any) {
         addReply: addReply,
         saveEditCm: saveEditCm,
         inviaRisposteQuiz: inviaRisposteQuiz,
+        // Handler rinomina/classi (C1): leggono rinominaClasse/Input/Conferma
+        // e classiCustom/classiNascoste — vivono qui così digitare nel rename
+        // (o aggiungere classi) ri-renderizza SOLO i consumatori FormContext
+        // (FilterBar/Modals), non la griglia. Chi li usava da UIContext ora
+        // li trova in FormContext: sono nelle deps per closure fresca.
+        apriRinomina: apriRinomina,
+        eseguiRinomina: eseguiRinomina,
+        addClasseCustom: addClasseCustom,
+        removeClasseCustom: removeClasseCustom,
       };
     },
     [
@@ -1325,6 +1368,8 @@ function AppProvider({ children }: any) {
       annoScolastico,
       showCard,
       cardsHook.cards,
+      cardsHook.classiCustom,
+      cardsHook.classiNascoste,
     ]
   );
 
@@ -1444,10 +1489,6 @@ function AppProvider({ children }: any) {
           setCopiaAnnoTarget('');
         },
         togglePreferito: togglePreferito,
-        apriRinomina: apriRinomina,
-        eseguiRinomina: eseguiRinomina,
-        addClasseCustom: addClasseCustom,
-        removeClasseCustom: removeClasseCustom,
         // Utilities
         classeColor: classeColor,
         fmt: fmt,
@@ -1480,7 +1521,6 @@ function AppProvider({ children }: any) {
       imgUploading,
       allegatiUploading,
       showCard,
-      __handlers,
       toasts,
       undoDelete,
       bulkMode,

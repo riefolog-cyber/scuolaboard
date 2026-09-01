@@ -81,6 +81,28 @@ describe('Elimina card con undo (prof)', () => {
       expect(db._get('cards', 'c1')).toBeTruthy(); // la card esiste ancora
     });
   });
+
+  // Bug B4: il setTimeout da 5s della cancellazione era ORFANO — se il
+  // componente smontava prima dello scadere (es. logout/refresh), il timer
+  // girava comunque e fbDel partiva DOPO lo smontaggio (cancellazione
+  // "spettrale" di una card che l'utente aveva deciso di tenere).
+  it('smontando l app prima dei 5s la card NON viene cancellata dopo (timer pulito)', async () => {
+    const seed = { users: { prof1: PROF_DOC }, cards: { c1: mkCard('c1', { titolo: 'Da non cancellare' }) } };
+    const { db, unmount } = await renderApp({ seed, user: PROF });
+    await screen.findByText('Da non cancellare', {}, { timeout: 4000 });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Elimina' }));
+    await screen.findByText(/Card eliminata/, {}, { timeout: 4000 });
+
+    // Smonta SUBITO (prima dello scadere dei 5s): il cleanup deve fare
+    // clearTimeout sul ref del timer di undo.
+    unmount();
+
+    // Aspetta PIÙ dei 5s del timer originale: senza il fix B4 fbDel
+    // verrebbe eseguito qui e la card sparirebbe dal db.
+    await new Promise((r) => setTimeout(r, 5600));
+    expect(db._get('cards', 'c1')).toBeTruthy(); // ancora presente: timer annullato
+  }, 15000);
 });
 
 // ── PROPOSTE STUDENTE → PROF ──────────────────────────────────────────────
