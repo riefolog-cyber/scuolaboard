@@ -38,6 +38,10 @@ jobs:
         run: npx tsc --noEmit
       - name: Unit & integration tests
         run: npm test
+      # Threshold di coverage (configurato in vitest.config.js): fallisce se la
+      # copertura scende sotto la soglia (baseline 01/09/2026: lines 72%, stmts 71%).
+      - name: Coverage threshold
+        run: npx vitest run --coverage --coverage.reporter=text-summary
 
   build:
     name: Build di produzione (docs/)

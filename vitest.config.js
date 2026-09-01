@@ -26,6 +26,16 @@ export default defineConfig({
       reportsDirectory: './coverage',
       include: ['src/**/*.{ts,tsx}'],
       exclude: ['src/**/*.test.{ts,tsx}', 'src/test-setup.ts'],
+      // Threshold anti-regressione (baseline 01/09/2026: lines 72.3%, stmts
+      // 70.7%, funcs 70.0%, branches 58.2%). Soglie con margine: il CI fallisce
+      // solo se la copertura scende davvero, non su rumore. Alzare le soglie
+      // man mano che la copertura cresce.
+      thresholds: {
+        lines: 60,
+        statements: 60,
+        functions: 55,
+        branches: 50,
+      },
     },
   },
 });

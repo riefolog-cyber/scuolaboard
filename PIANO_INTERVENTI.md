@@ -66,11 +66,13 @@ src/integration   77.2% (test) · src/modals 58.5% · src/utils 57.6%
 
 ## 🔵 Blocco D — Manutenzione tecnica / debito
 
-- [ ] `.freebuff/` nel working tree: NON committare (dati locali dell'agente)
-- [ ] Policy `docs/`: la build rigenera asset committati — decidere se committare la build a ogni intervento o lasciarla al CI/deploy (oggi si ripristina con `git checkout -- docs/`)
-- [ ] `README.md`: il conteggio test è ora "~352 test, 37 file" — aggiornarlo a ogni milestone
-- [ ] Verificare che il workflow CI (`.github/workflows/ci.yml`) includa anche la guardia anti-React-nudo e gli smoke test lazy (sono test vitest normali, dovrebbero esserci già)
-- [ ] Valutare un threshold di coverage nel CI (es. non far regredire sotto il 55% stmt) per blindare il lavoro fatto
+**✅ FATTO 01/09** — tutte le voci chiuse:
+
+- [x] `.freebuff/` nel working tree: NON committare (dati locali dell'agente) — regola rispettata in tutti i commit
+- [x] Policy `docs/`: **documentata nel README** (sezione CI/CD) — la build di produzione non va mai committata a mano; `deploy-docs` della CI è l'unico autorizzato a toccare `docs/` (in locale si ripristina con `git checkout -- docs/`)
+- [x] `README.md`: conteggio aggiornato a "495 test, 46 file — copertura critica >60%"
+- [x] CI: verificato che `npm test` include TUTTI i test (`vitest run` su `src/**/*.test.*`), inclusi i nuovi (lazy smoke, anti-React-nudo, card-detail-flows) — nessuna configurazione extra necessaria
+- [x] **Threshold di coverage nel CI**: aggiunto al job `test` (step "Coverage threshold": `npx vitest run --coverage`), soglie in `vitest.config.js` (baseline 01/09/2026: lines 72.3%, stmts 70.7%, funcs 70.0%, branches 58.2%) → soglie: lines 60, statements 60, functions 55, branches 50. Verificato che il meccanismo fallisce davvero sotto soglia (test con soglia 99 → exit 1)
 
 ### Risultati misura C1 (React Profiler, 12 card, 3 esecuzioni stabili)
 

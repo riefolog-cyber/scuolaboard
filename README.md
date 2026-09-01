@@ -48,7 +48,7 @@ scuolaboard/
 npm install        # Installa dipendenze
 npm run dev        # Avvia server sviluppo su http://localhost:5173
 npm run build      # Build di produzione in docs/
-npm test           # Esegue i test (~349 test, 36 file)
+npm test           # Esegue i test (495 test, 46 file — copertura critica >60%)
 npm run lint       # ESLint
 npx tsc --noEmit   # Typecheck
 npm run test:e2e   # Test E2E (Playwright, usa il Chrome di sistema)
@@ -81,6 +81,11 @@ A ogni push/PR su `main` il workflow `.github/workflows/ci.yml` esegue in automa
   `deploy-docs` rigenera la build (`npm run build`) e **committa e pusha da solo la cartella
   `docs/`** (messaggio con `[skip ci]`, nessun loop). Non serve più eseguire `npm run build`
   a mano prima del push: la CI lo fa al posto tuo.
+- **Policy `docs/` (importante)**: la build di produzione **non va mai committata a mano**.
+  Il job `deploy-docs` della CI è l'unico autorizzato a toccare `docs/`; se `git status` la
+  mostra come modificata in locale, ripristinala con `git checkout -- docs/` e lascia che
+  sia la CI a rigenerarla. Eventuali modifiche manuali a `docs/` nei tuoi commit possono
+  generare conflitti con i commit automatici della CI.
 - GitHub Pages serve la cartella **`docs/`** committata su `main` (Settings → Pages → branch
   `main`, folder `/docs`).
 - In locale gli E2E usano il Chrome di sistema; in CI usano il Chromium bundle di Playwright.
