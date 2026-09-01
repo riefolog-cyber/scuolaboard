@@ -270,74 +270,123 @@ function AppProvider({ children }: any) {
   // ref equivalente aggiornato a ogni render), mai da una variabile locale.
   var cardsHookRef = useRef(cardsHook);
   cardsHookRef.current = cardsHook;
+  // Ref live UNICO per tutti i valori letti dagli handler: aggiornato a ogni
+  // render. appHandlerCtx è memoizzato su [] → __handlers (like/voto/reazione…)
+  // NON viene più ricreato quando cambiano le card: prima deps ridondanti
+  // (cardsHook.cards, classiCustom, preferiti…) — lette comunque via ref dai
+  // getter — ricreavano tutti gli handler a ogni update, facendo girare
+  // UIContext/CardItem anche quando nulla di rilevante era cambiato.
+  var liveRef = useRef<any>(null);
+  liveRef.current = {
+    cards: cardsHook.cards,
+    user: user,
+    showCard: showCard,
+    nc: nc,
+    replyTesto: replyTesto,
+    myLikes: myLikes,
+    SB: SB,
+    myName: myName,
+    CLASSI_LIST: CLASSI_LIST,
+    classiCustom: cardsHook.classiCustom,
+    classiNascoste: cardsHook.classiNascoste,
+    newClasseInput: cardsHook.newClasseInput,
+    preferiti: cardsHook.preferiti,
+    showToast: showToast,
+    rinominaClasse: rinominaClasse,
+    rinominaInput: rinominaInput,
+    rinominaConferma: rinominaConferma,
+    isProf: isProf,
+    annoScolastico: annoScolastico,
+    applyOptimistic: cardsHook.applyOptimistic,
+    fbClassiSave: fbClassiSave,
+    fbNascosteSave: fbNascosteSave,
+    fbSave: fbSave,
+    fbFavSave: fbFavSave,
+    db: db,
+    setClassiCustom: cardsHook.setClassiCustom,
+    setClassiNascoste: cardsHook.setClassiNascoste,
+    setAddingClasse: cardsHook.setAddingClasse,
+    setNewClasseInput: cardsHook.setNewClasseInput,
+    setRinominaClasse: setRinominaClasse,
+    setRinominaInput: setRinominaInput,
+    setRinominaConferma: setRinominaConferma,
+    setPreferiti: cardsHook.setPreferiti,
+    setShowCard: setShowCard,
+    setLikeAnimCard: setLikeAnimCard,
+    setNc: setNc,
+    setReplyTo: setReplyTo,
+    setReplyTesto: setReplyTesto,
+    setShowAmm: modals.setShowAmm,
+    seenRef: seenRef,
+  };
   var appHandlerCtx = useMemo(
     function () {
       return {
         get cards() {
-          return cardsHookRef.current.cards;
+          return liveRef.current.cards;
         },
         get user() {
-          return user;
+          return liveRef.current.user;
         },
         get showCard() {
-          return showCard;
+          return liveRef.current.showCard;
         },
         get nc() {
-          return nc;
+          return liveRef.current.nc;
         },
         get replyTesto() {
-          return replyTesto;
+          return liveRef.current.replyTesto;
         },
         get myLikes() {
-          return myLikes;
+          return liveRef.current.myLikes;
         },
         get SB() {
-          return SB;
+          return liveRef.current.SB;
         },
         get myName() {
-          return myName;
+          return liveRef.current.myName;
         },
         get CLASSI_LIST() {
-          return CLASSI_LIST;
+          return liveRef.current.CLASSI_LIST;
         },
         get classiCustom() {
-          return cardsHookRef.current.classiCustom;
+          return liveRef.current.classiCustom;
         },
         get classiNascoste() {
-          return cardsHookRef.current.classiNascoste;
+          return liveRef.current.classiNascoste;
         },
         get newClasseInput() {
-          return cardsHookRef.current.newClasseInput;
+          return liveRef.current.newClasseInput;
         },
         get preferiti() {
-          return cardsHookRef.current.preferiti;
+          return liveRef.current.preferiti;
         },
         get showToast() {
-          return showToast;
+          return liveRef.current.showToast;
         },
         get rinominaClasse() {
-          return rinominaClasse;
+          return liveRef.current.rinominaClasse;
         },
         get rinominaInput() {
-          return rinominaInput;
+          return liveRef.current.rinominaInput;
         },
         get rinominaConferma() {
-          return rinominaConferma;
+          return liveRef.current.rinominaConferma;
         },
         get isProf() {
-          return isProf;
+          return liveRef.current.isProf;
         },
         get annoScolastico() {
-          return annoScolastico;
+          return liveRef.current.annoScolastico;
         },
         get onOptimistic() {
-          return cardsHookRef.current.applyOptimistic;
+          return liveRef.current.applyOptimistic;
         },
         fbClassiSave: function (arr: any) {
-          return fbClassiSave(arr, annoScolastico);
+          return liveRef.current.fbClassiSave(arr, liveRef.current.annoScolastico);
         },
         fbNascosteSave: function (arr: any) {
-          return fbNascosteSave(arr, annoScolastico);
+          return liveRef.current.fbNascosteSave(arr, liveRef.current.annoScolastico);
         },
         fbSave: fbSave,
         fbFavSave: fbFavSave,
@@ -359,24 +408,7 @@ function AppProvider({ children }: any) {
         seenRef: seenRef,
       };
     },
-    [
-      cardsHook.cards,
-      user,
-      showCard,
-      nc,
-      replyTesto,
-      CLASSI_LIST,
-      cardsHook.classiCustom,
-      cardsHook.classiNascoste,
-      cardsHook.preferiti,
-      cardsHook.addingClasse,
-      cardsHook.newClasseInput,
-      rinominaClasse,
-      rinominaInput,
-      rinominaConferma,
-      isProf,
-      annoScolastico,
-    ]
+    []
   );
 
   // Handlers memoized per evitare ricreazione a ogni render

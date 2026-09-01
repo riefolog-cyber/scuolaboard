@@ -66,7 +66,10 @@ function SommarioModal__({ $ }: any) {
           </div>
           <button
             onClick={function () {
-              $.riassuntiCommentiRun(card);
+              // force=true: la rigenerazione è ESCLICITA → ignora la cache
+              // persistita (altrimenti non farebbe nulla se i commenti
+              // non sono cambiati).
+              $.riassuntiCommentiRun(card, true);
             }}
             disabled={loading}
             style={{

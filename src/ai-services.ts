@@ -641,11 +641,28 @@ export function useAI(user: any) {
   }
 
   // 7. Riassunto discussione commenti (pseudonimizzato)
-  async function riassuntiCommentiRun(card: any) {
+  // Cache persistita in ai_results/{cardId}.sommario: se esiste già un
+  // sommario valido per lo STESSO numero di commenti, NON si rifà la chiamata
+  // AI (il riassunto non cambia se la discussione non è cambiata). Prima di
+  // questo fix ogni click su "📝 Riassumi" (anche dopo reload, senza commenti
+  // nuovi) interrogava Groq inutilmente. Il bottone "↻ Rigenera" passa
+  // force=true per sovrascrivere la cache.
+  async function riassuntiCommentiRun(card: any, force?: boolean) {
     var commenti = card.commenti || [];
     if (commenti.length < 2) {
       setSommarioResult(function (p: any) {
         return Object.assign({}, p, { [card.id]: "Commenti insufficienti per l'analisi." });
+      });
+      return;
+    }
+    var cache =
+      !force &&
+      aiMap &&
+      aiMap[String(card.id)] &&
+      aiMap[String(card.id)].sommario;
+    if (cache && cache.nCommenti === commenti.length && cache.testo) {
+      setSommarioResult(function (p: any) {
+        return Object.assign({}, p, { [card.id]: cache.testo });
       });
       return;
     }
@@ -668,6 +685,19 @@ export function useAI(user: any) {
       setSommarioResult(function (p: any) {
         return Object.assign({}, p, { [card.id]: rispostaConNomi });
       });
+      // Persistenza: salva in ai_results/{cardId}.sommario con il numero di
+      // commenti a cui si riferisce → alla riapertura (anche dopo reload) la
+      // cache è valida e la chiamata AI viene saltata. Stesso doc di analisi
+      // (merge: true) → non sovrascrive aiAnalisi di runCardAI.
+      try {
+        await _aiSave(card.id, {
+          sommario: {
+            testo: rispostaConNomi,
+            nCommenti: commenti.length,
+            data: new Date().toISOString(),
+          },
+        });
+      } catch (e: any) {}
     } catch (e: any) {
       setSommarioResult(function (p: any) {
         return Object.assign({}, p, { [card.id]: 'Errore: ' + e.message });

@@ -144,6 +144,12 @@ function useQuiz(deps: QuizDeps) {
     if (!pending.length) return;
     setQLoading(true);
     try {
+      var CHUNK_AI = 3;
+      // C3: raccoglie TUTTI gli update (uno per studente valutato) e li applica
+      // in un UNICO writeBatch alla fine — prima erano N update separati in
+      // Promise.all, applicabili PARZIALMENTE se uno falliva (es. rete a metà
+      // → alcuni studenti valutati e altri no). Ora è atomico: o tutti o nessuno.
+      var updates: any[] = [];
       async function evalOne(r: any) {
         var aiScores = r.aiScores || {};
         var dom2 = card.quizDomande || [];
@@ -165,7 +171,7 @@ function useQuiz(deps: QuizDeps) {
             item.d.testo +
             '\nRISPOSTA: ' +
             risposta +
-            '\nRestituisci SOLO questo JSON:\n{"voto": <0.0-1.0>, "punti_forza":"...", "lacune":"...", "suggerimento":"..."}';
+            '\nRestituisci SOLO questo JSON:{"voto": <0.0-1.0>, "punti_forza":"...", "lacune":"...", "suggerimento":"..."}';
           return window
             .callGroqJSON(null, prompt, 600)
             .then(function (res: any) {
@@ -182,18 +188,34 @@ function useQuiz(deps: QuizDeps) {
           if (out.res.voto != null) score += out.res.voto;
         });
         var pct = totale > 0 ? Math.round((score / totale) * 100) : 0;
-        await db
-          .collection('quiz_risposte')
-          .doc(String(card.id) + '_' + r.studente)
-          .update({
+        updates.push({
+          ref: db.collection('quiz_risposte').doc(String(card.id) + '_' + r.studente),
+          patch: {
             aiValutato: true,
             aiScores: aiScores,
             punteggio: { score: Math.round(score * 10) / 10, totale: totale, pct: pct },
-          });
+          },
+        });
       }
-      var CHUNK_AI = 3;
       for (var ci = 0; ci < pending.length; ci += CHUNK_AI) {
         await Promise.all(pending.slice(ci, ci + CHUNK_AI).map(evalOne));
+      }
+      // Batch atomico con fallback agli update singoli se batch() non esiste
+      // (stub/fake senza supporto) o se il commit fallisce (i batch sono
+      // atomici: commit fallito → nulla scritto, il retry è sicuro).
+      if (updates.length && db && typeof db.batch === 'function') {
+        var b = db.batch();
+        updates.forEach(function (u: any) {
+          // merge-set ≡ update (il batch del modulo espone solo set/delete)
+          b.set(u.ref, u.patch, { merge: true });
+        });
+        await b.commit();
+      } else {
+        await Promise.all(
+          updates.map(function (u: any) {
+            return u.ref.update(u.patch);
+          })
+        );
       }
     } catch (e) {
       showToast('Errore analisi risposte aperte', 'err');
@@ -208,11 +230,22 @@ function useQuiz(deps: QuizDeps) {
       snap.forEach(function (d: any) {
         ids.push(d.id);
       });
-      await Promise.all(
-        ids.map(function (id) {
-          return db.collection('quiz_risposte').doc(id).delete();
-        })
-      );
+      if (ids.length && db && typeof db.batch === 'function') {
+        // C3: N delete → UN commit atomico (prima: N delete in Promise.all,
+        // applicabili parzialmente se uno falliva → reset incompleto).
+        // Fallback ai delete singoli se batch() non è disponibile.
+        var b = db.batch();
+        ids.forEach(function (id) {
+          b.delete(db.collection('quiz_risposte').doc(id));
+        });
+        await b.commit();
+      } else {
+        await Promise.all(
+          ids.map(function (id) {
+            return db.collection('quiz_risposte').doc(id).delete();
+          })
+        );
+      }
       showToast('Risposte al quiz cancellate', 'warn');
     } catch (e) {
       showToast('Errore reset risposte', 'err');

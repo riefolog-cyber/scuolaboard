@@ -170,7 +170,7 @@ function StudentiPanel(props: any) {
                         }
                         {
                           <span style={{ fontSize: 12, color: 'rgba(255,255,255,.45)' }}>
-                            {lista.length + ' studente' + (lista.length !== 1 ? 'i' : '')}
+                            {lista.length + (lista.length !== 1 ? ' studenti' : ' studente')}
                           </span>
                         }
                       </div>

@@ -4,7 +4,7 @@
 // griglia e verifichiamo le AZIONI dal pannello: like, reazioni, commenti,
 // rimozione scadenza, badge NASCOSTA/allegati, voto sondaggio (studente),
 // chiusura. Le scritture si verificano sul db finto (window.db).
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { renderApp } from './harness';
 import { PROF, STUD, PROF_DOC, STUD_DOC, mkCard, setupTestEnv, teardownTestEnv } from './fixtures';
@@ -149,5 +149,49 @@ describe('CardDetail — stato APERTO', () => {
     fireEvent.click(detail.getByRole('button', { name: 'Chiudi card' }));
 
     await waitFor(() => expect(document.querySelector('.modal-inner')).toBeNull());
+  });
+
+  // Fix C1: il riassunto AI dei commenti era ricalcolato a OGNI click (e dopo
+  // ogni reload), anche senza commenti nuovi. Ora viene PERSISTITO in
+  // ai_results/{id}.sommario e riusato: la seconda apertura NON chiama l'AI.
+  it('Riassumi: la prima volta chiama l AI e salva; la seconda NON la richiama', async () => {
+    window.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      clone: () => ({ json: async () => ({}) }),
+      json: async () => ({ success: true, data: { content: 'riassunto persistito' } }),
+    });
+    const seed = {
+      users: { prof1: PROF_DOC },
+      cards: {
+        c1: mkCard('c1', {
+          titolo: 'Card discussione',
+          commenti: [
+            { id: 'cm1', autore: 'Luca', testo: 'primo' },
+            { id: 'cm2', autore: 'Anna', testo: 'secondo' },
+          ],
+        }),
+      },
+    };
+    const { db } = await renderApp({ seed, user: PROF });
+    const detail = await openCard('Card discussione');
+
+    // 1) Primo click: chiama l'AI e PERSISTE il sommario con nCommenti
+    fireEvent.click(await detail.findByRole('button', { name: '📝 Riassumi' }, {}, { timeout: 4000 }));
+    expect(await screen.findByText(/riassunto persistito/, {}, { timeout: 6000 })).toBeTruthy();
+    await waitFor(() => {
+      const saved = db._get('ai_results', 'c1');
+      expect(saved && saved.sommario).toBeTruthy();
+      expect(saved.sommario.testo).toBe('riassunto persistito');
+      expect(saved.sommario.nCommenti).toBe(2);
+    });
+    const callsDopoPrima = window.fetch.mock.calls.length;
+
+    // 2) Chiudi la modale e riapri: risultato dalla cache, NESSUNA nuova chiamata AI
+    fireEvent.click(screen.getByRole('button', { name: 'Chiudi' }));
+    await waitFor(() => expect(screen.queryByText(/Riassunto discussione/)).toBeNull());
+    fireEvent.click(detail.getByRole('button', { name: '📝 Riassumi' }));
+    expect(await screen.findByText(/riassunto persistito/, {}, { timeout: 4000 })).toBeTruthy();
+    expect(window.fetch).toHaveBeenCalledTimes(callsDopoPrima);
   });
 });

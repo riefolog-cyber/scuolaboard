@@ -98,6 +98,8 @@ beforeEach(() => {
   // fetch fresco per ogni test: senza, i mock dei test precedenti accumulano
   // chiamate e mockResolvedValueOnce vengono consumati da altri test.
   window.fetch = vi.fn();
+  dbUpdateMock.mockClear();
+  dbSetMock.mockClear();
   render(React.createElement(AIProbe, { u: USER }));
 });
 
@@ -228,7 +230,7 @@ describe('useAI — sommario e sondaggio', () => {
     expect(window.fetch).not.toHaveBeenCalled();
   });
 
-  it('riassuntiCommentiRun: 2+ commenti → riassunto (pseudonimizzato)', async () => {
+  it('riassuntiCommentiRun: 2+ commenti → riassunto (pseudonimizzato) e PERSISTITO con nCommenti', async () => {
     mockText('riassunto della discussione');
     apiRef.riassuntiCommentiRun({
       id: 'c1',
@@ -238,6 +240,47 @@ describe('useAI — sommario e sondaggio', () => {
       ],
     });
     await waitFor(() => expect(apiRef.sommarioResult['c1']).toContain('riassunto'));
+    // Persistenza in ai_results/{c1}.sommario con merge (stesso doc di analisi)
+    await waitFor(() => expect(dbSetMock).toHaveBeenCalled());
+    const arg = dbSetMock.mock.calls.find((c) => c[0] && c[0].sommario)[0];
+    expect(arg.sommario.testo).toBe('riassunto della discussione');
+    expect(arg.sommario.nCommenti).toBe(2);
+    const opts = dbSetMock.mock.calls.find((c) => c[0] && c[0].sommario)[1];
+    expect(opts && opts.merge).toBe(true);
+  });
+
+  it('riassuntiCommentiRun: cache valida (stesso nCommenti) → NESSUNA chiamata AI', async () => {
+    // Cache persistita già caricata in aiMap (es. reload: aiLoad la rilegge)
+    apiRef.setAiMap({ c1: { sommario: { testo: 'riassunto già fatto', nCommenti: 2 } } });
+    await waitFor(() => expect(apiRef.aiMap['c1']).toBeTruthy());
+    window.fetch = vi.fn(); // se venisse chiamata, fallirebbe il test
+
+    apiRef.riassuntiCommentiRun({
+      id: 'c1',
+      commenti: [
+        { id: 'cm1', autore: 'Luca', testo: 'a' },
+        { id: 'cm2', autore: 'Anna', testo: 'b' },
+      ],
+    });
+    await waitFor(() => expect(apiRef.sommarioResult['c1']).toContain('riassunto già fatto'));
+    expect(window.fetch).not.toHaveBeenCalled(); // nessun costo AI
+    expect(dbSetMock).not.toHaveBeenCalled(); // e nessuna riscrittura
+  });
+
+  it('riassuntiCommentiRun: cache con nCommenti diverso → ricontatta l AI (discussione cambiata)', async () => {
+    apiRef.setAiMap({ c1: { sommario: { testo: 'vecchio', nCommenti: 1 } } });
+    await waitFor(() => expect(apiRef.aiMap['c1']).toBeTruthy());
+    mockText('riassunto aggiornato');
+
+    apiRef.riassuntiCommentiRun({
+      id: 'c1',
+      commenti: [
+        { id: 'cm1', autore: 'Luca', testo: 'a' },
+        { id: 'cm2', autore: 'Anna', testo: 'b' },
+      ],
+    });
+    await waitFor(() => expect(apiRef.sommarioResult['c1']).toContain('riassunto aggiornato'));
+    expect(window.fetch).toHaveBeenCalled(); // 2 commenti ≠ cache(1) → rigenera
   });
 
   it('aiAnalisiSondaggio: nessun voto → messaggio', async () => {
