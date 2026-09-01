@@ -1,43 +1,15 @@
 // firestore-sync.ts — useSyncExternalStore adapter per Firestore onSnapshot
 // Sostituisce useState+useEffect(onSnapshot) con useSyncExternalStore
 // per gestione sottoscrizioni gestita da React (no tearing, no stale closure)
+//
+// REFACTOR (bug #7): gli store sono ISTANZIATI per chiamata (closure), non più
+// singleton a livello di modulo. Ogni createXxxStore possiede il proprio stato
+// (snapshot, loaded, listeners, unsub) e la propria cache combinata. Il
+// destroy() di un'istanza non tocca più i listener/sottoscrizioni di altre
+// istanze, ed è sparita la classe di race tra store condivisi a livello di
+// modulo (stesso db catturato all'import, chiavi globali, ecc.).
 
 import { safeDocId } from './utils/format.ts';
-
-// ── MODULE-LEVEL SINGLETONS ────────────────────────────────────────────────
-var _cardsSnapshot: any[] = [];
-var _cardsLoaded = false;
-var _cardsListeners = new Set<() => void>();
-var _cardsUnsub: (() => void) | null = null;
-// Chiave = anno + ruolo: la query degli studenti (con where visibile==true)
-// è diversa da quella del prof (tutte le card) → cambiando ruolo bisogna
-// ri-sottoscrivere, altrimenti lo studente erediterebbe la query del prof.
-var _cardsKey: string | null = null;
-
-var _classiCustom: string[] = [];
-var _classiNascoste: string[] = [];
-var _classiListeners = new Set<() => void>();
-var _classiUnsub: (() => void) | null = null;
-var _classiAnno: string | null = null;
-
-var _preferiti: string[] = [];
-var _preferitiListeners = new Set<() => void>();
-var _preferitiUnsub: (() => void) | null = null;
-var _preferitiUid: string | null = null;
-
-// ── COMBINED SNAPSHOT CACHE ────────────────────────────────────────────────
-// useSyncExternalStore chiama getSnapshot() frequentemente e confronta
-// il risultato con Object.is(). Se ritorniamo un nuovo oggetto ogni volta,
-// React pensa sempre che lo store sia cambiato → re-render infiniti.
-// Cache: creiamo un nuovo oggetto solo quando i dati sottostanti cambiano.
-
-var _cachedCombined: {
-  allCards: any[];
-  classiCustom: string[];
-  classiNascoste: string[];
-  preferiti: string[];
-  loaded: boolean;
-} | null = null;
 
 // Accesso LAZY a window.db: letto al momento della sottoscrizione, non
 // all'import. Se questo modulo viene valutato prima di app-utils/firebase-init
@@ -54,24 +26,33 @@ function getDb(): any {
 // client-side (visibleSorted in cards.ts) e così evitiamo un indice composito.
 // ⚠️ Richiede che TUTTE le card abbiano il campo annoScolastico: eseguire
 // prima migrations/migrate-card-annoscolastico.js per le card legacy.
-function createCardsStore(user: any, anno: string | null) {
+// onInvalidate (opzionale): chiamato quando i dati cambiano, per invalidare la
+// cache combinata dell'istanza che possiede questo store (createCombinedStore).
+function createCardsStore(user: any, anno: string | null, onInvalidate?: () => void) {
   var isProf = !!(user && user.role === 'prof');
-  var key = anno + (isProf ? ':prof' : ':stud');
+
+  // Stato LOCALE all'istanza: due store creati con lo stesso anno/ruolo NON
+  // condividono nulla — il destroy() di uno non tocca l'altro.
+  var snapshot: any[] = [];
+  var loaded = false;
+  var listeners = new Set<() => void>();
+  var unsub: (() => void) | null = null;
+
+  function invalidate() {
+    if (onInvalidate) onInvalidate();
+  }
+  function fire() {
+    listeners.forEach(function (l) {
+      l();
+    });
+  }
+
   return {
     subscribe: function (onStoreChange: () => void) {
-      _cardsListeners.add(onStoreChange);
-      // Cambio anno/ruolo → nuova sottoscrizione con il filtro giusto
-      if (_cardsKey !== key) {
-        if (_cardsUnsub) {
-          _cardsUnsub();
-          _cardsUnsub = null;
-        }
-        _cardsKey = key;
-        _cardsSnapshot = [];
-        _cardsLoaded = false;
-        _cachedCombined = null;
-      }
-      if (!_cardsUnsub && anno) {
+      listeners.add(onStoreChange);
+      // Una sola sottoscrizione Firestore per istanza, condivisa dai listener
+      // di QUESTA istanza (mai di altre).
+      if (!unsub && anno) {
         // ⚠️ Gli studenti devono filtrare in QUERY (where visibile==true): la
         // regola Firestore (cards read) ha una condizione su resource.data.visibile
         // e le regole NON sono filtri → senza il vincolo in query l'intera lettura
@@ -79,175 +60,182 @@ function createCardsStore(user: any, anno: string | null) {
         // Il prof legge tutto (isProf() nella regola, query senza filtri).
         var q: any = getDb().collection('cards').where('annoScolastico', '==', anno);
         if (!isProf) q = q.where('visibile', '==', true);
-        _cardsUnsub = q.onSnapshot(
+        unsub = q.onSnapshot(
           function (s: any) {
             var a: any[] = [];
             s.forEach(function (d: any) {
               a.push(d.data());
             });
-            _cardsSnapshot = a;
-            _cardsLoaded = true;
-            _cachedCombined = null; // invalida cache combinata
-            _cardsListeners.forEach(function (l) {
-              l();
-            });
+            snapshot = a;
+            loaded = true;
+            invalidate();
+            fire();
           },
           function (err: any) {
             // Senza error handler un permission-denied/errore di rete lasciava
-            // _cardsLoaded=false per sempre → UI bloccata sullo skeleton.
+            // loaded=false per sempre → UI bloccata sullo skeleton.
             console.error('[firestore-sync] cards onSnapshot:', err && err.code, err && err.message);
-            _cardsSnapshot = [];
-            _cardsLoaded = true; // stato vuoto invece dello spinner infinito
-            _cachedCombined = null;
-            _cardsListeners.forEach(function (l) {
-              l();
-            });
+            snapshot = [];
+            loaded = true; // stato vuoto invece dello spinner infinito
+            invalidate();
+            fire();
           }
         );
       }
       return function () {
-        _cardsListeners.delete(onStoreChange);
+        listeners.delete(onStoreChange);
       };
     },
     getSnapshot: function () {
-      return _cardsSnapshot;
+      return snapshot;
     },
     getLoaded: function () {
-      return _cardsLoaded;
+      return loaded;
     },
     destroy: function () {
-      if (_cardsUnsub) {
-        _cardsUnsub();
-        _cardsUnsub = null;
+      if (unsub) {
+        unsub();
+        unsub = null;
       }
-      _cardsSnapshot = [];
-      _cardsLoaded = false;
-      _cardsListeners.clear(); // Fix #2
-      _cachedCombined = null;
-      _cardsKey = null;
+      snapshot = [];
+      loaded = false;
+      listeners.clear(); // SOLO i listener di questa istanza
     },
   };
 }
 
 // ── STORE: CLASSI ──────────────────────────────────────────────────────────
-function createClassiStore(anno: string | null) {
-  if (_classiAnno !== anno) {
-    if (_classiUnsub) {
-      _classiUnsub();
-      _classiUnsub = null;
-    }
-    _classiAnno = anno;
-    _classiCustom = [];
-    _classiNascoste = [];
-    _cachedCombined = null;
+function createClassiStore(anno: string | null, onInvalidate?: () => void) {
+  var custom: string[] = [];
+  var nascoste: string[] = [];
+  var listeners = new Set<() => void>();
+  var unsub: (() => void) | null = null;
+
+  function invalidate() {
+    if (onInvalidate) onInvalidate();
+  }
+  function fire() {
+    listeners.forEach(function (l) {
+      l();
+    });
   }
 
   return {
     subscribe: function (onStoreChange: () => void) {
-      _classiListeners.add(onStoreChange);
-      if (!_classiUnsub && anno) {
-        _classiUnsub = getDb()
+      listeners.add(onStoreChange);
+      if (!unsub && anno) {
+        unsub = getDb()
           .collection('config')
           .doc('classi_custom_' + safeDocId(anno))
           .onSnapshot(
             function (doc: any) {
               var d = doc.exists ? doc.data() : {};
-              _classiCustom = d.lista || [];
-              _classiNascoste = d.nascoste || [];
-              _cachedCombined = null; // invalida cache combinata
-              _classiListeners.forEach(function (l) {
-                l();
-              });
+              custom = d.lista || [];
+              nascoste = d.nascoste || [];
+              invalidate();
+              fire();
             },
             function (err: any) {
               console.error('[firestore-sync] classi onSnapshot:', err && err.code, err && err.message);
-              _cachedCombined = null;
-              _classiListeners.forEach(function (l) {
-                l();
-              });
+              invalidate();
+              fire();
             }
           );
       }
       return function () {
-        _classiListeners.delete(onStoreChange);
+        listeners.delete(onStoreChange);
       };
     },
     getSnapshot: function () {
-      return { custom: _classiCustom, nascoste: _classiNascoste };
+      return { custom: custom, nascoste: nascoste };
     },
     destroy: function () {
-      if (_classiUnsub) {
-        _classiUnsub();
-        _classiUnsub = null;
+      if (unsub) {
+        unsub();
+        unsub = null;
       }
-      _classiCustom = [];
-      _classiNascoste = [];
-      _classiListeners.clear(); // Fix #2
-      _cachedCombined = null;
+      custom = [];
+      nascoste = [];
+      listeners.clear();
     },
   };
 }
 
 // ── STORE: PREFERITI ───────────────────────────────────────────────────────
-function createFavStore(uid: string | null) {
-  if (_preferitiUid !== uid) {
-    if (_preferitiUnsub) {
-      _preferitiUnsub();
-      _preferitiUnsub = null;
-    }
-    _preferitiUid = uid;
-    _preferiti = [];
-    _cachedCombined = null;
+function createFavStore(uid: string | null, onInvalidate?: () => void) {
+  var ids: string[] = [];
+  var listeners = new Set<() => void>();
+  var unsub: (() => void) | null = null;
+
+  function invalidate() {
+    if (onInvalidate) onInvalidate();
+  }
+  function fire() {
+    listeners.forEach(function (l) {
+      l();
+    });
   }
 
   return {
     subscribe: function (onStoreChange: () => void) {
-      _preferitiListeners.add(onStoreChange);
-      if (!_preferitiUnsub && uid) {
-        _preferitiUnsub = getDb()
+      listeners.add(onStoreChange);
+      if (!unsub && uid) {
+        unsub = getDb()
           .collection('preferiti')
           .doc(uid)
           .onSnapshot(
             function (doc: any) {
-              _preferiti = doc.exists && doc.data().ids ? doc.data().ids : [];
-              _cachedCombined = null; // invalida cache combinata
-              _preferitiListeners.forEach(function (l) {
-                l();
-              });
+              ids = doc.exists && doc.data().ids ? doc.data().ids : [];
+              invalidate();
+              fire();
             },
             function (err: any) {
               console.error('[firestore-sync] preferiti onSnapshot:', err && err.code, err && err.message);
-              _cachedCombined = null;
-              _preferitiListeners.forEach(function (l) {
-                l();
-              });
+              invalidate();
+              fire();
             }
           );
       }
       return function () {
-        _preferitiListeners.delete(onStoreChange);
+        listeners.delete(onStoreChange);
       };
     },
     getSnapshot: function () {
-      return _preferiti;
+      return ids;
     },
     destroy: function () {
-      if (_preferitiUnsub) {
-        _preferitiUnsub();
-        _preferitiUnsub = null;
+      if (unsub) {
+        unsub();
+        unsub = null;
       }
-      _preferiti = [];
-      _preferitiListeners.clear(); // Fix #2
-      _cachedCombined = null;
+      ids = [];
+      listeners.clear();
     },
   };
 }
 
 // ── COMBINED STORE ─────────────────────────────────────────────────────────
 function createCombinedStore(user: any, annoScolastico: string | null) {
-  var cardsStore = createCardsStore(user, annoScolastico);
-  var classiStore = createClassiStore(annoScolastico);
-  var favStore = createFavStore(user ? user.uid : null);
+  // Cache per getSnapshot: useSyncExternalStore chiama getSnapshot() spesso e
+  // confronta con Object.is(). Se restituiamo un nuovo oggetto ogni volta,
+  // React pensa sempre che lo store sia cambiato → re-render infiniti.
+  // La cache appartiene a QUESTA istanza e viene invalidata dai tre store
+  // figli (onInvalidate) quando i dati sottostanti cambiano.
+  var cachedCombined: {
+    allCards: any[];
+    classiCustom: string[];
+    classiNascoste: string[];
+    preferiti: string[];
+    loaded: boolean;
+  } | null = null;
+
+  function invalidate() {
+    cachedCombined = null;
+  }
+
+  var cardsStore = createCardsStore(user, annoScolastico, invalidate);
+  var classiStore = createClassiStore(annoScolastico, invalidate);
+  var favStore = createFavStore(user ? user.uid : null, invalidate);
 
   return {
     subscribe: function (onStoreChange: () => void) {
@@ -260,11 +248,10 @@ function createCombinedStore(user: any, annoScolastico: string | null) {
         u3();
       };
     },
-    // Fix #1: getSnapshot() ritorna lo stesso oggetto cached finché i dati non cambiano
     getSnapshot: function () {
-      if (!_cachedCombined) {
+      if (!cachedCombined) {
         var classiData = classiStore.getSnapshot();
-        _cachedCombined = {
+        cachedCombined = {
           allCards: cardsStore.getSnapshot(),
           classiCustom: classiData.custom,
           classiNascoste: classiData.nascoste,
@@ -272,9 +259,11 @@ function createCombinedStore(user: any, annoScolastico: string | null) {
           loaded: cardsStore.getLoaded(),
         };
       }
-      return _cachedCombined;
+      return cachedCombined;
     },
     destroy: function () {
+      // Distrugge SOLO i figli di questa istanza: i listener/sottoscrizioni
+      // delle altre istanze non vengono toccati (fix bug #7).
       cardsStore.destroy();
       classiStore.destroy();
       favStore.destroy();
