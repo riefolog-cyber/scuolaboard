@@ -83,7 +83,6 @@ export function useCards(user: any, annoScolastico: string) {
   var [filtroBarOpen, setFiltroBarOpen] = useState(true);
   var [newCardsBanner, setNewCardsBanner] = useState([]);
   var [showBanner, setShowBanner] = useState(false);
-  var [now, setNow] = useState(Date.now());
   var [view, setView] = useState('bacheca');
   var [viewStudenti, setViewStudenti] = useState(false);
   var [studenti, setStudenti] = useState([]);
@@ -256,22 +255,10 @@ export function useCards(user: any, annoScolastico: string) {
   // cards è il subset filtrato per annoScolastico corrente
   // allCards è calcolato sopra (overlay ottimistico su rawAllCards).
 
-  // ── TIMER TICK ────────────────────────────────────────────────────────
-  useEffect(
-    function () {
-      var hasScadenze = cards.some(function (c: any) {
-        return c.scadenza && new Date(c.scadenza).getTime() > Date.now() - 5000;
-      });
-      if (!hasScadenze) return;
-      var t = setInterval(function () {
-        setNow(Date.now());
-      }, 1000);
-      return function () {
-        clearInterval(t);
-      };
-    },
-    [cards]
-  );
+  // NOTA: il tick di 1s per i countdown è stato rimosso (ottimizzazione):
+  // ora vive in Countdown.tsx, che aggiorna SOLO il badge interessato invece
+  // di ri-renderizzare tutti i consumatori del CardsContext. L'allarme di
+  // scadenza in AppProvider usa il proprio interval locale.
 
   // ── FILTRO E ORDINAMENTO ──────────────────────────────────────────────
   var visible = useMemo(
@@ -334,7 +321,6 @@ export function useCards(user: any, annoScolastico: string) {
     setNewCardsBanner: setNewCardsBanner,
     showBanner: showBanner,
     setShowBanner: setShowBanner,
-    now: now,
     view: view,
     setView: setView,
     viewStudenti: viewStudenti,

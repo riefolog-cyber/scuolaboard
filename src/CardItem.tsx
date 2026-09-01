@@ -1,4 +1,5 @@
 import { normalizeLinks } from './app-utils.tsx';
+import Countdown from './Countdown.tsx';
 // CardItem.jsx · ScuolaBoard
 
 function CardItem__({ $, c }: any) {
@@ -283,43 +284,7 @@ function CardItem__({ $, c }: any) {
                   {c.testo}
                 </div>
               )}
-              {c.scadenza &&
-                (function () {
-                  var ms = new Date(c.scadenza).getTime() - Date.now();
-                  var expired = ms <= 0;
-                  var secs = Math.floor(ms / 1000),
-                    mins = Math.floor(secs / 60),
-                    hrs = Math.floor(mins / 60),
-                    days = Math.floor(hrs / 24);
-                  var str = expired
-                    ? 'Scaduta'
-                    : days > 0
-                      ? days + 'g ' + (hrs % 24) + 'h'
-                      : hrs > 0
-                        ? (hrs % 24) + 'h ' + (mins % 60) + 'm'
-                        : mins > 0
-                          ? (mins % 60) + 'm ' + (secs % 60) + 's'
-                          : (secs % 60) + 's';
-                  return (
-                    <div
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 4,
-                        background: expired ? 'rgba(239,68,68,.15)' : 'rgba(245,158,11,.12)',
-                        border: '1px solid ' + (expired ? 'rgba(239,68,68,.3)' : 'rgba(245,158,11,.25)'),
-                        borderRadius: 20,
-                        padding: '2px 8px',
-                        fontSize: 11,
-                        color: expired ? '#f87171' : '#fbbf24',
-                        fontWeight: 700,
-                        marginTop: 4,
-                      }}
-                    >
-                      {'⏰ ' + str}
-                    </div>
-                  );
-                })()}
+              {c.scadenza && <Countdown scadenza={c.scadenza} />}
               {cardLinks.length > 0 && (
                 <div style={{ marginTop: 5, fontSize: 11, color: '#60a5fa' }}>{'🔗 ' + cardLinks.length + ' link'}</div>
               )}

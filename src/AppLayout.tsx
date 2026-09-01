@@ -1,5 +1,7 @@
 // AppLayout.tsx — layout principale (classic JSX, $ = fusione dei context)
-import { lazy, Suspense, useContext } from 'react';
+// memo: il provider NON cambia le props di AppLayout → un keystroke nel form
+// (FormContext, NON consumato qui) non ri-renderizza l'intero albero.
+import { lazy, Suspense, useContext, memo } from 'react';
 import AuthContext from './contexts/AuthContext.tsx';
 import CardsContext from './contexts/CardsContext.tsx';
 import ModalsContext from './contexts/ModalsContext.tsx';
@@ -611,4 +613,4 @@ function AppLayout(props: any) {
     </div>
   );
 }
-export default AppLayout;
+export default memo(AppLayout);

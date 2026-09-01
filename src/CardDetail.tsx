@@ -1,5 +1,8 @@
 // CardDetail.jsx · ScuolaBoard
+import { useContext } from 'react';
 import { normalizeLinks } from './app-utils.tsx';
+import FormContext from './contexts/FormContext.tsx';
+import { useCountdown, countdownStr } from './Countdown.tsx';
 
 import QuizPanel from './carddetail/QuizPanel.tsx';
 import AIPanel from './carddetail/AIPanel.tsx';
@@ -8,10 +11,16 @@ import DomandeLiberePanel from './carddetail/DomandeLiberePanel.tsx';
 import CommentsSection from './carddetail/CommentsSection.tsx';
 import RifiutaModal from './carddetail/RifiutaModal.tsx';
 
-function CardDetail__({ $ }: any) {
-  if (!$.showCard) return null;
-  var isLight = !!$.isLight;
+function CardDetail__({ $: props$ }: any) {
+  // Merge del FormContext (split di UIContext): i pannelli (commenti, quiz,
+  // rifiuta) leggono editingCm/replyTesto/nc/qRisposte… che ora vivono qui.
+  var $ = Object.assign({}, props$, useContext(FormContext));
   var c = $.showCard;
+  // Hook chiamato SEMPRE (prima dell'early return): il timer locale aggiorna
+  // solo questo pannello, non l'intera app (vedi Countdown.tsx).
+  var cdNow = useCountdown(c && c.scadenza);
+  if (!c) return null;
+  var isLight = !!$.isLight;
   var totV = c.opzioni
     ? c.opzioni.reduce(function (a: any, o: any) {
         return a + (o.voti || []).length;
@@ -341,21 +350,8 @@ function CardDetail__({ $ }: any) {
           {/* Scadenza */}
           {c.scadenza &&
             (function () {
-              var ms = new Date(c.scadenza).getTime() - Date.now();
-              var expired = ms <= 0;
-              var secs = Math.floor(ms / 1000),
-                mins = Math.floor(secs / 60),
-                hrs = Math.floor(mins / 60),
-                days = Math.floor(hrs / 24);
-              var str = expired
-                ? 'Scaduta'
-                : days > 0
-                  ? days + 'g ' + (hrs % 24) + 'h'
-                  : hrs > 0
-                    ? (hrs % 24) + 'h ' + (mins % 60) + 'm'
-                    : mins > 0
-                      ? (mins % 60) + 'm ' + (secs % 60) + 's'
-                      : (secs % 60) + 's';
+              var fmt = countdownStr(c.scadenza, cdNow);
+              var expired = fmt.expired;
               return (
                 <div
                   style={{
@@ -372,7 +368,7 @@ function CardDetail__({ $ }: any) {
                     marginBottom: 12,
                   }}
                 >
-                  <span>{'⏰ ' + str}</span>
+                  <span>{'⏰ ' + fmt.str}</span>
                   {$.isProf && !$.simulaSt && (
                     <button
                       onClick={function (e: any) {

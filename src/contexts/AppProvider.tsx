@@ -5,6 +5,7 @@ import CardsContext from './CardsContext.tsx';
 import ModalsContext from './ModalsContext.tsx';
 import AIContext from './AIContext.tsx';
 import UIContext from './UIContext.tsx';
+import FormContext from './FormContext.tsx';
 import useToast from '../hooks/useToast.ts';
 import useQuiz from '../hooks/useQuiz.ts';
 import useAmmonizioni from '../hooks/useAmmonizioni.ts';
@@ -854,23 +855,36 @@ function AppProvider({ children }: any) {
     [cardsHook.cards, showCard]
   );
 
-  // Allarmi scadenze
+  // Allarmi scadenze: interval locale (nessuno state React) — il tick NON
+  // ri-renderizza l'app. Gira solo finché esiste almeno una card con scadenza;
+  // al primo tick in cui una scadenza è appena scaduta (finestra 2s) suona
+  // l'allarme una sola volta (alarmFiredRef).
   useEffect(
     function () {
-      if (!cardsHook.cards.length) return;
-      var n = cardsHook.now;
-      cardsHook.cards.forEach(function (c: any) {
-        if (!c.scadenza) return;
-        var key = String(c.id);
-        if (alarmFiredRef.current.has(key)) return;
-        var ms = new Date(c.scadenza).getTime() - n;
-        if (ms <= 0 && ms > -2000) {
-          alarmFiredRef.current.add(key);
-          playAlarm();
-        }
+      var cards = cardsHook.cards;
+      if (!cards.length) return;
+      var hasScadenze = cards.some(function (c: any) {
+        return c.scadenza;
       });
+      if (!hasScadenze) return;
+      var t = setInterval(function () {
+        var n = Date.now();
+        cards.forEach(function (c: any) {
+          if (!c.scadenza) return;
+          var key = String(c.id);
+          if (alarmFiredRef.current.has(key)) return;
+          var ms = new Date(c.scadenza).getTime() - n;
+          if (ms <= 0 && ms > -2000) {
+            alarmFiredRef.current.add(key);
+            playAlarm();
+          }
+        });
+      }, 1000);
+      return function () {
+        clearInterval(t);
+      };
     },
-    [cardsHook.now, cardsHook.cards]
+    [cardsHook.cards]
   );
 
   // Chiusura automatica menu anno
@@ -1014,7 +1028,6 @@ function AppProvider({ children }: any) {
         setNewCardsBanner: cardsHook.setNewCardsBanner,
         showBanner: cardsHook.showBanner,
         setShowBanner: cardsHook.setShowBanner,
-        now: cardsHook.now,
         view: cardsHook.view,
         setView: cardsHook.setView,
         viewStudenti: cardsHook.viewStudenti,
@@ -1041,7 +1054,6 @@ function AppProvider({ children }: any) {
       cardsHook.preferiti,
       cardsHook.newCardsBanner,
       cardsHook.showBanner,
-      cardsHook.now,
       cardsHook.view,
       cardsHook.viewStudenti,
       cardsHook.studenti,
@@ -1222,16 +1234,15 @@ function AppProvider({ children }: any) {
     ]
   );
 
-  var uiValue = useMemo(
+  // ── FORMCONTEXT (split di UIContext) ───────────────────────────────────
+  // Stato "veloce" che cambia a ogni keystroke (form, commenti, risposte…).
+  // Vive in un contesto SEPARATO: chi non lo consuma (griglia, header,
+  // AppLayout — memoizzato) NON viene ri-renderizzato quando l'utente digita.
+  // I setter stabili (setForm/setEditMode) restano ANCHE in uiValue perché
+  // CardGrid/FAB li usano senza bisogno di ri-renderizzarsi a ogni keystroke.
+  var formValue = useMemo(
     function () {
       return {
-        // Anno
-        annoScolastico: annoScolastico,
-        setAnnoScolastico: setAnnoScolastico,
-        showAnnoMenu: showAnnoMenu,
-        setShowAnnoMenu: setShowAnnoMenu,
-        annoDefault: annoDefault,
-        // Form / Editing
         form: form,
         setForm: setForm,
         editMode: editMode,
@@ -1244,7 +1255,6 @@ function AppProvider({ children }: any) {
         setReplyTo: setReplyTo,
         replyTesto: replyTesto,
         setReplyTesto: setReplyTesto,
-        // Classi
         classeInput: classeInput,
         setClasseInput: setClasseInput,
         rinominaClasse: rinominaClasse,
@@ -1259,6 +1269,78 @@ function AppProvider({ children }: any) {
         setCopiaAnnoTarget: setCopiaAnnoTarget,
         rifiutaInput: rifiutaInput,
         setRifiutaInput: setRifiutaInput,
+        timerInput: timerInput,
+        setTimerInput: setTimerInput,
+        qRisposte: qRisposte,
+        setQRisposte: setQRisposte,
+        qInviato: qInviato,
+        setQInviato: setQInviato,
+        qLoading: qLoading,
+        setQLoading: setQLoading,
+        quizRisposte: quizRisposte,
+        setQuizRisposte: setQuizRisposte,
+        // Funzioni che leggono lo stato del form: in questo memo vengono
+        // rigenerate quando i valori cambiano → closure sempre fresca.
+        addCard: addCard,
+        editCard: editCard,
+        handleImgUpload: handleImgUpload,
+        rimuoviImmagine: rimuoviImmagine,
+        setDidascalia: setDidascalia,
+        handleAllegatiUpload: function (e: any) {
+          handleAllegatiUpload(e, form, setForm, setAllegatiUploading, showToast);
+        },
+        confermaDuplica: confermaDuplica,
+        confermaCopiaAnno: confermaCopiaAnno,
+        // Handler commenti/quiz: leggono nc/replyTesto/editingCm/qRisposte
+        // (e showCard) — vivono qui così digitare un commento ri-renderizza
+        // SOLO il pannello della card, non la griglia (closure fresca).
+        addCom: addCom,
+        addReply: addReply,
+        saveEditCm: saveEditCm,
+        inviaRisposteQuiz: inviaRisposteQuiz,
+      };
+    },
+    [
+      form,
+      editMode,
+      nc,
+      editingCm,
+      replyTo,
+      replyTesto,
+      classeInput,
+      rinominaClasse,
+      rinominaInput,
+      rinominaConferma,
+      duplicaClassi,
+      copiaAnnoTarget,
+      rifiutaInput,
+      timerInput,
+      qRisposte,
+      qInviato,
+      qLoading,
+      quizRisposte,
+      user,
+      isProf,
+      classeCorrente,
+      annoScolastico,
+      showCard,
+      cardsHook.cards,
+    ]
+  );
+
+  var uiValue = useMemo(
+    function () {
+      return {
+        // Anno
+        annoScolastico: annoScolastico,
+        setAnnoScolastico: setAnnoScolastico,
+        showAnnoMenu: showAnnoMenu,
+        setShowAnnoMenu: setShowAnnoMenu,
+        annoDefault: annoDefault,
+        // Form / Editing — i setter stabili restano qui (CardGrid/FAB),
+        // i valori "veloci" vivono in FormContext.
+        setForm: setForm,
+        setEditMode: setEditMode,
         // Like / UI
         likeHoverCard: likeHoverCard,
         setLikeHoverCard: setLikeHoverCard,
@@ -1269,17 +1351,6 @@ function AppProvider({ children }: any) {
         setImgUploading: setImgUploading,
         allegatiUploading: allegatiUploading,
         setAllegatiUploading: setAllegatiUploading,
-        timerInput: timerInput,
-        setTimerInput: setTimerInput,
-        // Quiz
-        qRisposte: qRisposte,
-        setQRisposte: setQRisposte,
-        qInviato: qInviato,
-        setQInviato: setQInviato,
-        qLoading: qLoading,
-        setQLoading: setQLoading,
-        quizRisposte: quizRisposte,
-        setQuizRisposte: setQuizRisposte,
         // Card detail
         showCard: showCard,
         setShowCard: setShowCard,
@@ -1329,17 +1400,11 @@ function AppProvider({ children }: any) {
         myName: myName,
         closeCard: closeCard,
         openCard: openCard,
-        addCard: addCard,
-        editCard: editCard,
-        handleImgUpload: handleImgUpload,
-        rimuoviImmagine: rimuoviImmagine,
-        setDidascalia: setDidascalia,
         delCard: delCard,
         delCardWithUndo: delCardWithUndo,
         undoDeleteCard: undoDeleteCard,
         appCard: appCard,
         rifiutaConMot: rifiutaConMot,
-        inviaRisposteQuiz: inviaRisposteQuiz,
         valutaAperteProfAI: function (card: any, ris: any) {
           if (!isProf || simulaSt) return;
           valutaAperteProfAI(card, ris);
@@ -1348,7 +1413,6 @@ function AppProvider({ children }: any) {
         confirmResetRisposte: confirmResetRisposte,
         eliminaAnalisiAI: eliminaAnalisiAI,
         eliminaDomandeAI: eliminaDomandeAI,
-        saveEditCm: saveEditCm,
         toggleReaction: toggleReaction,
         setCardTimer: setCardTimer,
         saveClasse: saveClasse,
@@ -1364,20 +1428,13 @@ function AppProvider({ children }: any) {
         bulkHide: bulkHide,
         toggleVisibile: toggleVisibile,
         apriDuplica: apriDuplica,
-        confermaDuplica: confermaDuplica,
-        confermaCopiaAnno: confermaCopiaAnno,
         // Handlers
         toggleLike: toggleLike,
         toggleReazione: toggleReazione,
         vote: vote,
-        addCom: addCom,
-        addReply: addReply,
         executeDelReply: executeDelReply,
         executeDelCom: executeDelCom,
         ammonisci: ammonisci,
-        handleAllegatiUpload: function (e: any) {
-          handleAllegatiUpload(e, form, setForm, setAllegatiUploading, showToast);
-        },
         handleRimuoviAllegato: function (id: any) {
           handleRimuoviAllegato(id, setForm);
         },
@@ -1418,29 +1475,12 @@ function AppProvider({ children }: any) {
     [
       annoScolastico,
       showAnnoMenu,
-      form,
-      editMode,
-      nc,
-      editingCm,
-      replyTo,
-      replyTesto,
-      classeInput,
-      rinominaClasse,
-      rinominaInput,
-      rinominaConferma,
-      duplicaClassi,
-      copiaAnnoTarget,
-      rifiutaInput,
       likeHoverCard,
       likeAnimCard,
       imgUploading,
       allegatiUploading,
-      timerInput,
-      qRisposte,
-      qInviato,
-      qLoading,
-      quizRisposte,
       showCard,
+      __handlers,
       toasts,
       undoDelete,
       bulkMode,
@@ -1462,15 +1502,17 @@ function AppProvider({ children }: any) {
   );
 
   return (
-    <UIContext.Provider value={uiValue as any}>
-      <AuthContext.Provider value={authValue as any}>
-        <CardsContext.Provider value={cardsValue as any}>
-          <ModalsContext.Provider value={modalsValue as any}>
-            <AIContext.Provider value={aiValue as any}>{children}</AIContext.Provider>
-          </ModalsContext.Provider>
-        </CardsContext.Provider>
-      </AuthContext.Provider>
-    </UIContext.Provider>
+    <FormContext.Provider value={formValue as any}>
+      <UIContext.Provider value={uiValue as any}>
+        <AuthContext.Provider value={authValue as any}>
+          <CardsContext.Provider value={cardsValue as any}>
+            <ModalsContext.Provider value={modalsValue as any}>
+              <AIContext.Provider value={aiValue as any}>{children}</AIContext.Provider>
+            </ModalsContext.Provider>
+          </CardsContext.Provider>
+        </AuthContext.Provider>
+      </UIContext.Provider>
+    </FormContext.Provider>
   );
 }
 

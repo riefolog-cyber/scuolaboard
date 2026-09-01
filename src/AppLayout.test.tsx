@@ -9,6 +9,7 @@ import CardsContext from './contexts/CardsContext.tsx';
 import ModalsContext from './contexts/ModalsContext.tsx';
 import AIContext from './contexts/AIContext.tsx';
 import UIContext from './contexts/UIContext.tsx';
+import FormContext from './contexts/FormContext.tsx';
 
 beforeEach(() => {
   vi.stubGlobal('FORM0', {
@@ -137,15 +138,19 @@ function wrap(authOverrides: any = {}, cardsOverrides: any = {}) {
   var uiCtx = Object.assign({}, emptyUI);
   return function Wrapper({ children }: { children: React.ReactNode }): React.ReactElement {
     return h(
-      AuthContext.Provider,
-      { value: authCtx as any },
+      FormContext.Provider,
+      { value: {} as any },
       h(
-        CardsContext.Provider,
-        { value: cardsCtx as any },
+        AuthContext.Provider,
+        { value: authCtx as any },
         h(
-          ModalsContext.Provider,
-          { value: modalsCtx as any },
-          h(AIContext.Provider, { value: aiCtx as any }, h(UIContext.Provider, { value: uiCtx as any }, children))
+          CardsContext.Provider,
+          { value: cardsCtx as any },
+          h(
+            ModalsContext.Provider,
+            { value: modalsCtx as any },
+            h(AIContext.Provider, { value: aiCtx as any }, h(UIContext.Provider, { value: uiCtx as any }, children))
+          )
         )
       )
     );

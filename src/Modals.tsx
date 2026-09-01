@@ -3,7 +3,8 @@
 // Le 11 modali eager sotto vengono importate subito (side-effect: registrano
 // SB.<Name>); le 5 rare (WordCloud, QR, Duplica, CopiaAnno, Cerca) sono lazy:
 // la registrazione SB.<Name> avviene alla PRIMA apertura, non all'avvio.
-import { Fragment, lazy, Suspense } from 'react';
+import { Fragment, lazy, Suspense, useContext } from 'react';
+import FormContext from './contexts/FormContext.tsx';
 import LightboxModal from './modals/LightboxModal.tsx';
 import PrivacyModal from './modals/PrivacyModal.tsx';
 import ClasseModal from './modals/ClasseModal.tsx';
@@ -42,54 +43,57 @@ var LazyTimerModal = lazy(function () {
 });
 
 // ── AGGREGATOR: renders all modals ──
+// Merge del FormContext (split di UIContext): le modali ricevono anche lo
+// stato "veloce" del form (form, setForm, addCard, handleImgUpload…).
 function Modals({ $ }: any) {
+  var all = Object.assign({}, $, useContext(FormContext));
   return (
     // Fase 8b: le modali chiuse rendono null → il trap trova solo i focusable
     // della modale aperta. display:contents non altera il layout.
     <FocusTrap>
       <Fragment>
-        <LightboxModal {...$} />
-        <PrivacyModal {...$} />
-        <ClasseModal {...$} />
-        <AiQuizGenModal {...$} />
-        <AmmModal {...$} />
-        <EditAmmModal {...$} />
-        <NuovaCardModal {...$} />
-        <RifiutaModal {...$} />
-        <ConfirmDelModal {...$} />
+        <LightboxModal {...all} />
+        <PrivacyModal {...all} />
+        <ClasseModal {...all} />
+        <AiQuizGenModal {...all} />
+        <AmmModal {...all} />
+        <EditAmmModal {...all} />
+        <NuovaCardModal {...all} />
+        <RifiutaModal {...all} />
+        <ConfirmDelModal {...all} />
         {$.showProfilo && (
           <Suspense fallback={null}>
-            <LazyProfiloModal {...$} />
+            <LazyProfiloModal {...all} />
           </Suspense>
         )}
         {$.showTimerModal && (
           <Suspense fallback={null}>
-            <LazyTimerModal {...$} />
+            <LazyTimerModal {...all} />
           </Suspense>
         )}
         {$.showWordCloud && $.isProf && (
           <Suspense fallback={null}>
-            <LazyWordCloudModal {...$} />
+            <LazyWordCloudModal {...all} />
           </Suspense>
         )}
         {$.showQR && (
           <Suspense fallback={null}>
-            <LazyQRModal {...$} />
+            <LazyQRModal {...all} />
           </Suspense>
         )}
         {$.showDuplica && (
           <Suspense fallback={null}>
-            <LazyDuplicaModal {...$} />
+            <LazyDuplicaModal {...all} />
           </Suspense>
         )}
         {$.showCopiaAnno && (
           <Suspense fallback={null}>
-            <LazyCopiaAnnoModal {...$} />
+            <LazyCopiaAnnoModal {...all} />
           </Suspense>
         )}
         {$.showCerca && $.isProf && (
           <Suspense fallback={null}>
-            <LazyCercaModal {...$} />
+            <LazyCercaModal {...all} />
           </Suspense>
         )}
       </Fragment>

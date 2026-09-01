@@ -1,7 +1,11 @@
 // FilterBar.jsx · ScuolaBoard
+import { useContext } from 'react';
+import FormContext from './contexts/FormContext.tsx';
 import filterBtn from './modals/filterBtn.ts';
 
-function FilterBar__({ $ }: any) {
+function FilterBar__({ $: props$ }: any) {
+  // Merge del FormContext (split di UIContext): rinominaClasse/Input/Conferma
+  var $ = Object.assign({}, props$, useContext(FormContext));
   if (!$.isProf || $.simulaSt || $.view !== 'bacheca') return null;
   return (
     <div style={{ background: 'rgba(255,255,255,.02)', borderBottom: '1px solid rgba(255,255,255,.06)' }}>
