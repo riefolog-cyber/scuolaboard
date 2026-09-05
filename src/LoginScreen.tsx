@@ -161,6 +161,24 @@ function LoginScreen__({ $ }: any) {
               Accedi con Google
             </button>
           }
+          {$.authErr && (
+            <div
+              role="alert"
+              style={{
+                marginTop: 14,
+                background: 'rgba(239,68,68,.12)',
+                border: '1px solid rgba(239,68,68,.4)',
+                borderRadius: 12,
+                padding: '10px 14px',
+                color: '#fca5a5',
+                fontSize: 13,
+                fontWeight: 600,
+                lineHeight: 1.5,
+              }}
+            >
+              {'⚠️ ' + $.authErr}
+            </div>
+          )}
           {
             <div
               style={{

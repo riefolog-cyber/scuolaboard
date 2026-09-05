@@ -81,4 +81,81 @@ describe('useAuth — retry loadProfilo (race redirect)', () => {
     );
     expect(screen.getByTestId('load').textContent).toBe('false');
   });
+
+  it('self-healing: doc mai creato dal redirect → loadProfilo lo crea (niente parcheggio sulla login)', async () => {
+    // Simula il caso dei nuovi utenti con rete lenta / create persa:
+    // get restituisce sempre exists:false finché qualcuno non fa set().
+    // Prima del fix, esauriti i retry l'utente autenticato veniva parcheggiato
+    // sulla login (setUser null) fino al refresh manuale.
+    const uid = 'u-new';
+    const user = { uid, email: 'nuovo@ferrarisfermiclass.it', displayName: 'Nuovo Alunno' };
+    const store: Record<string, any> = {};
+    const db: any = {
+      collection: (name: string) => ({
+        doc: (id: string) => ({
+          get: async () => {
+            const data = store[id];
+            return data ? { exists: true, data: () => ({ ...data }) } : { exists: false, data: () => ({}) };
+          },
+          set: async (data: any) => {
+            store[id] = data;
+          },
+          update: async (data: any) => {
+            store[id] = { ...store[id], ...data };
+          },
+        }),
+      }),
+    };
+
+    (window as any).firebase = {
+      auth: () => makeAuth(user),
+      firestore: () => db,
+    };
+    (window as any).db = db;
+
+    render(React.createElement(AuthProbe));
+
+    // Backoff totale ~14s + self-heal: attende la creazione autonoma.
+    await waitFor(
+      () => {
+        expect(screen.getByTestId('role').textContent).toBe('studente');
+      },
+      { timeout: 30000 }
+    );
+    expect(screen.getByTestId('load').textContent).toBe('false');
+    expect(store[uid]).toBeTruthy();
+    expect(store[uid].role).toBe('studente');
+  });
+
+  it('email transiente (null al primo tick) → reload prima del sign-out, utente legittimo NON buttato fuori', async () => {
+    const uid = 'u-mail';
+    const user: any = {
+      uid,
+      email: null, // token non ancora popolato al primo onAuthStateChanged
+      displayName: 'Doc Test',
+      reload: async () => {
+        user.email = 'doc@ferrarisfermiclass.it';
+      },
+    };
+    const db = makeDbWithDelayedProfile(uid, 1);
+    const auth = makeAuth(user);
+    const signOut = vi.fn(() => Promise.resolve());
+    (auth as any).signOut = signOut;
+
+    (window as any).firebase = {
+      auth: () => auth,
+      firestore: () => db,
+    };
+    (window as any).db = db;
+
+    render(React.createElement(AuthProbe));
+
+    await waitFor(
+      () => {
+        expect(screen.getByTestId('role').textContent).toBe('prof');
+      },
+      { timeout: 6000 }
+    );
+    expect(signOut).not.toHaveBeenCalled();
+  });
 });

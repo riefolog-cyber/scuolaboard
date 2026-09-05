@@ -56,6 +56,17 @@ describe('LoginScreen', () => {
     expect(screen.getByText('🔒 Accesso sicuro tramite Google')).toBeInTheDocument();
   });
 
+  it('mostra il banner di errore quando authErr è impostato', () => {
+    renderLogin({ authErr: 'Impossibile caricare il tuo profilo: database non raggiungibile.' });
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.getByText(/database non raggiungibile/)).toBeInTheDocument();
+  });
+
+  it('nessun banner di errore senza authErr', () => {
+    renderLogin();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
   it('renders graduation cap emoji', () => {
     renderLogin();
     expect(screen.getByText('🎓')).toBeInTheDocument();

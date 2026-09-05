@@ -1061,9 +1061,10 @@ function AppProvider({ children }: any) {
         logout: auth.logout,
         setUser: auth.setUser,
         authLoad: auth.authLoad,
+        authErr: auth.authErr,
       };
     },
-    [auth.user, auth.isProf, auth.authLoad]
+    [auth.user, auth.isProf, auth.authLoad, auth.authErr]
   );
 
   var cardsValue = useMemo(

@@ -246,4 +246,92 @@ describe('useAuth — filtro d\'accesso e ciclo di vita', () => {
     await waitFor(() => expect(screen.getByTestId('load').textContent).toBe('false'));
     expect(screen.getByTestId('role').textContent).toBe('none');
   });
+
+  it('Firestore irraggiungibile in lettura → authErr visibile (non login muta)', async () => {
+    const errProbe = () => {
+      const { user, authLoad, authErr } = useAuth('2026/2027');
+      return React.createElement(
+        'div',
+        null,
+        React.createElement('span', { 'data-testid': 'load' }, String(authLoad)),
+        React.createElement('span', { 'data-testid': 'role' }, user ? (user as any).role : 'none'),
+        React.createElement('span', { 'data-testid': 'autherr' }, authErr || '')
+      );
+    };
+    const fake = makeFakeAuth({
+      user: { uid: 'u8', email: 'sfigato@ferrarisfermiclass.it', displayName: 'Sfigato' },
+    });
+    const db: any = {
+      collection: () => ({
+        doc: () => ({
+          // Rete giù / Firestore non raggiungibile: ogni get rigetta subito,
+          // ma il backoff attende comunque tutti i retry prima di arrendersi.
+          get: async () => {
+            throw { code: 'unavailable', message: 'db down' };
+          },
+          set: async () => {
+            throw { code: 'unavailable', message: 'db down' };
+          },
+          update: async () => {
+            throw { code: 'unavailable', message: 'db down' };
+          },
+        }),
+      }),
+    };
+    (window as any).firebase = { auth: fake.authFn, firestore: () => db };
+    (window as any).db = db;
+    render(React.createElement(errProbe));
+
+    await waitFor(
+      () => {
+        expect(screen.getByTestId('autherr').textContent).toContain('database non raggiungibile');
+      },
+      { timeout: 30000 }
+    );
+    expect(screen.getByTestId('role').textContent).toBe('none');
+    expect(screen.getByTestId('load').textContent).toBe('false');
+  });
+
+  it('loginGoogle con Firestore giù dopo popup ok → authErr, NESSUN redirect', async () => {
+    const errProbe = () => {
+      const { authErr, loginGoogle } = useAuth('2026/2027');
+      return React.createElement(
+        'div',
+        null,
+        React.createElement('span', { 'data-testid': 'autherr' }, authErr || ''),
+        React.createElement('button', { onClick: () => loginGoogle() }, 'login')
+      );
+    };
+    const user = { uid: 'u9', email: 'ok@ferrarisfermiclass.it', displayName: 'Ok Ora' };
+    const fake = makeFakeAuth({ popupResult: { user } });
+    const db: any = {
+      collection: () => ({
+        doc: () => ({
+          get: async () => {
+            throw { code: 'unavailable', message: 'db down' };
+          },
+          set: async () => {
+            throw { code: 'unavailable', message: 'db down' };
+          },
+          update: async () => {
+            throw { code: 'unavailable', message: 'db down' };
+          },
+        }),
+      }),
+    };
+    (window as any).firebase = { auth: fake.authFn, firestore: () => db };
+    (window as any).db = db;
+    render(React.createElement(errProbe));
+
+    fireEvent.click(screen.getByText('login'));
+    await waitFor(
+      () => {
+        expect(screen.getByTestId('autherr').textContent).toContain('database non raggiungibile');
+      },
+      { timeout: 6000 }
+    );
+    // Popup riuscito + Firestore giù: ricaricare la pagina via redirect sarebbe
+    // sbagliato (utente già autenticato) → nessun redirect.
+    expect(fake.calls.signInWithRedirect).toBe(0);
+  });
 });
