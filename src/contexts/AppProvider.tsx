@@ -1458,6 +1458,10 @@ function AppProvider({ children }: any) {
         // i valori "veloci" vivono in FormContext.
         setForm: setForm,
         setEditMode: setEditMode,
+        // editCard è usato dal bottone ✏️ di CardItem, che riceve `$` da
+        // AppLayout (senza FormContext): senza questo il click non apriva
+        // mai la modale di modifica.
+        editCard: editCard,
         // Like / UI
         likeHoverCard: likeHoverCard,
         setLikeHoverCard: setLikeHoverCard,
@@ -1489,7 +1493,6 @@ function AppProvider({ children }: any) {
         notifiche: notificheHook.notifiche,
         nonLette: notificheHook.nonLette,
         segnaLetta: notificheHook.segnaLetta,
-        segnaTutteLette: notificheHook.segnaTutteLette,
         showNotifiche: showNotifiche,
         setShowNotifiche: setShowNotifiche,
         // Refs

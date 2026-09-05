@@ -192,21 +192,6 @@ describe('Header', () => {
     expect(openCard).toHaveBeenCalledWith(cards[0]);
   });
 
-  it('marks all notifications as read', () => {
-    const segnaTutte = vi.fn();
-    renderHeader({
-      showNotifiche: true,
-      nonLette: 2,
-      notifiche: [
-        { id: 'n1', tipo: 'ammonizione', titolo: 'A', msg: 'm', letta: false },
-        { id: 'n2', tipo: 'proposta_esito', titolo: 'B', msg: 'm', letta: false },
-      ],
-      segnaTutteLette: segnaTutte,
-    });
-    fireEvent.click(screen.getByTitle('Segna tutte come lette'));
-    expect(segnaTutte).toHaveBeenCalled();
-  });
-
   it('clears all notifications after confirm, deleting the user doc', () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
     const delMock = vi.fn();

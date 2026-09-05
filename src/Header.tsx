@@ -385,48 +385,28 @@ function Header__({ $ }: any) {
                 🔔 NOTIFICHE
               </span>
               {($.notifiche || []).length > 0 && (
-                <span style={{ display: 'flex', gap: 6 }}>
-                  <button
-                    onClick={function () {
-                      $.segnaTutteLette();
-                    }}
-                    title="Segna tutte come lette"
-                    style={{
-                      background: 'rgba(99,102,241,.15)',
-                      border: '1px solid rgba(99,102,241,.3)',
-                      borderRadius: 6,
-                      padding: '3px 8px',
-                      fontSize: 11,
-                      color: '#a5b4fc',
-                      cursor: 'pointer',
-                      fontWeight: 700,
-                    }}
-                  >
-                    Segna già lette
-                  </button>
-                  <button
-                    onClick={function () {
-                      if (confirm('Eliminare tutte le notifiche?')) {
-                        var dbc: any = (window as any).db;
-                        if (dbc) dbc.collection('notifiche').doc($.user.uid).delete();
-                      }
-                    }}
-                    aria-label="Pulisci notifiche"
-                    title="Pulisci notifiche"
-                    style={{
-                      background: 'rgba(239,68,68,.12)',
-                      border: '1px solid rgba(239,68,68,.3)',
-                      borderRadius: 6,
-                      padding: '3px 8px',
-                      fontSize: 11,
-                      color: '#f87171',
-                      cursor: 'pointer',
-                      fontWeight: 700,
-                    }}
-                  >
-                    ✕
-                  </button>
-                </span>
+                <button
+                  onClick={function () {
+                    if (confirm('Eliminare tutte le notifiche?')) {
+                      var dbc: any = (window as any).db;
+                      if (dbc) dbc.collection('notifiche').doc($.user.uid).delete();
+                    }
+                  }}
+                  aria-label="Pulisci notifiche"
+                  title="Pulisci notifiche"
+                  style={{
+                    background: 'rgba(239,68,68,.12)',
+                    border: '1px solid rgba(239,68,68,.3)',
+                    borderRadius: 6,
+                    padding: '3px 8px',
+                    fontSize: 11,
+                    color: '#f87171',
+                    cursor: 'pointer',
+                    fontWeight: 700,
+                  }}
+                >
+                  ✕
+                </button>
               )}
             </div>
             {(!$.notifiche || $.notifiche.length === 0) && (

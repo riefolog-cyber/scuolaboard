@@ -59,61 +59,88 @@ function useNotifiche(deps: { user: any }) {
     [lista]
   );
 
-  var segnaLetta = useCallback(
-    function (id: string) {
+  // Scrive { lista: next, aggiornato } sul doc dell'utente (via diretta /
+  // fallback quando la lettura fresca fallisce).
+  var writeLista = useCallback(
+    function (next: Notifica[]) {
       if (!user || !user.uid) return;
       var db = getDbN();
-      if (!db || typeof db.runTransaction !== 'function') return;
-      var sid = String(id);
-      var uid = user.uid;
-      var ref = db.collection('notifiche').doc(uid);
-      // Transaction: il vecchio read-modify-write sull'intero doc perdeva le
-      // notifiche arrivate tra snapshot e scrittura (lost-update).
-      db.runTransaction(function (t: any) {
-        return t.get(ref).then(function (doc: any) {
-          var lista = doc.exists && doc.data().lista ? doc.data().lista : [];
-          var next = lista.map(function (n: any) {
-            return String(n.id) === sid ? Object.assign({}, n, { letta: true }) : n;
-          });
-          return t.set(ref, { lista: next, aggiornato: new Date().toISOString() }, { merge: true });
-        });
-      }).catch(function (e: any) {
-        if (typeof window !== 'undefined' && (window as any).SB_DEBUG)
-          console.warn('[notifiche] segnaLetta', e && e.code);
-      });
+      if (!db) return;
+      return db
+        .collection('notifiche')
+        .doc(user.uid)
+        .set({ lista: next, aggiornato: new Date().toISOString() }, { merge: true });
     },
     [user]
   );
 
-  var segnaTutteLette = useCallback(
-    function () {
-      if (!user || !user.uid) return;
-      var db = getDbN();
-      if (!db || typeof db.runTransaction !== 'function') return;
-      var uid = user.uid;
-      var ref = db.collection('notifiche').doc(uid);
-      db.runTransaction(function (t: any) {
-        return t.get(ref).then(function (doc: any) {
-          var lista = doc.exists && doc.data().lista ? doc.data().lista : [];
-          if (!lista.length) return null;
-          var next = lista.map(function (n: any) {
-            return Object.assign({}, n, { letta: true });
-          });
-          return t.set(ref, { lista: next, aggiornato: new Date().toISOString() }, { merge: true });
-        });
-      }).catch(function (e: any) {
-        if (typeof window !== 'undefined' && (window as any).SB_DEBUG)
-          console.warn('[notifiche] segnaTutteLette', e && e.code);
+  // Mappa la lista fresca marcando letta (per id, o tutte).
+  var markLette = useCallback(
+    function (lista: Notifica[], id?: string) {
+      var sid = id != null ? String(id) : null;
+      return lista.map(function (n) {
+        if (sid === null || String(n.id) === sid) return Object.assign({}, n, { letta: true });
+        return n;
       });
     },
-    [user]
+    []
+  );
+
+  // Unisce la lista appena letta dal server con lo snapshot locale (per id):
+  // nessuna notifica arriva tra read e write va persa, anche senza transaction.
+  var mergeListe = useCallback(
+    function (fresh: Notifica[], local: Notifica[]) {
+      var ids = fresh.map(function (n) {
+        return String(n.id);
+      });
+      return fresh.concat(
+        local.filter(function (n) {
+          return ids.indexOf(String(n.id)) < 0;
+        })
+      );
+    },
+    []
+  );
+
+  // Scrive segnando letta (tutte, o una per id). NIENTE runTransaction: il
+  // commit di una transaction porta currentDocument.updateTime come
+  // precondizione, e quando il doc notifiche è aggiornato da altri client
+  // (fan-out "nuova card" in una classe live) tra read e commit Firestore
+  // risponde 400 failed-precondition a ogni tentativo → il clic non faceva
+  // NULLA. Con get+set (senza precondizione) la scrittura si applica sempre;
+  // mergeListe copre l'arrivo di notifiche nel frattempo.
+  var markAndWrite = useCallback(
+    function (id?: string) {
+      if (!user || !user.uid) return;
+      var db = getDbN();
+      if (!db) return;
+      var ref = db.collection('notifiche').doc(user.uid);
+      ref
+        .get()
+        .then(function (doc: any) {
+          var fresh = doc.exists && doc.data().lista ? (doc.data().lista as Notifica[]) : [];
+          var next = markLette(mergeListe(fresh, lista), id);
+          return ref.set({ lista: next, aggiornato: new Date().toISOString() }, { merge: true });
+        })
+        .catch(function (e: any) {
+          console.warn('[notifiche] markAndWrite fallback (read: ' + ((e && e.code) || e) + ')');
+          writeLista(markLette(lista, id));
+        });
+    },
+    [user, lista, writeLista, markLette, mergeListe]
+  );
+
+  var segnaLetta = useCallback(
+    function (id: string) {
+      markAndWrite(id);
+    },
+    [markAndWrite]
   );
 
   return {
     notifiche: lista,
     nonLette: nonLette,
     segnaLetta: segnaLetta,
-    segnaTutteLette: segnaTutteLette,
     setNotifiche: setLista,
   };
 }

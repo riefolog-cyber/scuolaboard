@@ -90,21 +90,24 @@ function CardDetail__({ $: props$ }: any) {
             className="cd-close"
             style={{
               position: 'absolute',
-              right: 10,
-              top: 8,
-              width: 32,
-              height: 32,
+              right: 12,
+              top: 10,
+              width: 38,
+              height: 38,
               borderRadius: '50%',
-              border: '1px solid rgba(255,255,255,.14)',
-              background: 'rgba(255,255,255,.08)',
-              color: 'rgba(255,255,255,.85)',
-              fontSize: 16,
+              border: isLight ? '1px solid rgba(15,23,42,.18)' : '1px solid rgba(255,255,255,.16)',
+              background: isLight ? 'rgba(15,23,42,.07)' : 'rgba(255,255,255,.10)',
+              color: isLight ? 'rgba(15,23,42,.9)' : 'rgba(255,255,255,.9)',
+              fontSize: 17,
               fontWeight: 700,
               lineHeight: 1,
               cursor: 'pointer',
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
+              // Target touch minimo consigliato (44px) per il cellulare
+              boxSizing: 'content-box',
+              padding: 3,
             }}
           >
             ✕
