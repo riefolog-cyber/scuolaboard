@@ -3,7 +3,15 @@
 // grande supererebbe il limite e il salvataggio fallirebbe. Il guard blocca
 // prima con un toast (vedi AppProvider.addCard).
 import { describe, it, expect } from 'vitest';
-import { cardJsonSize, CARD_SIZE_LIMIT, imgUsageKB, computeImageTargetKB } from './app-provider-helpers.ts';
+import {
+  cardJsonSize,
+  CARD_SIZE_LIMIT,
+  imgUsageKB,
+  computeImageTargetKB,
+  aggiungiDomandaPubblicata,
+  rimuoviDomandaPubblicata,
+  isDomandaPubblicata,
+} from './app-provider-helpers.ts';
 
 function fakeImage(kb: number): string {
   // base64 ~1 byte per carattere: genera una stringa di ~kb kilobyte
@@ -93,5 +101,36 @@ describe('imgUsageKB / computeImageTargetKB (budget dinamico immagini)', () => {
     }
     const total = targets.reduce((a, b) => a + b, 0);
     expect(total).toBeLessThan(900); // resta salvabile (guard a 900KB)
+  });
+});
+
+describe('domande AI pubblicate (docente → studenti sola lettura)', () => {
+  const dq1 = { id: 1, q: "Cos'è X?", risposta: 'R1', data: '2026-01-01' };
+  const dq2 = { id: 2, q: "Cos'è Y?", risposta: 'R2', data: '2026-01-02' };
+
+  it('aggiunge senza duplicati e senza mutare la lista originale', () => {
+    const base: any[] = [];
+    const una = aggiungiDomandaPubblicata(base, dq1);
+    expect(una).toHaveLength(1);
+    expect(base).toHaveLength(0); // input non mutato
+    const due = aggiungiDomandaPubblicata(una, dq1);
+    expect(due).toHaveLength(1); // niente duplicati
+    expect(aggiungiDomandaPubblicata(due, dq2)).toHaveLength(2);
+  });
+
+  it('rimuove per id e isDomandaPubblicata riflette lo stato', () => {
+    const lista = [dq1, dq2];
+    expect(isDomandaPubblicata(lista, 1)).toBe(true);
+    const ridotta = rimuoviDomandaPubblicata(lista, 1);
+    expect(ridotta).toHaveLength(1);
+    expect(isDomandaPubblicata(ridotta, 1)).toBe(false);
+    expect(isDomandaPubblicata(ridotta, 2)).toBe(true);
+    expect(isDomandaPubblicata(undefined, 1)).toBe(false);
+  });
+
+  it('pubblica solo i campi q/risposta/data (niente dati interni)', () => {
+    const piena = { id: 9, q: 'Q', risposta: 'R', data: 'd', extra: 'x', mappaNomi: {} };
+    const lista = aggiungiDomandaPubblicata([], piena);
+    expect(lista[0]).toEqual({ id: 9, q: 'Q', risposta: 'R', data: 'd' });
   });
 });

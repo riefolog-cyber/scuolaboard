@@ -1,9 +1,55 @@
 // DomandeLiberePanel.tsx · ScuolaBoard · pannello estratto da CardDetail
 import { Fragment } from 'react';
+import { isDomandaPubblicata } from '../app-provider-helpers.ts';
 
 function DomandeLiberePanel({ $, c }: any) {
+  // Vista studente (anche anteprima prof con "simula studente"): SOLA LETTURA
+  // delle risposte PUBBLICATE dal docente (c.aiDomandePubbliche). Niente input,
+  // niente bottoni, nessuna chiamata AI: lo studente non usa mai l'AI.
+  var vistaStudente = !$.isProf || $.simulaSt;
+  var pubblicate = (c && Array.isArray(c.aiDomandePubbliche) ? c.aiDomandePubbliche : []).filter(function (dq: any) {
+    return dq && (dq.q || dq.risposta);
+  });
   return (
     <Fragment>
+      {vistaStudente && pubblicate.length > 0 && (
+        <div
+          style={{
+            marginBottom: 14,
+            background: 'rgba(99,102,241,.06)',
+            border: '1px solid rgba(99,102,241,.2)',
+            borderRadius: 10,
+            padding: 12,
+          }}
+        >
+          <div style={{ fontSize: 11, fontWeight: 800, color: 'rgba(255,255,255,.45)', letterSpacing: 1, marginBottom: 8 }}>
+            {"💬 DOMANDE ALL'AI · scelte dal docente (" + pubblicate.length + ')'}
+          </div>
+          {pubblicate.map(function (dq: any) {
+            return (
+              <div
+                key={dq.id}
+                style={{
+                  background: 'rgba(99,102,241,.08)',
+                  border: '1px solid rgba(99,102,241,.15)',
+                  borderRadius: 8,
+                  padding: '8px 12px',
+                  marginBottom: 6,
+                }}
+              >
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#a5b4fc', marginBottom: 4 }}>❓ {dq.q}</div>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,.75)', lineHeight: 1.5 }}>{dq.risposta}</div>
+              </div>
+            );
+          })}
+          <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span style={{ fontSize: 10, color: 'rgba(255,255,255,.35)' }}>🤖</span>
+            <span style={{ fontSize: 10, color: 'rgba(255,255,255,.35)', fontStyle: 'italic' }}>
+              Risposte generate con IA e pubblicate dal docente
+            </span>
+          </div>
+        </div>
+      )}
       {$.isProf && !$.simulaSt && $.cardQOpen[String(c.id)] && (
         <div
           style={{
@@ -117,6 +163,7 @@ function DomandeLiberePanel({ $, c }: any) {
                   </button>
                 </div>
                 {domande.map(function (dq: any) {
+                  var pubblicata = isDomandaPubblicata(c.aiDomandePubbliche, dq.id);
                   return (
                     <div
                       key={dq.id}
@@ -130,6 +177,47 @@ function DomandeLiberePanel({ $, c }: any) {
                     >
                       <div style={{ fontSize: 11, fontWeight: 700, color: '#a5b4fc', marginBottom: 4 }}>❓ {dq.q}</div>
                       <div style={{ fontSize: 12, color: 'rgba(255,255,255,.75)', lineHeight: 1.5 }}>{dq.risposta}</div>
+                      <div style={{ marginTop: 6, display: 'flex', justifyContent: 'flex-end' }}>
+                        {pubblicata ? (
+                          <button
+                            onClick={function () {
+                              $.nascondiDomandaAI(c, dq.id);
+                            }}
+                            title="Nascondi questa risposta agli studenti"
+                            style={{
+                              background: 'rgba(34,197,94,.12)',
+                              border: '1px solid rgba(34,197,94,.35)',
+                              borderRadius: 6,
+                              padding: '1px 8px',
+                              cursor: 'pointer',
+                              fontSize: 11,
+                              color: '#4ade80',
+                              fontWeight: 700,
+                            }}
+                          >
+                            👁️ Visibile · nascondi
+                          </button>
+                        ) : (
+                          <button
+                            onClick={function () {
+                              $.pubblicaDomandaAI(c, dq);
+                            }}
+                            title="Pubblica questa risposta agli studenti (sola lettura)"
+                            style={{
+                              background: 'none',
+                              border: '1px solid rgba(99,102,241,.4)',
+                              borderRadius: 6,
+                              padding: '1px 8px',
+                              cursor: 'pointer',
+                              fontSize: 11,
+                              color: '#a5b4fc',
+                              fontWeight: 700,
+                            }}
+                          >
+                            👁️ Pubblica agli studenti
+                          </button>
+                        )}
+                      </div>
                     </div>
                   );
                 })}

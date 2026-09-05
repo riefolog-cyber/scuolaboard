@@ -317,3 +317,34 @@ export function notifyProposalAuthor(db: any, card: any, msg: string): Promise<v
     })
     .catch(function () {});
 }
+
+// ── DOMANDE AI PUBBLICATE (docente → studenti, sola lettura) ───────────────
+// Il docente interroga l'AI (ai_results, prof-only) e pubblica SOLO le risposte
+// scelte nel campo card.aiDomandePubbliche. Lo studente le legge dalla card
+// (gia leggibile se visibile) senza mai chiamare l'AI. Funzioni pure: ricevono
+// la lista pubblicata e restituiscono la nuova lista (mai mutation dell'input).
+export function aggiungiDomandaPubblicata(pub: any, dq: any): any[] {
+  var lista = Array.isArray(pub) ? pub.slice() : [];
+  if (!dq) return lista;
+  var esiste = lista.some(function (x: any) {
+    return x && String(x.id) === String(dq.id);
+  });
+  if (!esiste) {
+    lista.push({ id: dq.id, q: dq.q, risposta: dq.risposta, data: dq.data || new Date().toISOString() });
+  }
+  return lista;
+}
+
+export function rimuoviDomandaPubblicata(pub: any, dqId: any): any[] {
+  var lista = Array.isArray(pub) ? pub.slice() : [];
+  return lista.filter(function (x: any) {
+    return !x || String(x.id) !== String(dqId);
+  });
+}
+
+export function isDomandaPubblicata(pub: any, dqId: any): boolean {
+  if (!Array.isArray(pub)) return false;
+  return pub.some(function (x: any) {
+    return x && String(x.id) === String(dqId);
+  });
+}

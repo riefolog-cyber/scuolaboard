@@ -110,12 +110,14 @@ service cloud.firestore {
       );
 
       // Create: prof tutto; studente solo proposta e senza campi privilegiati
+      // (aiAnalisi / aiDomandePubbliche sono scritti SOLO dal docente: senza
+      // questo un utente potrebbe forgiare finte "risposte AI" nella proposta)
       allow create: if isAuth() && (
         isProf()
         || (
           isStudente()
           && request.resource.data.proposta == true
-          && !request.resource.data.keys().hasAny(['likes', 'likesBy', 'reazioni', 'visibile', 'pinned'])
+          && !request.resource.data.keys().hasAny(['likes', 'likesBy', 'reazioni', 'visibile', 'pinned', 'aiAnalisi', 'aiDomandePubbliche'])
         )
       );
 

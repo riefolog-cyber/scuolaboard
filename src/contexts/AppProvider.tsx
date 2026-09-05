@@ -52,6 +52,8 @@ import {
   buildCopiaAnno,
   countCommenti,
   getProposte,
+  aggiungiDomandaPubblicata,
+  rimuoviDomandaPubblicata,
   notifyProposalAuthor,
   imgUsageKB,
   computeImageTargetKB,
@@ -792,6 +794,43 @@ function AppProvider({ children }: any) {
       });
   }
 
+  // ── PUBBLICAZIONE Q&A AI AGLI STUDENTI (sola lettura) ───────────────────
+  // Il docente interroga l'AI (ai_results, prof-only) e pubblica SOLO le
+  // risposte scelte nel campo card.aiDomandePubbliche. Lo studente le legge
+  // dalla card (gia leggibile se visibile) e non chiama MAI l'AI: nessun
+  // input/bottone lato studente, nessuna lettura di ai_results, runCardQ
+  // blindato su isProf. Difesa in profondita: le Rules vietano agli studenti
+  // di creare/modificare il campo (create: chiavi privilegiate negate).
+  function salvaPubblicate(card: any, next: any[], okMsg: string, errMsg: string) {
+    var id = String(card.id);
+    db.collection('cards')
+      .doc(id)
+      .update({ aiDomandePubbliche: next })
+      .then(function () {
+        // Sincronizza showCard come fa eliminaAnalisiAI (evita stale nel dettaglio)
+        if (showCard && String(showCard.id) === String(id)) {
+          setShowCard(Object.assign({}, showCard, { aiDomandePubbliche: next }));
+        }
+        showToast(okMsg, 'ok');
+      })
+      .catch(function (e: any) {
+        console.error('[ScuolaBoard] pubblicaDomandaAI:', e);
+        showToast(errMsg, 'err');
+      });
+  }
+
+  function pubblicaDomandaAI(card: any, dq: any) {
+    if (!isProf || simulaSt || !card || !dq) return;
+    var next = aggiungiDomandaPubblicata(card.aiDomandePubbliche, dq);
+    salvaPubblicate(card, next, 'Risposta pubblicata agli studenti ✓', 'Errore pubblicazione risposta');
+  }
+
+  function nascondiDomandaAI(card: any, dqId: any) {
+    if (!isProf || simulaSt || !card) return;
+    var next = rimuoviDomandaPubblicata(card.aiDomandePubbliche, dqId);
+    salvaPubblicate(card, next, 'Risposta nascosta agli studenti', 'Errore aggiornamento');
+  }
+
   function saveEditCm(cid: any) {
     if (!editingCm || !editingCm.testo.trim()) return;
     var card = cardsHook.cards.find(function (c: any) {
@@ -1491,6 +1530,8 @@ function AppProvider({ children }: any) {
         confirmResetRisposte: confirmResetRisposte,
         eliminaAnalisiAI: eliminaAnalisiAI,
         eliminaDomandeAI: eliminaDomandeAI,
+        pubblicaDomandaAI: pubblicaDomandaAI,
+        nascondiDomandaAI: nascondiDomandaAI,
         toggleReaction: toggleReaction,
         setCardTimer: setCardTimer,
         saveClasse: saveClasse,
