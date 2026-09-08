@@ -153,7 +153,10 @@ function AppProvider({ children }: any) {
   var prevProposteCount = useRef(0);
 
   // Drag & drop per il riordinamento card (estratto in useDragDrop)
-  var { dragId, onDragStart, onDragEnd, onDragOver, onDragLeave, onDrop } = useDragDrop(cardsHook.cards, fbSave);
+  var { dragId, onDragStart, onDragEnd, onDragOver, onDragLeave, onDrop, onGridDragOver, onGridDrop } = useDragDrop(
+    cardsHook.cards,
+    fbSave
+  );
 
   // ── HOOKS DI DOMINIO (estratti per ridurre la mole del provider) ──
   var quiz = useQuiz({
@@ -238,6 +241,12 @@ function AppProvider({ children }: any) {
   }, []);
 
   var openCard = useCallback(function (c: any) {
+    // L'utente ha aperto la card dalla UI: il deep-link (?card=) è di fatto già
+    // consumato. Senza questo, l'effetto deep-link (deps: cardsHook.cards) alla
+    // PRIMA modifica del dataset dopo l'apertura riapriva la CardDetail anche
+    // dopo che editCard l'aveva chiusa (es. modale Modifica con card riaperta
+    // sotto, stato incoerente alla chiusura della modale).
+    deepLinkDone.current = true;
     setShowCard(c);
     markSeen(c.id);
     try {
@@ -452,6 +461,20 @@ function AppProvider({ children }: any) {
     fbSave(Object.assign({}, card, { visibile: card.visibile === false }));
   }
 
+  // Fissa/sblocca una card in cima alla griglia (solo prof; il campo pinned è
+  // già bloccato dalle rules per gli studenti). Ottimistico come like/reazioni.
+  function togglePin(id: any) {
+    var card = cardsHook.cards.find(function (c: any) {
+      return String(c.id) === String(id);
+    });
+    if (!card) return;
+    var ottimo = Object.assign({}, card, { pinned: !card.pinned });
+    if (cardsHook.applyOptimistic) cardsHook.applyOptimistic(String(id), ottimo, ['pinned']);
+    try {
+      fbSave(ottimo);
+    } catch (e) {}
+  }
+
   function apriDuplica(card: any, e: any) {
     e.stopPropagation();
     modals.setShowDuplica(card);
@@ -534,6 +557,11 @@ function AppProvider({ children }: any) {
       fbSave(newCard)
         .then(function () {
           try {
+            // Card pubblicata: la bozza non serve più.
+            if (user && user.uid && SB.LS && SB.LS.draft) SB.LS.draft.rm(user.uid);
+            setBozzaAttiva(false);
+          } catch (e) {}
+          try {
             if (isProf && (window as any).SB && (window as any).SB.notifyClasse) {
               (window as any).SB.notifyClasse({
                 classi: newCard.classi || ['TUTTE'],
@@ -558,6 +586,67 @@ function AppProvider({ children }: any) {
     setEditMode(card);
     setForm(buildEditForm(card, normalizeLinks));
     modals.setShowModal(true);
+  }
+
+  // ── BOZZA NUOVA CARD (autosave in localStorage) ──────────────────────────
+  // Mentre si scrive una NUOVA card la bozza viene salvata (campi di testo,
+  // niente immagini/allegati base64) e ripristinata alla riapertura del FAB:
+  // niente più lavoro perso per chiusura accidentale della modale o refresh.
+  var [bozzaAttiva, setBozzaAttiva] = useState(false);
+
+  // Riduce il form ai soli campi leggeri da persistere (niente base64).
+  function formToDraft(f: any) {
+    return {
+      tipo: f.tipo,
+      titolo: f.titolo || '',
+      testo: f.testo || '',
+      opzioni: (f.opzioni || []).slice(),
+      links: (f.links || []).map(function (l: any) {
+        return { url: l.url || '', label: l.label || '' };
+      }),
+      classi: (f.classi || []).slice(),
+      quizDomande: (f.quizDomande || []).slice(),
+      quizTimer: f.quizTimer,
+      salvata: Date.now(),
+    };
+  }
+
+  // Ricostruisce il form dalla bozza salvata (campi assenti → default FORM0).
+  function draftToForm(d: any) {
+    var base: any = Object.assign({}, FORM0);
+    ['tipo', 'titolo', 'testo', 'opzioni', 'links', 'classi', 'quizDomande', 'quizTimer'].forEach(function (k) {
+      if (d && d[k] != null) base[k] = d[k];
+    });
+    return base;
+  }
+
+  // Apre la modale NUOVA card; se esiste una bozza per questo utente la
+  // ripristina nel form (con toast) invece di partire da FORM0 vuoto.
+  function apriNuovaCard() {
+    setEditMode(null);
+    var d = null;
+    try {
+      if (user && user.uid && SB.LS && SB.LS.draft) d = SB.LS.draft.get(user.uid);
+    } catch (e) {}
+    if (d && (String(d.titolo || '').trim() || String(d.testo || '').trim())) {
+      setForm(draftToForm(d));
+      setBozzaAttiva(true);
+      showToast('📋 Bozza ripristinata', 'ok');
+    } else {
+      setForm(Object.assign({}, FORM0));
+      setBozzaAttiva(false);
+    }
+    modals.setShowModal(true);
+  }
+
+  // Scarta la bozza salvata e azzera il form (chip ✕ nella modale).
+  function scartaBozza() {
+    try {
+      if (user && user.uid && SB.LS && SB.LS.draft) SB.LS.draft.rm(user.uid);
+    } catch (e) {}
+    setBozzaAttiva(false);
+    setForm(Object.assign({}, FORM0));
+    showToast('Bozza scartata', 'warn');
   }
 
   async function handleImgUpload(e: any, isCover: any) {
@@ -1045,6 +1134,34 @@ function AppProvider({ children }: any) {
     [modals.lightbox, showCard]
   );
 
+  // Autosave della bozza NUOVA card: debounced (500ms) mentre la modale è
+  // aperta, flush immediato alla chiusura. Solo card NUOVE (mai in modifica) e
+  // solo se c'è contenuto: niente scritture vuote a ogni render del form.
+  useEffect(
+    function () {
+      if (!user || !user.uid) return;
+      var uid = user.uid;
+      var hasContent = String(form.titolo || '').trim() || String(form.testo || '').trim();
+      if (editMode || !hasContent) return;
+      var draft = formToDraft(form);
+      var write = function () {
+        try {
+          if (SB.LS && SB.LS.draft) SB.LS.draft.set(uid, draft);
+        } catch (e) {}
+      };
+      if (modals.showModal) {
+        var t = setTimeout(write, 500);
+        return function () {
+          clearTimeout(t);
+        };
+      }
+      // Modale chiusa: flush della bozza corrente (una chiusura veloce non
+      // deve perdere le ultime battute).
+      write();
+    },
+    [form, modals.showModal, editMode, user]
+  );
+
   // Popup privacy al PRIMO accesso (una volta per utente, localStorage).
   // Era codice morto: la modale esisteva ma nessun trigger apriva showPrivacy.
   // L'accettazione viene salvata in SB.LS.privacy (per uid) e il popup classe
@@ -1206,6 +1323,10 @@ function AppProvider({ children }: any) {
         setShowWordCloud: modals.setShowWordCloud,
         wcTarget: modals.wcTarget,
         setWcTarget: modals.setWcTarget,
+        showRipasso: modals.showRipasso,
+        setShowRipasso: modals.setShowRipasso,
+        showStampa: modals.showStampa,
+        setShowStampa: modals.setShowStampa,
         closeAll: modals.closeAll,
         aiCardClasses: CLASSI_LIST,
         accepted: !modals.showPrivacy,
@@ -1229,6 +1350,8 @@ function AppProvider({ children }: any) {
       modals.confirmDel,
       modals.showWordCloud,
       modals.wcTarget,
+      modals.showRipasso,
+      modals.showStampa,
       CLASSI_LIST,
     ]
   );
@@ -1462,6 +1585,11 @@ function AppProvider({ children }: any) {
         // AppLayout (senza FormContext): senza questo il click non apriva
         // mai la modale di modifica.
         editCard: editCard,
+        // Bozza nuova card (autosave): apriNuovaCard ripristina la bozza
+        // salvata, scartaBozza la elimina (chip ✕ nella modale).
+        apriNuovaCard: apriNuovaCard,
+        scartaBozza: scartaBozza,
+        bozzaAttiva: bozzaAttiva,
         // Like / UI
         likeHoverCard: likeHoverCard,
         setLikeHoverCard: setLikeHoverCard,
@@ -1546,9 +1674,12 @@ function AppProvider({ children }: any) {
         onDragOver: onDragOver,
         onDragLeave: onDragLeave,
         onDrop: onDrop,
+        onGridDragOver: onGridDragOver,
+        onGridDrop: onGridDrop,
         toggleBulkSelect: toggleBulkSelect,
         bulkHide: bulkHide,
         toggleVisibile: toggleVisibile,
+        togglePin: togglePin,
         apriDuplica: apriDuplica,
         // Handlers
         toggleLike: toggleLike,

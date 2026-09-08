@@ -307,6 +307,76 @@ describe('Rispondi ai commenti', () => {
   });
 });
 
+// ── BOZZA NUOVA CARD (autosave) ──────────────────────────────────────────
+describe('Bozza nuova card (autosave)', () => {
+  const DRAFT_KEY = 'sb_card_draft_prof1';
+
+  function readDraft() {
+    try {
+      return JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
+    } catch (e) {
+      return null;
+    }
+  }
+
+  it('mentre scrive una nuova card salva la bozza e la ripristina alla riapertura del FAB', async () => {
+    const seed = { users: { prof1: PROF_DOC }, cards: {} };
+    await renderApp({ seed, user: PROF });
+
+    fireEvent.click(await screen.findByTitle('Nuova card', {}, { timeout: 4000 }));
+    fireEvent.input(screen.getByPlaceholderText('Es. Riflessione su…'), {
+      target: { value: 'Bozza in corso' },
+    });
+    fireEvent.input(screen.getByPlaceholderText('Descrizione, spunti…'), { target: { value: 'contenuto bozza' } });
+
+    // La bozza viene salvata (debounce ~500ms → waitFor aspetta il poll)
+    await waitFor(
+      function () {
+        expect(readDraft() && readDraft().titolo).toBe('Bozza in corso');
+      },
+      { timeout: 3000 }
+    );
+
+    // Chiude la modale con Esc (scenario "si chiude da sola") e riapre il FAB
+    // → la bozza salvata viene ripristinata, niente lavoro perso
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByPlaceholderText('Es. Riflessione su…')).toBeNull());
+
+    fireEvent.click(await screen.findByTitle('Nuova card', {}, { timeout: 4000 }));
+    expect(await screen.findByDisplayValue('Bozza in corso', {}, { timeout: 4000 })).toBeTruthy();
+    expect(screen.getByDisplayValue('contenuto bozza')).toBeTruthy();
+    // Chip di bozza attiva + possibilità di scartarla
+    expect(screen.getByText('📋 Bozza ripristinata')).toBeTruthy();
+  });
+
+  it('scarta bozza: elimina la bozza e azzera il form', async () => {
+    const seed = { users: { prof1: PROF_DOC }, cards: {} };
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ titolo: 'Bozza vecchia', testo: 'x', salvata: Date.now() }));
+    await renderApp({ seed, user: PROF });
+
+    fireEvent.click(await screen.findByTitle('Nuova card', {}, { timeout: 4000 }));
+    expect(await screen.findByDisplayValue('Bozza vecchia', {}, { timeout: 4000 })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Scarta bozza' }));
+    expect(readDraft()).toBeNull();
+    expect(screen.queryByDisplayValue('Bozza vecchia')).toBeNull();
+    expect(screen.queryByText('📋 Bozza ripristinata')).toBeNull();
+  });
+
+  it('dopo aver pubblicato la card la bozza viene eliminata', async () => {
+    const seed = { users: { prof1: PROF_DOC }, cards: {} };
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ titolo: 'Bozza da pubblicare', testo: '', salvata: Date.now() }));
+    await renderApp({ seed, user: PROF });
+
+    fireEvent.click(await screen.findByTitle('Nuova card', {}, { timeout: 4000 }));
+    await screen.findByDisplayValue('Bozza da pubblicare', {}, { timeout: 4000 });
+    fireEvent.click(screen.getByText('✅ Crea card'));
+    await screen.findByText('Bozza da pubblicare', {}, { timeout: 4000 });
+
+    await waitFor(() => expect(readDraft()).toBeNull(), { timeout: 3000 });
+  });
+});
+
 // ── VISTA STUDENTE + GATING AI ────────────────────────────────────────────
 describe('Vista studente', () => {
   it('lo studente vede solo le card della sua classe', async () => {

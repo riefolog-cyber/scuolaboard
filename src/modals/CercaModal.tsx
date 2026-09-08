@@ -1,16 +1,22 @@
-// CercaModal.tsx  ·  Ricerca card per parole chiave (SOLO PROF)
-// Cerca tra TUTTE le card (tutte le classi, incluse le "Solo prof") in titolo,
-// testo, commenti, domande quiz e opzioni sondaggio. Scopo: verificare che un
-// argomento esista già prima di creare una nuova card.
+// CercaModal.tsx  ·  Ricerca card per parole chiave
+// PROF: cerca tra TUTTE le card (tutte le classi, incluse le "Solo prof") in
+// titolo, testo, commenti, domande quiz e opzioni sondaggio. Scopo: verificare
+// che un argomento esista già prima di creare una nuova card.
+// STUDENTE (o prof in vista studente): cerca SOLO le card visibili alla sua
+// classe (mai "Solo prof", proposte o card nascoste), nell'anno in bacheca.
 import { useState, useEffect, useMemo, createElement } from 'react';
 import { norm, hilite } from '../utils/search.ts';
 
 function CercaModal(props: any) {
-  if (!props.showCerca || !props.isProf) return null;
+  if (!props.showCerca) return null;
   var isLight = !!props.isLight;
   var setShowCerca = props.setShowCerca;
   var cards = props.cards || [];
   var allCards = props.allCards || cards;
+  // Vista studente: studente reale oppure prof in simulazione (simulaSt). In
+  // questa vista si cercano SOLO le card visibili alla classe corrente.
+  var isStudentView = !props.isProf || !!props.simulaSt;
+  var stClasse = props.simulaSt ? props.previewClasse : props.classeCorrente;
   var [q, setQ] = useState('');
   // Ricerca debounced: si batte Firestore/memoria solo dopo una pausa di
   // digitazione (300ms), non a ogni tasto. Il campo input resta istantaneo.
@@ -151,20 +157,33 @@ function CercaModal(props: any) {
     [annoMenuOpen]
   );
 
+  // Nella vista studente una card è cercabile solo se è visibile alla classe
+  // corrente (stesso filtro di cards.ts per la griglia): mai proposte, card
+  // nascoste, "Solo prof" (classi vuote) o card di altre classi.
+  function studentVisible(c: any) {
+    if (c.proposta || c.visibile === false) return false;
+    var cc = c.classi || ['TUTTE'];
+    if (cc.length === 0) return false;
+    if (!stClasse || stClasse === 'TUTTE') return cc.indexOf('TUTTE') >= 0;
+    return cc.indexOf('TUTTE') >= 0 || cc.indexOf(stClasse) >= 0;
+  }
+
   // Base della ricerca: tutti gli anni, un anno specifico (diverso da quello in
   // bacheca → filtrato dal dataset di tutti gli anni), oppure l'anno attivo già
-  // in memoria (cards).
+  // in memoria (cards). Nella vista studente si filtra per visibilità classe.
   var base = useMemo(
     function () {
-      if (tuttiAnni) return mergedAll;
-      if (annoScelto !== annoCorrente) {
-        return mergedAll.filter(function (c: any) {
+      var list: any[];
+      if (tuttiAnni) list = mergedAll;
+      else if (annoScelto !== annoCorrente) {
+        list = mergedAll.filter(function (c: any) {
           return (c.annoScolastico || '') === annoScelto;
         });
-      }
-      return cards;
+      } else list = cards;
+      if (!isStudentView) return list;
+      return list.filter(studentVisible);
     },
-    [tuttiAnni, annoScelto, annoCorrente, mergedAll, cards]
+    [tuttiAnni, annoScelto, annoCorrente, mergedAll, cards, isStudentView, stClasse]
   );
 
   var rawTerms = String(debouncedQ || '')
@@ -265,7 +284,15 @@ function CercaModal(props: any) {
         justifyContent: 'center',
         padding: '10vh 16px 20px',
       }}
-      onClick={function () {
+      onPointerDown={function (e: any) {
+        // Chiude SOLO se il click PARTE dal backdrop: una selezione testo / drag
+        // che inizia dentro la modale non deve chiuderla (vedi NuovaCardModal).
+        if (e.target === e.currentTarget) e.currentTarget.dataset.sbDismiss = '1';
+        else delete e.currentTarget.dataset.sbDismiss;
+      }}
+      onClick={function (e: any) {
+        if (e.currentTarget.dataset.sbDismiss !== '1') return;
+        delete e.currentTarget.dataset.sbDismiss;
         setShowCerca(false);
       }}
     >
@@ -308,7 +335,7 @@ function CercaModal(props: any) {
                       🔍 Cerca nelle card
                     </span>
                   }
-                  {
+                  {!isStudentView && (
                     <span
                       style={{
                         fontSize: 10,
@@ -322,7 +349,7 @@ function CercaModal(props: any) {
                     >
                       SOLO PROF
                     </span>
-                  }
+                  )}
                   {<span style={{ flex: 1 }} />}
                   {
                     <button
@@ -345,7 +372,7 @@ function CercaModal(props: any) {
                   }
                 </div>
               }
-              {
+              {!isStudentView && (
                 <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
                   {
                     <div data-anno-picker="1" style={{ position: 'relative' }}>
@@ -517,7 +544,7 @@ function CercaModal(props: any) {
                     </button>
                   }
                 </div>
-              }
+              )}
               {
                 <div
                   style={{
@@ -572,7 +599,9 @@ function CercaModal(props: any) {
               }
               {
                 <div style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', marginTop: 8, lineHeight: 1.5 }}>
-                  Cerca tra tutte le classi, incluse le card «Solo prof», per verificare se un argomento esiste già.
+                  {isStudentView
+                    ? 'Cerca tra le card visibili alla tua classe.'
+                    : 'Cerca tra tutte le classi, incluse le card «Solo prof», per verificare se un argomento esiste già.'}
                 </div>
               }
               {needsAll && allYears === null && (

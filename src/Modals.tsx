@@ -41,6 +41,12 @@ var LazyProfiloModal = lazy(function () {
 var LazyTimerModal = lazy(function () {
   return import('./modals/TimerModal.tsx');
 });
+var LazyRipassoModal = lazy(function () {
+  return import('./modals/RipassoModal.tsx');
+});
+var LazyPrintModal = lazy(function () {
+  return import('./modals/PrintModal.tsx');
+});
 
 // ── AGGREGATOR: renders all modals ──
 // Merge del FormContext (split di UIContext): le modali ricevono anche lo
@@ -71,6 +77,16 @@ function Modals({ $ }: any) {
             <LazyTimerModal {...all} />
           </Suspense>
         )}
+        {$.showRipasso && (
+          <Suspense fallback={null}>
+            <LazyRipassoModal {...all} />
+          </Suspense>
+        )}
+        {$.showStampa && (
+          <Suspense fallback={null}>
+            <LazyPrintModal {...all} />
+          </Suspense>
+        )}
         {$.showWordCloud && $.isProf && (
           <Suspense fallback={null}>
             <LazyWordCloudModal {...all} />
@@ -91,7 +107,7 @@ function Modals({ $ }: any) {
             <LazyCopiaAnnoModal {...all} />
           </Suspense>
         )}
-        {$.showCerca && $.isProf && (
+        {$.showCerca && (
           <Suspense fallback={null}>
             <LazyCercaModal {...all} />
           </Suspense>

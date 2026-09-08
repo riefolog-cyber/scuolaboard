@@ -20,7 +20,12 @@ textarea,input,select,button{font-family:inherit}
 @keyframes fadein{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 .pulse{animation:pulse 2s infinite}
 .fadein{animation:fadein .35s cubic-bezier(.22,1,.36,1)}
-.card-wrap{cursor:pointer}
+.card-wrap{cursor:pointer;position:relative}
+/* Indicatore di inserimento drag & drop: riga sopra/sotto la card in cui la
+   card trascinata atterrerà (drop nei vuoti del layout a colonne incluso). */
+.card-wrap.drop-before::before,.card-wrap.drop-after::after{content:'';position:absolute;left:6px;right:6px;height:4px;background:var(--c-primary);border-radius:4px;box-shadow:0 0 12px rgba(var(--c-primary-rgb),.8);z-index:5}
+.card-wrap.drop-before::before{top:-7px}
+.card-wrap.drop-after::after{bottom:-7px}
 .card-wrap button:hover{filter:brightness(1.15);transform:scale(1.04);}
 .bulk-card{cursor:pointer !important;}
 .bulk-selected{outline:2px solid var(--c-primary) !important;outline-offset:2px;background:rgba(var(--c-primary-rgb),.12) !important;}
@@ -532,3 +537,25 @@ html[data-theme="light"] textarea[style*="background"],
 html[data-theme="light"] select[style*="background"]{background:#ffffff !important; color:#0f172a !important; border-color:rgba(15,23,42,.15) !important}
 html[data-theme="light"] input::placeholder,
 html[data-theme="light"] textarea::placeholder{color:#94a3b8 !important}
+
+/* ── STAMPA / PDF bacheca (PrintModal) ── */
+@media print {
+  /* Solo l'anteprima (print-area) è visibile; UI e backdrop spariscono. */
+  body * { visibility: hidden !important; }
+  .print-area, .print-area * { visibility: visible !important; }
+  .print-area {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: #fff !important;
+    color: #0f172a !important;
+    padding: 24px 28px !important;
+  }
+  .print-hide { display: none !important; }
+  .print-card { break-inside: avoid; }
+}

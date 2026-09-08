@@ -38,7 +38,17 @@ function NuovaCardModal(props: any) {
         alignItems: 'flex-end',
         justifyContent: 'center',
       }}
-      onClick={function () {
+      onPointerDown={function (e: any) {
+        // Solo un click che PARTE dal backdrop può chiuderla. Se parte dentro la
+        // modale (es. selezione testo mentre si scrive) e finisce sul backdrop,
+        // il click si risolve sull'antenato comune (il backdrop): senza questo
+        // flag la modale si chiuderebbe da sola perdendo il testo scritto.
+        if (e.target === e.currentTarget) e.currentTarget.dataset.sbDismiss = '1';
+        else delete e.currentTarget.dataset.sbDismiss;
+      }}
+      onClick={function (e: any) {
+        if (e.currentTarget.dataset.sbDismiss !== '1') return;
+        delete e.currentTarget.dataset.sbDismiss;
         setShowModal(false);
         if (editMode) setEditMode(null);
       }}
@@ -77,6 +87,44 @@ function NuovaCardModal(props: any) {
               {editMode ? '✏️ Modifica card' : !isProf ? '💡 Proponi una card' : '➕ Nuova card'}
             </h3>
           }
+          {!editMode && props.bozzaAttiva && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                background: isLight ? 'rgba(79,70,229,.08)' : 'rgba(99,102,241,.15)',
+                border: isLight ? '1px solid rgba(79,70,229,.2)' : '1px solid rgba(99,102,241,.35)',
+                borderRadius: 9,
+                padding: '4px 8px',
+                fontSize: 11,
+                color: isLight ? '#4338ca' : '#a5b4fc',
+                fontWeight: 700,
+                marginBottom: 12,
+              }}
+            >
+              <span>📋 Bozza ripristinata</span>
+              <span style={{ flex: 1 }} />
+              <button
+                aria-label="Scarta bozza"
+                title="Scarta la bozza e ricomincia da zero"
+                onClick={function () {
+                  if (props.scartaBozza) props.scartaBozza();
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: isLight ? '#64748b' : 'rgba(255,255,255,.55)',
+                  cursor: 'pointer',
+                  fontSize: 13,
+                  lineHeight: 1,
+                  padding: '1px 4px',
+                }}
+              >
+                ✕
+              </button>
+            </div>
+          )}
           {!isProf && !editMode && (
             <p style={{ margin: '0 0 14px', color: isLight ? '#64748b' : 'rgba(255,255,255,.45)', fontSize: 11 }}>
               La tua proposta sarà visibile dopo l'approvazione del prof

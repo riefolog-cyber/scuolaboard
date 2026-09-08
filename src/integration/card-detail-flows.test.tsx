@@ -141,6 +141,26 @@ describe('CardDetail — stato APERTO', () => {
     expect(detail.getAllByRole('button', { name: '✏️ Modifica' }).length).toBeGreaterThan(0);
   });
 
+  it('regression: drag/click che parte DENTRO la card e finisce sul backdrop NON chiude il dettaglio', async () => {
+    const seed = { users: { prof1: PROF_DOC }, cards: { c1: mkCard('c1', { titolo: 'Card backdrop' }) } };
+    await renderApp({ seed, user: PROF });
+
+    await openCard('Card backdrop');
+    const inner = document.querySelector('.modal-inner') as HTMLElement;
+    const backdrop = inner.parentElement as HTMLElement;
+
+    // pointerdown DENTRO la modale (es. selezione testo mentre si scrive) +
+    // click che si risolve sul backdrop (antenato comune) → NON deve chiudere
+    fireEvent.pointerDown(inner);
+    fireEvent.click(backdrop);
+    expect(document.querySelector('.modal-inner')).toBeTruthy();
+
+    // click pulito sul backdrop (pointerdown + click) → chiude
+    fireEvent.pointerDown(backdrop);
+    fireEvent.click(backdrop);
+    await waitFor(() => expect(document.querySelector('.modal-inner')).toBeNull());
+  });
+
   it('chiude la card al click sulla X (overlay smontato)', async () => {
     const seed = { users: { prof1: PROF_DOC }, cards: { c1: mkCard('c1', { titolo: 'Card da chiudere' }) } };
     await renderApp({ seed, user: PROF });

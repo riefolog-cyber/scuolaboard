@@ -127,6 +127,30 @@ describe('Modals', () => {
     expect(container.children.length).toBeGreaterThan(0);
   });
 
+  it('NuovaCardModal: click che parte dentro la modale e finisce sul backdrop NON la chiude', () => {
+    var $ = make$();
+    $.showModal = true;
+    $.form = Object.assign({}, $.form, { titolo: 'Bozza in corso' });
+    const setShowModal = vi.fn();
+    $.setShowModal = setShowModal;
+    var { container } = render(React.createElement(Modals, { $ }));
+
+    const backdrop = container.querySelector('[style*="z-index: 500"]') as HTMLElement;
+    expect(backdrop).toBeTruthy();
+    const titolo = screen.getByLabelText('Titolo della card');
+
+    // pointerdown DENTRO la modale (es. selezione testo) + click sul backdrop
+    // (il click si risolve sull'antenato comune) → NON chiude la modale
+    fireEvent.pointerDown(titolo);
+    fireEvent.click(backdrop);
+    expect(setShowModal).not.toHaveBeenCalled();
+
+    // click pulito sul backdrop (pointerdown + click) → chiude
+    fireEvent.pointerDown(backdrop);
+    fireEvent.click(backdrop);
+    expect(setShowModal).toHaveBeenCalledWith(false);
+  });
+
   it('EditAmm: salvare una modifica scrive e CHIUDE la modale (FIX bug E2E)', () => {
     // Bug trovato dall'esplorazione E2E: dopo "✓ Salva modifica" la modale
     // restava aperta e l'overlay z-600 bloccava i click su tutta la UI.

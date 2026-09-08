@@ -212,6 +212,21 @@ function CardItem__({ $, c }: any) {
                           NUOVO
                         </span>
                       )}
+                      {c.pinned && (
+                        <span
+                          className="badge-chip"
+                          title="Card fissata in cima"
+                          style={{
+                            background: 'rgba(168,85,247,.25)',
+                            color: '#d8b4fe',
+                            padding: '2px 6px',
+                            fontWeight: 800,
+                            border: '1px solid rgba(168,85,247,.4)',
+                          }}
+                        >
+                          📌 FISSATA
+                        </span>
+                      )}
                       {nascosta && $.isProf && (
                         <span
                           className="badge-chip"
@@ -472,6 +487,26 @@ function CardItem__({ $, c }: any) {
               )}
             </div>
           }
+          {$.isProf && !$.simulaSt && (
+            <button
+              aria-label={c.pinned ? 'Togli il pin' : 'Fissa in cima'}
+              title={c.pinned ? 'Togli il pin' : 'Fissa in cima'}
+              className="pill-btn"
+              onClick={function (e: any) {
+                e.stopPropagation();
+                $.togglePin(c.id);
+              }}
+              style={{
+                background: c.pinned ? 'rgba(168,85,247,.3)' : 'rgba(255,255,255,.08)',
+                border: '1px solid ' + (c.pinned ? 'rgba(168,85,247,.5)' : 'rgba(255,255,255,.1)'),
+                padding: '3px 8px',
+                fontSize: 12,
+                color: c.pinned ? '#d8b4fe' : 'rgba(255,255,255,.65)',
+              }}
+            >
+              📌
+            </button>
+          )}
           {
             <div style={{ display: 'flex', gap: 3 }}>
               {['🤔', '💡', '🔥'].map(function (emoji) {

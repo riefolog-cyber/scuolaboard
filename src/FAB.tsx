@@ -7,9 +7,12 @@ function FAB__({ $ }: any) {
     <button
       aria-label={$.isProf ? 'Nuova card' : 'Proponi card'}
       onClick={function () {
-        $.setEditMode(null);
-        $.setForm(Object.assign({}, FORM0));
-        $.setShowModal(true);
+        if ($.apriNuovaCard) $.apriNuovaCard();
+        else {
+          $.setEditMode(null);
+          $.setForm(Object.assign({}, FORM0));
+          $.setShowModal(true);
+        }
       }}
       style={{
         position: 'fixed',

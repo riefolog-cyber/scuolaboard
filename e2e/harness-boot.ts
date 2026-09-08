@@ -222,7 +222,7 @@ const seed = asStudent
           classiPerAnno: { '2026/2027': '3AO' },
         },
       },
-      cards: { c1, p1 },
+      cards: { c1, p1, q1 },
     }
   : {
       users: { prof1: { role: 'prof', nome: 'Prof', cognome: 'Rossi', classiPerAnno: {} } },

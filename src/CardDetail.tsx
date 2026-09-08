@@ -45,7 +45,18 @@ function CardDetail__({ $: props$ }: any) {
         justifyContent: 'center',
         padding: '0',
       }}
-      onClick={$.closeCard}
+      onPointerDown={function (e: any) {
+        // Chiude SOLO se il click PARTE dal backdrop: una selezione testo / drag
+        // che inizia dentro la card e finisce sul backdrop non deve chiuderla
+        // (il click si risolve sull'antenato comune, il backdrop).
+        if (e.target === e.currentTarget) e.currentTarget.dataset.sbDismiss = '1';
+        else delete e.currentTarget.dataset.sbDismiss;
+      }}
+      onClick={function (e: any) {
+        if (e.currentTarget.dataset.sbDismiss !== '1') return;
+        delete e.currentTarget.dataset.sbDismiss;
+        $.closeCard();
+      }}
     >
       <div
         className="modal-inner"

@@ -87,9 +87,39 @@ describe('CercaModal', () => {
     expect(screen.queryByText(/Cerca nelle card/)).toBeNull();
   });
 
-  it('renders nothing for students', () => {
-    renderModal({ isProf: false });
-    expect(screen.queryByText(/Cerca nelle card/)).toBeNull();
+  it('renders the search also for students (vista studente)', () => {
+    renderModal({ isProf: false, classeCorrente: '3AO' });
+    expect(screen.getByText(/Cerca nelle card/)).toBeTruthy();
+  });
+
+  it('student search excludes Solo-prof and other-class cards', () => {
+    renderModal({ isProf: false, classeCorrente: '3AO' });
+    // c2 (Roma antica) è "Solo prof" (classi []) → NON compare per lo studente
+    fireEvent.input(screen.getByLabelText('Cerca card'), { target: { value: 'Roma' } });
+    expect(screen.queryByRole('button', { name: /Roma antica/ })).toBeNull();
+    // c1 è in 3AO → visibile; c3 è in 3AI → NON visibile a 3AO
+    fireEvent.input(screen.getByLabelText('Cerca card'), { target: { value: 'Equazioni' } });
+    expect(screen.getByRole('button', { name: /Equazioni di primo grado/ })).toBeTruthy();
+    fireEvent.input(screen.getByLabelText('Cerca card'), { target: { value: 'cielo' } });
+    expect(screen.queryByRole('button', { name: /Perché il cielo è blu/ })).toBeNull();
+    // c4 (classi ['TUTTE']) resta visibile a ogni classe
+    fireEvent.input(screen.getByLabelText('Cerca card'), { target: { value: 'algebra' } });
+    expect(screen.getByRole('button', { name: /Quiz algebra/ })).toBeTruthy();
+  });
+
+  it('hides the SOLO PROF badge and the year picker for students', () => {
+    renderModal({ isProf: false, classeCorrente: '3AO' });
+    expect(screen.queryByText('SOLO PROF')).toBeNull();
+    expect(screen.queryByRole('button', { name: /Scegli anno scolastico/ })).toBeNull();
+    expect(screen.queryByText(/Tutti gli anni/)).toBeNull();
+  });
+
+  it('prof in vista studente (simulaSt) cerca solo le card della classe di anteprima', () => {
+    renderModal({ isProf: true, simulaSt: true, previewClasse: '3AO' });
+    fireEvent.input(screen.getByLabelText('Cerca card'), { target: { value: 'Roma' } });
+    expect(screen.queryByRole('button', { name: /Roma antica/ })).toBeNull();
+    fireEvent.input(screen.getByLabelText('Cerca card'), { target: { value: 'Equazioni' } });
+    expect(screen.getByRole('button', { name: /Equazioni di primo grado/ })).toBeTruthy();
   });
 
   it('debounces la ricerca: nessun risultato prima del delay, poi appare', () => {

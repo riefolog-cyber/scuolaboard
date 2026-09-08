@@ -105,6 +105,28 @@
         } catch (e) {}
       },
     },
+    draft: {
+      // Bozza NUOVA card (autosave): campi di testo salvati mentre si scrive
+      // nella modale e ripristinati alla riapertura (per utente).
+      get: function (uid: string) {
+        try {
+          var s = typeof localStorage !== 'undefined' ? localStorage.getItem('sb_card_draft_' + uid) : null;
+          return s ? JSON.parse(s) : null;
+        } catch (e) {
+          return null;
+        }
+      },
+      set: function (uid: string, v: any) {
+        try {
+          if (typeof localStorage !== 'undefined') localStorage.setItem('sb_card_draft_' + uid, JSON.stringify(v));
+        } catch (e) {}
+      },
+      rm: function (uid: string) {
+        try {
+          if (typeof localStorage !== 'undefined') localStorage.removeItem('sb_card_draft_' + uid);
+        } catch (e) {}
+      },
+    },
     aiCache: {
       get: function () {
         return typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(CFG.LS_KEYS.aiCache) : null;

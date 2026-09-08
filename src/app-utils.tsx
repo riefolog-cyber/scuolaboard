@@ -646,6 +646,31 @@ export var ErrorBoundary = (function () {
         } catch (e) {}
       },
     },
+    draft: {
+      // Bozza di NUOVA card (autosave): salva i campi di testo mentre si
+      // scrive nella modale e li ripristina alla riapertura (per utente).
+      // Le immagini/allegati base64 NON vengono salvati (limite localStorage).
+      get: function (uid: string) {
+        try {
+          var s = _safeGetItem(localStorage, 'sb_card_draft_' + uid);
+          return s ? JSON.parse(s) : null;
+        } catch (e) {
+          return null;
+        }
+      },
+      set: function (uid: string, v: any) {
+        try {
+          _safeSetItem(localStorage, 'sb_card_draft_' + uid, JSON.stringify(v));
+        } catch (e) {
+          console.warn('[ScuolaBoard] LS.draft set error:', e);
+        }
+      },
+      rm: function (uid: string) {
+        try {
+          _safeRemoveItem(localStorage, 'sb_card_draft_' + uid);
+        } catch (e) {}
+      },
+    },
     aiCache: {
       get: function () {
         return _safeGetItem(sessionStorage, CFG_LS_KEYS.aiCache || 'ai_results_cache');

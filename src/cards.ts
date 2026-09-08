@@ -299,7 +299,12 @@ export function useCards(user: any, annoScolastico: string) {
 
   var visibleSorted = useMemo(
     function () {
+      // Card fissate (📌 pinned, solo prof può fissarle) in cima, poi per
+      // ordine: le card importanti restano visibili subito a tutti.
       return visible.slice().sort(function (a: any, b: any) {
+        var pa = a.pinned ? 0 : 1;
+        var pb = b.pinned ? 0 : 1;
+        if (pa !== pb) return pa - pb;
         return (a.ordine || 0) - (b.ordine || 0);
       });
     },

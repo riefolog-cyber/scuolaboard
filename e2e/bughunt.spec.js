@@ -232,6 +232,36 @@ test('Ricerca card (solo prof): 🔍 trova per parola chiave e apre la card', as
   expect(fatalErrors(errors), 'Errori fatali: ' + JSON.stringify(fatalErrors(errors))).toEqual([]);
 });
 
+test('Ricerca card in vista studente: 🔍 disponibile, esclude Solo prof/proposte e apre la card', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto(HARNESS + '?user=studente', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByText('Lezione su X').first()).toBeVisible({ timeout: 15000 });
+
+  await page.getByRole('button', { name: 'Cerca nelle card' }).click();
+  const searchModal = page.locator('[style*="z-index: 520"]');
+  await expect(searchModal).toBeVisible({ timeout: 5000 });
+
+  // Niente badge SOLO PROF né selettore anno per lo studente
+  await expect(searchModal.getByText('SOLO PROF')).toHaveCount(0);
+  await expect(searchModal.getByRole('button', { name: /Scegli anno scolastico/ })).toHaveCount(0);
+
+  // Trova la card della sua classe (c1 → classi 3AO)
+  await searchModal.getByLabel('Cerca card').fill('Lezione');
+  await expect(searchModal.getByText('Lezione su X').first()).toBeVisible({ timeout: 5000 });
+
+  // p1 è una proposta (proposta: true) → non è una card pubblicata, resta fuori
+  await searchModal.getByLabel('Cerca card').fill('Proposta');
+  await expect(searchModal.getByText('Proposta di Luca')).toHaveCount(0);
+
+  // Clic sul risultato → si apre la CardDetail dello studente
+  await searchModal.getByLabel('Cerca card').fill('Lezione');
+  await searchModal.getByText('Lezione su X').first().click();
+  await expect(page.locator('.modal-inner')).toBeVisible({ timeout: 5000 });
+  await closeCardDetail(page);
+
+  expect(fatalErrors(errors), 'Errori fatali: ' + JSON.stringify(fatalErrors(errors))).toEqual([]);
+});
+
 test("Drag & drop: trascina la card c1 sotto p1 e l'ordine viene salvato", async ({ page }) => {
   const errors = collectErrors(page);
   await page.goto(HARNESS, { waitUntil: 'domcontentloaded' });
@@ -255,6 +285,105 @@ test("Drag & drop: trascina la card c1 sotto p1 e l'ordine viene salvato", async
   await expect.poll(() => page.evaluate(() => window.__db._get('cards', 'p1').ordine)).toBe(1);
 
   // Nessun errore console
+  expect(fatalErrors(errors), 'Errori fatali: ' + JSON.stringify(fatalErrors(errors))).toEqual([]);
+});
+
+test('Drag & drop nel VUOTO: l\'indicatore appare e la card resta nel punto del drop', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto(HARNESS, { waitUntil: 'domcontentloaded' });
+  await expect(page.getByText('Lezione su X').first()).toBeVisible({ timeout: 15000 });
+
+  const c1 = page.locator('#card-c1');
+  const p1 = page.locator('#card-p1');
+  const c1b = await c1.boundingBox();
+  const p1b = await p1.boundingBox();
+
+  // Punto nel GAP sotto p1 (layout a colonne: vuoto tra le card)
+  const gapX = p1b.x + p1b.width / 2;
+  const gapY = p1b.y + p1b.height + 14;
+
+  await page.mouse.move(c1b.x + c1b.width / 2, c1b.y + c1b.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(gapX, gapY, { steps: 15 });
+  // Durante il drag compare l'indicatore di inserimento sulla card target
+  await expect(page.locator('.drop-after, .drop-before').first()).toBeVisible({ timeout: 3000 });
+  await page.mouse.up();
+
+  // La card RESTA nel punto del drop: c1 subito dopo p1 (ordine: p1=1, c1=2)
+  await expect.poll(() => page.evaluate(() => window.__db._get('cards', 'c1').ordine)).toBe(2);
+  await expect.poll(() => page.evaluate(() => window.__db._get('cards', 'p1').ordine)).toBe(1);
+
+  expect(fatalErrors(errors), 'Errori fatali: ' + JSON.stringify(fatalErrors(errors))).toEqual([]);
+});
+
+test('Card fissata (pinned): 📌 la porta in cima con chip FISSATA, il toggle la ripristina', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto(HARNESS, { waitUntil: 'domcontentloaded' });
+  await expect(page.getByText('Lezione su X').first()).toBeVisible({ timeout: 15000 });
+
+  // Pin su q1 (ultima card): il chip FISSATA appare e q1 sale in cima alla griglia
+  await page.locator('#card-q1').getByRole('button', { name: 'Fissa in cima' }).click();
+  await expect(page.locator('#card-q1').getByText('📌 FISSATA')).toBeVisible({ timeout: 5000 });
+  await expect
+    .poll(() => page.evaluate(() => document.querySelectorAll('[id^="card-"]')[0].id))
+    .toBe('card-q1');
+  await expect.poll(() => page.evaluate(() => window.__db._get('cards', 'q1').pinned)).toBe(true);
+
+  // Toggle: si sblocca, chip sparisce e l'ordine torna all'ordine originale
+  await page.locator('#card-q1').getByRole('button', { name: 'Togli il pin' }).click();
+  await expect(page.locator('#card-q1').getByText('📌 FISSATA')).not.toBeVisible({ timeout: 5000 });
+  await expect.poll(() => page.evaluate(() => window.__db._get('cards', 'q1').pinned)).toBe(false);
+  await expect
+    .poll(() => page.evaluate(() => document.querySelectorAll('[id^="card-"]')[2].id))
+    .toBe('card-q1');
+
+  expect(fatalErrors(errors), 'Errori fatali: ' + JSON.stringify(fatalErrors(errors))).toEqual([]);
+});
+
+test('Modalità ripasso: lo studente apre 🎴, gira la flashcard e naviga', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto(HARNESS + '?user=studente', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByText('Lezione su X').first()).toBeVisible({ timeout: 15000 });
+
+  // 🎴 apre la modalità ripasso con le flashcard dei quiz della sua classe
+  await page.getByRole('button', { name: 'Modalità ripasso' }).click();
+  const modal = page.getByRole('dialog', { name: 'Modalità ripasso' });
+  await expect(modal).toBeVisible({ timeout: 5000 });
+  await expect(modal.getByText('MODALITÀ RIPASSO')).toBeVisible();
+  // q1 ha 1 domanda con risposta esatta (la aperta è esclusa dal mazzo)
+  await expect(modal.getByText(/1 flashcard/)).toBeVisible();
+  await expect(modal.getByText('Quanto fa 2+2?')).toBeVisible();
+
+  // Gira la flashcard → mostra la risposta esatta ('4' = indice 1 di ['3','4','5'])
+  await modal.getByText('Quanto fa 2+2?').click();
+  await expect(modal.getByText('RISPOSTA')).toBeVisible();
+  await expect(modal.getByText('4')).toBeVisible();
+  await expect(modal.getByText('🎉 Ripasso completato!')).toBeVisible();
+
+  // Chiude senza errori
+  await modal.getByRole('button', { name: 'Chiudi ripasso' }).click();
+  await expect(modal).not.toBeVisible({ timeout: 5000 });
+
+  expect(fatalErrors(errors), 'Errori fatali: ' + JSON.stringify(fatalErrors(errors))).toEqual([]);
+});
+
+test('Stampa bacheca: 🖨️ apre l\'anteprima con le card e stampa (window.print)', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto(HARNESS, { waitUntil: 'domcontentloaded' });
+  await expect(page.getByText('Lezione su X').first()).toBeVisible({ timeout: 15000 });
+
+  await page.getByRole('button', { name: 'Stampa bacheca' }).click();
+  const preview = page.getByText('ANTEPRIMA STAMPA').first();
+  await expect(preview).toBeVisible({ timeout: 5000 });
+  await expect(page.getByText(/3 card/).first()).toBeVisible();
+  await expect(page.getByText('Lezione su X').first()).toBeVisible();
+  await expect(page.getByText('Quiz sulle frazioni').first()).toBeVisible();
+
+  // Il pulsante di stampa c'è e la chiusura funziona
+  await expect(page.getByRole('button', { name: /Stampa \/ Salva PDF/ })).toBeVisible();
+  await page.getByRole('button', { name: 'Chiudi anteprima stampa' }).click();
+  await expect(page.getByText('ANTEPRIMA STAMPA')).not.toBeVisible({ timeout: 5000 });
+
   expect(fatalErrors(errors), 'Errori fatali: ' + JSON.stringify(fatalErrors(errors))).toEqual([]);
 });
 

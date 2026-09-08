@@ -21,6 +21,8 @@ export function useModals() {
   var [showWordCloud, setShowWordCloud] = useState(false);
   var [wcTarget, setWcTarget] = useState('tutte');
   var [showCerca, setShowCerca] = useState(false);
+  var [showRipasso, setShowRipasso] = useState(false);
+  var [showStampa, setShowStampa] = useState(false);
 
   var closeAll = useCallback(function () {
     setShowModal(false);
@@ -39,6 +41,8 @@ export function useModals() {
     setLightbox(null);
     setConfirmDel(null);
     setShowCerca(false);
+    setShowRipasso(false);
+    setShowStampa(false);
   }, []);
 
   return {
@@ -48,6 +52,10 @@ export function useModals() {
     setWcTarget: setWcTarget,
     showCerca: showCerca,
     setShowCerca: setShowCerca,
+    showRipasso: showRipasso,
+    setShowRipasso: setShowRipasso,
+    showStampa: showStampa,
+    setShowStampa: setShowStampa,
     showModal: showModal,
     setShowModal: setShowModal,
     showQR: showQR,

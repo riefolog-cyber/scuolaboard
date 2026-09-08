@@ -75,6 +75,7 @@ function Header__({ $ }: any) {
           onClick={function () {
             $.setShowClasseModal(true);
           }}
+          aria-label="Scegli la tua classe"
           className="header-chip"
           style={{
             background: 'rgba(239,68,68,.2)',
@@ -84,24 +85,6 @@ function Header__({ $ }: any) {
           }}
         >
           ⚠️ Scegli classe
-        </button>
-      )}
-      {!$.isProf && !($.user.classiPerAnno || {})[$.annoScolastico] && (
-        <button
-          onClick={function () {
-            $.setShowClasseModal(true);
-          }}
-          aria-label="Scegli la tua classe"
-          className="header-chip"
-          style={{
-            background: 'rgba(255,255,255,.06)',
-            color: 'rgba(255,255,255,.58)',
-            border: '1px solid rgba(255,255,255,.1)',
-            padding: '2px 8px',
-            cursor: 'pointer',
-          }}
-        >
-          ✏️
         </button>
       )}
       {$.simulaSt && (
@@ -507,7 +490,7 @@ function Header__({ $ }: any) {
           </div>
         )}
       </div>
-      {$.isProf && !$.simulaSt && (
+      {
         <button
           aria-label="Cerca nelle card"
           title="Cerca nelle card"
@@ -525,6 +508,26 @@ function Header__({ $ }: any) {
           }}
         >
           🔍
+        </button>
+      }
+      {(!$.isProf || $.simulaSt) && (
+        <button
+          aria-label="Modalità ripasso"
+          title="Ripassa i quiz con le flashcard"
+          onClick={function () {
+            $.setShowRipasso(true);
+          }}
+          style={{
+            background: isLight ? 'rgba(168,85,247,.10)' : 'rgba(168,85,247,.15)',
+            border: isLight ? '1px solid rgba(168,85,247,.22)' : '1px solid rgba(168,85,247,.35)',
+            borderRadius: 8,
+            padding: '5px 9px',
+            cursor: 'pointer',
+            fontSize: 14,
+            color: isLight ? '#7e22ce' : '#d8b4fe',
+          }}
+        >
+          🎴
         </button>
       )}
       {$.isProf && !$.simulaSt && (
@@ -546,6 +549,26 @@ function Header__({ $ }: any) {
           ⚠️
         </button>
       )}
+      {
+        <button
+          aria-label="Stampa bacheca"
+          title="Stampa / salva PDF della bacheca"
+          onClick={function () {
+            $.setShowStampa(true);
+          }}
+          style={{
+            background: 'rgba(34,197,94,.12)',
+            border: '1px solid rgba(34,197,94,.3)',
+            borderRadius: 8,
+            padding: '5px 9px',
+            cursor: 'pointer',
+            fontSize: 14,
+            color: '#4ade80',
+          }}
+        >
+          🖨️
+        </button>
+      }
       {
         <button
           aria-label="QR Code bacheca"

@@ -113,9 +113,12 @@ function CardGrid__({ $ }: any) {
         {$.isProf && (
           <button
             onClick={function () {
-              $.setEditMode(null);
-              $.setForm(Object.assign({}, FORM0));
-              $.setShowModal(true);
+              if ($.apriNuovaCard) $.apriNuovaCard();
+              else {
+                $.setEditMode(null);
+                $.setForm(Object.assign({}, FORM0));
+                $.setShowModal(true);
+              }
             }}
             className="btn btn-primary"
           >
@@ -127,7 +130,18 @@ function CardGrid__({ $ }: any) {
   }
 
   return (
-    <div className="card-grid" style={{ columns: '300px', columnGap: 16 }}>
+    <div
+      className="card-grid"
+      style={{ columns: '300px', columnGap: 16 }}
+      onDragOver={function (e: any) {
+        // Drop anche nei VUOTI tra le card (layout a colonne): senza questo il
+        // browser non accetta il drop e la card tornava al punto di partenza.
+        if ($.onGridDragOver) $.onGridDragOver(e);
+      }}
+      onDrop={function (e: any) {
+        if ($.onGridDrop) $.onGridDrop(e);
+      }}
+    >
       {$.visibleSorted.map(function (c: any) {
         return <CardItem key={c.id} $={$} c={c} />;
       })}

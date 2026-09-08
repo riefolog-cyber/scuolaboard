@@ -61,4 +61,54 @@ describe('reorderCards', () => {
     expect(reorderCards(cards, 'A', 'ZZZ')).toEqual([]);
     expect(reorderCards(cards, 'ZZZ', 'A')).toEqual([]);
   });
+
+  it('drop nel VUOTO sotto p1 (after=true): c1 finisce subito dopo p1', () => {
+    // Semantica del drop nel gap: puntatore sotto il centro di p1 → DOPO p1
+    var cards = [
+      { id: 'c1', ordine: 1 },
+      { id: 'p1', ordine: 2 },
+      { id: 'q1', ordine: 3 },
+    ];
+    var res = reorderCards(cards, 'c1', 'p1', true);
+    expect(res.map(function (c: any) {
+      return c.id;
+    }).join('')).toBe('p1c1q1');
+    expect(res[1].ordine).toBe(2);
+  });
+
+  it('after=true sull\'ultima card → appendi in coda', () => {
+    var cards = [
+      { id: 'c1', ordine: 1 },
+      { id: 'p1', ordine: 2 },
+      { id: 'q1', ordine: 3 },
+    ];
+    var res = reorderCards(cards, 'c1', 'q1', true);
+    expect(res.map(function (c: any) {
+      return c.id;
+    }).join('')).toBe('p1q1c1');
+    expect(res[2].ordine).toBe(3);
+  });
+
+  it('after=false (default) resta retro-compatibile: c1 prende il posto di p1', () => {
+    var cards = [
+      { id: 'c1', ordine: 1 },
+      { id: 'p1', ordine: 2 },
+      { id: 'q1', ordine: 3 },
+    ];
+    // Semantica storica dell'e2e: drop c1 SU p1 → c1 prende il posto di p1
+    // (p1=1, c1=2), con ordini ricompattati 1..N
+    var res = reorderCards(cards, 'c1', 'p1');
+    expect(res.map(function (c: any) {
+      return c.id;
+    }).join('')).toBe('p1c1q1');
+    expect(res.map(function (c: any) {
+      return c.ordine;
+    })).toEqual([1, 2, 3]);
+  });
+
+  it('spostare una card prima/dopo se stessa → no-op', () => {
+    var cards = [{ id: 'A', ordine: 1 }, { id: 'B', ordine: 2 }];
+    expect(reorderCards(cards, 'A', 'A')).toEqual([]);
+    expect(reorderCards(cards, 'A', 'A', true)).toEqual([]);
+  });
 });
