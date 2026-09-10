@@ -1,0 +1,82 @@
+# Monitor Login — verifica giornaliera del login di produzione.
+#
+# Il login si è rotto due volte in modi che i test non potevano vedere
+# (dipendeva da Google/ambiente, non dal codice: il flusso redirect restava
+# appeso al selettore account). Questo workflow apre ogni mattina la pagina
+# live, clicca il bottone e verifica che si apra il popup del flusso Google.
+# Se qualcosa non va: run rosso + issue di avviso (senza duplicati) + screenshot
+# in allegato. Quando il login torna ok, l'issue viene chiusa automaticamente.
+name: Monitor Login
+
+on:
+  schedule:
+    # Ogni giorno feriale alle 06:30 UTC = 07:30 in Italia (ora solare),
+    # prima dell'inizio delle lezioni.
+    - cron: '30 6 * * 1-5'
+  workflow_dispatch: # eseguibile a mano dal tab Actions
+
+permissions:
+  contents: read
+  issues: write # per aprire/chiudere l'issue di avviso
+
+concurrency:
+  group: login-monitor
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Verifica login di produzione
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Installa browser (Chromium)
+        run: npx playwright install --with-deps chromium
+      - name: Controlla il login live
+        id: check
+        run: node .github/scripts/check-login.mjs
+
+      - name: Allega screenshot se il login è rotto
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: login-monitor-screenshot
+          path: '*.png'
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Apri un issue di avviso (senza duplicati)
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          LABEL=monitor-login
+          gh label create "$LABEL" --repo "${{ github.repository }}" >/dev/null 2>&1 || true
+          if gh issue list --repo "${{ github.repository }}" --label "$LABEL" --state open --json number -q '.[0].number' | grep -q .; then
+            echo "Issue di avviso già aperta: niente duplicati."
+          else
+            gh issue create \
+              --repo "${{ github.repository }}" \
+              --label "$LABEL" \
+              --title "⚠️ Login di produzione non funziona ($(date -u +%Y-%m-%d))" \
+              --body "Il monitor giornaliero ha rilevato un problema sul login di produzione: **https://riefolog-cyber.github.io/scuolaboard/**
+
+Possibili cause: dominio non autorizzato in Firebase, flusso Google cambiato, estensione/rete, o una regressione dell'app.
+
+Dettagli nel log di questo run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          fi
+
+      - name: Chiudi l'issue di avviso se il login è di nuovo ok
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ISSUE=$(gh issue list --repo "${{ github.repository }}" --label monitor-login --state open --json number -q '.[0].number' || true)
+          if [ -n "$ISSUE" ]; then
+            gh issue close "$ISSUE" --repo "${{ github.repository }}" \
+              --comment "✅ Il monitor del $(date -u +%Y-%m-%d) conferma che il login funziona di nuovo."
+          fi
