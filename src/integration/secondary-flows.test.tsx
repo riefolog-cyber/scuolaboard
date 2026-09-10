@@ -209,9 +209,14 @@ describe('Gestione studenti (prof)', () => {
           role: 'studente',
           nome: 'Sara',
           cognome: 'Russo',
-          // Stato prodotto da rimuoviStudente: classiPerAnno[anno] = null
-          // (rimozione persistita) → NON deve ricomparire al reload
-          classiPerAnno: { '2026/2027': null },
+          // Stato prodotto da rimuoviStudente: la chiave dell'anno corrente è
+          // stata ELIMINATA da classiPerAnno (e rimosso: true) → la rimozione
+          // è persistita e NON deve ricomparire al reload. Con la chiave
+          // assente (non null) lo studente può comunque riscegliere la classe
+          // senza violare la regola classiPerAnnoSoloAggiunte.
+          classe: null,
+          rimosso: true,
+          classiPerAnno: {},
           displayName: 'Sara Russo',
         },
       },
@@ -230,7 +235,7 @@ describe('Gestione studenti (prof)', () => {
     expect(screen.getByText('Giulia Verdi')).toBeTruthy();
     // Lo studente con la sola classe legacy dello scorso anno è escluso
     expect(screen.queryByText('Marco Neri')).toBeNull();
-    // …e anche lo studente rimosso (classiPerAnno[anno] = null)
+    // …e anche lo studente rimosso (chiave dell'anno eliminata da classiPerAnno)
     expect(screen.queryByText('Sara Russo')).toBeNull();
   });
 

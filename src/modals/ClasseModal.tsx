@@ -86,7 +86,11 @@ function ClasseModal(props: any) {
                 <select
                   aria-label="Scegli la tua classe"
                   value={props.classeInput}
-                  onInput={function (e: any) {
+                  // onChange (non onInput): il <select> non emette l'evento
+                  // `input` su tutti i browser/WebView (es. Safari). Con onInput
+                  // classeInput restava '', il bottone "Salva classe" era
+                  // disabilitato e l'utente rimaneva bloccato sulla scelta.
+                  onChange={function (e: any) {
                     props.setClasseInput(e.target.value);
                   }}
                   style={Object.assign({}, S.input, { fontSize: 14, color: '#f1f5f9', background: '#1c1a2e' })}

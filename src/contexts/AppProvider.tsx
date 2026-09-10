@@ -1178,9 +1178,15 @@ function AppProvider({ children }: any) {
         return;
       }
       // Popup classe per studente senza classe per l'anno scolastico corrente
-      // (usa classiPerAnno[anno], non il campo piatto legacy user.classe)
-      if (user.role === 'studente' && !(user.classiPerAnno || {})[annoScolastico]) {
-        modals.setShowClasseModal(true);
+      // (usa classiPerAnno[anno], non il campo piatto legacy user.classe).
+      // Se la classe per l'anno C'È, chiudi la modale (safety-net: un successo
+      // salvato ma con chiusura persa non deve lasciare la modale appesa).
+      if (user.role === 'studente') {
+        if (!(user.classiPerAnno || {})[annoScolastico]) {
+          modals.setShowClasseModal(true);
+        } else {
+          modals.setShowClasseModal(false);
+        }
       }
     },
     [user, annoScolastico, modals.showPrivacy]
@@ -1720,6 +1726,10 @@ function AppProvider({ children }: any) {
     },
     [
       annoScolastico,
+      classeInput, // serve a saveClasse (useClassi): senza questa dep il uiValue
+      // memo tratteneva una closure STALE con classeInput='' → il bottone
+      // "Salva classe" era abilitato ma il click non salvava niente (studente
+      // bloccato sulla scelta della classe).
       showAnnoMenu,
       likeHoverCard,
       likeAnimCard,

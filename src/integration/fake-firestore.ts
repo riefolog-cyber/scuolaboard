@@ -1,6 +1,35 @@
 // @ts-nocheck — fake Firestore in-memory per i test di integrazione
 // Supporta: collection, doc, where, orderBy, get, onSnapshot, runTransaction,
-// FieldValue.arrayUnion. Emula il comportamento essenziale del Firestore reale.
+// FieldValue.arrayUnion, dot-notation in update() ("classiPerAnno.2026/2027").
+// Emula il comportamento essenziale del Firestore reale.
+
+function isPlainObject(v) {
+  return !!v && typeof v === 'object' && !Array.isArray(v) && !v.__arrayUnion;
+}
+
+// Applica una patch Firestore a un doc: chiavi con '.' creano/fondono mappe
+// annidate (come l'update() reale). Senza questo, update({'a.b': v})
+// scriverebbe una chiave letterale 'a.b' invece di {a:{b:v}}.
+function applyPatch(existing, patch) {
+  var out = Object.assign({}, existing || {});
+  var resolved = resolveFieldValues(patch, existing);
+  for (var k of Object.keys(resolved)) {
+    var v = resolved[k];
+    if (k.indexOf('.') < 0) {
+      out[k] = v;
+      continue;
+    }
+    var parts = k.split('.');
+    var cur = out;
+    for (var i = 0; i < parts.length - 1; i++) {
+      var p = parts[i];
+      cur[p] = isPlainObject(cur[p]) ? Object.assign({}, cur[p]) : {};
+      cur = cur[p];
+    }
+    cur[parts[parts.length - 1]] = v;
+  }
+  return out;
+}
 
 function resolveFieldValues(data, existing) {
   const out = {};
@@ -113,7 +142,7 @@ export function createFakeDb(seed = {}) {
     async update(patch) {
       collections[this.name] = collections[this.name] || {};
       const existing = collections[this.name][this.id] || {};
-      collections[this.name][this.id] = { ...existing, ...resolveFieldValues(patch, existing) };
+      collections[this.name][this.id] = applyPatch(existing, patch);
       notifyCollection(this.name);
       notifyDoc(this.name, this.id);
     }

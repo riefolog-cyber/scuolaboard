@@ -5,9 +5,9 @@
 // 2) ri-aggiungere una classe predefinita nascosta deve toglierla da classiNascoste
 //    (prima veniva aggiunta a classiCustom senza alcun effetto → \"aggiungi classe\" rotto).
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { screen, fireEvent, within } from '@testing-library/react';
+import { screen, fireEvent, within, waitFor } from '@testing-library/react';
 import { bootApp, renderApp } from './harness';
-import { PROF, PROF_DOC, setupTestEnv, teardownTestEnv } from './fixtures';
+import { PROF, PROF_DOC, STUD, setupTestEnv, teardownTestEnv } from './fixtures';
 import { createAppHandlers } from '../app-handlers';
 
 beforeEach(setupTestEnv);
@@ -267,5 +267,78 @@ describe('Aggiungi classe dalla UI (FilterBar, flusso reale)', () => {
     await screen.findByText('5AI', {}, { timeout: 4000 });
     expect(db._get('config', 'classi_custom_2026_2027').nascoste).toEqual(['5BO']);
     expect(db._get('config', 'classi_custom_2026_2027').lista).toEqual(['CORSO BASE AI PROF']);
+  });
+});
+
+describe('Scelta classe studente (ClasseModal)', () => {
+  // Studente senza classe per l'anno corrente → la modale si apre da sola.
+  function seedStudenteSenzaClasse() {
+    return {
+      users: {
+        stud1: {
+          role: 'studente',
+          nome: 'Luca',
+          cognome: 'Bianchi',
+          email: STUD.email,
+          displayName: STUD.displayName,
+          classiPerAnno: {},
+        },
+      },
+      cards: {},
+    };
+  }
+
+  it('sceglie la classe → viene salvata su users/{uid} e la modale si chiude', async () => {
+    const { db } = await renderApp({ seed: seedStudenteSenzaClasse(), user: STUD });
+
+    // La modale "Scegli la tua classe" si apre da sola (privacy pre-accettata)
+    const saveBtn = await screen.findByRole('button', { name: /Salva classe/ }, {}, { timeout: 4000 });
+    const select = screen.getByRole('combobox', { name: /Scegli la tua classe/ });
+    fireEvent.change(select, { target: { value: '3AI' } });
+    expect(saveBtn).not.toBeDisabled();
+    fireEvent.click(saveBtn);
+
+    // La classe compare nel doc (fonte di verità per-anno) e la modale si chiude
+    await waitFor(
+      () => {
+        const doc = db._get('users', 'stud1');
+        expect(doc && doc.classiPerAnno && doc.classiPerAnno['2026/2027']).toBe('3AI');
+      },
+      { timeout: 4000 }
+    );
+    await waitFor(() => expect(screen.queryByRole('button', { name: /Salva classe/ })).toBeNull(), {
+      timeout: 4000,
+    });
+  });
+
+  it('salvataggio fallito (rete giù) → la modale resta aperta e mostra un errore esplicito', async () => {
+    const { db } = await renderApp({ seed: seedStudenteSenzaClasse(), user: STUD });
+    const saveBtn = await screen.findByRole('button', { name: /Salva classe/ }, {}, { timeout: 4000 });
+    const select = screen.getByRole('combobox', { name: /Scegli la tua classe/ });
+
+    // Simula la rete giù SOLO per l'update del profilo studente: senza il fix,
+    // l'errore veniva ingoiato e la modale restava aperta senza alcun feedback
+    // ("bloccato sulla scelta della classe").
+    const realColl = db.collection.bind(db);
+    db.collection = (name: string) => {
+      const q: any = realColl(name);
+      if (name === 'users') {
+        const realDoc: any = q.doc.bind(q);
+        q.doc = (id: string) => {
+          const d: any = realDoc(id);
+          if (id === 'stud1') d.update = async () => Promise.reject({ code: 'unavailable', message: 'rete giù' });
+          return d;
+        };
+      }
+      return q;
+    };
+
+    fireEvent.change(select, { target: { value: '3AI' } });
+    fireEvent.click(screen.getByRole('button', { name: /Salva classe/ }));
+
+    // Feedback visibile all'utente + modale ancora aperta per riprovare
+    expect(await screen.findByText(/Errore salvataggio classe/, {}, { timeout: 4000 })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /Salva classe/ })).toBeTruthy();
+    expect(db._get('users', 'stud1').classiPerAnno['2026/2027']).toBeUndefined();
   });
 });

@@ -34,25 +34,38 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "studente";
     }
 
-    // Scelta classe studente BLOCCATA: lo studente può SOLO aggiungere una
-    // classe per un anno che non ne ha, mai modificare o rimuovere la classe
-    // già scelta per un anno (la UI la blocca già; qui anche contro scritture
-    // dirette).
-    // NB: funzioni Firestore Rules = solo return expr; (niente if).
-    // Logica: ok se (a) non stiamo scrivendo classiPerAnno, oppure (b) la
-    // nuova mappa è valida E (il profilo è nuovo OPPURE nessuna rimozione
-    // di chiavi E nessuna modifica di valori esistenti nella mappa).
+    // Scelta classe studente: lo studente può SOLO aggiungere una classe per
+    // un anno che non ne ha, mai modificare la classe già scelta per un anno
+    // (la UI la blocca già; qui anche contro scritture dirette).
+    // ECCEZIONE (tombstone recovery): può sovrascrivere un valore null.
+    // Perché: le vecchie versioni di rimuoviStudente/aggiornaClasseStudente
+    // scrivevano classiPerAnno[anno] = null (invece di eliminare la chiave).
+    // Con la regola "solo aggiunte" pura, null → "3AI" risultava una MODIFICA
+    // di chiave esistente → permission-denied al saveClasse → modale bloccata
+    // per sempre (alcuni utenti entravano, quelli con tombstone null no).
+    // Ora null è trattato come "nessuna scelta": sovrascrivibile.
+    // NB: gli anni sono enumerati esplicitamente (come ANNI_DISPONIBILI
+    // nel client): una modifica a un anno fuori lista è negata allo
+    // studente (il prof non ha questo vincolo e può sempre scrivere
+    // qualsiasi anno).
+    function annoInvariato(vecchia, nuova, anno) {
+      return !(anno in vecchia) || vecchia[anno] == null || nuova[anno] == vecchia[anno];
+    }
     function classiPerAnnoSoloAggiunte() {
       return !request.resource.data.keys().hasAny(['classiPerAnno'])
         || (request.resource.data.classiPerAnno is map
           && (!resource.data.keys().hasAny(['classiPerAnno'])
             || (resource.data.classiPerAnno is map
               && resource.data.classiPerAnno.keys().toSet()
-                  .difference(request.resource.data.classiPerAnno.keys().toSet()).size() == 0
+                   .difference(request.resource.data.classiPerAnno.keys().toSet()).size() == 0
               && request.resource.data.classiPerAnno.diff(resource.data.classiPerAnno)
-                  .affectedKeys().intersection(resource.data.classiPerAnno.keys().toSet()).size() == 0)));
+                   .affectedKeys().hasOnly(['2025/2026', '2026/2027', '2027/2028', '2028/2029', '2029/2030'])
+              && annoInvariato(resource.data.classiPerAnno, request.resource.data.classiPerAnno, '2025/2026')
+              && annoInvariato(resource.data.classiPerAnno, request.resource.data.classiPerAnno, '2026/2027')
+              && annoInvariato(resource.data.classiPerAnno, request.resource.data.classiPerAnno, '2027/2028')
+              && annoInvariato(resource.data.classiPerAnno, request.resource.data.classiPerAnno, '2028/2029')
+              && annoInvariato(resource.data.classiPerAnno, request.resource.data.classiPerAnno, '2029/2030'))));
     }
-
     // ── USERS ──
     // Cambio rispetto a prima: allow read era isAuth() quindi CHIUNQUE autenticato poteva
     // scaricare tutti i profili (nome, cognome, email, classe). Ora:

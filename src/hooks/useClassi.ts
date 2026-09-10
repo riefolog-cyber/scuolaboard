@@ -30,16 +30,40 @@ function useClassi(deps: ClassiDeps) {
   var showToast = deps.showToast;
 
   function saveClasse() {
-    if (!classeInput) return;
-    var newClassiPerAnno = Object.assign({}, user.classiPerAnno, { [annoScolastico]: classeInput });
+    if (!classeInput || !user || !user.uid) return;
+    // ⚠️ Scrittura CHIRURGICA per-anno (dot-notation), NON mappa intera.
+    // Perché: lo snapshot `user.classiPerAnno` del client può essere STALE
+    // (es. un altro device/browser ha già aggiunto l'anno successivo, o una
+    // rimozione/background-sync ha cambiato la mappa). Con update({mappa})
+    // invieremmo una mappa intera potenzialmente vecchia → la regola
+    // "nessuna rimozione di chiavi" negherebbe con permission-denied e lo
+    // studente resterebbe BLOCCATO sulla scelta della classe.
+    // Con la dot-notation aggiorniamo SOLO classiPerAnno.<anno> (upsert di
+    // una chiave, mai rimozione): il server fonde il campo senza toccare gli
+    // altri anni. La regola classiPerAnnoSoloAggiunte resta soddisfatta.
+    var patch: any = {};
+    patch['classiPerAnno.' + annoScolastico] = classeInput;
     db.collection('users')
       .doc(user.uid)
-      .update({ classiPerAnno: newClassiPerAnno })
+      .update(patch)
       .then(function () {
+        var newClassiPerAnno = Object.assign({}, user.classiPerAnno || {}, { [annoScolastico]: classeInput });
         setUser(function (u: any) {
           return Object.assign({}, u, { classiPerAnno: newClassiPerAnno, classe: classeInput });
         });
         setShowClasseModal(false);
+      })
+      .catch(function (e: any) {
+        // Senza .catch un errore di scrittura (rete giù della scuola,
+        // permission-denied delle rules, licenza mentre salva…) lasciava la
+        // modale aperta PER SEMPRE con zero feedback: l'utente risultava
+        // "bloccato sulla scelta della classe senza possibilità di accedere".
+        // Ora: la modale resta aperta per riprovare MA viene mostrato un
+        // errore esplicito (niente fallimento silenzioso).
+        console.error('[ScuolaBoard] saveClasse fallito:', e && e.code, (e && e.message) || e);
+        try {
+          showToast('Errore salvataggio classe. Controlla la connessione e riprova.', 'err');
+        } catch (e2) {}
       });
   }
 
@@ -95,7 +119,15 @@ function useClassi(deps: ClassiDeps) {
       .then(function (doc: any) {
         if (doc.exists) {
           var studentData = doc.data();
-          var newClassiPerAnno = Object.assign({}, studentData.classiPerAnno || {}, { [annoScolastico]: cl || null });
+          // Se il prof sceglie "Nessuna" (cl null) ELIMINO la chiave invece di
+          // scrivere null: così non si ricreano i tombstone null che bloccavano
+          // lo studente sulla scelta classe (vedi rimuoviStudente + rules).
+          var newClassiPerAnno = Object.assign({}, studentData.classiPerAnno || {});
+          if (cl) {
+            newClassiPerAnno[annoScolastico] = cl;
+          } else {
+            delete newClassiPerAnno[annoScolastico];
+          }
           db.collection('users')
             .doc(uid)
             .update({ classiPerAnno: newClassiPerAnno })
@@ -117,10 +149,16 @@ function useClassi(deps: ClassiDeps) {
   }
 
   function rimuoviStudente(uid: string) {
-    // Legge il doc per azzerare SOLO la classe dell'anno corrente in
+    // Legge il doc per rimuovere SOLO la classe dell'anno corrente da
     // classiPerAnno (come aggiornaClasseStudente). Senza questo, al reload
     // loadStudenti (che ora legge solo classiPerAnno[anno]) lo studente
     // riapparirebbe nell'elenco: la rimozione resterebbe solo ottimistica.
+    // uso update() con la chiave ELIMINATA (non null): uno studente rimosso
+    // può così riscegliere la classe senza violare la regola Firestore
+    // classiPerAnnoSoloAggiunte (che vieta di modificare una chiave già
+    // esistente; una chiave assente invece può essere aggiunta). Con null
+    // la chiave restava presente e lo studente restava bloccato per sempre
+    // sulla scelta della classe.
     db.collection('users')
       .doc(uid)
       .get()
@@ -128,11 +166,11 @@ function useClassi(deps: ClassiDeps) {
         if (!doc.exists) return;
         var studentData = doc.data();
         var newClassiPerAnno = Object.assign({}, studentData.classiPerAnno || {});
-        newClassiPerAnno[annoScolastico] = null;
+        delete newClassiPerAnno[annoScolastico];
         return db
           .collection('users')
           .doc(uid)
-          .set({ classe: null, rimosso: true, classiPerAnno: newClassiPerAnno }, { merge: true });
+          .update({ classe: null, rimosso: true, classiPerAnno: newClassiPerAnno });
       })
       .then(function () {
         setStudenti(function (prev: any[]) {
