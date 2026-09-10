@@ -69,6 +69,7 @@ function makeFakeAuth(getUser) {
       setTimeout(() => cb(getCurrent()), 0);
       return () => listeners.delete(cb);
     },
+    getRedirectResult: () => Promise.resolve(null),
     // loginGoogle è POPUP-first con fallback a redirect. Il fake non espone
     // signInWithPopup → il codice usa il redirect e simula il rientro da
     // Google emitendo onAuthStateChanged (come il Firebase reale).
