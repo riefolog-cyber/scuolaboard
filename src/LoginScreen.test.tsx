@@ -56,6 +56,17 @@ describe('LoginScreen', () => {
     expect(screen.getByText('🔒 Accesso sicuro tramite Google')).toBeInTheDocument();
   });
 
+  it('mostra il pannello "Come accedere" con il dominio scuola', () => {
+    renderLogin();
+    expect(screen.getByText('💡 Come accedere')).toBeInTheDocument();
+    expect(screen.getByText(/@ferrarisfermiclass\.it/)).toBeInTheDocument();
+  });
+
+  it('mostra il suggerimento per il popup bloccato', () => {
+    renderLogin();
+    expect(screen.getByText(/Il popup non si apre/)).toBeInTheDocument();
+  });
+
   it('mostra il banner di errore quando authErr è impostato', () => {
     renderLogin({ authErr: 'Impossibile caricare il tuo profilo: database non raggiungibile.' });
     expect(screen.getByRole('alert')).toBeInTheDocument();

@@ -1,4 +1,7 @@
 // LoginScreen.jsx · ScuolaBoard
+// Il pannello "Come accedere" riusa DOMINIO_SCUOLA da auth.ts (unica fonte
+// di verità per il filtro d'accesso): evita che copia e filtro divergano.
+import { DOMINIO_SCUOLA } from './auth.ts';
 
 function LoginScreen__({ $ }: any) {
   return (
@@ -179,6 +182,33 @@ function LoginScreen__({ $ }: any) {
               {'⚠️ ' + $.authErr}
             </div>
           )}
+          {
+            <div
+              style={{
+                marginTop: 16,
+                background: 'rgba(99,102,241,.08)',
+                border: '1px solid rgba(99,102,241,.18)',
+                borderRadius: 14,
+                padding: '12px 14px',
+                textAlign: 'left',
+                fontSize: 12,
+                color: 'rgba(255,255,255,.65)',
+                lineHeight: 1.6,
+              }}
+            >
+              <div style={{ fontWeight: 700, color: 'rgba(255,255,255,.85)', marginBottom: 4 }}>
+                💡 Come accedere
+              </div>
+              <div>
+                Accedi solo con il tuo account scuola {DOMINIO_SCUOLA} oppure con l'account
+                autorizzato dal docente.
+              </div>
+              <div style={{ marginTop: 6 }}>
+                Il popup non si apre? Disattiva le estensioni che bloccano i popup e riprova,
+                oppure cambia rete.
+              </div>
+            </div>
+          }
           {
             <div
               style={{

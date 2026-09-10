@@ -8,8 +8,10 @@ import { useState, useEffect } from 'react';
 // account personale) possono usare l'app. Questo controllo client-side gestisce
 // l'UX (sign-out immediato); il presidio di sicurezza reale è rispecchiato
 // nelle Firestore Rules (helper isEmailAutorizzata).
-var DOMINIO_SCUOLA = '@ferrarisfermiclass.it';
-var DOCENTI_WHITELIST = ['riefolog@gmail.com'];
+// Esportate: la login (LoginScreen.tsx) le mostra agli alunni nel pannello
+// informativo "Come accedere" — unica fonte di verità per il dominio.
+export var DOMINIO_SCUOLA = '@ferrarisfermiclass.it';
+export var DOCENTI_WHITELIST = ['riefolog@gmail.com'];
 
 // Messaggio visibile sulla login quando il profilo non si riesce a caricare
 // (Firestore irraggiungibile / permessi): l'utente deve capire che NON è un
