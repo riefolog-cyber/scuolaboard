@@ -101,9 +101,15 @@ test('PROD 4173: il click su Accedi con Google apre il popup Google senza errori
     page.getByRole('button', { name: /Accedi con Google/i }).first().click(),
   ]);
   // Il popup potrebbe non terminare il load (rete di CI/proxy): l'importante è
-  // che la finestra sia stata aperta verso il dominio giusto.
+  // che la finestra sia stata aperta verso il flusso giusto. L'SDK apre prima
+  // l'handler di Firebase (`__/auth/handler?authType=signInViaPopup`), che poi
+  // reindirizza a accounts.google.com; su rete lenta il redirect può non
+  // completare, quindi accettiamo entrambi gli hop (entrambi dimostrano il
+  // flusso POPUP, non il redirect nella stessa scheda).
   await popup.waitForLoadState('domcontentloaded').catch(() => {});
-  expect(popup.url(), 'Il popup deve puntare a accounts.google.com').toContain('accounts.google.com');
+  expect(popup.url(), 'Il popup deve puntare all\'handler Firebase o a accounts.google.com').toMatch(
+    /authType=signInViaPopup|accounts\.google\.com/
+  );
   await popup.close().catch(() => {});
 
   // L'app resta stabile e senza errori JS non gestiti
