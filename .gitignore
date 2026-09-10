@@ -78,4 +78,10 @@ coverage/
 backup/
 
 # Immagini di test generate per la verifica manuale dell'upload (non committare)
+# Immagini di test generate per la verifica manuale dell'upload (non committare)
+test-images/
+
+# Cache tooling locale (project-id + script harvesting: ambiente di sviluppo,
+# non fa parte del progetto)
+.freebuff/
 test-images/
