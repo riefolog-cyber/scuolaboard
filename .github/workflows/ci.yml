@@ -102,18 +102,31 @@ jobs:
       - run: npm ci
       - name: Rigenera docs/ (build di produzione)
         run: npm run build
+      # Race-safe: docs/ è rigenerata, quindi due run concorrenti (o un push
+      # diretto nel frattempo) producono entrambi modifiche a docs/index.html
+      # e il `git pull --rebase` andava in CONFLICT insanabile in automatico.
+      # Qui invece a ogni tentativo si riparte da origin/main fresca e si
+      # ricostruisce: niente rebase, niente merge, niente conflitti. La build
+      # dura ~1s, quindi ricostruire a ogni retry è economico.
       - name: Committa e pusha docs/ se modificata
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/
-          if git diff --cached --quiet; then
-            echo "✓ docs/ già aggiornata: nessun commit necessario"
-          else
+          for i in 1 2 3; do
+            git fetch origin main
+            git reset --hard origin/main
+            npm run build
+            git add docs/
+            if git diff --cached --quiet; then
+              echo "✓ docs/ già aggiornata: nessun commit necessario"
+              exit 0
+            fi
             git commit -m "build(docs): rigenerazione automatica da CI [skip ci]"
-            # Se nel frattempo è arrivato un push diretto su main, rebase locale
-            # prima di pushare (come fa scripts/deploy.sh): evita non-fast-forward.
-            git pull --rebase origin main
-            git push origin main
-            echo "✓ docs/ rigenerata e pushatta su main"
-          fi
+            if git push origin HEAD:main; then
+              echo "✓ docs/ rigenerata e pushatta su main"
+              exit 0
+            fi
+            echo "Push respinto (main avanzata nel frattempo), riprovo ($i/3)..."
+          done
+          echo "✖ Impossibile pushare docs/ dopo 3 tentativi" >&2
+          exit 1
