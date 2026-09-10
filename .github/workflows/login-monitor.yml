@@ -65,9 +65,9 @@ jobs:
               --title "⚠️ Login di produzione non funziona ($(date -u +%Y-%m-%d))" \
               --body "Il monitor giornaliero ha rilevato un problema sul login di produzione: **https://riefolog-cyber.github.io/scuolaboard/**
 
-Possibili cause: dominio non autorizzato in Firebase, flusso Google cambiato, estensione/rete, o una regressione dell'app.
+              Possibili cause: dominio non autorizzato in Firebase, flusso Google cambiato, estensione/rete, o una regressione dell'app.
 
-Dettagli nel log di questo run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+              Dettagli nel log di questo run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           fi
 
       - name: Chiudi l'issue di avviso se il login è di nuovo ok
