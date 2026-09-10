@@ -41,9 +41,6 @@ var LazyProfiloModal = lazy(function () {
 var LazyTimerModal = lazy(function () {
   return import('./modals/TimerModal.tsx');
 });
-var LazyRipassoModal = lazy(function () {
-  return import('./modals/RipassoModal.tsx');
-});
 var LazyPrintModal = lazy(function () {
   return import('./modals/PrintModal.tsx');
 });
@@ -75,11 +72,6 @@ function Modals({ $ }: any) {
         {$.showTimerModal && (
           <Suspense fallback={null}>
             <LazyTimerModal {...all} />
-          </Suspense>
-        )}
-        {$.showRipasso && (
-          <Suspense fallback={null}>
-            <LazyRipassoModal {...all} />
           </Suspense>
         )}
         {$.showStampa && (

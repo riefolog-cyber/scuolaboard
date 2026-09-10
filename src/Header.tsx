@@ -510,26 +510,6 @@ function Header__({ $ }: any) {
           🔍
         </button>
       }
-      {(!$.isProf || $.simulaSt) && (
-        <button
-          aria-label="Modalità ripasso"
-          title="Ripassa i quiz con le flashcard"
-          onClick={function () {
-            $.setShowRipasso(true);
-          }}
-          style={{
-            background: isLight ? 'rgba(168,85,247,.10)' : 'rgba(168,85,247,.15)',
-            border: isLight ? '1px solid rgba(168,85,247,.22)' : '1px solid rgba(168,85,247,.35)',
-            borderRadius: 8,
-            padding: '5px 9px',
-            cursor: 'pointer',
-            fontSize: 14,
-            color: isLight ? '#7e22ce' : '#d8b4fe',
-          }}
-        >
-          🎴
-        </button>
-      )}
       {$.isProf && !$.simulaSt && (
         <button
           aria-label="Ammonizioni"

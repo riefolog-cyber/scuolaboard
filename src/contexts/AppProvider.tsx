@@ -1323,8 +1323,6 @@ function AppProvider({ children }: any) {
         setShowWordCloud: modals.setShowWordCloud,
         wcTarget: modals.wcTarget,
         setWcTarget: modals.setWcTarget,
-        showRipasso: modals.showRipasso,
-        setShowRipasso: modals.setShowRipasso,
         showStampa: modals.showStampa,
         setShowStampa: modals.setShowStampa,
         closeAll: modals.closeAll,
@@ -1350,7 +1348,6 @@ function AppProvider({ children }: any) {
       modals.confirmDel,
       modals.showWordCloud,
       modals.wcTarget,
-      modals.showRipasso,
       modals.showStampa,
       CLASSI_LIST,
     ]

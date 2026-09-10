@@ -248,29 +248,6 @@ describe('Header', () => {
     expect(setShowCerca).toHaveBeenCalledWith(true);
   });
 
-  it('opens the ripasso (flashcard) modal for students', () => {
-    const setShowRipasso = vi.fn();
-    renderHeader({
-      isProf: false,
-      user: { nome: 'Mario', photoURL: null, classiPerAnno: { '2026/2027': '3A' }, classe: '3A' },
-      setShowRipasso,
-    });
-    fireEvent.click(screen.getByTitle('Ripassa i quiz con le flashcard'));
-    expect(setShowRipasso).toHaveBeenCalledWith(true);
-  });
-
-  it('opens the ripasso modal also in student preview (simulaSt)', () => {
-    const setShowRipasso = vi.fn();
-    renderHeader({ simulaSt: true, previewClasse: 'TUTTE', CLASSI_LIST: ['1A', '2A'], setShowRipasso });
-    fireEvent.click(screen.getByTitle('Ripassa i quiz con le flashcard'));
-    expect(setShowRipasso).toHaveBeenCalledWith(true);
-  });
-
-  it('hides the ripasso button for prof in bacheca view', () => {
-    renderHeader({ isProf: true, simulaSt: false });
-    expect(screen.queryByTitle('Ripassa i quiz con le flashcard')).toBeNull();
-  });
-
   it('opens the print preview', () => {
     const setShowStampa = vi.fn();
     renderHeader({ setShowStampa });

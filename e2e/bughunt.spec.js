@@ -340,33 +340,6 @@ test('Card fissata (pinned): 📌 la porta in cima con chip FISSATA, il toggle l
   expect(fatalErrors(errors), 'Errori fatali: ' + JSON.stringify(fatalErrors(errors))).toEqual([]);
 });
 
-test('Modalità ripasso: lo studente apre 🎴, gira la flashcard e naviga', async ({ page }) => {
-  const errors = collectErrors(page);
-  await page.goto(HARNESS + '?user=studente', { waitUntil: 'domcontentloaded' });
-  await expect(page.getByText('Lezione su X').first()).toBeVisible({ timeout: 15000 });
-
-  // 🎴 apre la modalità ripasso con le flashcard dei quiz della sua classe
-  await page.getByRole('button', { name: 'Modalità ripasso' }).click();
-  const modal = page.getByRole('dialog', { name: 'Modalità ripasso' });
-  await expect(modal).toBeVisible({ timeout: 5000 });
-  await expect(modal.getByText('MODALITÀ RIPASSO')).toBeVisible();
-  // q1 ha 1 domanda con risposta esatta (la aperta è esclusa dal mazzo)
-  await expect(modal.getByText(/1 flashcard/)).toBeVisible();
-  await expect(modal.getByText('Quanto fa 2+2?')).toBeVisible();
-
-  // Gira la flashcard → mostra la risposta esatta ('4' = indice 1 di ['3','4','5'])
-  await modal.getByText('Quanto fa 2+2?').click();
-  await expect(modal.getByText('RISPOSTA')).toBeVisible();
-  await expect(modal.getByText('4')).toBeVisible();
-  await expect(modal.getByText('🎉 Ripasso completato!')).toBeVisible();
-
-  // Chiude senza errori
-  await modal.getByRole('button', { name: 'Chiudi ripasso' }).click();
-  await expect(modal).not.toBeVisible({ timeout: 5000 });
-
-  expect(fatalErrors(errors), 'Errori fatali: ' + JSON.stringify(fatalErrors(errors))).toEqual([]);
-});
-
 test('Stampa bacheca: 🖨️ apre l\'anteprima con le card e stampa (window.print)', async ({ page }) => {
   const errors = collectErrors(page);
   await page.goto(HARNESS, { waitUntil: 'domcontentloaded' });
