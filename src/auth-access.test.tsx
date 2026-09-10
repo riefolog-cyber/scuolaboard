@@ -5,20 +5,19 @@
 //   - email fuori dominio/whitelist → sign-out + alert, MAI profilo "fantasma"
 //   - email scuola / whitelist docente (anche case-insensitive e con spazi) → ok
 //   - getRedirectResult con nuovo utente autorizzato → crea users/{uid} (studente)
-//   - loginGoogle: POPUP solo su host locali (jsdom = localhost) con
-//     fallback a REDIRECT; redirect diretto in produzione (COOP di
-//     accounts.google.com inonderebbe la console e può bloccare il popup):
-//     avvio redirect quando il popup manca/fallisce; rientro con utente
-//     autorizzato → profilo creato; rientro non autorizzato → niente
-//     profilo; redirect fallito → authErr visibile (messaggio auth, non DB)
-//   - isLocalHostname: decide la strategia per ambiente (locali vs produzione)
+//   - loginGoogle: POPUP su TUTTI gli host (verificato in produzione: completa
+//     anche con i warning COOP di Google, solo rumore in console) con fallback
+//     a REDIRECT quando il popup manca/fallisce con errore reale (mai per
+//     chiusura utente); rientro redirect con utente autorizzato → profilo
+//     creato; rientro non autorizzato → niente profilo; redirect fallito →
+//     authErr visibile (messaggio auth, non DB)
 //   - logout → signOut + stato azzerato
 //   - auth/firestore non disponibili → offline mode (authLoad false, niente crash)
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import React from 'react';
 
-import { useAuth, isLocalHostname } from './auth.ts';
+import { useAuth } from './auth.ts';
 
 // ── Fake di firebase.auth() con contatori e provider ────────────────────────
 type FakeAuthOpts = {
@@ -445,25 +444,5 @@ describe('useAuth — filtro d\'accesso e ciclo di vita', () => {
 
     await waitFor(() => expect(screen.getByTestId('load').textContent).toBe('false'));
     expect(screen.getByTestId('role').textContent).toBe('none');
-  });
-});
-
-describe('isLocalHostname — strategia login per ambiente', () => {
-  it('host locali → popup (true)', () => {
-    expect(isLocalHostname('localhost')).toBe(true);
-    expect(isLocalHostname('127.0.0.1')).toBe(true);
-    expect(isLocalHostname('::1')).toBe(true);
-    expect(isLocalHostname('192.168.68.73')).toBe(true);
-    expect(isLocalHostname('10.0.0.5')).toBe(true);
-    expect(isLocalHostname('172.20.10.3')).toBe(true);
-    expect(isLocalHostname('')).toBe(true);
-    expect(isLocalHostname(null)).toBe(true);
-  });
-
-  it('host pubblici → redirect diretto (false)', () => {
-    expect(isLocalHostname('riefolog-cyber.github.io')).toBe(false);
-    expect(isLocalHostname('scuolaboard-874d4.firebaseapp.com')).toBe(false);
-    expect(isLocalHostname('example.com')).toBe(false);
-    expect(isLocalHostname('172.32.0.1')).toBe(false);
   });
 });

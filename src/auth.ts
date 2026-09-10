@@ -39,22 +39,6 @@ function msgAuth(e: any): string {
   return 'Accesso Google non riuscito' + (code ? ' (' + code + ')' : '') + ': ' + msg;
 }
 
-// Strategia login per ambiente (COOP): il popup di signInWithPopup polla
-// `window.closed` sull'opener e Google invia Cross-Origin-Opener-Policy sulle
-// pagine OAuth → in produzione la console si inonda di warning ("policy would
-// block the window.closed call") e con policy enforce l'handshake può non
-// completarsi mai. Quindi: popup SOLO su host locali (nessuna navigazione,
-// debug immediato), redirect diretto altrove (GitHub Pages, ...).
-// Esportata per i test (l'hostname di jsdom non è sovrascrivibile).
-export function isLocalHostname(h: string | null | undefined): boolean {
-  var host = String(h == null ? '' : h).toLowerCase();
-  if (!host || host === 'localhost' || host === '127.0.0.1' || host === '::1') return true;
-  if (/^192\.168\./.test(host) || /^10\./.test(host)) return true;
-  var m = host.match(/^172\.(\d+)\./);
-  if (m && +m[1] >= 16 && +m[1] <= 31) return true;
-  return false;
-}
-
 // Firma esplicita: script UMD — una function diventerebbe globale e TS6
 // inferirebbe `() => void` (zero argomenti) → TS2554 sulle chiamate.
 var isEmailAutorizzata = function (email: string | null | undefined): boolean {
@@ -430,16 +414,14 @@ export function useAuth(_annoScolastico: string) {
       setAuthErr(msgAuth(e));
       return;
     }
-    // 1) POPUP solo su host locali (nessuna navigazione, errore subito
-    // visibile in console). Altrove (produzione) redirect diretto: il popup
-    // polla `window.closed` e Google invia COOP sulle pagine OAuth → console
-    // inondata di warning e handshake a rischio. Su host locali il popup che
-    // fallisce (non chiusura utente) ripiega comunque sul redirect qui sotto.
-    var host = '';
-    try {
-      host = (window.location && window.location.hostname) || '';
-    } catch (e) {}
-    if (isLocalHostname(host) && auth && typeof auth.signInWithPopup === 'function') {
+    // 1) POPUP su TUTTI gli host: verificato in produzione che il popup
+    // completa anche con i warning COOP di Google ("policy would block the
+    // window.closed call"): sono solo rumore in console, come su localhost.
+    // Il redirect qui sotto resta SOLO come fallback per ambienti dove il
+    // popup manca o fallisce con errore reale: il flusso redirect su GitHub
+    // Pages si è rivelato inaffidabile (in alcuni ambienti resta appeso al
+    // selettore account di Google dopo la scelta dell'account).
+    if (auth && typeof auth.signInWithPopup === 'function') {
       var fu: any = null;
       try {
         var cr = await auth.signInWithPopup(provider);
@@ -483,9 +465,9 @@ export function useAuth(_annoScolastico: string) {
       }
       // fu null senza eccezione (caso teorico): prova il redirect.
     }
-    // 2) REDIRECT (produzione, COOP-safe). Al rientro la sessione viene
-    // ripristinata da getRedirectResult + onAuthStateChanged che già
-    // creano/leggono users/{uid} (filtro dominio, retry e self-heal).
+    // 2) REDIRECT (fallback). Al rientro la sessione viene ripristinata da
+    // getRedirectResult + onAuthStateChanged che già creano/leggono
+    // users/{uid} (filtro dominio, retry e self-heal).
     try {
       await auth.signInWithRedirect(provider);
     } catch (e: any) {

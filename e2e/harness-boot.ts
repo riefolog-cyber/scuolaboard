@@ -70,10 +70,10 @@ function makeFakeAuth(getUser) {
       return () => listeners.delete(cb);
     },
     getRedirectResult: () => Promise.resolve(null),
-    // loginGoogle è per-ambiente (popup solo su host locali, redirect
-    // diretto in produzione). Il fake non espone signInWithPopup → il codice
-    // usa il redirect e simula il rientro da Google emitendo
-    // onAuthStateChanged (come il Firebase reale).
+    // loginGoogle è popup-first su TUTTI gli host (con fallback redirect).
+    // Il fake non espone signInWithPopup → il codice usa il redirect e
+    // simula il rientro da Google emitendo onAuthStateChanged (come il
+    // Firebase reale).
     signInWithRedirect: () => {
       signedOut = false;
       emit();
