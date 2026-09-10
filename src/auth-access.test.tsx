@@ -27,6 +27,8 @@ type FakeAuthOpts = {
   redirectError?: any; // errore di signInWithRedirect
   popupResult?: any; // esito di signInWithPopup (se assente: { user: null } → fallback a redirect)
   popupError?: any; // errore di signInWithPopup
+  redirectResultError?: any; // errore di getRedirectResult (rientro dal redirect fallito)
+  lateNull?: boolean; // emette onAuthStateChanged(null) dopo 50ms (simula fire tardivo)
 };
 
 function makeFakeAuth(opts: FakeAuthOpts) {
@@ -36,11 +38,14 @@ function makeFakeAuth(opts: FakeAuthOpts) {
     listeners.forEach((cb) => cb(u));
   };
   const auth: any = {
-    getRedirectResult: () =>
-      Promise.resolve(opts.redirectUser ? { user: opts.redirectUser } : null),
+    getRedirectResult: () => {
+      if (opts.redirectResultError) return Promise.reject(opts.redirectResultError);
+      return Promise.resolve(opts.redirectUser ? { user: opts.redirectUser } : null);
+    },
     onAuthStateChanged: (cb: Function) => {
       listeners.add(cb);
       if (opts.user) setTimeout(() => emit(opts.user), 0);
+      if (opts.lateNull) setTimeout(() => emit(null), 50);
       return () => {
         listeners.delete(cb);
       };
@@ -327,6 +332,41 @@ describe('useAuth — filtro d\'accesso e ciclo di vita', () => {
     });
     expect(fake.calls.signInWithRedirect).toBe(1);
     expect(screen.getByTestId('role').textContent).toBe('none');
+  });
+
+  it('getRedirectResult fallisce (es. unauthorized-domain) + fire null tardivo → errore preservato, niente login muta', async () => {
+    const errProbe = () => {
+      const { user, authLoad, authErr } = useAuth('2026/2027');
+      return React.createElement(
+        'div',
+        null,
+        React.createElement('span', { 'data-testid': 'load' }, String(authLoad)),
+        React.createElement('span', { 'data-testid': 'role' }, user ? (user as any).role : 'none'),
+        React.createElement('span', { 'data-testid': 'autherr' }, authErr || '')
+      );
+    };
+    // Rientro dal redirect fallito SU localhost: il catch mostra il messaggio
+    // dominio; il fire null tardivo di onAuthStateChanged NON deve cancellarlo
+    // (race: con l'azzeramento incondizionato tornava la login muta).
+    const fake = makeFakeAuth({
+      redirectResultError: { code: 'auth/unauthorized-domain', message: 'domain not whitelisted' },
+      lateNull: true,
+    });
+    const db = makeStatefulDb();
+    (window as any).firebase = { auth: fake.authFn, firestore: () => db };
+    (window as any).db = db;
+    render(React.createElement(errProbe));
+
+    await waitFor(
+      () => {
+        expect(screen.getByTestId('autherr').textContent).toContain('dominio non autorizzato');
+      },
+      { timeout: 6000 }
+    );
+    await new Promise((r) => setTimeout(r, 200)); // lascia arrivare il null tardivo
+    expect(screen.getByTestId('autherr').textContent).toContain('dominio non autorizzato');
+    expect(screen.getByTestId('role').textContent).toBe('none');
+    expect(screen.getByTestId('load').textContent).toBe('false');
   });
 
   it('logout → signOut + stato azzerato (login screen)', async () => {

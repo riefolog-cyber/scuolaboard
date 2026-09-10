@@ -379,7 +379,11 @@ export function useAuth(_annoScolastico: string) {
       } else {
         setUser(null);
         setIsProf(false);
-        setAuthErr(null);
+        // NOTA: authErr NON azzerato qui. Un fire null (sign-out, redirect
+        // fallito) può arrivare DOPO il catch di getRedirectResult che ha
+        // appena mostrato l'errore: azzerarlo in base all'ordine di arrivo
+        // degli eventi riprodurrebbe la "login muta". Il reset avviene già
+        // dove serve (logout(), nuovo login, profilo caricato).
         setAuthLoad(false);
       }
     });
