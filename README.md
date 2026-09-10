@@ -262,15 +262,15 @@ I contenuti utente vengono incapsulati in delimitatori rigidi `<USER_DATA>` con 
 - Il ruolo `prof` viene verificato lato server sia dal Worker AI che dalle regole Firestore
 - Il ruolo `studente` è il default e non ha accesso alla scrittura card
 
-> **Nota login Google (popup + redirect)**: il login prova prima
-> `signInWithPopup` (ideale su localhost: nessuna navigazione, errore subito
-> visibile) e ripiega su `signInWithRedirect` se il popup fallisce. Motivo:
-> Google invia l'header `Cross-Origin-Opener-Policy` sulle proprie pagine
-> OAuth e in produzione il popup può restare bloccato (warning
-> "*Cross-Origin-Opener-Policy policy would block the window.closed call*"
-> ripetuto, handshake mai completato); il redirect è una navigazione piena
-> (nessun opener) e non è affetto da COOP. Gli errori di rientro dal redirect
-> sono mostrati sulla login (prima restava muta).
+> **Nota login Google (strategia per ambiente)**: su host locali (localhost,
+> rete LAN) il login prova prima `signInWithPopup` (nessuna navigazione,
+> errore subito visibile) e ripiega su `signInWithRedirect` se fallisce; in
+> produzione va **diretto al redirect**. Motivo: Google invia l'header
+> `Cross-Origin-Opener-Policy` sulle pagine OAuth e il popup — che polla
+> `window.closed` — inonda la console di warning ("*policy would block the
+> window.closed call*") e con policy enforce l'handshake può non completarsi
+> mai. Il redirect è una navigazione piena (nessun opener) e non è affetto da
+> COOP. Gli errori di rientro dal redirect sono mostrati sulla login.
 > ⚠️ il redirect richiede che il dominio dell'app sia negli
 > **Authorized Domains** della Firebase Console (per GitHub Pages:
 > `riefolog-cyber.github.io`; per lo sviluppo: `localhost`).
