@@ -141,6 +141,9 @@ describe('useAuth — filtro d\'accesso e ciclo di vita', () => {
   beforeEach(() => {
     (window as any).SB_DEBUG = false;
     vi.spyOn(window, 'alert').mockImplementation(() => {});
+    try {
+      localStorage.removeItem('sb_login_pending');
+    } catch (e) {}
   });
   afterEach(() => {
     vi.restoreAllMocks();
@@ -367,6 +370,49 @@ describe('useAuth — filtro d\'accesso e ciclo di vita', () => {
     expect(screen.getByTestId('autherr').textContent).toContain('dominio non autorizzato');
     expect(screen.getByTestId('role').textContent).toBe('none');
     expect(screen.getByTestId('load').textContent).toBe('false');
+  });
+
+  it('login avviato ma nessun utente al rientro → messaggio visibile (niente login muta)', async () => {
+    const errProbe = () => {
+      const { user, authLoad, authErr } = useAuth('2026/2027');
+      return React.createElement(
+        'div',
+        null,
+        React.createElement('span', { 'data-testid': 'load' }, String(authLoad)),
+        React.createElement('span', { 'data-testid': 'role' }, user ? (user as any).role : 'none'),
+        React.createElement('span', { 'data-testid': 'autherr' }, authErr || '')
+      );
+    };
+    // Flag recente: un tentativo è stato avviato ma non è tornato nessun
+    // utente (getRedirectResult null e nessun fire di onAuthStateChanged).
+    localStorage.setItem('sb_login_pending', String(Date.now()));
+    const fake = makeFakeAuth({});
+    const db = makeStatefulDb();
+    (window as any).firebase = { auth: fake.authFn, firestore: () => db };
+    (window as any).db = db;
+    render(React.createElement(errProbe));
+
+    await waitFor(
+      () => {
+        expect(screen.getByTestId('autherr').textContent).toContain('non è tornato correttamente');
+      },
+      { timeout: 10000 }
+    );
+    expect(screen.getByTestId('role').textContent).toBe('none');
+    // Il flag viene pulito: il messaggio non si ripresenta a ogni reload
+    expect(localStorage.getItem('sb_login_pending')).toBeNull();
+  });
+
+  it('login riuscito → il flag del tentativo viene pulito (niente falso errore)', async () => {
+    localStorage.setItem('sb_login_pending', String(Date.now()));
+    const fake = makeFakeAuth({
+      user: { uid: 'u10', email: 'ok@ferrarisfermiclass.it', displayName: 'Ok Utente' },
+    });
+    const db = makeStatefulDb({ u10: { role: 'studente', nome: 'Ok', cognome: 'Utente' } });
+    mountWith(fake, db);
+
+    await waitFor(() => expect(screen.getByTestId('role').textContent).toBe('studente'));
+    expect(localStorage.getItem('sb_login_pending')).toBeNull();
   });
 
   it('logout → signOut + stato azzerato (login screen)', async () => {

@@ -18,6 +18,38 @@ var MSG_DB_DOWN =
   'Impossibile caricare il tuo profilo: database non raggiungibile. ' +
   'Controlla la connessione e ricarica la pagina.';
 
+// Fallimento SILENZIOSO del login: un tentativo è stato avviato (loginGoogle)
+// ma al rientro nessun utente è arrivato (né da getRedirectResult né da
+// onAuthStateChanged). Prima questo caso lasciava l'utente su una login muta
+// ("non funziona e non dice nulla"). Ora il tentativo viene annotato in
+// localStorage (sopravvive al giro di redirect) e, al caricamento, se entro
+// pochi secondi non arriva nessun utente si mostra questo messaggio con i
+// rimedi tipici (estensioni privacy / rete).
+var MSG_LOGIN_SILENT =
+  "Il login con Google non è tornato correttamente all'app. " +
+  'Riprova; se il problema persiste, disattiva le estensioni del browser o cambia rete.';
+var LS_LOGIN_PENDING = 'sb_login_pending';
+var LOGIN_PENDING_MAX_AGE_MS = 10 * 60 * 1000; // 10 minuti
+function setLoginPending(): void {
+  try {
+    localStorage.setItem(LS_LOGIN_PENDING, String(Date.now()));
+  } catch (e) {}
+}
+function clearLoginPending(): void {
+  try {
+    localStorage.removeItem(LS_LOGIN_PENDING);
+  } catch (e) {}
+}
+// true se esiste un tentativo di login recente (entro LOGIN_PENDING_MAX_AGE_MS)
+function isLoginPendingRecent(): boolean {
+  try {
+    var t = parseInt(localStorage.getItem(LS_LOGIN_PENDING) || '', 10);
+    return !isNaN(t) && Date.now() - t <= LOGIN_PENDING_MAX_AGE_MS;
+  } catch (e) {
+    return false;
+  }
+}
+
 // Messaggio per fallimenti del flusso Google (popup/redirect), distinto dal
 // DB: su localhost l'errore tipico è auth/unauthorized-domain (dominio non
 // autorizzato in Firebase Console) — mostrarlo come "database" confonde.
@@ -207,6 +239,22 @@ export function useAuth(_annoScolastico: string) {
     // precedente quando ne parte uno nuovo.
     var cancelled = false;
     var chainId = 0;
+    // Rilevamento del fallimento silenzioso del login (vedi MSG_LOGIN_SILENT):
+    // se è stato avviato un tentativo (flag in localStorage) ma entro pochi
+    // secondi nessun utente è arrivato, mostra il messaggio e pulisce il flag
+    // (una tantum per tentativo). `gotUser` evita falsi positivi durante il
+    // caricamento lento del profilo (onAuthStateChanged ha già consegnato
+    // l'utente, è solo il doc users/ che arriva con i retry).
+    var gotUser = false;
+    var silentLoginTimer = setTimeout(function () {
+      if (gotUser) return;
+      var recent = isLoginPendingRecent();
+      clearLoginPending();
+      if (recent) {
+        setAuthErr(MSG_LOGIN_SILENT);
+        setAuthLoad(false);
+      }
+    }, 6000);
     auth
       .getRedirectResult()
       .then(async function (cr: any) {
@@ -266,6 +314,7 @@ export function useAuth(_annoScolastico: string) {
         // letture sovrapposte non si pestano i piedi, e `cancelled` evita
         // setState dopo lo smontaggio (le catene ora durano ~15s+).
         var myChain = ++chainId;
+        gotUser = true; // l'utente è arrivato: nessun falso "fallimento silenzioso"
         setAuthErr(null); // nuovo evento auth → l'errore precedente non vale più
         // Filtro accesso su sessioni persistite (es. login via redirect
         // dell'accesso precedente): disconnessione immediata se non autorizzato.
@@ -302,6 +351,7 @@ export function useAuth(_annoScolastico: string) {
               if (doc.exists) {
                 var d = doc.data();
                 var finalUser = Object.assign({}, base, d) as AuthUser;
+                clearLoginPending(); // login riuscito: niente "fallimento silenzioso"
                 setUser(finalUser);
                 setIsProf(finalUser.role === 'prof');
                 setAuthErr(null);
@@ -337,6 +387,7 @@ export function useAuth(_annoScolastico: string) {
                       };
                       var d2 = doc2.exists ? doc2.data() : {};
                       var finalUser2 = Object.assign({}, base2, d2) as AuthUser;
+                      clearLoginPending(); // login riuscito (self-heal): nessun falso errore
                       setUser(finalUser2);
                       setIsProf(finalUser2.role === 'prof');
                       setAuthErr(null);
@@ -391,6 +442,7 @@ export function useAuth(_annoScolastico: string) {
       cancelled = true;
       if (typeof unsub === 'function') unsub();
       clearTimeout(authTimeout);
+      clearTimeout(silentLoginTimer);
     };
   }, []);
   async function loginGoogle() {
@@ -414,6 +466,10 @@ export function useAuth(_annoScolastico: string) {
       setAuthErr(msgAuth(e));
       return;
     }
+    // Annota il tentativo: se al rientro (redirect) o al prossimo caricamento
+    // nessun utente è arrivato, la login mostrerà un messaggio invece di
+    // fallire in silenzio (vedi MSG_LOGIN_SILENT / silentLoginTimer).
+    setLoginPending();
     // 1) POPUP su TUTTI gli host: verificato in produzione che il popup
     // completa anche con i warning COOP di Google ("policy would block the
     // window.closed call"): sono solo rumore in console, come su localhost.
@@ -430,6 +486,7 @@ export function useAuth(_annoScolastico: string) {
         var code = (e && e.code) || '';
         // Scelta esplicita dell'utente: nessun errore, resta sulla login.
         if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request' || code === 'auth/user-cancelled') {
+          clearLoginPending(); // chiusura esplicita dell'utente: non è un fallimento
           return;
         }
         console.error('[auth] signInWithPopup fallito, fallback a redirect:', code, e && e.message);

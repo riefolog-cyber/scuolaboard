@@ -7,7 +7,7 @@
 // cache "stale": quelle di versioni precedenti senza meta vengono eliminate
 // subito, quelle recenti (installate da meno di 30 giorni) restano per non
 // rompere l'offline di client ancora aperti sulla shell precedente.
-var CACHE = 'scuolaboard-v3';
+var CACHE = 'scuolaboard-v4';
 var META_URL = './__sb_cache_meta__';
 var CACHE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 giorni
 

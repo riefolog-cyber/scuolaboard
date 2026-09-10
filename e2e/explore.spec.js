@@ -86,6 +86,31 @@ test('PROD 4173: la login carica, la meta CSP cè e non ci sono violazioni', asy
   expect(pageErrors, 'Page errors: ' + JSON.stringify(pageErrors)).toEqual([]);
 });
 
+// Regressione login: il bottone "Accedi con Google" deve aprire il POPUP di
+// Google (il flusso redirect su GitHub Pages si è rivelato inaffidabile, resta
+// appeso al selettore account: vedere src/auth.ts). Il test non completa il
+// login (servono credenziali reali) ma verifica che il click apra davvero il
+// popup verso accounts.google.com e che l'app resti stabile senza errori JS.
+test('PROD 4173: il click su Accedi con Google apre il popup Google senza errori', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto(PROD, { waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('button', { name: /Accedi con Google/i }).first()).toBeVisible({ timeout: 15000 });
+
+  const [popup] = await Promise.all([
+    page.waitForEvent('popup', { timeout: 15000 }),
+    page.getByRole('button', { name: /Accedi con Google/i }).first().click(),
+  ]);
+  // Il popup potrebbe non terminare il load (rete di CI/proxy): l'importante è
+  // che la finestra sia stata aperta verso il dominio giusto.
+  await popup.waitForLoadState('domcontentloaded').catch(() => {});
+  expect(popup.url(), 'Il popup deve puntare a accounts.google.com').toContain('accounts.google.com');
+  await popup.close().catch(() => {});
+
+  // L'app resta stabile e senza errori JS non gestiti
+  const pageErrors = fatalErrors(errors).filter((e) => e.startsWith('[pageerror]'));
+  expect(pageErrors, 'Page errors: ' + JSON.stringify(pageErrors)).toEqual([]);
+});
+
 test('PROD 4173 mobile (390px): nessun overflow orizzontale sulla login', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   const errors = collectErrors(page);
