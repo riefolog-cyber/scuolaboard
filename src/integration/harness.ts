@@ -32,7 +32,7 @@ window.React.useSyncExternalStore = function (subscribe, getSnapshot, _getServer
 };
 
 // ── Fake Auth ─────────────────────────────────────────────────────────────
-// Fedele a Firebase reale: signInWithPopup e signOut ri-innescano
+// Fedele a Firebase reale: signInWithRedirect e signOut ri-innescano
 // onAuthStateChanged (senza questo il re-login dopo logout non funziona).
 function makeFakeAuth(getUser) {
   const authFn = () => authInstance;
@@ -57,10 +57,13 @@ function makeFakeAuth(getUser) {
       return () => listeners.delete(cb);
     },
     getRedirectResult: () => Promise.resolve(null),
-    signInWithPopup: () => {
+    // loginGoogle è POPUP-first con fallback a redirect. Il fake non espone
+    // signInWithPopup → il codice usa il redirect e simula il rientro da
+    // Google emitendo onAuthStateChanged (come il Firebase reale).
+    signInWithRedirect: () => {
       signedOut = false;
       emit();
-      return Promise.resolve({ user: getCurrent() });
+      return Promise.resolve();
     },
     signOut: () => {
       signedOut = true;

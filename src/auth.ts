@@ -18,6 +18,27 @@ var MSG_DB_DOWN =
   'Impossibile caricare il tuo profilo: database non raggiungibile. ' +
   'Controlla la connessione e ricarica la pagina.';
 
+// Messaggio per fallimenti del flusso Google (popup/redirect), distinto dal
+// DB: su localhost l'errore tipico è auth/unauthorized-domain (dominio non
+// autorizzato in Firebase Console) — mostrarlo come "database" confonde.
+function msgAuth(e: any): string {
+  var code = (e && e.code) || '';
+  if (code === 'auth/unauthorized-domain')
+    return (
+      'Accesso Google bloccato: dominio non autorizzato (' +
+      window.location.hostname +
+      '). Aggiungilo in Firebase Console > Authentication > Settings > Authorized domains e riprova.'
+    );
+  if (code === 'auth/operation-not-supported-in-this-environment')
+    return 'Accesso Google non supportato in questo browser/contesto. Prova con Chrome su http://localhost:5173.';
+  if (code === 'auth/network-request-failed')
+    return 'Accesso Google non riuscito: rete non raggiungibile. Controlla la connessione e riprova.';
+  if (code === 'auth/cancelled-popup-request' || code === 'auth/popup-closed-by-user' || code === 'auth/user-cancelled')
+    return '';
+  var msg = (e && e.message) || 'errore sconosciuto';
+  return 'Accesso Google non riuscito' + (code ? ' (' + code + ')' : '') + ': ' + msg;
+}
+
 // Firma esplicita: script UMD — una function diventerebbe globale e TS6
 // inferirebbe `() => void` (zero argomenti) → TS2554 sulle chiamate.
 var isEmailAutorizzata = function (email: string | null | undefined): boolean {
@@ -217,6 +238,17 @@ export function useAuth(_annoScolastico: string) {
       })
       .catch(function (err: any) {
         console.error('[auth] getRedirectResult fallito:', err && err.code, err && err.message);
+        // Rientro dal redirect con errore (es. unauthorized-domain su
+        // localhost, account esistente con credenziale diversa): prima veniva
+        // solo loggato e l'utente atterrava su una login muta ("non funziona").
+        // Ora l'errore è visibile, con messaggio specifico per il dominio.
+        var m = msgAuth(err);
+        if (m) {
+          setUser(null);
+          setIsProf(false);
+          setAuthErr(m);
+          setAuthLoad(false);
+        }
       });
     // Timeout di sicurezza: se Firebase non risponde affatto (offline totale),
     // mostra comunque la login invece dello spinner infinito. Coordinato con
@@ -363,66 +395,79 @@ export function useAuth(_annoScolastico: string) {
       return;
     }
     setAuthErr(null); // nuovo tentativo → l'errore precedente non vale più
-    var fu: any;
+    var provider: any;
     try {
-      var provider = new firebase.auth.GoogleAuthProvider();
-      provider.setCustomParameters({ prompt: 'select_account' });
-      var cr = await auth.signInWithPopup(provider);
-      fu = cr.user;
-    } catch (e: any) {
-      // Fallback robusto al redirect (signInWithRedirect NON apre un popup
-      // cross-origin, quindi non è affetto da COOP/Cross-Origin-Opener-Policy:
-      // su dispositivi/browser dove il popup fallisce — popup bloccato, rete,
-      // o COOP che impedisce la comunicazione con window.opener (warning
-      // "Cross-Origin-Opener-Policy policy would block the window.closed") —
-      // il login proseguirebbe senza esito. Unico caso in cui NON si ripiega:
-      // l'utente ha annullato esplicitamente (chiuso il popup o seconda
-      // richiesta cancellata) — in quel caso rispettiamo la sua scelta.
-      var noFallback = e && (e.code === 'auth/popup-closed-by-user' || e.code === 'auth/cancelled-popup-request');
-      if (!noFallback) {
-        console.error('[auth] signInWithPopup fallito, fallback a redirect:', e && e.code, e && e.message);
-        try {
-          // Stessi custom parameters del popup: sui dispositivi condivisi della
-          // scuola il selettore d'account evita l'auto-login con l'account
-          // sbagliato (es. gmail personale del fratello) → "non riesco ad
-          // entrare" + alert di accesso non autorizzato apparentemente inspiegabile.
-          var redirectProvider = new firebase.auth.GoogleAuthProvider();
-          if (typeof redirectProvider.setCustomParameters === 'function') {
-            redirectProvider.setCustomParameters({ prompt: 'select_account' });
-          }
-          await auth.signInWithRedirect(redirectProvider);
-        } catch (e2: any) {
-          console.error('[auth] signInWithRedirect fallito:', e2 && e2.code, e2 && e2.message);
-          setAuthErr(MSG_DB_DOWN);
-        }
+      provider = new firebase.auth.GoogleAuthProvider();
+      if (provider && typeof provider.setCustomParameters === 'function') {
+        // Selettore account: sui dispositivi condivisi della scuola evita
+        // l'auto-login con l'account sbagliato (es. gmail personale del
+        // fratello) → "non riesco ad entrare" + alert di accesso non
+        // autorizzato apparentemente inspiegabile.
+        provider.setCustomParameters({ prompt: 'select_account' });
       }
+    } catch (e: any) {
+      console.error('[auth] creazione provider Google fallita:', e && e.code, e && e.message);
+      setAuthErr(msgAuth(e));
       return;
     }
-    // Popup riuscito: da qui gli errori sono di Firestore (profilo), NON del
-    // popup — MAI fallback a redirect (ricaricherebbe la pagina con utente già
-    // autenticato). Errore visibile sulla login.
-    try {
-      // Filtro accesso: nessun profilo viene creato per email non autorizzate.
-      // Come in onAuthStateChanged, l'email può essere transiente al primo
-      // tick: reload prima di negare.
-      if (fu && !(await emailAutorizzataConReload(fu))) {
-        negaAccesso(auth);
+    // 1) POPUP prima (ideale su localhost: nessuna navigazione, errore subito
+    // visibile in console, niente pagina che ricarica). Su produzione Google
+    // può bloccare il popup via COOP (warning "Cross-Origin-Opener-Policy
+    // policy would block the window.closed call"): in quel caso si passa al
+    // redirect qui sotto, che è una navigazione piena (nessun opener).
+    if (auth && typeof auth.signInWithPopup === 'function') {
+      var fu: any = null;
+      try {
+        var cr = await auth.signInWithPopup(provider);
+        fu = cr && cr.user;
+      } catch (e: any) {
+        var code = (e && e.code) || '';
+        // Scelta esplicita dell'utente: nessun errore, resta sulla login.
+        if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request' || code === 'auth/user-cancelled') {
+          return;
+        }
+        console.error('[auth] signInWithPopup fallito, fallback a redirect:', code, e && e.message);
+        // Continua al redirect (non return): unauthorized-domain su popup
+        // quasi sempre fallirebbe anche in redirect, ma il redirect mostra
+        // almeno la pagina di errore Google / il rientro gestito da
+        // getRedirectResult con messaggio specifico.
+      }
+      if (fu) {
+        // Popup riuscito: filtro + creazione profilo come nel redirect.
+        // Da qui gli errori sono di Firestore (profilo), NON del popup —
+        // MAI fallback a redirect (ricaricherebbe la pagina con utente già
+        // autenticato).
+        try {
+          if (!(await emailAutorizzataConReload(fu))) {
+            negaAccesso(auth);
+            return;
+          }
+          var ud = await db.collection('users').doc(fu.uid).get();
+          if (!ud.exists) {
+            await db.collection('users').doc(fu.uid).set(buildProfiloIniziale(fu));
+          } else {
+            var existing = ud.data();
+            if (!existing.displayName && fu.displayName) {
+              await db.collection('users').doc(fu.uid).update({ displayName: fu.displayName });
+            }
+          }
+        } catch (e3: any) {
+          console.error('[auth] loginGoogle: profilo non creato/letto:', e3 && e3.code, e3 && e3.message);
+          setAuthErr(MSG_DB_DOWN);
+        }
         return;
       }
-      if (!fu) return;
-      var ud = await db.collection('users').doc(fu.uid).get();
-      if (!ud.exists) {
-        await db.collection('users').doc(fu.uid).set(buildProfiloIniziale(fu));
-      } else {
-        // Backfill displayName su utenti esistenti che ancora non lo hanno
-        var existing = ud.data();
-        if (!existing.displayName && fu.displayName) {
-          await db.collection('users').doc(fu.uid).update({ displayName: fu.displayName });
-        }
-      }
-    } catch (e3: any) {
-      console.error('[auth] loginGoogle: profilo non creato/letto:', e3 && e3.code, e3 && e3.message);
-      setAuthErr(MSG_DB_DOWN);
+      // fu null senza eccezione (caso teorico): prova il redirect.
+    }
+    // 2) REDIRECT (produzione, COOP-safe). Al rientro la sessione viene
+    // ripristinata da getRedirectResult + onAuthStateChanged che già
+    // creano/leggono users/{uid} (filtro dominio, retry e self-heal).
+    try {
+      await auth.signInWithRedirect(provider);
+    } catch (e: any) {
+      console.error('[auth] signInWithRedirect fallito:', e && e.code, e && e.message);
+      var m = msgAuth(e);
+      setAuthErr(m || MSG_DB_DOWN);
     }
   }
   function logout() {

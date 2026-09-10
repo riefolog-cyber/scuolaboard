@@ -5,8 +5,12 @@
 //   - email fuori dominio/whitelist → sign-out + alert, MAI profilo "fantasma"
 //   - email scuola / whitelist docente (anche case-insensitive e con spazi) → ok
 //   - getRedirectResult con nuovo utente autorizzato → crea users/{uid} (studente)
-//   - loginGoogle: crea profilo se nuovo, NIENTE profilo se non autorizzato,
-//     fallback a signInWithRedirect se il popup fallisce (ma non se chiuso)
+//   - loginGoogle: POPUP-first (localhost, nessun reload) con fallback a
+//     REDIRECT (produzione, COOP di accounts.google.com può bloccare il
+//     popup): avvio redirect quando il popup manca/fallisce; rientro con
+//     utente autorizzato → profilo creato; rientro non autorizzato →
+//     niente profilo; redirect fallito → authErr visibile (messaggio auth,
+//     non DB)
 //   - logout → signOut + stato azzerato
 //   - auth/firestore non disponibili → offline mode (authLoad false, niente crash)
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -17,21 +21,26 @@ import { useAuth } from './auth.ts';
 
 // ── Fake di firebase.auth() con contatori e provider ────────────────────────
 type FakeAuthOpts = {
-  user?: any; // utente consegnato da onAuthStateChanged
-  redirectUser?: any; // utente restituito da getRedirectResult
-  popupResult?: any; // esito di signInWithPopup
+  user?: any; // utente consegnato da onAuthStateChanged all'avvio (sessione persistita)
+  redirectUser?: any; // utente restituito da getRedirectResult (rientro da redirect Google)
+  loginUser?: any; // utente consegnato da onAuthStateChanged DOPO loginGoogle (rientro redirect)
+  redirectError?: any; // errore di signInWithRedirect
+  popupResult?: any; // esito di signInWithPopup (se assente: { user: null } → fallback a redirect)
   popupError?: any; // errore di signInWithPopup
 };
 
 function makeFakeAuth(opts: FakeAuthOpts) {
   const calls = { signOut: 0, signInWithRedirect: 0, popup: 0 };
   const listeners = new Set<Function>();
+  const emit = (u: any) => {
+    listeners.forEach((cb) => cb(u));
+  };
   const auth: any = {
     getRedirectResult: () =>
       Promise.resolve(opts.redirectUser ? { user: opts.redirectUser } : null),
     onAuthStateChanged: (cb: Function) => {
       listeners.add(cb);
-      if (opts.user) setTimeout(() => cb(opts.user), 0);
+      if (opts.user) setTimeout(() => emit(opts.user), 0);
       return () => {
         listeners.delete(cb);
       };
@@ -40,13 +49,19 @@ function makeFakeAuth(opts: FakeAuthOpts) {
       calls.signOut++;
       return Promise.resolve();
     },
-    signInWithPopup: (provider: any) => {
+    // loginGoogle è POPUP-first con fallback a redirect: il popup riuscito
+    // restituisce subito l'utente, altrimenti (null/errore non-user) si passa
+    // al redirect, dove al rientro da Google onAuthStateChanged ri-emette
+    // l'utente autenticato (come il Firebase reale).
+    signInWithPopup: () => {
       calls.popup++;
       if (opts.popupError) return Promise.reject(opts.popupError);
       return Promise.resolve(opts.popupResult || { user: null });
     },
     signInWithRedirect: () => {
       calls.signInWithRedirect++;
+      if (opts.redirectError) return Promise.reject(opts.redirectError);
+      if (opts.loginUser) setTimeout(() => emit(opts.loginUser), 0);
       return Promise.resolve();
     },
   };
@@ -178,24 +193,27 @@ describe('useAuth — filtro d\'accesso e ciclo di vita', () => {
     expect(set.data.provider).toBe('google');
   });
 
-  it('loginGoogle: nuovo utente autorizzato → crea il profilo', async () => {
+  it('loginGoogle: rientro dal redirect → sessione ripristinata (profilo letto)', async () => {
     const user = { uid: 'u5', email: 'nuova@ferrarisfermiclass.it', displayName: 'Anna Bianchi' };
-    const fake = makeFakeAuth({ popupResult: { user } });
-    const db = makeStatefulDb();
+    // Nessun utente all'avvio: la sessione nasce solo DOPO il rientro dal
+    // redirect (onAuthStateChanged ri-suona con l'utente → loadProfilo).
+    const fake = makeFakeAuth({ loginUser: user });
+    // Il profilo del nuovo utente esiste già: getRedirectResult lo crea al
+    // rientro (coperto dal test dedicato). Qui si verifica il caricamento.
+    const db = makeStatefulDb({
+      u5: { role: 'studente', nome: 'Anna', cognome: 'Bianchi', email: user.email, displayName: user.displayName },
+    });
     mountWith(fake, db);
 
     fireEvent.click(screen.getByText('login'));
-    await waitFor(() => expect(dbLog(db).some((l) => l.op === 'set')).toBe(true));
-    const set = dbLog(db).find((l) => l.op === 'set')!;
-    expect(set).toBeTruthy();
-    expect(set.data.role).toBe('studente');
-    expect(set.data.nome).toBe('Anna');
+    await waitFor(() => expect(fake.calls.signInWithRedirect).toBe(1));
+    await waitFor(() => expect(screen.getByTestId('role').textContent).toBe('studente'));
     expect(fake.calls.signOut).toBe(0);
   });
 
-  it('loginGoogle: utente NON autorizzato → nessun profilo creato', async () => {
+  it('loginGoogle: rientro con utente NON autorizzato → signOut + alert, nessun profilo', async () => {
     const user = { uid: 'u6', email: 'hacker@gmail.com', displayName: 'Hacker' };
-    const fake = makeFakeAuth({ popupResult: { user } });
+    const fake = makeFakeAuth({ loginUser: user });
     const db = makeStatefulDb();
     mountWith(fake, db);
 
@@ -205,13 +223,31 @@ describe('useAuth — filtro d\'accesso e ciclo di vita', () => {
     expect(dbLog(db)).toHaveLength(0); // db MAI toccato: nessun profilo "fantasma"
   });
 
-  it('loginGoogle: popup fallisce → fallback a signInWithRedirect', async () => {
-    const fake = makeFakeAuth({ popupError: new Error('rete giù') });
+  it('loginGoogle: popup senza utente → fallback a signInWithRedirect', async () => {
+    const fake = makeFakeAuth({});
     const db = makeStatefulDb();
     mountWith(fake, db);
 
     fireEvent.click(screen.getByText('login'));
+    await waitFor(() => expect(fake.calls.popup).toBe(1));
     await waitFor(() => expect(fake.calls.signInWithRedirect).toBe(1));
+  });
+
+  it('loginGoogle: popup ok con nuovo utente autorizzato → crea il profilo, NESSUN redirect', async () => {
+    const user = { uid: 'u5b', email: 'nuovo@ferrarisfermiclass.it', displayName: 'Nuovo Alunno' };
+    const fake = makeFakeAuth({ popupResult: { user } });
+    const db = makeStatefulDb();
+    mountWith(fake, db);
+
+    fireEvent.click(screen.getByText('login'));
+    await waitFor(() => expect(dbLog(db).some((l) => l.op === 'set')).toBe(true));
+    const set = dbLog(db).find((l) => l.op === 'set')!;
+    expect(set).toBeTruthy();
+    expect(set.data.role).toBe('studente');
+    expect(set.data.nome).toBe('Nuovo');
+    expect(set.data.cognome).toBe('Alunno');
+    expect(fake.calls.signInWithRedirect).toBe(0);
+    expect(fake.calls.signOut).toBe(0);
   });
 
   it('loginGoogle: popup chiuso dall\'utente → NESSUN fallback (rispetta la scelta)', async () => {
@@ -220,8 +256,77 @@ describe('useAuth — filtro d\'accesso e ciclo di vita', () => {
     mountWith(fake, db);
 
     fireEvent.click(screen.getByText('login'));
-    await new Promise((r) => setTimeout(r, 30)); // lascia scorrere il catch
+    await new Promise((r) => setTimeout(r, 50)); // lascia scorrere il catch
+    expect(fake.calls.popup).toBe(1);
     expect(fake.calls.signInWithRedirect).toBe(0);
+  });
+
+  it('loginGoogle: Firestore giù dopo popup ok → authErr DB, NESSUN redirect', async () => {
+    const errProbe = () => {
+      const { authErr, loginGoogle } = useAuth('2026/2027');
+      return React.createElement(
+        'div',
+        null,
+        React.createElement('span', { 'data-testid': 'autherr' }, authErr || ''),
+        React.createElement('button', { onClick: () => loginGoogle() }, 'login')
+      );
+    };
+    const user = { uid: 'u9b', email: 'ok@ferrarisfermiclass.it', displayName: 'Ok Ora' };
+    const fake = makeFakeAuth({ popupResult: { user } });
+    const db: any = {
+      collection: () => ({
+        doc: () => ({
+          get: async () => {
+            throw { code: 'unavailable', message: 'db down' };
+          },
+          set: async () => {
+            throw { code: 'unavailable', message: 'db down' };
+          },
+          update: async () => {
+            throw { code: 'unavailable', message: 'db down' };
+          },
+        }),
+      }),
+    };
+    (window as any).firebase = { auth: fake.authFn, firestore: () => db };
+    (window as any).db = db;
+    render(React.createElement(errProbe));
+
+    fireEvent.click(screen.getByText('login'));
+    await waitFor(
+      () => {
+        expect(screen.getByTestId('autherr').textContent).toContain('database non raggiungibile');
+      },
+      { timeout: 6000 }
+    );
+    // Popup riuscito + Firestore giù: ricaricare la pagina via redirect sarebbe
+    // sbagliato (utente già autenticato) → nessun redirect.
+    expect(fake.calls.signInWithRedirect).toBe(0);
+  });
+
+  it('loginGoogle: signInWithRedirect fallisce → authErr visibile, nessun utente', async () => {
+    const errProbe = () => {
+      const { user, authErr, loginGoogle } = useAuth('2026/2027');
+      return React.createElement(
+        'div',
+        null,
+        React.createElement('span', { 'data-testid': 'role' }, user ? (user as any).role : 'none'),
+        React.createElement('span', { 'data-testid': 'autherr' }, authErr || ''),
+        React.createElement('button', { onClick: () => loginGoogle() }, 'login')
+      );
+    };
+    const fake = makeFakeAuth({ redirectError: new Error('rete giù') });
+    const db = makeStatefulDb();
+    (window as any).firebase = { auth: fake.authFn, firestore: () => db };
+    (window as any).db = db;
+    render(React.createElement(errProbe));
+
+    fireEvent.click(screen.getByText('login'));
+    await waitFor(() => {
+      expect(screen.getByTestId('autherr').textContent).toContain('Accesso Google non riuscito');
+    });
+    expect(fake.calls.signInWithRedirect).toBe(1);
+    expect(screen.getByTestId('role').textContent).toBe('none');
   });
 
   it('logout → signOut + stato azzerato (login screen)', async () => {
@@ -292,46 +397,12 @@ describe('useAuth — filtro d\'accesso e ciclo di vita', () => {
     expect(screen.getByTestId('load').textContent).toBe('false');
   });
 
-  it('loginGoogle con Firestore giù dopo popup ok → authErr, NESSUN redirect', async () => {
-    const errProbe = () => {
-      const { authErr, loginGoogle } = useAuth('2026/2027');
-      return React.createElement(
-        'div',
-        null,
-        React.createElement('span', { 'data-testid': 'autherr' }, authErr || ''),
-        React.createElement('button', { onClick: () => loginGoogle() }, 'login')
-      );
-    };
-    const user = { uid: 'u9', email: 'ok@ferrarisfermiclass.it', displayName: 'Ok Ora' };
-    const fake = makeFakeAuth({ popupResult: { user } });
-    const db: any = {
-      collection: () => ({
-        doc: () => ({
-          get: async () => {
-            throw { code: 'unavailable', message: 'db down' };
-          },
-          set: async () => {
-            throw { code: 'unavailable', message: 'db down' };
-          },
-          update: async () => {
-            throw { code: 'unavailable', message: 'db down' };
-          },
-        }),
-      }),
-    };
-    (window as any).firebase = { auth: fake.authFn, firestore: () => db };
-    (window as any).db = db;
-    render(React.createElement(errProbe));
+  it('auth/firestore non disponibili → offline mode senza crash', async () => {
+(window as any).firebase = { auth: () => undefined, firestore: () => undefined };
+    (window as any).db = null;
+    render(React.createElement(AuthProbe));
 
-    fireEvent.click(screen.getByText('login'));
-    await waitFor(
-      () => {
-        expect(screen.getByTestId('autherr').textContent).toContain('database non raggiungibile');
-      },
-      { timeout: 6000 }
-    );
-    // Popup riuscito + Firestore giù: ricaricare la pagina via redirect sarebbe
-    // sbagliato (utente già autenticato) → nessun redirect.
-    expect(fake.calls.signInWithRedirect).toBe(0);
+    await waitFor(() => expect(screen.getByTestId('load').textContent).toBe('false'));
+    expect(screen.getByTestId('role').textContent).toBe('none');
   });
 });

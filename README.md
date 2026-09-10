@@ -255,18 +255,25 @@ I contenuti utente vengono incapsulati in delimitatori rigidi `<USER_DATA>` con 
 - **Filtro dominio attivo**: possono accedere solo gli account `@ferrarisfermiclass.it` e gli
   indirizzi docente in whitelist (`DOCENTI_WHITELIST` in `src/auth.ts`, es. `riefolog@gmail.com`).
   Gli altri account Google vengono disconnessi all'istante, prima di qualsiasi scrittura su
-  Firestore. Il filtro è presidiato **sia lato client** (`src/auth.ts`, tre flussi: popup,
-  redirect, sessioni persistite) **sia lato server** (helper `isEmailAutorizzata()` nelle
+  Firestore. Il filtro è presidiato **sia lato client** (`src/auth.ts`, flussi
+  popup, redirect e sessioni persistite) **sia lato server** (helper `isEmailAutorizzata()` nelle
   Firestore Rules, ereditato da `isAuth()` per tutte le collection)
   → ⚠️ dopo ogni modifica alle regole, pubblicarle su Firebase Console
 - Il ruolo `prof` viene verificato lato server sia dal Worker AI che dalle regole Firestore
 - Il ruolo `studente` è il default e non ha accesso alla scrittura card
 
-> **Nota su localhost**: in sviluppo può comparire in console il warning
-> `Cross-Origin-Opener-Policy policy would block the window.closed call` durante il
-> login Google. È un warning del popup cross-origin (accounts.google.com) — innocuo se
-> il login riesce. Se il popup fallisce, l'app ripiega automaticamente su
-> `signInWithRedirect` (non usa `window.opener`, quindi non è affetto da COOP).
+> **Nota login Google (popup + redirect)**: il login prova prima
+> `signInWithPopup` (ideale su localhost: nessuna navigazione, errore subito
+> visibile) e ripiega su `signInWithRedirect` se il popup fallisce. Motivo:
+> Google invia l'header `Cross-Origin-Opener-Policy` sulle proprie pagine
+> OAuth e in produzione il popup può restare bloccato (warning
+> "*Cross-Origin-Opener-Policy policy would block the window.closed call*"
+> ripetuto, handshake mai completato); il redirect è una navigazione piena
+> (nessun opener) e non è affetto da COOP. Gli errori di rientro dal redirect
+> sono mostrati sulla login (prima restava muta).
+> ⚠️ il redirect richiede che il dominio dell'app sia negli
+> **Authorized Domains** della Firebase Console (per GitHub Pages:
+> `riefolog-cyber.github.io`; per lo sviluppo: `localhost`).
 
 ---
 

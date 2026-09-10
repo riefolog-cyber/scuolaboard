@@ -44,7 +44,7 @@ window.React.useSyncExternalStore = function (subscribe, getSnapshot, getServerS
 
 // ── Fake Auth ─────────────────────────────────────────────────────────────
 // Fedele a Firebase reale: onAuthStateChanged viene RI-INNESCATA da
-// signInWithPopup e da signOut. Senza questo, dopo "Esci" il re-login non
+// signInWithRedirect e da signOut. Senza questo, dopo "Esci" il re-login non
 // funzionava nell'harness (loginGoogle si affida a onAuthStateChanged per
 // impostare l'utente) e il flusso logout non era testabile end-to-end.
 function makeFakeAuth(getUser) {
@@ -69,11 +69,13 @@ function makeFakeAuth(getUser) {
       setTimeout(() => cb(getCurrent()), 0);
       return () => listeners.delete(cb);
     },
-    getRedirectResult: () => Promise.resolve(null),
-    signInWithPopup: () => {
+    // loginGoogle è POPUP-first con fallback a redirect. Il fake non espone
+    // signInWithPopup → il codice usa il redirect e simula il rientro da
+    // Google emitendo onAuthStateChanged (come il Firebase reale).
+    signInWithRedirect: () => {
       signedOut = false;
       emit();
-      return Promise.resolve({ user: getCurrent() });
+      return Promise.resolve();
     },
     signOut: () => {
       signedOut = true;
