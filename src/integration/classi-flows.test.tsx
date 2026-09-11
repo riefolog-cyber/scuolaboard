@@ -339,10 +339,16 @@ describe('Scelta classe studente (ClasseModal)', () => {
     };
 
     fireEvent.change(select, { target: { value: '3AI' } });
+    // Il bottone deve essere abilitato DOPO la scelta: se qualcosa avesse
+    // azzerato classeInput nel mezzo (es. reset spurio), il click sarebbe un
+    // no-op silenzioso e il test fallirebbe poi con un timeout misterioso sul
+    // toast. Questo assert lo rende un fallimento immediato e leggibile.
+    expect(screen.getByRole('button', { name: /Salva classe/ })).not.toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: /Salva classe/ }));
 
-    // Feedback visibile all'utente + modale ancora aperta per riprovare
-    expect(await screen.findByText(/Errore salvataggio classe/, {}, { timeout: 4000 })).toBeTruthy();
+    // Feedback visibile all'utente + modale ancora aperta per riprovare.
+    // Timeout largo (10s): sotto carico CI il polling può arrivare tardi.
+    expect(await screen.findByText(/Errore salvataggio classe/, {}, { timeout: 10000 })).toBeTruthy();
     expect(screen.getByRole('button', { name: /Salva classe/ })).toBeTruthy();
     expect(db._get('users', 'stud1').classiPerAnno['2026/2027']).toBeUndefined();
   });

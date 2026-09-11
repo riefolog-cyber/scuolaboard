@@ -1205,15 +1205,20 @@ function AppProvider({ children }: any) {
     [user, annoScolastico, modals.showPrivacy, modals.showClasseModal]
   );
 
-  // Reset della scelta classe al cambio anno o alla (ri)apertura della modale:
-  // senza questo, dopo un save per l'anno A lo switch all'anno B (senza classe)
-  // riusava la vecchia scelta con bottone già abilitato → rischio save della
-  // classe sbagliata per l'anno nuovo con un solo click.
+  // Reset della scelta classe al cambio anno: senza questo, dopo un save per
+  // l'anno A lo switch all'anno B (senza classe) riusava la vecchia scelta con
+  // bottone già abilitato → rischio save della classe sbagliata per l'anno
+  // nuovo con un solo click.
+  // VOLUTAMENTE solo su annoScolastico (mai all'apertura della modale): un
+  // reset all'apertura cancellerebbe una scelta già digitata se la modale
+  // dovesse richiudersi/riaprirsi nel mezzo (loop obbligatorietà, HMR), con
+  // bottone che torna disabilitato e click apparentemente morto.
+  // setClasseInput('') a valore già '' non ri-renderizza (bail-out React).
   useEffect(
     function () {
-      if (modals.showClasseModal) setClasseInput('');
+      setClasseInput('');
     },
-    [annoScolastico, modals.showClasseModal]
+    [annoScolastico]
   );
 
   // ── COMPUTED VALUES (memoized) ──
