@@ -105,6 +105,12 @@ function negaAccesso(authInst: any): void {
   );
 }
 
+// Guardia anti-doppio-click sul bottone Google: loginGoogle è async con popup
+// + get/set profilo. Senza questo, un doppio click apre 2 popup in parallelo:
+// il secondo fallisce con auth/cancelled-popup-request e cade nel fallback
+// redirect con reload pagina mentre il primo popup è ancora aperto.
+var loginInCorso = false;
+
 // Costruisce il documento profilo iniziale per un nuovo utente Google.
 // Estratto in helper condiviso: prima la stessa logica era duplicata in
 // getRedirectResult e loginGoogle (rischio divergenza), e loadProfilo non la
@@ -449,9 +455,15 @@ export function useAuth(_annoScolastico: string) {
   }, []);
   async function loginGoogle() {
     if (!auth || !db) {
-      if (window.SB_DEBUG) console.warn('[auth] Firebase auth/firestore not available; login aborted.');
+      // Prima: return muto con bottone apparentemente rotto. Ora errore visibile.
+      setAuthErr(
+        'Accesso non disponibile: Firebase non inizializzato. Controlla la connessione e ricarica la pagina.'
+      );
       return;
     }
+    // Anti-doppio-click: ignora i click mentre un tentativo è già in corso.
+    if (loginInCorso) return;
+    loginInCorso = true;
     setAuthErr(null); // nuovo tentativo → l'errore precedente non vale più
     var provider: any;
     try {
@@ -466,6 +478,7 @@ export function useAuth(_annoScolastico: string) {
     } catch (e: any) {
       console.error('[auth] creazione provider Google fallita:', e && e.code, e && e.message);
       setAuthErr(msgAuth(e));
+      loginInCorso = false;
       return;
     }
     // Annota il tentativo: se al rientro (redirect) o al prossimo caricamento
@@ -489,6 +502,7 @@ export function useAuth(_annoScolastico: string) {
         // Scelta esplicita dell'utente: nessun errore, resta sulla login.
         if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request' || code === 'auth/user-cancelled') {
           clearLoginPending(); // chiusura esplicita dell'utente: non è un fallimento
+          loginInCorso = false;
           return;
         }
         console.error('[auth] signInWithPopup fallito, fallback a redirect:', code, e && e.message);
@@ -505,6 +519,7 @@ export function useAuth(_annoScolastico: string) {
         try {
           if (!(await emailAutorizzataConReload(fu))) {
             negaAccesso(auth);
+            loginInCorso = false;
             return;
           }
           var ud = await db.collection('users').doc(fu.uid).get();
@@ -520,6 +535,7 @@ export function useAuth(_annoScolastico: string) {
           console.error('[auth] loginGoogle: profilo non creato/letto:', e3 && e3.code, e3 && e3.message);
           setAuthErr(MSG_DB_DOWN);
         }
+        loginInCorso = false;
         return;
       }
       // fu null senza eccezione (caso teorico): prova il redirect.
@@ -534,6 +550,7 @@ export function useAuth(_annoScolastico: string) {
       var m = msgAuth(e);
       setAuthErr(m || MSG_DB_DOWN);
     }
+    loginInCorso = false;
   }
   function logout() {
     // Il sign-out deve essere infallibile: anche se Firebase non è disponibile

@@ -13,7 +13,10 @@ service cloud.firestore {
     }
 
     function isEmailAutorizzata() {
-      return emailUtente().matches('.*@ferrarisfermiclass[.]it')
+      // Ancorata a fine stringa ($): senza, '.*@ferrarisfermiclass[.]it'
+      // matcha anche 'x@ferrarisfermiclass.it.evil.com'. Allineata al client
+      // (auth.ts endsWith).
+      return emailUtente().matches('.*@ferrarisfermiclass[.]it$')
         || emailUtente() == 'riefolog@gmail.com';
     }
 

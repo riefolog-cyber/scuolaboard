@@ -25,6 +25,7 @@ import {
   runTransaction,
   writeBatch,
   arrayUnion,
+  FieldPath,
 } from 'firebase/firestore';
 
 let _app: any = null;
@@ -52,7 +53,29 @@ function wrapRef(ref: any): any {
     ref, // ref reale per runTransaction/writeBatch
     get: async () => compatDocSnap(await getDoc(ref)),
     set: (data: any, opts?: any) => setDoc(ref, data, opts || {}),
-    update: (patch: any) => updateDoc(ref, patch),
+    // update() compat: supporta sia {campo: v} sia dot-notation {'a.b': v}.
+    // Le chiavi anno ('2026/2027') contengono '/': passate come stringa
+    // 'classiPerAnno.2026/2027' l'updateDoc modulare le rifiuta come
+    // field-path. Qui le convertiamo in FieldPath('classiPerAnno','2026/2027')
+    // così qualsiasi call-site dot-notation resta funzionante.
+    update: (patch: any) => {
+      try {
+        var keys = patch ? Object.keys(patch) : [];
+        var hasDot = keys.some(function (k: string) {
+          return k.indexOf('.') >= 0;
+        });
+        if (!hasDot) return updateDoc(ref, patch);
+        var args: any[] = [];
+        keys.forEach(function (k: string) {
+          var v = patch[k];
+          if (k.indexOf('.') < 0) args.push(new FieldPath(k), v);
+          else args.push(new FieldPath(...k.split('.')), v);
+        });
+        return (updateDoc as any)(ref, ...args);
+      } catch (e) {
+        return updateDoc(ref, patch);
+      }
+    },
     delete: () => deleteDoc(ref),
     onSnapshot: (cb: (_d: any) => void, err?: (_e: any) => void) =>
       onSnapshot(ref, (d: any) => cb(compatDocSnap(d)), err),

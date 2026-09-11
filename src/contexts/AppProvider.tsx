@@ -254,17 +254,23 @@ function AppProvider({ children }: any) {
     } catch (e) {}
   }, []);
 
-  // ── CLASSI_LIST (memoized) ──
+  // ── CLASSI_LIST (memoized, ordine crescente) ──
+  // Home / FilterBar / modale classe: elenco sempre A→Z (locale 'it').
+  // Prima l'ordine era quello di CLASSI_DEFAULT + inserimento custom
+  // (es. 1AO prima di 1AI) → elenco disordinato in home.
   var CLASSI_LIST = useMemo(
     function () {
       var nascoste = cardsHook.classiNascoste || [];
-      return CLASSI_DEFAULT.filter(function (c: any) {
+      var lista = CLASSI_DEFAULT.filter(function (c: any) {
         return nascoste.indexOf(c) < 0;
       }).concat(
         cardsHook.classiCustom.filter(function (c: any) {
           return CLASSI_DEFAULT.indexOf(c) < 0;
         })
       );
+      return lista.sort(function (a: any, b: any) {
+        return String(a).localeCompare(String(b), 'it');
+      });
     },
     [cardsHook.classiCustom, cardsHook.classiNascoste]
   );
@@ -1175,12 +1181,19 @@ function AppProvider({ children }: any) {
       var privacyAccettata = !!(window.SB.LS && window.SB.LS.privacy && window.SB.LS.privacy.get(user.uid));
       if (!privacyAccettata) {
         modals.setShowPrivacy(true);
+        // La privacy è obbligatoria e deve stare sopra: mai due modali
+        // sovrapposte (Classe coprirebbe Privacy, stesso zIndex).
+        modals.setShowClasseModal(false);
         return;
       }
       // Popup classe per studente senza classe per l'anno scolastico corrente
       // (usa classiPerAnno[anno], non il campo piatto legacy user.classe).
       // Se la classe per l'anno C'È, chiudi la modale (safety-net: un successo
       // salvato ma con chiusura persa non deve lasciare la modale appesa).
+      // Se MANCA, (ri)apri: la scelta è obbligatoria — backdrop/Esc/closeAll
+      // non devono poter lasciare la bacheca accessibile senza classe
+      // (showClasseModal in deps come showPrivacy: chiuderla senza scegliere
+      // la riapre, stesso loop voluto del GDPR per la privacy).
       if (user.role === 'studente') {
         if (!(user.classiPerAnno || {})[annoScolastico]) {
           modals.setShowClasseModal(true);
@@ -1189,7 +1202,18 @@ function AppProvider({ children }: any) {
         }
       }
     },
-    [user, annoScolastico, modals.showPrivacy]
+    [user, annoScolastico, modals.showPrivacy, modals.showClasseModal]
+  );
+
+  // Reset della scelta classe al cambio anno o alla (ri)apertura della modale:
+  // senza questo, dopo un save per l'anno A lo switch all'anno B (senza classe)
+  // riusava la vecchia scelta con bottone già abilitato → rischio save della
+  // classe sbagliata per l'anno nuovo con un solo click.
+  useEffect(
+    function () {
+      if (modals.showClasseModal) setClasseInput('');
+    },
+    [annoScolastico, modals.showClasseModal]
   );
 
   // ── COMPUTED VALUES (memoized) ──

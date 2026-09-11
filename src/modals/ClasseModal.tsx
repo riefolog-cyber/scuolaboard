@@ -16,6 +16,13 @@ function ClasseModal(props: any) {
   // classeCorrente (fallback-inclusivo) resterebbe bloccato con una modale
   // disabilitata ogni volta che il popup si apre.
   var isDisabled = !!(props.user && props.user.classiPerAnno && props.user.classiPerAnno[props.annoScolastico]);
+  // Scelta obbligatoria per lo studente senza classe per l'anno corrente:
+  // backdrop e Esc non devono poterla chiudere (l'effect in AppProvider la
+  // riapre finché manca). Il prof e lo studente che ha già scelto restano
+  // liberi di chiuderla.
+  var isObbligatoria =
+    !!props.user && props.user.role === 'studente' && !(props.user.classiPerAnno || {})[props.annoScolastico];
+  var listaVuota = CLASSI_LIST.length === 0 && !isDisabled;
 
   return (
     <div
@@ -30,7 +37,7 @@ function ClasseModal(props: any) {
         padding: 20,
       }}
       onClick={function () {
-        props.setShowClasseModal(false);
+        if (!isObbligatoria) props.setShowClasseModal(false);
       }}
     >
       {
@@ -122,25 +129,73 @@ function ClasseModal(props: any) {
               onClick={function () {
                 props.saveClasse();
               }}
-              disabled={isDisabled || !props.classeInput}
+              disabled={isDisabled || !props.classeInput || listaVuota}
               style={{
                 width: '100%',
                 padding: 13,
                 background:
-                  isDisabled || !props.classeInput
+                  isDisabled || !props.classeInput || listaVuota
                     ? 'rgba(255,255,255,.06)'
                     : 'linear-gradient(135deg,#6366f1,#8b5cf6)',
-                color: isDisabled || !props.classeInput ? 'rgba(255,255,255,.40)' : '#fff',
+                color: isDisabled || !props.classeInput || listaVuota ? 'rgba(255,255,255,.40)' : '#fff',
                 border: 'none',
                 borderRadius: 12,
                 fontSize: 14,
                 fontWeight: 800,
-                cursor: isDisabled || !props.classeInput ? 'not-allowed' : 'pointer',
+                cursor: isDisabled || !props.classeInput || listaVuota ? 'not-allowed' : 'pointer',
               }}
             >
               {isDisabled ? '✓ Classe confermata' : '✓ Salva classe'}
             </button>
           }
+          {listaVuota && (
+            <div style={{ marginTop: 12, fontSize: 12, color: 'rgba(255,255,255,.6)', lineHeight: 1.6, textAlign: 'center' }}>
+              Nessuna classe attiva per quest'anno scolastico. Contatta il docente per farla attivare, poi{' '}
+              <button
+                onClick={function () {
+                  try {
+                    window.location.reload();
+                  } catch (e) {}
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#a5b4fc',
+                  cursor: 'pointer',
+                  fontSize: 12,
+                  fontWeight: 800,
+                  textDecoration: 'underline',
+                  padding: 0,
+                }}
+              >
+                ricarica la pagina
+              </button>
+              . Se il problema persiste, premi Esci e rientra.
+              {props.logout && (
+                <div style={{ marginTop: 8 }}>
+                  <button
+                    onClick={function () {
+                      try {
+                        props.logout();
+                      } catch (e) {}
+                    }}
+                    style={{
+                      background: 'rgba(255,255,255,.07)',
+                      border: '1px solid rgba(255,255,255,.15)',
+                      borderRadius: 8,
+                      color: 'rgba(255,255,255,.7)',
+                      cursor: 'pointer',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      padding: '6px 14px',
+                    }}
+                  >
+                    Esci
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       }
     </div>

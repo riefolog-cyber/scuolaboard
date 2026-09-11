@@ -73,7 +73,9 @@ function PrivacyModal(props: any) {
             {
               <button
                 onClick={function () {
-                  SB.LS.privacy.set(props.user.uid);
+                  try {
+                    if (props.user && props.user.uid) SB.LS.privacy.set(props.user.uid);
+                  } catch (e) {}
                   props.setShowPrivacy(false);
                 }}
                 style={{

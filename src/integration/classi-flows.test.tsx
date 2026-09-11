@@ -316,9 +316,11 @@ describe('Scelta classe studente (ClasseModal)', () => {
     const saveBtn = await screen.findByRole('button', { name: /Salva classe/ }, {}, { timeout: 4000 });
     const select = screen.getByRole('combobox', { name: /Scegli la tua classe/ });
 
-    // Simula la rete giù SOLO per l'update del profilo studente: senza il fix,
+    // Simula la rete giù SOLO per la scrittura del profilo studente: senza il fix,
     // l'errore veniva ingoiato e la modale restava aperta senza alcun feedback
-    // ("bloccato sulla scelta della classe").
+    // ("bloccato sulla scelta della classe"). saveClasse fa get + set(merge)
+    // (niente dot-notation: le chiavi anno contengono '/'), quindi il mock deve
+    // far fallire set (e update per sicurezza).
     const realColl = db.collection.bind(db);
     db.collection = (name: string) => {
       const q: any = realColl(name);
@@ -326,7 +328,10 @@ describe('Scelta classe studente (ClasseModal)', () => {
         const realDoc: any = q.doc.bind(q);
         q.doc = (id: string) => {
           const d: any = realDoc(id);
-          if (id === 'stud1') d.update = async () => Promise.reject({ code: 'unavailable', message: 'rete giù' });
+          if (id === 'stud1') {
+            d.update = async () => Promise.reject({ code: 'unavailable', message: 'rete giù' });
+            d.set = async () => Promise.reject({ code: 'unavailable', message: 'rete giù' });
+          }
           return d;
         };
       }

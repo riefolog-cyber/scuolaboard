@@ -5,6 +5,12 @@ import { compareStudenti } from '../utils/format.ts';
 
 var db = window.db;
 
+// Guardia anti-doppio-click: saveClasse è async (get + set, 2 roundtrip).
+// Senza questo, un doppio click invia 2 scritture parallele con possibile
+// last-write-wins se classeInput cambia nel mezzo. Flag per uid+anno,
+// sempre resettato in finally (then/catch).
+var saveInFlight: Record<string, boolean> = {};
+
 type ClassiDeps = {
   classeInput: string;
   user: any;
@@ -31,29 +37,49 @@ function useClassi(deps: ClassiDeps) {
 
   function saveClasse() {
     if (!classeInput || !user || !user.uid) return;
-    // ⚠️ Scrittura CHIRURGICA per-anno (dot-notation), NON mappa intera.
-    // Perché: lo snapshot `user.classiPerAnno` del client può essere STALE
-    // (es. un altro device/browser ha già aggiunto l'anno successivo, o una
-    // rimozione/background-sync ha cambiato la mappa). Con update({mappa})
-    // invieremmo una mappa intera potenzialmente vecchia → la regola
-    // "nessuna rimozione di chiavi" negherebbe con permission-denied e lo
-    // studente resterebbe BLOCCATO sulla scelta della classe.
-    // Con la dot-notation aggiorniamo SOLO classiPerAnno.<anno> (upsert di
-    // una chiave, mai rimozione): il server fonde il campo senza toccare gli
-    // altri anni. La regola classiPerAnnoSoloAggiunte resta soddisfatta.
-    var patch: any = {};
-    patch['classiPerAnno.' + annoScolastico] = classeInput;
+    // Scrittura per-anno SENZA dot-notation: le chiavi anno ('2026/2027')
+    // contengono '/' e l'updateDoc modulare (firebase-modular.ts) le rifiuta
+    // quando passate come field-path 'classiPerAnno.2026/2027' → la scrittura
+    // falliva per TUTTI i nuovi studenti (modale bloccata su "Salva classe").
+    // Strategia robusta: get fresco + update della mappa INTERA.
+    // Il get fresco evita lo stale-snapshot (altro device che ha già aggiunto
+    // un anno) che la vecchia dot-notation voleva aggirare, senza parsing di
+    // field-path. set(...,{merge:true}) crea il doc se mancante (race
+    // ensureProfilo) e preserva gli altri campi del profilo.
+    var uid = user.uid;
+    var anno = annoScolastico;
+    var scelta = classeInput;
+    var flightKey = uid + '|' + anno;
+    if (saveInFlight[flightKey]) return;
+    saveInFlight[flightKey] = true;
+    var snapshotMap = user.classiPerAnno && typeof user.classiPerAnno === 'object' ? user.classiPerAnno : {};
     db.collection('users')
-      .doc(user.uid)
-      .update(patch)
+      .doc(uid)
+      .get()
+      .then(function (doc: any) {
+        var serverMap: any = snapshotMap;
+        try {
+          if (doc && doc.exists) {
+            var d = doc.data() || {};
+            if (d.classiPerAnno && typeof d.classiPerAnno === 'object') serverMap = d.classiPerAnno;
+          }
+        } catch (e) {}
+        var newClassiPerAnno = Object.assign({}, serverMap, { [anno]: scelta });
+        return db
+          .collection('users')
+          .doc(uid)
+          .set({ classiPerAnno: newClassiPerAnno, classe: scelta }, { merge: true });
+      })
       .then(function () {
-        var newClassiPerAnno = Object.assign({}, user.classiPerAnno || {}, { [annoScolastico]: classeInput });
+        saveInFlight[flightKey] = false;
+        var newClassiPerAnno = Object.assign({}, snapshotMap, { [anno]: scelta });
         setUser(function (u: any) {
-          return Object.assign({}, u, { classiPerAnno: newClassiPerAnno, classe: classeInput });
+          return Object.assign({}, u, { classiPerAnno: newClassiPerAnno, classe: scelta });
         });
         setShowClasseModal(false);
       })
       .catch(function (e: any) {
+        saveInFlight[flightKey] = false;
         // Senza .catch un errore di scrittura (rete giù della scuola,
         // permission-denied delle rules, licenza mentre salva…) lasciava la
         // modale aperta PER SEMPRE con zero feedback: l'utente risultava
@@ -62,7 +88,11 @@ function useClassi(deps: ClassiDeps) {
         // errore esplicito (niente fallimento silenzioso).
         console.error('[ScuolaBoard] saveClasse fallito:', e && e.code, (e && e.message) || e);
         try {
-          showToast('Errore salvataggio classe. Controlla la connessione e riprova.', 'err');
+          var code = (e && e.code) || '';
+          showToast(
+            'Errore salvataggio classe' + (code ? ' (' + code + ')' : '') + '. Controlla la connessione e riprova.',
+            'err'
+          );
         } catch (e2) {}
       });
   }
