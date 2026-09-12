@@ -41,6 +41,7 @@ import '../notifiche-service.ts';
 import {
   playAlarm,
   classeCorrenteOf,
+  ANNO_LEGACY,
   buildOpzioni,
   buildQuizDomande,
   cleanLinks,
@@ -68,6 +69,13 @@ var SB = window.SB || {};
 var db = window.db;
 var ValutazioneApertaAI = window.ValutazioneApertaAI;
 var ANNI_DISPONIBILI = window.ANNI_DISPONIBILI;
+
+// Anno scolastico "ufficiale" dell'app (CFG.ANNO_DEFAULT, es. '2026/2027'):
+// è l'UNICO anno per cui la scelta della classe è obbligatoria. Per gli anni
+// diversi da questo la modale resta facoltativa/chiusurabile (si apre dal chip
+// "⚠️ Scegli classe" nell'header): un cambio anno non deve intrappolare lo
+// studente in una scelta che le rules rendono IRREVERSIBILE per lui.
+var ANNO_CORRENTE = (window.SB_CONFIG && window.SB_CONFIG.ANNO_DEFAULT) || '2026/2027';
 
 // Confronto risposta/corretta robusto: per le domande a scelta multipla
 // `corretta` è l'INDICE (stringa) dell'opzione giusta, per vero/falso è il
@@ -109,9 +117,10 @@ function AppProvider({ children }: any) {
   var simulaSt = isProf && cardsHook.previewSt;
 
   // Classe corrente dello studente per l'anno selezionato: fonte di verità è la
-  // mappa classiPerAnno[anno] (per-anno), con fallback sul campo piatto legacy.
-  // Stessa formula di cards.ts (fallback su user.classe anche senza classiPerAnno).
-  var classeCorrente = classeCorrenteOf(user, annoScolastico);
+  // mappa classiPerAnno[anno] (per-anno), con fallback sul campo piatto SOLO per
+  // l'anno legacy. Unica funzione condivisa con cards.ts (filtro card) e
+  // loadStudenti (elenco studenti del prof).
+  var classeCorrente = classeCorrenteOf(user, annoScolastico, ANNO_LEGACY);
 
   // ── STATI LOCALI RESIDUI ──
   var [form, setForm] = useState(Object.assign({}, FORM0));
@@ -121,6 +130,9 @@ function AppProvider({ children }: any) {
   var [replyTo, setReplyTo] = useState(null);
   var [replyTesto, setReplyTesto] = useState('');
   var [classeInput, setClasseInput] = useState('');
+  // true quando l'ULTIMO salvataggio della classe è fallito: ClasseModal lo usa
+  // per mostrare un'uscita ("Esci") quando la modale è obbligatoria.
+  var [classeSaveErr, setClasseSaveErr] = useState(false);
   var [rinominaClasse, setRinominaClasse] = useState(null);
   var [rinominaInput, setRinominaInput] = useState('');
   var [rinominaConferma, setRinominaConferma] = useState(false);
@@ -192,12 +204,14 @@ function AppProvider({ children }: any) {
     classeInput: classeInput,
     user: user,
     annoScolastico: annoScolastico,
-    // Primo anno disponibile = anno del vecchio sistema (fallback legacy)
-    annoLegacy: ANNI_DISPONIBILI && ANNI_DISPONIBILI[0] ? ANNI_DISPONIBILI[0] : null,
+    // Anno del vecchio sistema (fallback legacy): costante esplicita, NON
+    // ANNI_DISPONIBILI[0] (che cambierebbe da solo al rollover della lista).
+    annoLegacy: ANNO_LEGACY,
     setUser: auth.setUser,
     setShowClasseModal: modals.setShowClasseModal,
     setStudenti: cardsHook.setStudenti,
     showToast: showToast,
+    setClasseSaveErr: setClasseSaveErr,
   });
   var saveClasse = classi.saveClasse,
     loadStudenti = classi.loadStudenti,
@@ -1186,19 +1200,25 @@ function AppProvider({ children }: any) {
         modals.setShowClasseModal(false);
         return;
       }
-      // Popup classe per studente senza classe per l'anno scolastico corrente
-      // (usa classiPerAnno[anno], non il campo piatto legacy user.classe).
+      // Popup classe per studente senza classe (usa classiPerAnno[anno], non il
+      // campo piatto legacy user.classe).
       // Se la classe per l'anno C'È, chiudi la modale (safety-net: un successo
       // salvato ma con chiusura persa non deve lasciare la modale appesa).
-      // Se MANCA, (ri)apri: la scelta è obbligatoria — backdrop/Esc/closeAll
+      // Se MANCA: obbligatoria SOLO per ANNO_CORRENTE — lì backdrop/Esc/closeAll
       // non devono poter lasciare la bacheca accessibile senza classe
-      // (showClasseModal in deps come showPrivacy: chiuderla senza scegliere
-      // la riapre, stesso loop voluto del GDPR per la privacy).
+      // (showClasseModal in deps come showPrivacy: chiuderla senza scegliere la
+      // riapre, stesso loop voluto del GDPR per la privacy).
+      // Per gli anni NON correnti nessuna apertura automatica: prima sì, e con
+      // la modale non chiudibile — lo studente che cambiava anno dal menu in
+      // header (accessibile anche a lui) restava intrappolato a scegliere la
+      // classe per QUEL anno, scelta che le rules gli vietano poi di correggere
+      // (da rimediare a mano dal docente). Ora la scelta resta possibile, ma
+      // deliberata e annullabile ("Non ora" / click fuori).
       if (user.role === 'studente') {
-        if (!(user.classiPerAnno || {})[annoScolastico]) {
-          modals.setShowClasseModal(true);
-        } else {
+        if ((user.classiPerAnno || {})[annoScolastico]) {
           modals.setShowClasseModal(false);
+        } else if (annoScolastico === ANNO_CORRENTE) {
+          modals.setShowClasseModal(true);
         }
       }
     },
@@ -1669,6 +1689,8 @@ function AppProvider({ children }: any) {
         // con fallback sul campo piatto legacy). Usata da ClasseModal per mostrare
         // la classe già scelta e disabilitare la scelta.
         classeCorrente: classeCorrente,
+        // Ultimo salvataggio classe fallito → ClasseModal offre l'uscita "Esci"
+        classeSaveErr: classeSaveErr,
         qrUrl: qrUrl,
         CHUNK: CHUNK,
         totC: totC,
@@ -1744,6 +1766,8 @@ function AppProvider({ children }: any) {
         buildWordCloud: buildWordCloud,
         collectCloudStats: collectCloudStats,
         ANNI_DISPONIBILI: ANNI_DISPONIBILI,
+        // Anno ufficiale dell'app (obbligo di scelta classe solo per questo)
+        annoCorrente: ANNO_CORRENTE,
         // Modifica ammonizioni
         modificaAmm: modificaAmm,
         eliminaAmm: eliminaAmm,
@@ -1755,6 +1779,7 @@ function AppProvider({ children }: any) {
     },
     [
       annoScolastico,
+      classeSaveErr, // ClasseModal: uscita "Esci" dopo un salvataggio fallito
       classeInput, // serve a saveClasse (useClassi): senza questa dep il uiValue
       // memo tratteneva una closure STALE con classeInput='' → il bottone
       // "Salva classe" era abilitato ma il click non salvava niente (studente

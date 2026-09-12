@@ -3,6 +3,7 @@
 // per sottoscrizioni Firestore gestite nativamente da React 18.
 
 import { useState, useEffect, useMemo, useRef, useCallback, useSyncExternalStore } from 'react';
+import { classeCorrenteOf, ANNO_LEGACY } from './app-provider-helpers.ts';
 
 // Confronto STRUTTURALE (per chiavi, non per ordine): JSON.stringify falliva
 // il prune dell'overlay ottimistico quando il server restituiva le chiavi in
@@ -145,14 +146,12 @@ export function useCards(user: any, annoScolastico: string) {
   var isProf = user && user.role === 'prof';
   var simulaSt = isProf && previewSt;
 
-  // Classe corrente dello studente per l'anno selezionato: fonte di verità è la
-  // mappa classiPerAnno[anno] (per-anno), con fallback sul campo piatto legacy.
-  var classeCorrente =
-    user && user.classiPerAnno
-      ? user.classiPerAnno[annoScolastico] || user.classe || null
-      : user
-        ? user.classe || null
-        : null;
+  // Classe corrente dello studente per l'anno selezionato: UNICA fonte di
+  // verità (stessa funzione di AppProvider e loadStudenti), con il fallback sul
+  // campo piatto legacy limitato al solo anno legacy. Prima la formula era
+  // duplicata qui e applicava il campo piatto a QUALSIASI anno: uno studente con
+  // la classe scelta per un altro anno vedeva le card di quella classe.
+  var classeCorrente = classeCorrenteOf(user, annoScolastico, ANNO_LEGACY);
 
   // Inizializza seenRef da localStorage
   useEffect(function () {

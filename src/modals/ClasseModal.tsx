@@ -16,12 +16,20 @@ function ClasseModal(props: any) {
   // classeCorrente (fallback-inclusivo) resterebbe bloccato con una modale
   // disabilitata ogni volta che il popup si apre.
   var isDisabled = !!(props.user && props.user.classiPerAnno && props.user.classiPerAnno[props.annoScolastico]);
-  // Scelta obbligatoria per lo studente senza classe per l'anno corrente:
-  // backdrop e Esc non devono poterla chiudere (l'effect in AppProvider la
-  // riapre finché manca). Il prof e lo studente che ha già scelto restano
-  // liberi di chiuderla.
+  // Scelta obbligatoria (= non chiudibile) SOLO per l'anno ufficiale dell'app
+  // (props.annoCorrente): per gli altri anni la modale è facoltativa e si può
+  // chiudere. Prima era obbligatoria per QUALSIASI anno senza classe, e non
+  // c'era via d'uscita: chi cambiava anno dal menu in header (accessibile anche
+  // agli studenti) restava intrappolato a scegliere la classe per quell'anno,
+  // scelta che le rules rendono irreversibile per lo studente. Se il prop non
+  // arriva (render isolati nei test) si mantiene il comportamento storico:
+  // obbligatoria per qualsiasi anno senza classe.
+  var annoCorrente = props.annoCorrente || props.annoScolastico;
   var isObbligatoria =
-    !!props.user && props.user.role === 'studente' && !(props.user.classiPerAnno || {})[props.annoScolastico];
+    !!props.user &&
+    props.user.role === 'studente' &&
+    !(props.user.classiPerAnno || {})[props.annoScolastico] &&
+    props.annoScolastico === annoCorrente;
   var listaVuota = CLASSI_LIST.length === 0 && !isDisabled;
 
   return (
@@ -148,6 +156,64 @@ function ClasseModal(props: any) {
               {isDisabled ? '✓ Classe confermata' : '✓ Salva classe'}
             </button>
           }
+          {/* Anni non correnti: la scelta è facoltativa, quindi serve un'uscita
+              ESPLICITA (prima l'unica via d'uscita era scegliere, perché
+              backdrop/Esc non chiudevano e l'effect la riapriva). */}
+          {!isObbligatoria && !isDisabled && (
+            <div style={{ marginTop: 12, textAlign: 'center' }}>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,.45)', lineHeight: 1.5, marginBottom: 8 }}>
+                Stai scegliendo la classe per l'anno {props.annoScolastico}: per cambiarla dopo servirà il docente.
+              </div>
+              <button
+                onClick={function () {
+                  props.setShowClasseModal(false);
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#a5b4fc',
+                  cursor: 'pointer',
+                  fontSize: 12,
+                  fontWeight: 800,
+                  textDecoration: 'underline',
+                  padding: 0,
+                }}
+              >
+                Non ora
+              </button>
+            </div>
+          )}
+          {/* Salvataggio fallito (rete/permessi): via d'uscita esplicita.
+              Serve soprattutto per l'ANNO CORRENTE, dove la modale è
+              obbligatoria e non chiudibile: senza questo, dopo un errore lo
+              studente restava murato e poteva solo ricaricare la pagina. */}
+          {props.classeSaveErr && !isDisabled && props.logout && (
+            <div style={{ marginTop: 12, textAlign: 'center' }}>
+              <div style={{ fontSize: 11, color: 'rgba(255,255,255,.55)', lineHeight: 1.5, marginBottom: 8 }}>
+                Il salvataggio non è andato a buon fine. Puoi riprovare (controlla la connessione) oppure uscire e
+                rientrare più tardi.
+              </div>
+              <button
+                onClick={function () {
+                  try {
+                    props.logout();
+                  } catch (e) {}
+                }}
+                style={{
+                  background: 'rgba(255,255,255,.07)',
+                  border: '1px solid rgba(255,255,255,.15)',
+                  borderRadius: 8,
+                  color: 'rgba(255,255,255,.7)',
+                  cursor: 'pointer',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  padding: '6px 14px',
+                }}
+              >
+                Esci
+              </button>
+            </div>
+          )}
           {listaVuota && (
             <div style={{ marginTop: 12, fontSize: 12, color: 'rgba(255,255,255,.6)', lineHeight: 1.6, textAlign: 'center' }}>
               Nessuna classe attiva per quest'anno scolastico. Contatta il docente per farla attivare, poi{' '}

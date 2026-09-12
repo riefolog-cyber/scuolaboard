@@ -1,6 +1,7 @@
 // app-handlers.ts  ·  ScuolaBoard  ·  Action handlers factory (pattern UMD)
 // Il ctx è tipizzato strutturalmente: i campi opzionali sono quelli forniti
 // da AppProvider al momento della creazione.
+import { classeCorrenteOf, ANNO_LEGACY } from './app-provider-helpers.ts';
 
 var SB: any = window.SB || {};
 window.SB = SB;
@@ -249,19 +250,26 @@ export function createAppHandlers(ctx: any) {
                   var data = d.data() || {};
                   var map = data.classiPerAnno || {};
                   // Rinomina per-anno: lo studente appartiene alla classe rinominata
-                  // SOLO se la casella dell'anno corrente della mappa classiPerAnno
-                  // coincide con oldN (o, come fallback legacy, il campo piatto classe).
-                  var inQuestaClasse = map[anno] === oldN || (map[anno] == null && data.classe === oldN);
+                  // SOLO se la sua classe per l'anno corrente (stessa funzione usata
+                  // da UI, filtro card ed elenco studenti: mappa per-anno, con il
+                  // campo piatto legacy valido solo per l'anno legacy) è oldN.
+                  var inQuestaClasse = classeCorrenteOf(data, anno, ANNO_LEGACY) === oldN;
                   if (!inQuestaClasse) return;
                   // Cambia SOLO la casella dell'anno corrente: gli anni scolastici
                   // precedenti restano intatti come record storico.
                   var nextMap = Object.assign({}, map);
                   nextMap[anno] = newN;
+                  // Il campo piatto `classe` è la classe dell'ANNO LEGACY: lo
+                  // aggiorniamo solo se stiamo rinominando quell'anno, altrimenti
+                  // resta il record storico (prima veniva sovrascritto sempre e
+                  // l'elenco dell'anno vecchio mostrava classi di altri anni).
                   // rules firestore.txt consente al prof l'update di classe/classiPerAnno/
                   // rimosso sui doc users (match /users/{uid} → isProf && affectedKeys
                   // hasOnly). Se fallisce (es. regole non ancora pubblicate in console)
                   // logghiamo per diagnosi senza crash.
-                  d.ref.update({ classiPerAnno: nextMap, classe: newN }).catch(function (e: any) {
+                  var patch: any = { classiPerAnno: nextMap };
+                  if (anno === ANNO_LEGACY) patch.classe = newN;
+                  d.ref.update(patch).catch(function (e: any) {
                     if (window.SB_DEBUG)
                       console.warn(
                         '[ScuolaBoard] rinomina: aggiornamento classe studente non permesso dalle rules:',

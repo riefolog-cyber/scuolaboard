@@ -24,14 +24,29 @@ export function playAlarm() {
   } catch (e) {}
 }
 
-// Classe corrente dello studente per l'anno selezionato: fonte di verità è la
-// mappa classiPerAnno[anno] (per-anno), con fallback sul campo piatto legacy.
-export function classeCorrenteOf(user: any, annoScolastico: string): string | null {
-  return user && user.classiPerAnno
-    ? user.classiPerAnno[annoScolastico] || user.classe || null
-    : user
-      ? user.classe || null
-      : null;
+// Anno dell'EPOCA LEGACY: l'unico anno in cui il vecchio sistema scriveva il
+// campo piatto `classe` (prima era ANNI_DISPONIBILI[0], quindi bastava togliere
+// un anno dalla testa della lista perché il fallback legacy si spostasse su un
+// altro anno e reinterpretasse come "legacy" dati correnti).
+export var ANNO_LEGACY = '2025/2026';
+
+// Classe dello studente per l'anno selezionato — UNICA fonte di verità per UI,
+// filtro card ed elenco studenti. Prima la stessa formula era duplicata qui, in
+// cards.ts e in loadStudenti (useClassi): tre copie che potevano divergere, e
+// infatti due delle tre applicavano il fallback legacy a QUALSIASI anno.
+// Regole:
+// - classiPerAnno[anno] vince se la chiave ESISTE, anche quando vale null (null
+//   esplicito = "nessuna scelta": non deve far riemergere la classe legacy);
+// - il campo piatto `classe` vale SOLO per annoLegacy. Senza `annoLegacy`
+//   (chiamanti vecchi) nessun fallback: solo la mappa per-anno.
+export function classeCorrenteOf(user: any, annoScolastico: string, annoLegacy?: string | null): string | null {
+  if (!user) return null;
+  var map = user.classiPerAnno;
+  if (map && typeof map === 'object' && Object.prototype.hasOwnProperty.call(map, annoScolastico)) {
+    return map[annoScolastico] || null;
+  }
+  if (!annoLegacy || annoScolastico !== annoLegacy) return null;
+  return user.classe || null;
 }
 
 // ── Builder del form → card ────────────────────────────────────────────────

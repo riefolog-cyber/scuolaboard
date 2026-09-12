@@ -253,14 +253,29 @@ export function useAuth(_annoScolastico: string) {
     // (una tantum per tentativo). `gotUser` evita falsi positivi durante il
     // caricamento lento del profilo (onAuthStateChanged ha già consegnato
     // l'utente, è solo il doc users/ che arriva con i retry).
+    //
+    // Verifica a INTERVALLI (non un setTimeout secco): un login popup normale
+    // può superare i 6s dal caricamento pagina (scelta account + password, a
+    // volte 2FA). Il primo giro scattava MENTRE lo studente stava ancora
+    // autenticando: messaggio di fallimento a schermo e flag consumato, così se
+    // poi chiudeva il popup l'errore restava lì. Ora il giro viene saltato
+    // finché un tentativo è in corso (`loginInCorso`) e il flag NON si consuma.
     var gotUser = false;
-    var silentLoginTimer = setTimeout(function () {
-      if (gotUser) return;
+    var silentLoginTimer = setInterval(function () {
+      if (gotUser) {
+        clearInterval(silentLoginTimer);
+        return;
+      }
+      // Tentativo in corso (popup aperto / redirect in volo): non è un
+      // "fallimento silenzioso", quindi niente messaggio e niente consumo del
+      // flag (serve al prossimo giro, quando il tentativo sarà finito).
+      if (loginInCorso) return;
       var recent = isLoginPendingRecent();
       clearLoginPending();
       if (recent) {
         setAuthErr(MSG_LOGIN_SILENT);
         setAuthLoad(false);
+        clearInterval(silentLoginTimer);
       }
     }, 6000);
     auth
@@ -450,7 +465,7 @@ export function useAuth(_annoScolastico: string) {
       cancelled = true;
       if (typeof unsub === 'function') unsub();
       clearTimeout(authTimeout);
-      clearTimeout(silentLoginTimer);
+      clearInterval(silentLoginTimer);
     };
   }, []);
   async function loginGoogle() {
@@ -464,6 +479,19 @@ export function useAuth(_annoScolastico: string) {
     // Anti-doppio-click: ignora i click mentre un tentativo è già in corso.
     if (loginInCorso) return;
     loginInCorso = true;
+    // Watchdog anti-blocco: se signInWithPopup/signInWithRedirect non si
+    // risolvono MAI (WebView o estensione che congela il flusso senza errore) il
+    // flag resterebbe true per sempre e "Accedi con Google" diventerebbe un
+    // click morto fino al reload. Dopo 60s il flag si sblocca: un eventuale
+    // arrivo tardivo dell'utente è comunque gestito da onAuthStateChanged.
+    var loginWatchdog = setTimeout(function () {
+      loginInCorso = false;
+    }, 60000);
+    // Unico punto di uscita dal tentativo: sblocca il flag e spegne il watchdog.
+    function fineLogin(): void {
+      loginInCorso = false;
+      clearTimeout(loginWatchdog);
+    }
     setAuthErr(null); // nuovo tentativo → l'errore precedente non vale più
     var provider: any;
     try {
@@ -478,7 +506,7 @@ export function useAuth(_annoScolastico: string) {
     } catch (e: any) {
       console.error('[auth] creazione provider Google fallita:', e && e.code, e && e.message);
       setAuthErr(msgAuth(e));
-      loginInCorso = false;
+      fineLogin();
       return;
     }
     // Annota il tentativo: se al rientro (redirect) o al prossimo caricamento
@@ -502,7 +530,10 @@ export function useAuth(_annoScolastico: string) {
         // Scelta esplicita dell'utente: nessun errore, resta sulla login.
         if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request' || code === 'auth/user-cancelled') {
           clearLoginPending(); // chiusura esplicita dell'utente: non è un fallimento
-          loginInCorso = false;
+          // …e via anche un eventuale falso allarme del watchdog: l'utente ha
+          // scelto di annullare, non deve restare un errore a schermo.
+          setAuthErr(null);
+          fineLogin();
           return;
         }
         console.error('[auth] signInWithPopup fallito, fallback a redirect:', code, e && e.message);
@@ -519,7 +550,7 @@ export function useAuth(_annoScolastico: string) {
         try {
           if (!(await emailAutorizzataConReload(fu))) {
             negaAccesso(auth);
-            loginInCorso = false;
+            fineLogin();
             return;
           }
           var ud = await db.collection('users').doc(fu.uid).get();
@@ -535,7 +566,7 @@ export function useAuth(_annoScolastico: string) {
           console.error('[auth] loginGoogle: profilo non creato/letto:', e3 && e3.code, e3 && e3.message);
           setAuthErr(MSG_DB_DOWN);
         }
-        loginInCorso = false;
+        fineLogin();
         return;
       }
       // fu null senza eccezione (caso teorico): prova il redirect.
@@ -550,7 +581,7 @@ export function useAuth(_annoScolastico: string) {
       var m = msgAuth(e);
       setAuthErr(m || MSG_DB_DOWN);
     }
-    loginInCorso = false;
+    fineLogin();
   }
   function logout() {
     // Il sign-out deve essere infallibile: anche se Firebase non è disponibile

@@ -59,7 +59,9 @@ function Header__({ $ }: any) {
           {$.isProf ? '👨‍🏫 Prof' : '🎒 ' + $.user.nome}
         </span>
       }
-      {!$.isProf && ($.classeCorrente || $.user.classe) && (
+      {/* Solo la classe dell'ANNO SELEZIONATO ($.classeCorrente): il fallback
+          sul campo piatto mostrava la classe di un altro anno. */}
+      {!$.isProf && $.classeCorrente && (
         <span
           className="header-chip"
           style={{
@@ -67,7 +69,7 @@ function Header__({ $ }: any) {
             color: '#fb923c',
           }}
         >
-          {$.classeCorrente || $.user.classe}
+          {$.classeCorrente}
         </span>
       )}
       {!$.isProf && !($.user.classiPerAnno || {})[$.annoScolastico] && (

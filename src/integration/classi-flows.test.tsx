@@ -7,8 +7,9 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { screen, fireEvent, within, waitFor } from '@testing-library/react';
 import { bootApp, renderApp } from './harness';
-import { PROF, PROF_DOC, STUD, setupTestEnv, teardownTestEnv } from './fixtures';
+import { PROF, PROF_DOC, STUD, modalRoot, setupTestEnv, teardownTestEnv } from './fixtures';
 import { createAppHandlers } from '../app-handlers';
+import { ANNO_LEGACY } from '../app-provider-helpers.ts';
 
 beforeEach(setupTestEnv);
 afterEach(teardownTestEnv);
@@ -351,5 +352,267 @@ describe('Scelta classe studente (ClasseModal)', () => {
     expect(await screen.findByText(/Errore salvataggio classe/, {}, { timeout: 10000 })).toBeTruthy();
     expect(screen.getByRole('button', { name: /Salva classe/ })).toBeTruthy();
     expect(db._get('users', 'stud1').classiPerAnno['2026/2027']).toBeUndefined();
+  });
+
+  it("anno corrente: la scelta resta obbligatoria (Esc non chiude la modale)", async () => {
+    await renderApp({ seed: seedStudenteSenzaClasse(), user: STUD });
+    await screen.findByRole('button', { name: /Salva classe/ }, {}, { timeout: 4000 });
+
+    // Esc → closeAll → l'effect la riapre: per l'ANNO CORRENTE la scelta classe
+    // non è aggirabile (stesso loop voluto del GDPR per la privacy).
+    fireEvent.keyDown(document, { key: 'Escape' });
+    await waitFor(() => expect(screen.getByRole('button', { name: /Salva classe/ })).toBeTruthy(), {
+      timeout: 4000,
+    });
+    // …e per l'anno corrente non esiste l'uscita "Non ora" (solo anni non correnti)
+    expect(screen.queryByRole('button', { name: 'Non ora' })).toBeNull();
+  });
+
+  it('cambio anno: nessuna modale automatica e la scelta è annullabile (niente trappola)', async () => {
+    const seed = {
+      users: {
+        stud1: {
+          role: 'studente',
+          nome: 'Luca',
+          cognome: 'Bianchi',
+          email: STUD.email,
+          displayName: STUD.displayName,
+          classiPerAnno: { '2026/2027': '3AI' },
+        },
+      },
+      cards: {},
+    };
+    await renderApp({ seed, user: STUD });
+
+    // Anno corrente già scelto: nessuna modale (la bacheca è montata: il chip
+    // anno in header è visibile)
+    await screen.findByRole('button', { name: /2026\/2027/ }, { timeout: 4000 });
+    expect(screen.queryByRole('button', { name: /Salva classe/ })).toBeNull();
+
+    // Cambio anno dal menu in header → 2027/2028 (per lo studente: nessuna classe).
+    // Prima si apriva una modale OBBLIGATORIA che non si poteva chiudere in alcun
+    // modo: l'unica uscita era scegliere la classe per quell'anno (e le rules
+    // impediscono poi allo studente di correggerla).
+    fireEvent.click(screen.getByRole('button', { name: /2026\/2027/ }));
+    fireEvent.click(screen.getByRole('button', { name: '2027/2028' }));
+
+    // Nessuna apertura automatica: resta il chip "⚠️ Scegli classe" nell'header
+    const chip = await screen.findByRole('button', { name: 'Scegli la tua classe' }, { timeout: 4000 });
+    expect(screen.queryByRole('button', { name: /Salva classe/ })).toBeNull();
+    // La bacheca è utilizzabile (niente overlay a schermo intero) e l'anno
+    // selezionato è davvero quello nuovo
+    expect(screen.getByRole('button', { name: /2027\/2028/ })).toBeTruthy();
+
+    // Aprendola dal chip, ora si può chiudere senza scegliere…
+    fireEvent.click(chip);
+    fireEvent.click(await screen.findByRole('button', { name: 'Non ora' }, { timeout: 4000 }));
+    await waitFor(() => expect(screen.queryByRole('button', { name: /Salva classe/ })).toBeNull(), {
+      timeout: 4000,
+    });
+    // …e non si riapre da sola (senza il fix l'effect la riapriva → loop senza uscita)
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.queryByRole('button', { name: /Salva classe/ })).toBeNull();
+  });
+
+  it('saveClasse: lo stato locale conserva gli anni scritti sul server da un altro dispositivo', async () => {
+    // uid 'stud2' (non 'stud1'): il test "rete giù" qui sopra monkey-patcha il
+    // doc stud1 del fake db e la patch resta attiva (il db è condiviso nel file).
+    const { db } = await bootApp({
+      seed: {
+        users: {
+          stud2: {
+            role: 'studente',
+            nome: 'Anna',
+            cognome: 'Verdi',
+            displayName: 'Anna Verdi',
+            // Anno assegnato dal prof da un altro dispositivo: la copia locale
+            // del profilo (sotto) NON lo ha ancora.
+            classiPerAnno: { '2027/2028': '5AI' },
+          },
+        },
+        cards: {},
+      },
+      user: STUD,
+    });
+
+    const { default: useClassi } = await import('../hooks/useClassi.ts');
+    let localUser = { uid: 'stud2', role: 'studente', classiPerAnno: {} };
+    const hook = useClassi({
+      classeInput: '3AI',
+      user: localUser,
+      annoScolastico: '2026/2027',
+      annoLegacy: '2025/2026',
+      setUser: (fn) => {
+        localUser = fn(localUser);
+      },
+      setShowClasseModal: () => {},
+      setStudenti: () => {},
+      showToast: () => {},
+    });
+    hook.saveClasse();
+
+    await waitFor(() => expect(localUser.classiPerAnno['2026/2027']).toBe('3AI'), { timeout: 4000 });
+    // La scelta nuova c'è, ma l'anno che vive SOLO sul server non deve sparire
+    // dallo stato locale (prima spariva: l'effetto riapriva la modale e il
+    // salvataggio successivo veniva rifiutato dalle rules).
+    expect(localUser.classiPerAnno['2027/2028']).toBe('5AI');
+    expect(db._get('users', 'stud2').classiPerAnno).toEqual({ '2026/2027': '3AI', '2027/2028': '5AI' });
+  });
+});
+
+describe('Salvataggio classe fallito (anno corrente, modale obbligatoria)', () => {
+  // Studente SENZA classe per l'anno corrente → la modale è obbligatoria e non
+  // chiudibile (backdrop/Esc neutralizzati): l'unica via d'uscita dopo un errore
+  // di scrittura deve essere il pulsante "Esci" della modale.
+  const STUD6 = { uid: 'stud6', email: STUD.email, displayName: 'Elia Blu' };
+
+  function seedStudente() {
+    return {
+      users: {
+        stud6: {
+          role: 'studente',
+          nome: 'Elia',
+          cognome: 'Blu',
+          email: STUD.email,
+          displayName: 'Elia Blu',
+          classiPerAnno: {},
+        },
+      },
+      cards: {},
+    };
+  }
+
+  it('dopo l errore compare "Esci" nella modale e riporta alla login', async () => {
+    const { db } = await renderApp({ seed: seedStudente(), user: STUD6 });
+    const saveBtn = await screen.findByRole('button', { name: /Salva classe/ }, {}, { timeout: 4000 });
+
+    // La scrittura su users/stud6 fallisce (rete giù): get + set(merge)
+    const realColl = db.collection.bind(db);
+    db.collection = (name: string) => {
+      const q: any = realColl(name);
+      if (name === 'users') {
+        const realDoc: any = q.doc.bind(q);
+        q.doc = (id: string) => {
+          const d: any = realDoc(id);
+          if (id === 'stud6') {
+            d.update = async () => Promise.reject({ code: 'unavailable', message: 'rete giù' });
+            d.set = async () => Promise.reject({ code: 'unavailable', message: 'rete giù' });
+          }
+          return d;
+        };
+      }
+      return q;
+    };
+
+    // Prima dell'errore nella modale NON c'è nessuna uscita: la modale è
+    // obbligatoria (il pulsante Esci dell'header è un'altra cosa: qui si cerca
+    // dentro la modale)
+    const modale = modalRoot('Scegli la tua classe');
+    expect(within(modale).queryByRole('button', { name: 'Esci' })).toBeNull();
+
+    fireEvent.change(screen.getByRole('combobox', { name: /Scegli la tua classe/ }), {
+      target: { value: '3AI' },
+    });
+    fireEvent.click(saveBtn);
+
+    // Errore visibile + uscita disponibile nella modale
+    expect(await screen.findByText(/Errore salvataggio classe/, {}, { timeout: 10000 })).toBeTruthy();
+    const esci = await within(modalRoot('Scegli la tua classe')).findByRole(
+      'button',
+      { name: 'Esci' },
+      { timeout: 4000 }
+    );
+
+    // "Esci" sblocca davvero: logout → schermata di login
+    fireEvent.click(esci);
+    expect(await screen.findByRole('button', { name: /Accedi con Google/ }, { timeout: 4000 })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: /Salva classe/ })).toBeNull();
+  });
+});
+
+// ── Studente rimosso + campo piatto legacy ────────────────────────────────
+// Il campo piatto `classe` è la classe dell'ANNO LEGACY: finché saveClasse lo
+// riscriveva per l'anno corrente, uno studente rimosso dal docente ricompariva
+// nel roster storico con la classe scelta per un altro anno, e viceversa il
+// roster dell'anno vecchio mostrava classi di altri anni.
+describe('Studente rimosso e roster anno legacy', () => {
+  function seedRimosso() {
+    return {
+      users: {
+        prof1: PROF_DOC,
+        // Stato prodotto da rimuoviStudente sull'anno corrente: chiave anno
+        // eliminata da classiPerAnno e campo piatto azzerato.
+        stud4: {
+          role: 'studente',
+          nome: 'Sara',
+          cognome: 'Russo',
+          displayName: 'Sara Russo',
+          classe: null,
+          classiPerAnno: {},
+        },
+        // Studente del vecchio sistema: solo campo piatto → appartiene al
+        // roster dell'anno legacy (controllo positivo del test)
+        stud5: {
+          role: 'studente',
+          nome: 'Marco',
+          cognome: 'Neri',
+          displayName: 'Marco Neri',
+          classe: '4BI',
+        },
+      },
+      cards: {},
+    };
+  }
+
+  it('lo studente rimosso non ricompare nel roster legacy dopo aver riscelto la classe', async () => {
+    const { db } = await bootApp({ seed: seedRimosso(), user: PROF });
+    const { default: useClassi } = await import('../hooks/useClassi.ts');
+
+    let studenti: any[] = [];
+    const setStudenti = (v: any) => {
+      studenti = typeof v === 'function' ? v(studenti) : v;
+    };
+    const profHook = useClassi({
+      classeInput: '',
+      user: { uid: 'prof1', role: 'prof' },
+      annoScolastico: ANNO_LEGACY, // roster dell'anno del vecchio sistema
+      annoLegacy: ANNO_LEGACY,
+      setUser: () => {},
+      setShowClasseModal: () => {},
+      setStudenti: setStudenti,
+      showToast: () => {},
+    });
+
+    profHook.loadStudenti();
+    await waitFor(() => expect(studenti).toHaveLength(1), { timeout: 4000 });
+    expect(studenti[0].uid).toBe('stud5');
+
+    // Lo studente rimosso risceglie la classe per l'ANNO CORRENTE
+    let localUser: any = { uid: 'stud4', role: 'studente', classiPerAnno: {} };
+    const studHook = useClassi({
+      classeInput: '3AI',
+      user: localUser,
+      annoScolastico: '2026/2027',
+      annoLegacy: ANNO_LEGACY,
+      setUser: (fn: any) => {
+        localUser = fn(localUser);
+      },
+      setShowClasseModal: () => {},
+      setStudenti: () => {},
+      showToast: () => {},
+    });
+    studHook.saveClasse();
+
+    await waitFor(() => expect(db._get('users', 'stud4').classiPerAnno['2026/2027']).toBe('3AI'), { timeout: 4000 });
+    // La scelta per l'anno corrente NON deve toccare il campo piatto legacy
+    expect(db._get('users', 'stud4').classe).toBeNull();
+    // …e non deve riesumare il flag `rimosso` (mai letto da nessuno)
+    expect(db._get('users', 'stud4').rimosso).toBeUndefined();
+
+    // Ricarica del roster legacy: ancora un solo studente (quello del 2025/2026)
+    studenti = [];
+    profHook.loadStudenti();
+    await waitFor(() => expect(studenti).toHaveLength(1), { timeout: 4000 });
+    expect(studenti[0].uid).toBe('stud5');
   });
 });

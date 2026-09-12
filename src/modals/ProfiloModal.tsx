@@ -88,7 +88,9 @@ function ProfiloModal(props: any) {
                 />
               )}
               {<div style={{ fontWeight: 800, color: '#f1f5f9', fontSize: 17 }}>{user.nome + ' ' + user.cognome}</div>}
-              {(props.classeCorrente || user.classe) && (
+              {/* Solo la classe dell'ANNO SELEZIONATO (props.classeCorrente):
+                  il campo piatto legacy mostrava la classe di un altro anno. */}
+              {props.classeCorrente && (
                 <span
                   style={{
                     background: 'rgba(251,146,60,.2)',
@@ -99,7 +101,7 @@ function ProfiloModal(props: any) {
                     fontWeight: 700,
                   }}
                 >
-                  {props.classeCorrente || user.classe}
+                  {props.classeCorrente}
                 </span>
               )}
             </div>

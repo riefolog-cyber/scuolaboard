@@ -27,6 +27,7 @@ type FakeAuthOpts = {
   redirectError?: any; // errore di signInWithRedirect
   popupResult?: any; // esito di signInWithPopup (se assente: { user: null } → fallback a redirect)
   popupError?: any; // errore di signInWithPopup
+  popupDelayMs?: number; // il popup si conclude (con popupError/popupResult) dopo N ms: simula un login lento (scelta account + password + 2FA)
   redirectResultError?: any; // errore di getRedirectResult (rientro dal redirect fallito)
   lateNull?: boolean; // emette onAuthStateChanged(null) dopo 50ms (simula fire tardivo)
 };
@@ -60,8 +61,20 @@ function makeFakeAuth(opts: FakeAuthOpts) {
     // l'utente autenticato (come il Firebase reale).
     signInWithPopup: () => {
       calls.popup++;
-      if (opts.popupError) return Promise.reject(opts.popupError);
-      return Promise.resolve(opts.popupResult || { user: null });
+      const esito = () => {
+        if (opts.popupError) return Promise.reject(opts.popupError);
+        return Promise.resolve(opts.popupResult || { user: null });
+      };
+      // Login lento: il tentativo resta "in corso" per popupDelayMs (è il caso
+      // reale di uno studente che sceglie l'account e digita la password).
+      if (opts.popupDelayMs) {
+        return new Promise((resolve, reject) => {
+          setTimeout(() => {
+            esito().then(resolve, reject);
+          }, opts.popupDelayMs);
+        });
+      }
+      return esito();
     },
     signInWithRedirect: () => {
       calls.signInWithRedirect++;
@@ -402,6 +415,44 @@ describe('useAuth — filtro d\'accesso e ciclo di vita', () => {
     // Il flag viene pulito: il messaggio non si ripresenta a ogni reload
     expect(localStorage.getItem('sb_login_pending')).toBeNull();
   });
+
+  it('login popup lento (>6s): nessun falso "non è tornato" mentre il tentativo è in corso', async () => {
+    const errProbe = () => {
+      const { authErr, loginGoogle } = useAuth('2026/2027');
+      return React.createElement(
+        'div',
+        null,
+        React.createElement('span', { 'data-testid': 'autherr' }, authErr || ''),
+        React.createElement('button', { onClick: () => loginGoogle() }, 'login')
+      );
+    };
+    // Il popup si chiude DOPO 8s (con un errore reale): mentre è aperto il
+    // watchdog del fallimento silenzioso (6s) deve tacere. Prima mostrava
+    // "Il login con Google non è tornato correttamente all'app" mentre lo
+    // studente stava ancora autenticando, e consumava il flag: chiudendo il
+    // popup l'errore restava a schermo.
+    const fake = makeFakeAuth({
+      popupDelayMs: 8000,
+      popupError: { code: 'auth/internal-error', message: 'popup bloccato' },
+    });
+    const db = makeStatefulDb();
+    (window as any).firebase = { auth: fake.authFn, firestore: () => db };
+    (window as any).db = db;
+    render(React.createElement(errProbe));
+
+    fireEvent.click(screen.getByText('login'));
+    await new Promise((r) => setTimeout(r, 6500));
+    expect(screen.getByTestId('autherr').textContent).toBe('');
+    // …e il flag del tentativo NON va consumato: serve se il login non torna
+    expect(localStorage.getItem('sb_login_pending')).not.toBeNull();
+
+    // Tentativo concluso (8s): il flag di anti-doppio-click è stato rilasciato,
+    // quindi un nuovo click viene accettato (senza il watchdog in fineLogin il
+    // bottone sarebbe rimasto morto fino al reload).
+    await new Promise((r) => setTimeout(r, 2600));
+    fireEvent.click(screen.getByText('login'));
+    expect(fake.calls.popup).toBe(2);
+  }, 20000);
 
   it('login riuscito → il flag del tentativo viene pulito (niente falso errore)', async () => {
     localStorage.setItem('sb_login_pending', String(Date.now()));

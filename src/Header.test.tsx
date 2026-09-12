@@ -57,8 +57,24 @@ describe('Header', () => {
     renderHeader({
       isProf: false,
       user: { nome: 'Mario', photoURL: null, classiPerAnno: { '2026/2027': '3A' }, classe: '3A' },
+      // classeCorrente è quella calcolata da AppProvider per l'ANNO SELEZIONATO
+      // (classeCorrenteOf): è l'unica fonte del chip classe.
+      classeCorrente: '3A',
     });
     expect(screen.getByText('3A')).toBeInTheDocument();
+  });
+
+  it('il campo piatto legacy non produce il chip classe (è di un altro anno)', () => {
+    // Nessuna classe per l'anno selezionato (classeCorrente null) ma campo
+    // piatto legacy valorizzato: il chip NON deve mostrare la classe di un anno
+    // diverso da quello selezionato (prima lo faceva: fallback su user.classe).
+    renderHeader({
+      isProf: false,
+      user: { nome: 'Mario', photoURL: null, classiPerAnno: {}, classe: '4BI' },
+      classeCorrente: null,
+    });
+    expect(screen.queryByText('4BI')).toBeNull();
+    expect(screen.getByText(/Scegli classe/)).toBeInTheDocument();
   });
 
   it('shows warning if student has no class', () => {

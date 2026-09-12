@@ -11,6 +11,8 @@ import {
   aggiungiDomandaPubblicata,
   rimuoviDomandaPubblicata,
   isDomandaPubblicata,
+  classeCorrenteOf,
+  ANNO_LEGACY,
 } from './app-provider-helpers.ts';
 
 function fakeImage(kb: number): string {
@@ -132,5 +134,44 @@ describe('domande AI pubblicate (docente → studenti sola lettura)', () => {
     const piena = { id: 9, q: 'Q', risposta: 'R', data: 'd', extra: 'x', mappaNomi: {} };
     const lista = aggiungiDomandaPubblicata([], piena);
     expect(lista[0]).toEqual({ id: 9, q: 'Q', risposta: 'R', data: 'd' });
+  });
+});
+
+// ── Classe dello studente (unica fonte di verità) ──────────────────────────
+// Stessa funzione usata da: chip in header, filtro card (cards.ts), elenco
+// studenti del prof (loadStudenti) e rinomina classe. I tre bug corretti:
+// 1) il campo piatto legacy non deve valere per gli anni NUOVI (uno studente
+//    con la classe di un altro anno vedeva le card di quella classe);
+// 2) un null esplicito (prof che sceglie "Nessuna") non deve far riemergere la
+//    classe legacy;
+// 3) l'anno legacy è una costante, non "il primo anno della lista".
+describe('classeCorrenteOf', () => {
+  it('vince la classe dell anno selezionato nella mappa per-anno', () => {
+    const stud = { classiPerAnno: { '2026/2027': '3AI' }, classe: '4BI' };
+    expect(classeCorrenteOf(stud, '2026/2027', ANNO_LEGACY)).toBe('3AI');
+  });
+
+  it('il campo piatto legacy NON vale per gli anni nuovi', () => {
+    const legacy = { classe: '4BI' };
+    // Anno nuovo senza voce nella mappa: nessuna classe (lo studente dovrà
+    // scegliere), NON la classe dello scorso anno.
+    expect(classeCorrenteOf(legacy, '2026/2027', ANNO_LEGACY)).toBeNull();
+    // Anno legacy: il campo piatto è la sua fonte di verità
+    expect(classeCorrenteOf(legacy, ANNO_LEGACY, ANNO_LEGACY)).toBe('4BI');
+  });
+
+  it('un null esplicito per l anno legacy non fa riemergere il campo piatto', () => {
+    const stud = { classiPerAnno: { [ANNO_LEGACY]: null }, classe: '4BI' };
+    expect(classeCorrenteOf(stud, ANNO_LEGACY, ANNO_LEGACY)).toBeNull();
+  });
+
+  it('senza annoLegacy nessun fallback (solo mappa per-anno)', () => {
+    const legacy = { classe: '4BI' };
+    expect(classeCorrenteOf(legacy, ANNO_LEGACY)).toBeNull();
+  });
+
+  it('utente assente → null (nessun crash)', () => {
+    expect(classeCorrenteOf(null, '2026/2027', ANNO_LEGACY)).toBeNull();
+    expect(classeCorrenteOf(undefined, '2026/2027', ANNO_LEGACY)).toBeNull();
   });
 });
