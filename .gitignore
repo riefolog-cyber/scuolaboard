@@ -78,10 +78,13 @@ coverage/
 backup/
 
 # Immagini di test generate per la verifica manuale dell'upload (non committare)
-# Immagini di test generate per la verifica manuale dell'upload (non committare)
 test-images/
+
+# Screenshot generati dallo script del monitor login
+# (.github/scripts/check-login.mjs: artefatti locali, in CI vanno negli artifact)
+login-monitor.png
+login-non-carica.png
 
 # Cache tooling locale (project-id + script harvesting: ambiente di sviluppo,
 # non fa parte del progetto)
 .freebuff/
-test-images/
