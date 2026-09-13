@@ -103,7 +103,10 @@ function clearDropIndicators() {
   });
 }
 
-export function useDragDrop(cards: any[], fbSave: (_c: any) => any) {
+// `onReorder` (opzionale): callback chiamata SOLO quando il drop produce davvero
+// un riordino salvato. Serve ad azzerare i "bump" delle card aperte di recente:
+// dopo un trascinamento vince l'ordine manuale (vedi clearAperti in cards.ts).
+export function useDragDrop(cards: any[], fbSave: (_c: any) => any, onReorder?: () => void) {
   var dragId = useRef<any>(null);
 
   function onDragStart(e: any, id: any) {
@@ -142,6 +145,12 @@ export function useDragDrop(cards: any[], fbSave: (_c: any) => any) {
     if (!fromId || !target) return;
     var reordered = reorderCards(cards, fromId, target.toId, target.after);
     if (!reordered.length) return;
+    // Il riordino manuale riprende il comando: niente bump delle aperture.
+    if (onReorder) {
+      try {
+        onReorder();
+      } catch (e) {}
+    }
     var db = (window as any).db;
     var saveAll = function () {
       reordered.forEach(function (c: any) {

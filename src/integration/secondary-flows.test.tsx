@@ -8,6 +8,12 @@ import { PROF, STUD, PROF_DOC, STUD_DOC, mkCard, modalRoot, setupTestEnv, teardo
 beforeEach(setupTestEnv);
 afterEach(teardownTestEnv);
 
+// Le azioni di gestione (duplica, copia anno, elimina…) sono dietro il toggle
+// "⋯ Altre azioni" della card: la fila di pillole a riposo resta corta.
+function apriAltreAzioni() {
+  fireEvent.click(screen.getByRole('button', { name: 'Altre azioni' }));
+}
+
 // ── DUPLICA CARD ──────────────────────────────────────────────────────────
 describe('Duplica card (prof)', () => {
   it('apre la DuplicaModal, seleziona una classe e crea la copia', async () => {
@@ -15,7 +21,8 @@ describe('Duplica card (prof)', () => {
     const { db } = await renderApp({ seed, user: PROF });
     await screen.findByText('Lezione su X', {}, { timeout: 4000 });
 
-    // Apre la modal (bottone 📋 nella card)
+    // Apre la modal (bottone 📋 nella card, dentro il menu azioni)
+    apriAltreAzioni();
     const duplicaBtn = screen.getAllByRole('button').find((b) => b.textContent === '📋');
     fireEvent.click(duplicaBtn);
 
@@ -44,6 +51,7 @@ describe('Copia in altro anno (prof)', () => {
     const { db } = await renderApp({ seed, user: PROF });
     await screen.findByText('Lezione su Y', {}, { timeout: 4000 });
 
+    apriAltreAzioni();
     fireEvent.click(screen.getByRole('button', { name: 'Copia in altro anno' }));
     await screen.findByText('Copia in altro anno', {}, { timeout: 4000 });
     const modal = modalRoot('Copia in altro anno');
@@ -72,6 +80,7 @@ describe('Elimina card con undo (prof)', () => {
     const { db } = await renderApp({ seed, user: PROF });
     await screen.findByText('Da eliminare', {}, { timeout: 4000 });
 
+    apriAltreAzioni();
     fireEvent.click(screen.getByRole('button', { name: 'Elimina' }));
     // Il toast contiene icona + messaggio + bottone undo: match parziale
     expect(await screen.findByText(/Card eliminata/, {}, { timeout: 4000 })).toBeTruthy();
@@ -91,6 +100,7 @@ describe('Elimina card con undo (prof)', () => {
     const { db, unmount } = await renderApp({ seed, user: PROF });
     await screen.findByText('Da non cancellare', {}, { timeout: 4000 });
 
+    apriAltreAzioni();
     fireEvent.click(screen.getByRole('button', { name: 'Elimina' }));
     await screen.findByText(/Card eliminata/, {}, { timeout: 4000 });
 

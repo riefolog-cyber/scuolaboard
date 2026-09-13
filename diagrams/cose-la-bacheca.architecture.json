@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "ScuolaBoard — cos'è la bacheca",
+    "output": "cose-la-bacheca.html",
+    "quality_profile": "showcase",
+    "locale": "en",
+    "repository": {
+      "url": "https://github.com/riefolog-cyber/scuolaboard",
+      "revision": "ea5825995cd68792d75b07bd9b922756c8787c7a"
+    },
+    "views": [
+      {
+        "id": "percorso-studente",
+        "label": "Lo studente",
+        "focus": ["studenti", "app", "card", "commenti", "notifiche"],
+        "note": "Apre l'app, vede solo le card della sua classe, commenta e riceve gli avvisi nella campanella."
+      },
+      {
+        "id": "percorso-docente",
+        "label": "Il docente",
+        "focus": ["docenti", "app", "auth", "card", "worker", "ia"],
+        "note": "Accede con l'email della scuola, pubblica una card e, se vuole, chiede una bozza all'IA prima di approvarla."
+      },
+      {
+        "id": "dati-e-avvisi",
+        "label": "Dove vivono i dati",
+        "focus": ["app", "card", "dati", "notifiche"],
+        "note": "Le card e i commenti stanno su Firestore; la campanella avvisa dentro l'app."
+      },
+      {
+        "id": "privacy",
+        "label": "Privacy",
+        "focus": ["auth", "worker", "ia"],
+        "note": "Il cancello d'ingresso e l'IA: accesso riservato, nomi anonimi, revisione umana."
+      }
+    ]
+  },
+  "components": [
+    { "id": "docenti", "type": "external", "label": "Docente", "sublabel": "Google Workspace", "pos": [20, 250], "size": [130, 58] },
+    { "id": "studenti", "type": "external", "label": "Studente", "sublabel": "browser o telefono", "pos": [20, 430], "size": [130, 58] },
+    { "id": "auth", "type": "security", "label": "Accesso Google", "sublabel": "solo email della scuola", "pos": [300, 60], "size": [150, 58] },
+    { "id": "app", "type": "frontend", "label": "Bacheca (app web)", "sublabel": "React · Vite · installabile", "pos": [300, 250], "size": [150, 64], "sources": [{ "path": "src/AppLayout.tsx" }] },
+    { "id": "card", "type": "backend", "label": "Le card", "sublabel": "domanda · sondaggio · quiz · nota", "pos": [600, 250], "size": [160, 64], "sources": [{ "path": "src/CardItem.tsx" }] },
+    { "id": "commenti", "type": "backend", "label": "Commenti e reazioni", "sublabel": "la discussione della classe", "pos": [600, 430], "size": [160, 58] },
+    { "id": "worker", "type": "security", "label": "Worker Cloudflare", "sublabel": "cancello + chiavi IA", "pos": [880, 250], "size": [150, 64], "sources": [{ "path": "worker cloudflare.txt" }] },
+    { "id": "ia", "type": "cloud", "label": "IA didattica", "sublabel": "quiz · riassunti · spiegazioni", "pos": [880, 60], "size": [150, 58] },
+    { "id": "dati", "type": "database", "label": "Firestore", "sublabel": "card · classi · commenti", "pos": [880, 430], "size": [150, 64] },
+    { "id": "notifiche", "type": "messagebus", "label": "Campanella", "sublabel": "avvisi dentro l'app", "pos": [880, 610], "size": [150, 58], "sources": [{ "path": "src/notifiche-service.ts" }] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "Dispositivi della classe", "wraps": ["docenti", "studenti"], "pad": 20 },
+    { "kind": "region", "label": "App nel browser", "wraps": ["auth", "app"], "pad": 18 },
+    { "kind": "region", "label": "Servizi online gratuiti", "wraps": ["worker", "ia", "dati", "notifiche"], "pad": 20 }
+  ],
+  "connections": [
+    { "id": "docenti-app", "from": "docenti", "to": "app", "label": "pubblica una card", "variant": "emphasis", "fromSide": "right", "toSide": "left" },
+    { "id": "studenti-app", "from": "studenti", "to": "app", "label": "legge · commenta", "fromSide": "right", "toSide": "left" },
+    { "id": "auth-app", "from": "auth", "to": "app", "label": "verifica l'email", "variant": "security", "fromSide": "bottom", "toSide": "top", "labelAt": [375, 132] },
+    { "id": "app-card", "from": "app", "to": "card", "label": "crea · modifica · fissa" },
+    { "id": "app-commenti", "from": "app", "to": "commenti", "label": "commenta", "fromSide": "bottom", "toSide": "left" },
+    { "id": "card-dati", "from": "card", "to": "dati", "label": "salva", "fromSide": "bottom", "toSide": "top" },
+    { "id": "commenti-dati", "from": "commenti", "to": "dati", "label": "salva", "fromSide": "right", "toSide": "left" },
+    { "id": "card-worker", "from": "card", "to": "worker", "label": "quiz e riassunti", "variant": "dashed", "fromSide": "right", "toSide": "left" },
+    { "id": "worker-ia", "from": "worker", "to": "ia", "label": "modelli gratuiti", "fromSide": "top", "toSide": "bottom" },
+    { "id": "dati-notifiche", "from": "dati", "to": "notifiche", "label": "la campanella si accende", "variant": "dashed", "fromSide": "bottom", "toSide": "top", "labelAt": [955, 552] }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "Che cos'è", "items": [
+      "Una bacheca digitale di classe: la lavagna di avvisi, lezioni e attività",
+      "Ogni contenuto è una card: domanda, sondaggio, quiz o nota",
+      "Docente e studenti guardano la stessa bacheca, ognuno con i suoi permessi"
+    ] },
+    { "dot": "emerald", "title": "Cosa può fare il docente", "items": [
+      "Pubblica, modifica, fissa in cima e assegna una card a una o più classi",
+      "Genera quiz, riassunti e spiegazioni con l'IA, poi li rilegge prima di pubblicarli",
+      "Vede le proposte degli studenti, i commenti e le statistiche"
+    ] },
+    { "dot": "violet", "title": "Cosa vede lo studente", "items": [
+      "Solo le card della sua classe (più quelle valide per tutti)",
+      "Reagisce, commenta e risponde ai quiz",
+      "Riceve un avviso nella campanella quando nasce una card nuova"
+    ] },
+    { "dot": "rose", "title": "Privacy e sicurezza", "items": [
+      "Si entra solo con l'email della scuola",
+      "Nomi anonimi nei testi inviati all'IA, che è riservata al docente",
+      "Nessun tracciamento: le preferenze di lettura restano nel browser"
+    ] }
+  ]
+}

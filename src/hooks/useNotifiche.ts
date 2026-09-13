@@ -7,6 +7,23 @@ function getDbN() {
   return typeof window !== 'undefined' ? (window as any).db : null;
 }
 
+// Dedupe per id. Le notifiche di una card hanno un id DETERMINISTICO
+// (`nuova_card_<cardId>`): se il fan-out viene ripetuto — perché il browser del
+// prof si era chiuso a metà e il recupero ha ri-annunciato la card — lo studente
+// si ritrova due voci identiche. Qui ne resta una sola, quella più vecchia.
+function dedupeNotifiche(lista: Notifica[] | undefined | null): Notifica[] {
+  var seen: any = {};
+  var out: Notifica[] = [];
+  (lista || []).forEach(function (n: any) {
+    if (!n || n.id == null) return;
+    var k = String(n.id);
+    if (seen[k]) return;
+    seen[k] = true;
+    out.push(n);
+  });
+  return out;
+}
+
 type Notifica = {
   id: string;
   tipo: 'nuova_card' | 'proposta_esito' | 'risposta' | 'ammonizione';
@@ -35,7 +52,7 @@ function useNotifiche(deps: { user: any }) {
         .doc(user.uid)
         .onSnapshot(
           function (doc: any) {
-            if (doc.exists) setLista((doc.data().lista || []) as Notifica[]);
+            if (doc.exists) setLista(dedupeNotifiche(doc.data().lista));
             else setLista([]);
           },
           function (err: any) {
@@ -119,12 +136,12 @@ function useNotifiche(deps: { user: any }) {
         .get()
         .then(function (doc: any) {
           var fresh = doc.exists && doc.data().lista ? (doc.data().lista as Notifica[]) : [];
-          var next = markLette(mergeListe(fresh, lista), id);
+          var next = dedupeNotifiche(markLette(mergeListe(fresh, lista), id));
           return ref.set({ lista: next, aggiornato: new Date().toISOString() }, { merge: true });
         })
         .catch(function (e: any) {
           console.warn('[notifiche] markAndWrite fallback (read: ' + ((e && e.code) || e) + ')');
-          writeLista(markLette(lista, id));
+          writeLista(dedupeNotifiche(markLette(lista, id)));
         });
     },
     [user, lista, writeLista, markLette, mergeListe]

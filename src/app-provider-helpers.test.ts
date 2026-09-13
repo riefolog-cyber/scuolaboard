@@ -175,3 +175,6 @@ describe('classeCorrenteOf', () => {
     expect(classeCorrenteOf(undefined, '2026/2027', ANNO_LEGACY)).toBeNull();
   });
 });
+
+// NB: gli avvisi di classe (coda, fan-out, recupero, copie senza annuncio) sono
+// coperti da src/avvisi-classe.test.ts — qui restano solo gli helper delle card.

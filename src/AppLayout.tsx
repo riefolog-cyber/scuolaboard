@@ -15,6 +15,7 @@ import ProposalsPanel from './ProposalsPanel.tsx';
 import CardGrid from './CardGrid.tsx';
 import FAB from './FAB.tsx';
 import Toasts from './Toasts.tsx';
+import { etichettaSospesi } from './avvisi-classe.ts';
 // Fase 8b: trappola di focus per la CardDetail (modale lazy).
 import FocusTrap from './modals/focusTrap.tsx';
 import StudentiPanel from './StudentiPanel.tsx';
@@ -99,14 +100,21 @@ function AppLayout(props: any) {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
+                justifyContent: 'flex-start',
                 gap: 8,
-                padding: '7px 14px',
+                padding: '6px 14px',
                 background: isLight
                   ? 'linear-gradient(90deg,rgba(79,70,229,.05) 0%,#f8fafc 40%,rgba(34,197,94,.06) 100%)'
                   : 'linear-gradient(90deg,rgba(99,102,241,.06) 0%,rgba(255,255,255,.03) 40%,rgba(34,197,94,.05) 100%)',
                 borderBottom: isLight ? '1px solid rgba(15,23,42,.08)' : '1px solid rgba(255,255,255,.07)',
                 flexWrap: 'wrap',
+                // Fascia UNICA (contatori + privacy) agganciata in alto mentre si
+                // scorre: i numeri della bacheca restano sotto gli occhi e si
+                // risparmia una riga intera sopra le card.
+                position: 'sticky',
+                top: 0,
+                zIndex: 30,
+                backdropFilter: 'blur(10px)',
               }}
             >
               {
@@ -156,53 +164,231 @@ function AppLayout(props: any) {
                   {'⏳ ' + $.proposte.length + ' in attesa'}
                 </span>
               )}
-            </div>
-          }
-          {
-            /* Banner privacy — cliccabile per aprire la modale informativa */
-            <div
-              onClick={function () {
-                $.setShowPrivacyInfo(true);
-              }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 6,
-                padding: '6px 14px',
-                background: isLight
-                  ? 'linear-gradient(90deg,rgba(79,70,229,.06) 0%,rgba(168,85,247,.06) 50%,rgba(79,70,229,.06) 100%)'
-                  : 'linear-gradient(90deg,rgba(99,102,241,.05) 0%,rgba(168,85,247,.05) 50%,rgba(99,102,241,.05) 100%)',
-                borderBottom: isLight ? '1px solid rgba(15,23,42,.08)' : '1px solid rgba(255,255,255,.05)',
-                cursor: 'pointer',
-                transition: 'background .2s',
-              }}
-              onMouseEnter={function (e: any) {
-                e.currentTarget.style.background = isLight ? 'rgba(79,70,229,.10)' : 'rgba(99,102,241,.1)';
-              }}
-              onMouseLeave={function (e: any) {
-                e.currentTarget.style.background = isLight
-                  ? 'linear-gradient(90deg,rgba(79,70,229,.06) 0%,rgba(168,85,247,.06) 50%,rgba(79,70,229,.06) 100%)'
-                  : 'linear-gradient(90deg,rgba(99,102,241,.05) 0%,rgba(168,85,247,.05) 50%,rgba(99,102,241,.05) 100%)';
-              }}
-            >
-              <span style={{ fontSize: 13 }}>🛡️</span>
-              <span
+              {/* Annunci di classe non partiti: indicatore per il docente, con
+                  il numero di card in sospeso e il riprova-tutti. La decisione
+                  su cosa è "in sospeso" sta in avvisi-classe.ts. */}
+              {$.isProf && !$.simulaSt && $.annunciSospesi.length > 0 && (
+                <span
+                  className="annunci-sospesi"
+                  title="La classe non ha ricevuto l'annuncio di queste card"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    background: 'rgba(245,158,11,.18)',
+                    color: isLight ? '#92400e' : '#fbbf24',
+                    borderRadius: 20,
+                    padding: '2px 4px 2px 9px',
+                    fontSize: 11,
+                    fontWeight: 800,
+                    border: '1px solid rgba(245,158,11,.45)',
+                  }}
+                >
+                  {etichettaSospesi($.annunciSospesi.length)}
+                  <button
+                    type="button"
+                    aria-label="Riprova tutti gli avvisi"
+                    title="Riprova ora tutti gli avvisi in sospeso"
+                    onClick={function () {
+                      $.riprovaTuttiAnnunci();
+                    }}
+                    style={{
+                      border: 'none',
+                      background: 'rgba(245,158,11,.35)',
+                      color: isLight ? '#78350f' : '#fde68a',
+                      borderRadius: 20,
+                      padding: '2px 9px',
+                      fontSize: 10.5,
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    {'↻ Riprova tutti'}
+                  </button>
+                </span>
+              )}
+              {/* Guida "Cos'è la bacheca": spiegazione in parole semplici + mappa
+                  del sistema (diagramma Archify). Stesso linguaggio visivo del
+                  sigillo privacy, colore diverso: viola = orientarsi,
+                  verde = garanzia sui dati. */}
+              <button
+                type="button"
+                className="guida-badge"
+                onClick={function () {
+                  $.setShowGuida(true);
+                }}
+                aria-label="Cos'è la bacheca: spiegazione e mappa del sistema"
+                title="Cos'è la bacheca: spiegazione e mappa del sistema"
                 style={{
+                  marginLeft: 'auto',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  minWidth: 0,
+                  maxWidth: '100%',
+                  flexShrink: 1,
+                  background: isLight
+                    ? 'linear-gradient(135deg,rgba(99,102,241,.18) 0%,rgba(168,85,247,.16) 100%)'
+                    : 'linear-gradient(135deg,rgba(99,102,241,.32) 0%,rgba(168,85,247,.24) 100%)',
+                  border: '1px solid ' + (isLight ? 'rgba(79,70,229,.40)' : 'rgba(139,92,246,.60)'),
+                  borderRadius: 999,
+                  padding: '3px 12px 3px 5px',
+                  cursor: 'pointer',
                   fontSize: 11,
-                  fontWeight: 600,
-                  color: isLight ? '#4338ca' : 'rgba(199,210,254,.7)',
-                  letterSpacing: 0.3,
+                  fontWeight: 700,
+                  color: isLight ? '#3730a3' : '#e9d5ff',
+                  letterSpacing: 0.2,
+                  fontFamily: 'inherit',
+                  boxShadow: isLight
+                    ? '0 0 0 3px rgba(99,102,241,.10), 0 3px 16px rgba(99,102,241,.28)'
+                    : '0 0 0 3px rgba(99,102,241,.12), 0 3px 20px rgba(139,92,246,.45)',
                 }}
               >
-                La tua privacy è protetta — nomi anonimi, IA trasparente, tutto revisionato dal docente
-              </span>
-              <span style={{ fontSize: 10, color: isLight ? '#6366f1' : 'rgba(99,102,241,.6)' }}>▶</span>
+                <span
+                  style={{
+                    position: 'relative',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 24,
+                    height: 24,
+                    borderRadius: '50%',
+                    flexShrink: 0,
+                    background: 'linear-gradient(135deg,#6366f1 0%,#8b5cf6 60%,#a855f7 100%)',
+                    boxShadow: '0 2px 8px rgba(99,102,241,.55)',
+                    animation: 'guida-seal-glow 3s ease-in-out infinite',
+                  }}
+                >
+                  <span style={{ fontSize: 12, lineHeight: 1 }}>🗺️</span>
+                </span>
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '2px 5px',
+                    flexWrap: 'wrap',
+                    minWidth: 0,
+                    lineHeight: 1.25,
+                  }}
+                >
+                  <span style={{ fontWeight: 900, fontSize: 11.5, letterSpacing: 0.3 }}>{"Cos'è la bacheca"}</span>
+                  <span className="guida-badge-detail" style={{ fontWeight: 600, fontSize: 10.5, opacity: 0.85 }}>
+                    {'spiegazione e mappa del sistema'}
+                  </span>
+                </span>
+                <span style={{ fontSize: 9, opacity: 0.75 }}>▶</span>
+              </button>
+              {/* Privacy nella STESSA fascia dei contatori: una riga sola.
+                  Il testo resta per intero (è un'informativa, non la si taglia).
+                  Da "chip discreta" a SIGILLO VERDE "verificato": alone animato
+                  che si espande + spunta di conferma. Verde = dato trattato e
+                  controllato, non solo "protetto": si legge a colpo d'occhio. */}
+              <button
+                type="button"
+                className="privacy-badge"
+                onClick={function () {
+                  $.setShowPrivacyInfo(true);
+                }}
+                aria-label="Privacy e trasparenza: nomi anonimi, IA trasparente, dati verificati dal docente"
+                title="Privacy e trasparenza: nomi anonimi, IA trasparente, dati verificati dal docente"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  minWidth: 0,
+                  maxWidth: '100%',
+                  flexShrink: 1,
+                  background: isLight
+                    ? 'linear-gradient(135deg,rgba(16,185,129,.20) 0%,rgba(34,197,94,.16) 100%)'
+                    : 'linear-gradient(135deg,rgba(16,185,129,.30) 0%,rgba(34,197,94,.22) 100%)',
+                  border: '1px solid ' + (isLight ? 'rgba(5,150,105,.45)' : 'rgba(52,211,153,.60)'),
+                  borderRadius: 999,
+                  padding: '3px 12px 3px 5px',
+                  cursor: 'pointer',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: isLight ? '#065f46' : '#d1fae5',
+                  letterSpacing: 0.2,
+                  fontFamily: 'inherit',
+                  boxShadow: isLight
+                    ? '0 0 0 3px rgba(34,197,94,.10), 0 3px 16px rgba(16,185,129,.28)'
+                    : '0 0 0 3px rgba(34,197,94,.12), 0 3px 20px rgba(16,185,129,.45)',
+                }}
+              >
+                {/* Sigillo verde "verificato": alone animato + spunta. La chiave
+                    privacy-seal-glow è in styles.css (e in e2e/harness.html, che
+                    non carica lo stylesheet) — grazie all'alone il badge "respira"
+                    invece di restare un'icona ferma. */}
+                <span
+                  style={{
+                    position: 'relative',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 24,
+                    height: 24,
+                    borderRadius: '50%',
+                    flexShrink: 0,
+                    background: 'linear-gradient(135deg,#10b981 0%,#22c55e 60%,#4ade80 100%)',
+                    boxShadow: '0 2px 8px rgba(16,185,129,.55)',
+                    animation: 'privacy-seal-glow 2.4s ease-in-out infinite',
+                  }}
+                >
+                  <span style={{ fontSize: 12, lineHeight: 1 }}>🛡️</span>
+                  {/* Spunta di conferma: angolo del sigillo, come un bollino. */}
+                  <span
+                    aria-hidden="true"
+                    style={{
+                      position: 'absolute',
+                      right: -4,
+                      bottom: -4,
+                      width: 13,
+                      height: 13,
+                      borderRadius: '50%',
+                      background: '#22c55e',
+                      color: '#04291a',
+                      fontSize: 9,
+                      fontWeight: 900,
+                      lineHeight: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: '1.5px solid ' + (isLight ? '#f8fafc' : '#161320'),
+                      boxShadow: '0 1px 4px rgba(0,0,0,.35)',
+                    }}
+                  >
+                    {'✓'}
+                  </span>
+                </span>
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '2px 5px',
+                    flexWrap: 'wrap',
+                    minWidth: 0,
+                    lineHeight: 1.25,
+                  }}
+                >
+                  <span style={{ fontWeight: 900, fontSize: 11.5, letterSpacing: 0.3 }}>{'Privacy protetta'}</span>
+                  <span className="privacy-badge-detail" style={{ fontWeight: 600, fontSize: 10.5, opacity: 0.85 }}>
+                    {'nomi anonimi · IA trasparente · dati verificati dal docente'}
+                  </span>
+                </span>
+                <span style={{ fontSize: 9, opacity: 0.75 }}>▶</span>
+              </button>
             </div>
           }
           {<FilterBar $={$} />}
           {<ProposalsPanel $={$} />}
-          {<div style={{ flex: 1, padding: '10px 14px 18px' }}>{<CardGrid $={$} />}</div>}
+          {
+            /* Tetto di larghezza: su un monitor grande la griglia si allargava
+               all'infinito creando colonne sempre più strette. */
+            <div style={{ flex: 1, padding: '10px 14px 18px' }}>
+              <div style={{ maxWidth: 1500, margin: '0 auto' }}>{<CardGrid $={$} />}</div>
+            </div>
+          }
         </>
       )}
       {$.view === 'analisi' && !$.simulaSt && (

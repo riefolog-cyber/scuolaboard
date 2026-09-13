@@ -10,6 +10,8 @@ export function useModals() {
   var [editAmm, setEditAmm] = useState<any>(null);
   var [showPrivacy, setShowPrivacy] = useState(false);
   var [showPrivacyInfo, setShowPrivacyInfo] = useState(false);
+  // Guida "Cos'è la bacheca" (spiegazione + diagramma Archify).
+  var [showGuida, setShowGuida] = useState(false);
   var [showProfilo, setShowProfilo] = useState(false);
   var [showTimerModal, setShowTimerModal] = useState(false);
   var [showDuplica, setShowDuplica] = useState<any>(null);
@@ -31,6 +33,7 @@ export function useModals() {
     setEditAmm(null);
     setShowPrivacy(false);
     setShowPrivacyInfo(false);
+    setShowGuida(false);
     setShowProfilo(false);
     setShowTimerModal(false);
     setShowDuplica(null);
@@ -66,6 +69,8 @@ export function useModals() {
     setShowPrivacy: setShowPrivacy,
     showPrivacyInfo: showPrivacyInfo,
     setShowPrivacyInfo: setShowPrivacyInfo,
+    showGuida: showGuida,
+    setShowGuida: setShowGuida,
     showProfilo: showProfilo,
     setShowProfilo: setShowProfilo,
     showTimerModal: showTimerModal,

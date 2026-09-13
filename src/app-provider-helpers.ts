@@ -1,3 +1,5 @@
+import { senzaAnnuncio } from './avvisi-classe.ts';
+
 // app-provider-helpers.ts · ScuolaBoard · Fase 7: helper PURI estratti da
 // AppProvider. Nessuna dipendenza da stato React: ricevono tutto come
 // parametri. Usati da AppProvider.tsx per ridurne la mole (1427 → più snello)
@@ -126,6 +128,10 @@ export function buildEditCard(
   return c;
 }
 
+// NB: la logica degli AVVISI DI CLASSE (coda, fan-out, recupero) sta tutta in
+// `src/avvisi-classe.ts`. Qui restano solo i costruttori puri di card e form:
+// chi crea una card usa `conAnnuncioInCoda()` da quel modulo.
+
 // Nuova card (modalità creazione, prof o studente)
 export function buildNewCard(opts: {
   form: any;
@@ -161,6 +167,8 @@ export function buildNewCard(opts: {
   if (opts.opzioni) newCard['opzioni'] = opts.opzioni;
   if (opts.quizDomande) newCard['quizDomande'] = opts.quizDomande;
   if (opts.form.tipo === 'quiz') newCard['quizTimer'] = opts.form.quizTimer || 10;
+  // La card del docente NON viene marcata qui per l'annuncio: se ne occupa
+  // `conAnnuncioInCoda()` (src/avvisi-classe.ts) nel punto in cui viene pubblicata.
   if (!opts.isProf) {
     newCard['proposta'] = true;
     if (opts.classeCorrente) newCard.classi = [opts.classeCorrente];
@@ -201,6 +209,8 @@ export function buildDuplicaCopia(src: any, cl: string, newId: string, ordine: n
     data: new Date().toISOString().slice(0, 10),
     titolo: src.titolo + ' [' + cl + ']',
   });
+  // Una copia NON è una card nuova per la classe: nessun avviso da inviare.
+  copia = senzaAnnuncio(copia);
   if (Array.isArray(src.opzioni) && src.opzioni.length > 0) {
     copia.opzioni = src.opzioni.map(function (o: any) {
       return Object.assign({}, o, { voti: [] });
@@ -222,6 +232,8 @@ export function buildCopiaAnno(src: any, newId: string, ordine: number, annoTarg
     annoScolastico: annoTarget,
     visibile: false,
   });
+  // Copia in un altro anno (per giunta nascosta): nessun avviso da inviare.
+  copia = senzaAnnuncio(copia);
   delete copia.proposta;
   delete copia.motivazioneRifiuto;
   if (Array.isArray(src.opzioni)) {

@@ -96,6 +96,7 @@ test('Duplica card: la modale si apre, seleziona classe e crea la copia', async 
 
   const nCardsPrima = await page.evaluate(() => window.__db._all('cards').length);
 
+  await page.locator('#card-c1').getByRole('button', { name: 'Altre azioni' }).click();
   await page.locator('#card-c1').getByRole('button', { name: 'Duplica card' }).click();
   const modal = page.locator('[style*="z-index: 500"]').filter({ hasText: 'Duplica card' }).first();
   await expect(modal).toBeVisible({ timeout: 5000 });
@@ -127,6 +128,7 @@ test('Like + reazione emoji dalla griglia (senza aprire la card)', async ({ page
   await card.getByRole('button', { name: 'Aggiungi like' }).click();
   await expect(card.getByRole('button', { name: 'Rimuovi like' })).toBeVisible({ timeout: 5000 });
 
+  await card.getByRole('button', { name: 'Altre azioni' }).click();
   await card.getByRole('button', { name: 'Reagisci con 🤔' }).click();
   // Il like è persistito nel fake db
   await expect.poll(() => page.evaluate(() => window.__db._get('cards', 'c1').likes)).toBe(1);
@@ -196,6 +198,7 @@ test("Copia link: il bottone 🔗 copia l'URL con #card- e mostra il toast", asy
   await page.goto(HARNESS, { waitUntil: 'domcontentloaded' });
   await expect(page.getByText('Lezione su X').first()).toBeVisible({ timeout: 15000 });
 
+  await page.locator('#card-c1').getByRole('button', { name: 'Altre azioni' }).click();
   await page.locator('#card-c1').getByRole('button', { name: 'Copia link' }).click();
 
   // Il toast conferma la copia (successo o fallback con URL visibile)
@@ -322,6 +325,7 @@ test('Card fissata (pinned): 📌 la porta in cima con chip FISSATA, il toggle l
   await expect(page.getByText('Lezione su X').first()).toBeVisible({ timeout: 15000 });
 
   // Pin su q1 (ultima card): il chip FISSATA appare e q1 sale in cima alla griglia
+  await page.locator('#card-q1').getByRole('button', { name: 'Altre azioni' }).click();
   await page.locator('#card-q1').getByRole('button', { name: 'Fissa in cima' }).click();
   await expect(page.locator('#card-q1').getByText('📌 FISSATA')).toBeVisible({ timeout: 5000 });
   await expect
@@ -336,6 +340,50 @@ test('Card fissata (pinned): 📌 la porta in cima con chip FISSATA, il toggle l
   await expect
     .poll(() => page.evaluate(() => document.querySelectorAll('[id^="card-"]')[2].id))
     .toBe('card-q1');
+
+  expect(fatalErrors(errors), 'Errori fatali: ' + JSON.stringify(fatalErrors(errors))).toEqual([]);
+});
+
+test('Ordine della griglia su desktop: la priorità si legge sulla PRIMA RIGA (orizzontale)', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto(HARNESS, { waitUntil: 'domcontentloaded' });
+  await expect(page.getByText('Lezione su X').first()).toBeVisible({ timeout: 15000 });
+
+  // Il container deve essere una griglia ROW-MAJOR (riga per riga): con le colonne
+  // CSS/masonry l'ordine si leggeva in VERTICALE (la priorità finiva impilata
+  // nella prima colonna). La sola verifica geometrica "stesso top" non basta:
+  // con poche card anche il masonry le affianca, quindi controlliamo il layout.
+  const layout = await page.evaluate(() => {
+    const cs = getComputedStyle(document.querySelector('.card-grid'));
+    return { display: cs.display, colonne: cs.gridTemplateColumns };
+  });
+  expect(layout.display).toBe('grid');
+  expect(layout.colonne.split(' ').length).toBeGreaterThan(1); // più colonne → le card stanno in riga
+
+  // Le prime card condividono il top (stessa riga) e hanno x crescente.
+  const boxes = () =>
+    page.evaluate(() =>
+      Array.from(document.querySelectorAll('.card-grid [id^="card-"]')).map((el) => {
+        const r = el.getBoundingClientRect();
+        return { id: el.id, x: Math.round(r.left), y: Math.round(r.top) };
+      })
+    );
+
+  const prima = await boxes();
+  expect(prima.length).toBeGreaterThan(1);
+  expect(prima[1].y, 'seconda card sulla stessa riga della prima').toBe(prima[0].y);
+  expect(prima[1].x).toBeGreaterThan(prima[0].x);
+
+  // Apro l'ultima card: la priorità (apertura recente) deve vedersi nella prima riga
+  await page.getByText('Quiz sulle frazioni').first().click();
+  await expect(page.locator('.modal-inner')).toBeVisible({ timeout: 5000 });
+  await page.getByRole('button', { name: 'Chiudi card' }).click();
+  await expect(page.locator('.modal-inner')).toHaveCount(0);
+
+  await expect.poll(async () => (await boxes())[0].id).toBe('card-q1');
+  const dopo = await boxes();
+  expect(dopo[0].y, 'la card prioritaria resta in prima riga').toBe(dopo[1].y);
+  expect(dopo[0].x).toBeLessThan(dopo[1].x);
 
   expect(fatalErrors(errors), 'Errori fatali: ' + JSON.stringify(fatalErrors(errors))).toEqual([]);
 });

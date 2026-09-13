@@ -23,7 +23,9 @@ describe('regression: editCard dal CardItem', () => {
     await renderApp({ seed, user: PROF });
 
     fireEvent.click(await screen.findByText('Card da modificare', {}, { timeout: 4000 }));
-    // Chiudi la CardDetail (altrimenti la modale si apre sopra)
+    // La ✏️ sta nel menu "⋯" della card (la fila di azioni a riposo resta corta):
+    // la modale di modifica deve aprirsi anche con la CardDetail aperta.
+    fireEvent.click(screen.getByRole('button', { name: 'Altre azioni' }));
     const edit = await screen.findByRole('button', { name: 'Modifica card' }, {}, { timeout: 4000 });
     fireEvent.click(edit);
 

@@ -53,21 +53,43 @@ export function countdownStr(scadenza: any, now: number): { str: string; expired
 }
 
 // Badge countdown usato nelle card della griglia (ri-render SOLO di se stesso).
+// Urgenza a tre livelli: scaduta o imminente (< 1h) → rosso (pulsante se già
+// scaduta), sotto le 24h → ambra, oltre → neutro. Prima tutto era ambra tranne
+// "Scaduta": una consegna che scade tra 10 minuti non si distingueva da una che
+// scade tra 3 giorni.
 export default function Countdown({ scadenza }: any) {
   var now = useCountdown(scadenza);
   var fmt = countdownStr(scadenza, now);
+  var ms = new Date(scadenza).getTime() - now;
+  var urgente = !fmt.expired && ms < 3600000;
+  var entro24h = !fmt.expired && !urgente && ms < 86400000;
   return (
     <div
+      className={fmt.expired ? 'pulse' : ''}
       style={{
         display: 'inline-flex',
         alignItems: 'center',
         gap: 4,
-        background: fmt.expired ? 'rgba(239,68,68,.15)' : 'rgba(245,158,11,.12)',
-        border: '1px solid ' + (fmt.expired ? 'rgba(239,68,68,.3)' : 'rgba(245,158,11,.25)'),
+        background: fmt.expired
+          ? 'rgba(239,68,68,.18)'
+          : urgente
+            ? 'rgba(239,68,68,.12)'
+            : entro24h
+              ? 'rgba(245,158,11,.12)'
+              : 'rgba(255,255,255,.06)',
+        border:
+          '1px solid ' +
+          (fmt.expired
+            ? 'rgba(239,68,68,.35)'
+            : urgente
+              ? 'rgba(239,68,68,.3)'
+              : entro24h
+                ? 'rgba(245,158,11,.25)'
+                : 'rgba(255,255,255,.12)'),
         borderRadius: 20,
         padding: '2px 8px',
         fontSize: 11,
-        color: fmt.expired ? '#f87171' : '#fbbf24',
+        color: fmt.expired || urgente ? '#f87171' : entro24h ? '#fbbf24' : 'rgba(255,255,255,.62)',
         fontWeight: 700,
         marginTop: 4,
       }}

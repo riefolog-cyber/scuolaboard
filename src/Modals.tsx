@@ -7,6 +7,7 @@ import { Fragment, lazy, Suspense, useContext } from 'react';
 import FormContext from './contexts/FormContext.tsx';
 import LightboxModal from './modals/LightboxModal.tsx';
 import PrivacyModal from './modals/PrivacyModal.tsx';
+import GuidaModal from './modals/GuidaModal.tsx';
 import ClasseModal from './modals/ClasseModal.tsx';
 import AiQuizGenModal from './modals/AiQuizGenModal.tsx';
 import AmmModal from './modals/AmmModal.tsx';
@@ -57,6 +58,7 @@ function Modals({ $ }: any) {
       <Fragment>
         <LightboxModal {...all} />
         <PrivacyModal {...all} />
+        <GuidaModal {...all} />
         <ClasseModal {...all} />
         <AiQuizGenModal {...all} />
         <AmmModal {...all} />

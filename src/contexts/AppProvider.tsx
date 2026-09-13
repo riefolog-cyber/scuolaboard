@@ -39,6 +39,16 @@ import {
 } from '../app-utils.tsx';
 import '../notifiche-service.ts';
 import {
+  annunciInSospeso,
+  annunciaClasse,
+  avvisiDaRecuperare,
+  confermaAnnunci,
+  confermaAnnuncio,
+  confermaRecupero,
+  conAnnuncioInCoda,
+  creaRitentativiAvvisi,
+} from '../avvisi-classe.ts';
+import {
   playAlarm,
   classeCorrenteOf,
   ANNO_LEGACY,
@@ -165,9 +175,13 @@ function AppProvider({ children }: any) {
   var prevProposteCount = useRef(0);
 
   // Drag & drop per il riordinamento card (estratto in useDragDrop)
+  // Il 3° argomento azzera la memoria delle aperture: dopo un trascinamento
+  // vince l'ordine manuale scelto dal prof (priorità: fissate > trascinamento >
+  // aperture recenti).
   var { dragId, onDragStart, onDragEnd, onDragOver, onDragLeave, onDrop, onGridDragOver, onGridDrop } = useDragDrop(
     cardsHook.cards,
-    fbSave
+    fbSave,
+    cardsHook.clearAperti
   );
 
   // ── HOOKS DI DOMINIO (estratti per ridurre la mole del provider) ──
@@ -227,6 +241,9 @@ function AppProvider({ children }: any) {
   var toggleTheme = themeHook.toggleTheme;
 
   var seenRef = cardsHook.seenRef;
+  // Registra l'apertura di una card: tiene in cima alla griglia le card aperte
+  // di recente (memoria locale per utente, vedi compareCards in cards.ts).
+  var markAperto = cardsHook.markAperto;
   function markSeen(id: any) {
     if (!seenRef.current.has(String(id))) {
       seenRef.current.add(String(id));
@@ -263,6 +280,7 @@ function AppProvider({ children }: any) {
     deepLinkDone.current = true;
     setShowCard(c);
     markSeen(c.id);
+    markAperto(c.id);
     try {
       history.replaceState(null, '', '?card=' + encodeURIComponent(c.id));
     } catch (e) {}
@@ -522,6 +540,125 @@ function AppProvider({ children }: any) {
     setCopiaAnnoTarget('');
   }
 
+  // ── ANNUNCI: RITENTATIVI AUTOMATICI (attese crescenti) ───────────────────
+  // Un annuncio non partito non aspetta più la prossima apertura dell'app: il
+  // controllore (in avvisi-classe.ts, senza React) lo ritenta da solo con attese
+  // crescenti, finché non riesce o finché la sessione esaurisce la scaletta.
+  // Qui solo il collegamento ai valori LIVE (ref): un timer creato in una render
+  // vecchia deve comunque leggere le card e l'utente di adesso.
+  var ritentativiRef = useRef<any>(null);
+  if (!ritentativiRef.current) {
+    ritentativiRef.current = creaRitentativiAvvisi({
+      annuncia: function (card: any, forza: boolean) {
+        return annunciaClasse({
+          card: card,
+          anno: card.annoScolastico || liveRef.current.annoScolastico,
+          excludeUid: liveRef.current.user && liveRef.current.user.uid,
+          forza: forza,
+        });
+      },
+      cardCorrente: function (id: string) {
+        var lista: any[] = (cardsHookRef.current.cards as any[]) || [];
+        return lista.filter(function (c: any) {
+          return String(c.id) === id;
+        })[0];
+      },
+      // Riuscito dopo un ritentativo: il badge sparisce da solo, quindi lo diciamo.
+      onRecuperato: function (_card: any, esito: any) {
+        var fb = confermaRecupero(esito);
+        if (fb) showToast(fb.msg, fb.type);
+      },
+    });
+  }
+  var ritentativi = ritentativiRef.current;
+
+  // I timer dei ritentativi muoiono con il provider: nessun timer orfano.
+  useEffect(
+    function () {
+      return function () {
+        ritentativi.ferma();
+      };
+    },
+    [ritentativi]
+  );
+
+  // Conferma/monito dell'annuncio, uguale per OGNI percorso che pubblica una
+  // card (pubblicazione, approvazione di una proposta). Il testo vive in
+  // avvisi-classe.ts (testabile senza montare l'app): qui solo il toast.
+  //  - invio riuscito → "🔔 N studenti avvisati";
+  //  - nessuno da avvisare → silenzio;
+  //  - invio non partito → avviso: la coda resta aperta e il ritentativo riprova.
+  function mostraEsitoAnnuncio(esito: any) {
+    var fb = confermaAnnuncio(esito);
+    if (fb) showToast(fb.msg, fb.type);
+  }
+
+  // Il badge "avviso non inviato" sulla card è premibile: rilanciare SUBITO,
+  // azzerando la scaletta (chi interviene non aspetta l'attesa già cresciuta).
+  function riprovaAnnuncio(card: any) {
+    if (!isProf || !card) return;
+    ritentativi.esegui(card, { forza: true, riparti: true }).then(mostraEsitoAnnuncio);
+  }
+
+  // "Riprova tutti" (indicatore in alto): rilancia in una volta gli annunci
+  // rimasti in sospeso e riporta UN solo esito aggregato, non uno per card.
+  function riprovaTuttiAnnunci() {
+    if (!isProf) return;
+    var sospesi = annunciInSospeso(cardsHook.cards, Date.now());
+    if (!sospesi.length) return;
+    Promise.all(
+      sospesi.map(function (c: any) {
+        return ritentativi.esegui(c, { forza: true, riparti: true });
+      })
+    ).then(function (esiti: any) {
+      var fb = confermaAnnunci(esiti);
+      if (fb) showToast(fb.msg, fb.type);
+    });
+  }
+
+  // ── AVVISI ALLA CLASSE: recupero degli invii interrotti ──────────────────
+  // La regola (coda, fan-out, chiusura del flag) sta TUTTA in src/avvisi-classe.ts;
+  // qui si dice soltanto quando guardare. Una card con `avvisiPendenti` ancora
+  // true significa "annuncio non concluso" (pubblicazione o approvazione
+  // interrotta): alla riapertura dell'app da parte di un docente viene ripreso.
+  // `annunciaClasse` ha già il guard "un solo tentativo per card", quindi il
+  // listener delle card può ripassare senza duplicare gli invii.
+  useEffect(
+    function () {
+      if (!isProf || !user || !user.uid) return;
+      if (!cardsHook.cards || !cardsHook.cards.length) return;
+      avvisiDaRecuperare(cardsHook.cards, annoScolastico, Date.now()).forEach(function (c: any) {
+        // Silenzioso di proposito: è un recupero in background, non un'azione
+        // del docente. Se fallisce, il controllore programma i ritentativi.
+        ritentativi.esegui(c);
+      });
+    },
+    [isProf, user && user.uid, annoScolastico, cardsHook.cards]
+  );
+
+  // Il badge/indicatore "avviso non inviato" con conteggio IGNOTO compare dopo
+  // AVVISO_SOSPETTO_MS: senza un re-render non si vedrebbe finché non cambia
+  // qualcos'altro. Un battito ogni 30s, acceso SOLO se c'è almeno un annuncio
+  // pendente: nessun timer a vuoto sui client degli studenti.
+  var [tickSospesi, setTickSospesi] = useState(0);
+  var haAnnunciPendenti = (cardsHook.cards || []).some(function (c: any) {
+    return !!c && c.avvisiPendenti === true;
+  });
+  useEffect(
+    function () {
+      if (!haAnnunciPendenti) return undefined;
+      var t = setInterval(function () {
+        setTickSospesi(function (n) {
+          return n + 1;
+        });
+      }, 30000);
+      return function () {
+        clearInterval(t);
+      };
+    },
+    [haAnnunciPendenti]
+  );
+
   function addCard() {
     if (!form.titolo.trim() || !user) return;
     var opzioni = buildOpzioni(form);
@@ -573,6 +710,10 @@ function AppProvider({ children }: any) {
         immagini: immagini,
       });
       if (!guardSize(newCard)) return;
+      // Punto unico dell'annuncio: la card del docente entra in coda QUI, prima
+      // del salvataggio. Il fan-out parte subito dopo (o al recupero, se questo
+      // browser si chiude prima). `conAnnuncioInCoda` imposta flag + istante.
+      if (isProf) newCard = conAnnuncioInCoda(newCard);
       cardsHook.nextOrd.current++;
       fbSave(newCard)
         .then(function () {
@@ -581,18 +722,10 @@ function AppProvider({ children }: any) {
             if (user && user.uid && SB.LS && SB.LS.draft) SB.LS.draft.rm(user.uid);
             setBozzaAttiva(false);
           } catch (e) {}
-          try {
-            if (isProf && (window as any).SB && (window as any).SB.notifyClasse) {
-              (window as any).SB.notifyClasse({
-                classi: newCard.classi || ['TUTTE'],
-                annoScolastico: annoScolastico,
-                cardId: String(newCard.id),
-                titolo: newCard.titolo,
-                msg: 'Nuova card per la tua classe',
-                excludeUid: (user as any).uid,
-              });
-            }
-          } catch (e) {}
+          // Annuncio alla classe: unico punto in avvisi-classe.ts. Il toast di
+          // esito arriva quando il fan-out è concluso (o fallito); se fallisce,
+          // il controllore programma da solo i ritentativi.
+          if (isProf) ritentativi.esegui(newCard).then(mostraEsitoAnnuncio);
         })
         .catch(function () {});
       showToast(isProf ? 'Card pubblicata ✓' : 'Proposta inviata al prof ✓', 'ok');
@@ -817,9 +950,16 @@ function AppProvider({ children }: any) {
       return x.id === id;
     });
     if (c) {
-      fbSave(Object.assign({}, c, { proposta: false }))
+      // Approvare = pubblicare: la card diventa visibile alla classe, quindi entra
+      // in coda d'annuncio come una card nuova. `conAnnuncioInCoda` è lo stesso
+      // punto usato dalla pubblicazione: per una proposta approvata l'istante di
+      // annuncio è ORA, non la data di creazione della proposta (altrimenti il
+      // recupero la considererebbe troppo vecchia e non la annuncerebbe mai).
+      var approvata = conAnnuncioInCoda(Object.assign({}, c, { proposta: false }));
+      fbSave(approvata)
         .then(function () {
           notifyProposalAuthor(db, c, 'Proposta approvata: ' + c.titolo);
+          ritentativi.esegui(approvata).then(mostraEsitoAnnuncio);
         })
         .catch(function () {});
       showToast('Proposta approvata ✓', 'ok');
@@ -1043,6 +1183,7 @@ function AppProvider({ children }: any) {
         deepLinkDone.current = true;
         setShowCard(c);
         markSeen(c.id);
+        markAperto(c.id);
       }
     },
     [cardsHook.cards]
@@ -1261,6 +1402,15 @@ function AppProvider({ children }: any) {
     },
     [cardsHook.cards]
   );
+  // Card con un annuncio in sospeso → indicatore in alto con "Riprova tutti"
+  // (e, sulla singola card, il badge). `tickSospesi` entra tra le dipendenze
+  // perché il caso "conteggio ignoto" diventa visibile solo col passare del tempo.
+  var annunciSospesiDaRiprovare = useMemo(
+    function () {
+      return annunciInSospeso(cardsHook.cards, Date.now());
+    },
+    [cardsHook.cards, tickSospesi]
+  );
 
   // ── BUILD CONTEXT VALUES ──
   var authValue = useMemo(
@@ -1323,6 +1473,11 @@ function AppProvider({ children }: any) {
     },
     [
       cardsHook.cards,
+      // visibleSorted è memoizzato su [visible, aperti]: cambia anche quando
+      // cambia SOLO l'ordine di apertura (memoria locale), senza che cambi la
+      // lista `cards`. Senza questa dep la griglia resterebbe nell'ordine
+      // vecchio dopo l'apertura di una card.
+      cardsHook.visibleSorted,
       cardsHook.previewSt,
       cardsHook.previewClasse,
       cardsHook.filterClasse,
@@ -1380,6 +1535,8 @@ function AppProvider({ children }: any) {
         setWcTarget: modals.setWcTarget,
         showStampa: modals.showStampa,
         setShowStampa: modals.setShowStampa,
+        showGuida: modals.showGuida,
+        setShowGuida: modals.setShowGuida,
         closeAll: modals.closeAll,
         aiCardClasses: CLASSI_LIST,
         accepted: !modals.showPrivacy,
@@ -1399,6 +1556,7 @@ function AppProvider({ children }: any) {
       modals.showRifiutaModal,
       modals.showCopiaAnno,
       modals.showPrivacyInfo,
+      modals.showGuida,
       modals.lightbox,
       modals.confirmDel,
       modals.showWordCloud,
@@ -1734,6 +1892,9 @@ function AppProvider({ children }: any) {
         bulkHide: bulkHide,
         toggleVisibile: toggleVisibile,
         togglePin: togglePin,
+        riprovaAnnuncio: riprovaAnnuncio,
+        riprovaTuttiAnnunci: riprovaTuttiAnnunci,
+        annunciSospesi: annunciSospesiDaRiprovare,
         apriDuplica: apriDuplica,
         // Handlers
         toggleLike: toggleLike,
@@ -1805,6 +1966,7 @@ function AppProvider({ children }: any) {
       CLASSI_LIST,
       totC,
       proposte,
+      annunciSospesiDaRiprovare,
       cardsHook.cards,
       user,
     ]

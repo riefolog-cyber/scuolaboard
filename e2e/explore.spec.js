@@ -195,6 +195,7 @@ test('HARNESS prof: Timer, Copia anno, QR, FAB nuova card', async ({ page }) => 
   await expect(page.locator('[style*="z-index: 200"]')).not.toBeVisible();
 
   // ── Copia in altro anno (dalla card in griglia) ──
+  await page.locator('#card-c1').getByRole('button', { name: 'Altre azioni' }).click();
   await page.locator('#card-c1').getByRole('button', { name: 'Copia in altro anno' }).click();
   await expect(page.getByText('Copia in altro anno').first()).toBeVisible({ timeout: 5000 });
   const copiaModal = page.locator('[style*="z-index: 500"]').filter({ hasText: 'Copia in altro anno' }).first();

@@ -1,9 +1,10 @@
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { normalizeLinks } from './app-utils.tsx';
+import { avvisoInSospeso, dettaglioMancanti, etichettaAvviso } from './avvisi-classe.ts';
 import Countdown from './Countdown.tsx';
 // CardItem.jsx · ScuolaBoard
 
-function CardItem__({ $, c }: any) {
+function CardItem__({ $, c, idx }: any) {
   var isLight = !!$.isLight;
   var totV = c.opzioni
     ? c.opzioni.reduce(function (a: any, o: any) {
@@ -17,7 +18,47 @@ function CardItem__({ $, c }: any) {
   var cardLinks = normalizeLinks(c);
   var nascosta = c.visibile === false;
   var nuova = !$.seenRef.current.has(String(c.id));
+  // Badge PERSISTENTE (non un toast): se l'annuncio alla classe non è partito,
+  // il docente lo vede sulla card finché non è risolto, con i nomi di chi è
+  // rimasto senza avviso (quando li conosciamo).
+  var avviso = $.isProf && !$.simulaSt && avvisoInSospeso(c, Date.now());
+  var mancantiTxt = avviso ? dettaglioMancanti(c) : '';
   var cc = c.classi || ['TUTTE'];
+  var tipoCol = $.badgeBg(c.tipo);
+
+  // Azioni secondarie (fissa, riassumi, link, duplica, copia anno, elimina,
+  // reazioni) dietro il toggle "⋯": la fila di pillole resta corta e il titolo
+  // torna protagonista. Non usiamo l'hover per rivelarle: su tablet e con la
+  // tastiera devono restare raggiungibili.
+  var [azioniOpen, setAzioniOpen] = useState(false);
+
+  // Badge a riposo: TIPO + al massimo UNO stato (priorità: fissata → nascosta →
+  // nuova). Gli altri restano nel DOM ma si rivelano al passaggio del mouse
+  // (classe .card-badge-extra, sempre visibili su touch): meno rumore sui chip,
+  // più gerarchia tra titolo e contorno.
+  var statoBadges: any[] = [];
+  if (c.pinned) {
+    statoBadges.push({
+      key: 'pin',
+      label: '📌 FISSATA',
+      title: 'Card fissata in cima',
+      bg: 'rgba(168,85,247,.25)',
+      fg: '#d8b4fe',
+      bd: 'rgba(168,85,247,.4)',
+    });
+  }
+  if (nascosta && $.isProf) {
+    statoBadges.push({ key: 'nasc', label: 'NASCOSTA', bg: 'rgba(239,68,68,.2)', fg: '#f87171' });
+  }
+  if (nuova) {
+    statoBadges.push({
+      key: 'nuovo',
+      label: 'NUOVO',
+      bg: 'rgba(34,197,94,.25)',
+      fg: '#4ade80',
+      bd: 'rgba(34,197,94,.4)',
+    });
+  }
 
   return (
     <div
@@ -26,7 +67,10 @@ function CardItem__({ $, c }: any) {
       className={
         'card-wrap fadein' +
         ($.bulkMode && $.isProf ? ' bulk-card' : '') +
-        ($.bulkMode && $.isProf && $.bulkSelected.indexOf(String(c.id)) >= 0 ? ' bulk-selected' : '')
+        ($.bulkMode && $.isProf && $.bulkSelected.indexOf(String(c.id)) >= 0 ? ' bulk-selected' : '') +
+        // Zona "importante": le card fissate stanno in cima per tutti, quindi si
+        // vedono da lontano (alone viola via CSS .card-pinned).
+        (c.pinned ? ' card-pinned' : '')
       }
       draggable={!$.bulkMode && $.isProf && !$.simulaSt}
       onDragStart={function (e: any) {
@@ -47,8 +91,8 @@ function CardItem__({ $, c }: any) {
       style={(function () {
         var tipoBorder = nascosta ? 'rgba(255,255,255,.08)' : $.badgeBg(c.tipo);
         return {
-          breakInside: 'avoid',
-          marginBottom: 16,
+          // Niente margin: la spaziatura tra le card è del gap della griglia
+          // (CardGrid: grid row-major) — un margin qui la raddoppierebbe.
           background: nascosta ? 'rgba(255,255,255,.02)' : 'rgba(255,255,255,.055)',
           backdropFilter: 'blur(12px)',
           border: '1px solid ' + (nascosta ? 'rgba(255,255,255,.05)' : 'rgba(255,255,255,.09)'),
@@ -57,6 +101,9 @@ function CardItem__({ $, c }: any) {
           opacity: nascosta ? 0.45 : 1,
           transition: 'transform .2s cubic-bezier(.22,1,.36,1),box-shadow .2s,opacity .2s',
           borderTop: '3px solid ' + tipoBorder,
+          // Entrata a cascata: le card compaiono in sequenza (max 300ms) invece
+          // di lampeggiare tutte insieme al primo render.
+          animationDelay: Math.min(idx || 0, 12) * 25 + 'ms',
         };
       })()}
     >
@@ -68,20 +115,21 @@ function CardItem__({ $, c }: any) {
           }}
         >
           {
+            // Alone del colore del tipo nell'angolo: prima qui c'era l'emoji
+            // gigante a opacità .06 (praticamente invisibile, quindi solo
+            // rumore nel DOM). Dà carattere senza coprire il testo.
             <div
               style={{
                 position: 'absolute',
-                bottom: 6,
-                right: 8,
-                fontSize: 32,
-                opacity: 0.06,
+                right: -30,
+                bottom: -30,
+                width: 130,
+                height: 130,
+                borderRadius: '50%',
+                background: 'radial-gradient(circle, ' + tipoCol + '2e 0%, transparent 70%)',
                 pointerEvents: 'none',
-                userSelect: 'none',
-                lineHeight: 1,
               }}
-            >
-              {$.tipoIcon(c.tipo)}
-            </div>
+            />
           }
           {c.copertina && (
             <div
@@ -127,7 +175,14 @@ function CardItem__({ $, c }: any) {
             </div>
           )}
           {
-            <div style={{ padding: '12px 14px 6px' }}>
+            <div
+              style={{
+                padding: '12px 14px 6px',
+                // Identità del tipo: velatura del colore del tipo sull'intestazione.
+                // Serve a riconoscere il tipo a colpo d'occhio (anche proiettata).
+                background: nascosta ? 'transparent' : 'linear-gradient(180deg,' + tipoCol + '1c 0%, transparent 65%)',
+              }}
+            >
               {
                 <div
                   style={{
@@ -142,22 +197,85 @@ function CardItem__({ $, c }: any) {
                     <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
                       {
                         <span
-                          className="badge-chip"
+                          className={'badge-chip'}
                           style={{
-                            background: $.badgeBg(c.tipo),
+                            background: tipoCol,
                             color: '#fff',
-                            padding: '3px 9px',
+                            padding: '2px 8px',
                             fontWeight: 800,
                             letterSpacing: 0.5,
-                            boxShadow: '0 2px 8px ' + $.badgeBg(c.tipo) + '55',
+                            boxShadow: '0 2px 8px ' + tipoCol + '55',
                           }}
                         >
                           {$.tipoIcon(c.tipo) + ' ' + (c.tipo || '').toUpperCase()}
                         </span>
                       }
+                      {statoBadges.map(function (b: any, i: number) {
+                        return (
+                          <span
+                            key={b.key}
+                            className={'badge-chip' + (i > 0 ? ' card-badge-extra' : '')}
+                            title={b.title}
+                            style={{
+                              background: b.bg,
+                              color: b.fg,
+                              padding: '2px 6px',
+                              fontWeight: 800,
+                              border: b.bd ? '1px solid ' + b.bd : 'none',
+                            }}
+                          >
+                            {b.label}
+                          </span>
+                        );
+                      })}
+                      {avviso && (
+                        <span
+                          className="badge-chip card-avviso"
+                          title={
+                            "La classe non ha ancora ricevuto l'annuncio" +
+                            (mancantiTxt ? ' — ' + mancantiTxt : '') +
+                            ': riprovo alla prossima apertura (o premi Riprova)'
+                          }
+                          style={{
+                            background: 'rgba(245,158,11,.22)',
+                            color: '#fbbf24',
+                            padding: '2px 6px',
+                            fontWeight: 800,
+                            border: '1px solid rgba(245,158,11,.45)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 5,
+                          }}
+                        >
+                          {etichettaAvviso(c)}
+                          {typeof $.riprovaAnnuncio === 'function' && (
+                            <button
+                              type="button"
+                              aria-label="Riprova avviso"
+                              title="Riprova ora l'annuncio alla classe"
+                              onClick={function (e: any) {
+                                e.stopPropagation();
+                                $.riprovaAnnuncio(c);
+                              }}
+                              style={{
+                                border: 'none',
+                                background: 'rgba(245,158,11,.35)',
+                                color: '#fde68a',
+                                borderRadius: 10,
+                                padding: '1px 7px',
+                                fontSize: 10,
+                                fontWeight: 800,
+                                cursor: 'pointer',
+                              }}
+                            >
+                              ↻ Riprova
+                            </button>
+                          )}
+                        </span>
+                      )}
                       {$.isProf && cc.indexOf('TUTTE') < 0 && cc.length > 0 && (
                         <span
-                          className="badge-chip"
+                          className="badge-chip card-badge-extra"
                           style={{
                             background: 'rgba(255,255,255,.07)',
                             color: 'rgba(255,255,255,.7)',
@@ -189,55 +307,13 @@ function CardItem__({ $, c }: any) {
                       )}
                       {$.isProf && cc.length === 0 && (
                         <span
-                          className="badge-chip"
+                          className="badge-chip card-badge-extra"
                           style={{
                             background: 'rgba(239,68,68,.2)',
                             color: '#f87171',
                           }}
                         >
                           Solo prof
-                        </span>
-                      )}
-                      {nuova && (
-                        <span
-                          className="badge-chip"
-                          style={{
-                            background: 'rgba(34,197,94,.25)',
-                            color: '#4ade80',
-                            padding: '2px 6px',
-                            fontWeight: 800,
-                            border: '1px solid rgba(34,197,94,.4)',
-                          }}
-                        >
-                          NUOVO
-                        </span>
-                      )}
-                      {c.pinned && (
-                        <span
-                          className="badge-chip"
-                          title="Card fissata in cima"
-                          style={{
-                            background: 'rgba(168,85,247,.25)',
-                            color: '#d8b4fe',
-                            padding: '2px 6px',
-                            fontWeight: 800,
-                            border: '1px solid rgba(168,85,247,.4)',
-                          }}
-                        >
-                          📌 FISSATA
-                        </span>
-                      )}
-                      {nascosta && $.isProf && (
-                        <span
-                          className="badge-chip"
-                          style={{
-                            background: 'rgba(239,68,68,.2)',
-                            color: '#f87171',
-                            padding: '2px 6px',
-                            fontWeight: 800,
-                          }}
-                        >
-                          NASCOSTA
                         </span>
                       )}
                     </div>
@@ -275,11 +351,17 @@ function CardItem__({ $, c }: any) {
                 <div
                   style={{
                     fontWeight: 800,
-                    fontSize: 14,
+                    fontSize: 15,
                     color: nascosta ? (isLight ? '#64748b' : 'rgba(255,255,255,.58)') : isLight ? '#0f172a' : '#f1f5f9',
                     lineHeight: 1.35,
                     marginBottom: 5,
                     letterSpacing: 0.1,
+                    // Titoli lunghi: max 2 righe, così le righe della griglia
+                    // restano uniformi (prima potevano allungarsi a piacere).
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
                   }}
                 >
                   {c.titolo}
@@ -396,6 +478,7 @@ function CardItem__({ $, c }: any) {
                     $.toggleLike(c.id);
                   }}
                   style={{
+                    order: 1,
                     background: liked ? 'rgba(99,102,241,.3)' : 'rgba(255,255,255,.08)',
                     border: '1px solid ' + (liked ? 'rgba(99,102,241,.5)' : 'rgba(255,255,255,.1)'),
                     padding: '3px 8px',
@@ -487,7 +570,7 @@ function CardItem__({ $, c }: any) {
               )}
             </div>
           }
-          {$.isProf && !$.simulaSt && (
+          {azioniOpen && $.isProf && !$.simulaSt && (
             <button
               aria-label={c.pinned ? 'Togli il pin' : 'Fissa in cima'}
               title={c.pinned ? 'Togli il pin' : 'Fissa in cima'}
@@ -497,6 +580,7 @@ function CardItem__({ $, c }: any) {
                 $.togglePin(c.id);
               }}
               style={{
+                order: 8,
                 background: c.pinned ? 'rgba(168,85,247,.3)' : 'rgba(255,255,255,.08)',
                 border: '1px solid ' + (c.pinned ? 'rgba(168,85,247,.5)' : 'rgba(255,255,255,.1)'),
                 padding: '3px 8px',
@@ -507,8 +591,8 @@ function CardItem__({ $, c }: any) {
               📌
             </button>
           )}
-          {
-            <div style={{ display: 'flex', gap: 3 }}>
+          {azioniOpen && (
+            <div style={{ display: 'flex', gap: 3, order: 9 }}>
               {['🤔', '💡', '🔥'].map(function (emoji) {
                 var lista = (c.reazioni && c.reazioni[emoji]) || [];
                 var hasMe = lista.indexOf($.myName($.user)) >= 0;
@@ -536,7 +620,7 @@ function CardItem__({ $, c }: any) {
                 );
               })}
             </div>
-          }
+          )}
           {
             <button
               aria-label="Apri commenti"
@@ -553,6 +637,7 @@ function CardItem__({ $, c }: any) {
                 }, 150);
               }}
               style={{
+                order: 2,
                 background: 'rgba(99,102,241,.15)',
                 border: '1px solid rgba(99,102,241,.3)',
                 padding: '3px 10px',
@@ -578,7 +663,7 @@ function CardItem__({ $, c }: any) {
               }
             </button>
           }
-          {$.isProf && !$.simulaSt && (c.commenti || []).length >= 3 && (
+          {azioniOpen && $.isProf && !$.simulaSt && (c.commenti || []).length >= 3 && (
             <button
               className="pill-btn"
               onClick={function (e: any) {
@@ -587,6 +672,7 @@ function CardItem__({ $, c }: any) {
                 if (!$.sommarioResult[c.id]) $.riassuntiCommentiRun(c);
               }}
               style={{
+                order: 10,
                 background: 'rgba(34,197,94,.12)',
                 border: '1px solid rgba(34,197,94,.3)',
                 color: '#4ade80',
@@ -604,6 +690,7 @@ function CardItem__({ $, c }: any) {
                 $.togglePreferito(c.id);
               }}
               style={{
+                order: 3,
                 background: $.preferiti.indexOf(String(c.id)) >= 0 ? 'rgba(245,158,11,.3)' : 'rgba(255,255,255,.06)',
                 border:
                   '1px solid ' +
@@ -615,13 +702,42 @@ function CardItem__({ $, c }: any) {
               {$.preferiti.indexOf(String(c.id)) >= 0 ? '★' : '☆'}
             </button>
           )}
-          {<span style={{ flex: 1 }} />}
           {
-            <span title={$.fmt(c.data)} style={{ fontSize: 11, color: 'rgba(255,255,255,.45)' }}>
+            // Toggle delle azioni secondarie: sta nella riga primaria (order 4)
+            // così «👍 💬 ★/✏️ ⋯» è tutto ciò che si vede a riposo.
+            <button
+              aria-label="Altre azioni"
+              title="Altre azioni"
+              aria-expanded={azioniOpen}
+              className="pill-btn"
+              onClick={function (e: any) {
+                e.stopPropagation();
+                setAzioniOpen(function (v: boolean) {
+                  return !v;
+                });
+              }}
+              style={{
+                order: 4,
+                background: azioniOpen ? 'rgba(99,102,241,.28)' : 'rgba(255,255,255,.06)',
+                border: '1px solid ' + (azioniOpen ? 'rgba(99,102,241,.45)' : 'rgba(255,255,255,.12)'),
+                color: azioniOpen ? '#c7d2fe' : 'rgba(255,255,255,.62)',
+                fontWeight: 800,
+              }}
+            >
+              {azioniOpen ? '×' : '⋯'}
+            </button>
+          }
+          {<span style={{ flex: 1, order: 5 }} />}
+          {
+            <span title={$.fmt(c.data)} style={{ order: 6, fontSize: 11, color: 'rgba(255,255,255,.45)' }}>
               {$.timeAgo(c.data)}
             </span>
           }
-          {$.isProf && !$.simulaSt && (
+          {
+            // A capo prima delle azioni secondarie: flex-basis 100% + order 7.
+            <span aria-hidden="true" style={{ order: 7, flexBasis: '100%', height: 0, marginTop: 6 }} />
+          }
+          {azioniOpen && $.isProf && !$.simulaSt && (
             <button
               aria-label="Copia link"
               className="pill-btn"
@@ -639,6 +755,7 @@ function CardItem__({ $, c }: any) {
                     });
               }}
               style={{
+                order: 11,
                 background: 'rgba(255,255,255,.06)',
                 border: '1px solid rgba(255,255,255,.12)',
                 color: 'rgba(255,255,255,.52)',
@@ -648,7 +765,7 @@ function CardItem__({ $, c }: any) {
               🔗
             </button>
           )}
-          {$.isProf && !$.simulaSt && (
+          {azioniOpen && $.isProf && !$.simulaSt && (
             <button
               aria-label="Modifica card"
               className="pill-btn"
@@ -657,6 +774,7 @@ function CardItem__({ $, c }: any) {
                 $.editCard(c);
               }}
               style={{
+                order: 12,
                 background: 'rgba(59,130,246,.2)',
                 border: '1px solid rgba(59,130,246,.4)',
                 color: '#60a5fa',
@@ -675,6 +793,9 @@ function CardItem__({ $, c }: any) {
                 $.editCard(c);
               }}
               style={{
+                // L'autore vede la sua ✏️ tra le azioni primarie: è l'azione
+                // che usa di più e non deve stare dietro il menu.
+                order: 3,
                 background: 'rgba(59,130,246,.2)',
                 border: '1px solid rgba(59,130,246,.4)',
                 color: '#60a5fa',
@@ -684,7 +805,7 @@ function CardItem__({ $, c }: any) {
               ✏️
             </button>
           )}
-          {$.isProf && !$.simulaSt && (
+          {azioniOpen && $.isProf && !$.simulaSt && (
             <button
               aria-label="Duplica card"
               className="pill-btn"
@@ -692,6 +813,7 @@ function CardItem__({ $, c }: any) {
                 $.apriDuplica(c, e);
               }}
               style={{
+                order: 13,
                 background: 'rgba(245,158,11,.15)',
                 border: '1px solid rgba(245,158,11,.3)',
                 color: '#fbbf24',
@@ -701,7 +823,7 @@ function CardItem__({ $, c }: any) {
               📋
             </button>
           )}
-          {$.isProf && !$.simulaSt && (
+          {azioniOpen && $.isProf && !$.simulaSt && (
             <button
               type="button"
               draggable={false}
@@ -715,6 +837,7 @@ function CardItem__({ $, c }: any) {
                 $.apriCopiaAnno(c, e);
               }}
               style={{
+                order: 14,
                 background: 'rgba(139,92,246,.15)',
                 border: '1px solid rgba(139,92,246,.3)',
                 color: '#a78bfa',
@@ -724,7 +847,7 @@ function CardItem__({ $, c }: any) {
               📅
             </button>
           )}
-          {$.isProf && !$.simulaSt && (
+          {azioniOpen && $.isProf && !$.simulaSt && (
             <button
               aria-label="Elimina"
               className="pill-btn"
@@ -733,6 +856,7 @@ function CardItem__({ $, c }: any) {
                 $.delCardWithUndo(c.id);
               }}
               style={{
+                order: 15,
                 background: 'rgba(239,68,68,.15)',
                 border: '1px solid rgba(239,68,68,.3)',
                 color: '#f87171',
@@ -756,6 +880,9 @@ function CardItem__({ $, c }: any) {
 // toasts, bulkMode) ri-renderizzava TUTTE le card della griglia.
 function cardItemAreEqual(prev: any, next: any) {
   if (prev.c !== next.c) return false;
+  // idx guida solo il ritardo dell'entrata a cascata: se cambia (riordino), la
+  // card va ri-renderizzata per non trascinarsi dietro il delay vecchio.
+  if (prev.idx !== next.idx) return false;
   var a = prev.$;
   var b = next.$;
   // Campi scalari/ref che la card renderizza direttamente

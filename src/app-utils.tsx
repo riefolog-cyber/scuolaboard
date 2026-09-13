@@ -604,6 +604,33 @@ export var ErrorBoundary = (function () {
         } catch (e) {}
       },
     },
+    aperti: {
+      // Fallback (usato solo se window._SB_LS non esiste): stessa mappa di
+      // apertura per utente di app-state.ts — { [cardId]: timestamp }.
+      get: function (uid: string) {
+        try {
+          var raw = _safeGetItem(localStorage, (CFG_LS_KEYS.aperti && CFG_LS_KEYS.aperti(uid)) || 'sb_aperti_' + uid);
+          var m = raw ? JSON.parse(raw) : null;
+          return m && typeof m === 'object' ? m : {};
+        } catch (e) {
+          return {};
+        }
+      },
+      set: function (uid: string, m: any) {
+        try {
+          _safeSetItem(
+            localStorage,
+            (CFG_LS_KEYS.aperti && CFG_LS_KEYS.aperti(uid)) || 'sb_aperti_' + uid,
+            JSON.stringify(m)
+          );
+        } catch (e) {}
+      },
+      rm: function (uid: string) {
+        try {
+          _safeRemoveItem(localStorage, (CFG_LS_KEYS.aperti && CFG_LS_KEYS.aperti(uid)) || 'sb_aperti_' + uid);
+        } catch (e) {}
+      },
+    },
     privacy: {
       get: function (uid: string) {
         return _safeGetItem(

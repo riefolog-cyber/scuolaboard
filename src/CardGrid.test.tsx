@@ -19,7 +19,7 @@ beforeEach(() => {
 });
 
 import CardItem from './CardItem.tsx';
-import CardGrid from './CardGrid.tsx';
+import CardGrid, { GRID_STYLE } from './CardGrid.tsx';
 
 describe('CardGrid', () => {
   function make$(overrides = {}) {
@@ -103,6 +103,14 @@ describe('CardGrid', () => {
     });
     render(React.createElement(CardGrid, { $ }));
     expect(screen.getByText(/Nessuna card per la classe/)).toBeTruthy();
+  });
+
+  it('usa una griglia row-major (ordine da sinistra a destra, non a colonne)', () => {
+    // Regressione: con le colonne CSS (masonry) la priorità (fissate, aperture
+    // recenti) finiva impilata in VERTICALE nella prima colonna invece di
+    // scorrere sulla prima riga. Il layout deve restare una grid con più colonne.
+    expect(GRID_STYLE.display).toBe('grid');
+    expect(GRID_STYLE.gridTemplateColumns).toContain('auto-fill');
   });
 
   it('renders cards when visibleSorted has items', () => {

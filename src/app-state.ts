@@ -32,6 +32,12 @@
       privacy: function (uid: string) {
         return 'privacy_accepted_' + uid;
       },
+      // Ordine di apertura delle card, PER UTENTE: { [cardId]: timestamp }.
+      // Vive in localStorage perché è una preferenza di lettura personale:
+      // nessuna scrittura Firestore, nessun cambio alle regole.
+      aperti: function (uid: string) {
+        return 'sb_aperti_' + uid;
+      },
     },
   };
   window.SB_CONFIG = CFG;
@@ -75,6 +81,29 @@
       rm: function () {
         try {
           if (typeof localStorage !== 'undefined') localStorage.removeItem(CFG.LS_KEYS.seen);
+        } catch (e) {}
+      },
+    },
+    aperti: {
+      // Ordine di apertura delle card per utente: { [cardId]: timestamp }.
+      // get() normalizza qualunque contenuto corrotto in {} (mai throw).
+      get: function (uid: string) {
+        try {
+          var raw = typeof localStorage !== 'undefined' ? localStorage.getItem(CFG.LS_KEYS.aperti(uid)) : null;
+          var m = raw ? JSON.parse(raw) : null;
+          return m && typeof m === 'object' ? m : {};
+        } catch (e) {
+          return {};
+        }
+      },
+      set: function (uid: string, m: any) {
+        try {
+          if (typeof localStorage !== 'undefined') localStorage.setItem(CFG.LS_KEYS.aperti(uid), JSON.stringify(m));
+        } catch (e) {}
+      },
+      rm: function (uid: string) {
+        try {
+          if (typeof localStorage !== 'undefined') localStorage.removeItem(CFG.LS_KEYS.aperti(uid));
         } catch (e) {}
       },
     },

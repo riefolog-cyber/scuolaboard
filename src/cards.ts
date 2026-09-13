@@ -23,6 +23,35 @@ export function deepEq(a: any, b: any): boolean {
   return true;
 }
 
+// Numero massimo di aperture ricordate per utente: tiene la mappa (e la voce
+// in localStorage) piccola anche dopo mesi di uso.
+export var APERTI_MAX = 300;
+
+// Ordinamento della griglia:
+//   1) PRIMA le card fissate (📌) — sempre davanti a tutte;
+//   2) poi le card aperte di recente, apertura più recente per prima;
+//   3) infine le card mai aperte nel loro ordine manuale (drag & drop del prof).
+// `aperti` è la mappa { [cardId]: timestamp } dell'utente corrente (vedi
+// markAperto). Pura e esportata per i test unitari.
+export function compareCards(a: any, b: any, aperti?: Record<string, number>): number {
+  var ap = aperti || {};
+  var pa = a.pinned ? 0 : 1;
+  var pb = b.pinned ? 0 : 1;
+  if (pa !== pb) return pa - pb;
+  // Tra le fissate resta l'ordine manuale: il pin è una scelta esplicita del
+  // prof e il gruppo in cima non deve riordinarsi da solo quando si apre una
+  // card. Il pin resta quindi "davanti a tutte", stabile.
+  if (pa === 0) return (a.ordine || 0) - (b.ordine || 0);
+  var ta = ap[String(a.id)];
+  var tb = ap[String(b.id)];
+  if (ta || tb) {
+    if (!ta) return 1; // una card mai aperta sta sotto quelle già aperte
+    if (!tb) return -1;
+    if (ta !== tb) return tb - ta; // apertura più recente per prima
+  }
+  return (a.ordine || 0) - (b.ordine || 0);
+}
+
 export function useCards(user: any, annoScolastico: string) {
   // ── STORE (useSyncExternalStore) ──────────────────────────────────────
   // any: lo store è `empty` (locale) o quello di createCombinedStore (compat,
@@ -157,6 +186,68 @@ export function useCards(user: any, annoScolastico: string) {
   useEffect(function () {
     try {
       seenRef.current = SB.LS.seen.get();
+    } catch (e) {}
+  }, []);
+
+  // ── ORDINE DI APERTURA (memoria locale, per utente) ────────────────────
+  // `aperti` = { [cardId]: timestamp dell'ultima apertura }: serve a tenere in
+  // cima le card aperte di recente (compareCards). È una preferenza di lettura
+  // personale, quindi vive in localStorage per uid — nessuna scrittura su
+  // Firestore e nessun cambio alle regole.
+  var uid = user && user.uid ? String(user.uid) : '';
+  var [aperti, setAperti] = useState<Record<string, number>>({});
+  // Ref mirror: markAperto è chiamato da handler creati una sola volta (openCard
+  // in AppProvider è un useCallback con deps vuote) e deve leggere sempre la
+  // mappa più recente e l'uid corrente, non quelli del primo render.
+  var apertiRef = useRef<Record<string, number>>({});
+  var uidRef = useRef('');
+
+  useEffect(
+    function () {
+      uidRef.current = uid;
+      var m: Record<string, number> = {};
+      if (uid) {
+        try {
+          m = SB.LS.aperti.get(uid) || {};
+        } catch (e) {
+          m = {};
+        }
+      }
+      apertiRef.current = m;
+      setAperti(m);
+    },
+    [uid]
+  );
+
+  // Il prof ha riordinato a mano (drag & drop): l'ordine manuale riprende il
+  // comando e i "bump" delle card aperte di recente si azzerano — altrimenti la
+  // card appena trascinata tornerebbe su da sola e il drop sembrerebbe ignorato.
+  var clearAperti = useCallback(function () {
+    var u = uidRef.current;
+    var had = Object.keys(apertiRef.current).length > 0;
+    apertiRef.current = {};
+    if (had) setAperti({});
+    try {
+      if (u) SB.LS.aperti.rm(u);
+    } catch (e) {}
+  }, []);
+
+  var markAperto = useCallback(function (id: any) {
+    var u = uidRef.current;
+    if (!u) return;
+    var next: Record<string, number> = Object.assign({}, apertiRef.current, { [String(id)]: Date.now() });
+    var keys = Object.keys(next);
+    if (keys.length > APERTI_MAX) {
+      // Potatura: butta le aperture più vecchie (le card eliminate/inattive).
+      keys.sort(function (x: string, y: string) {
+        return (next[x] || 0) - (next[y] || 0);
+      });
+      for (var i = 0; i < keys.length - APERTI_MAX; i++) delete next[keys[i]];
+    }
+    apertiRef.current = next;
+    setAperti(next);
+    try {
+      SB.LS.aperti.set(u, next);
     } catch (e) {}
   }, []);
 
@@ -298,16 +389,13 @@ export function useCards(user: any, annoScolastico: string) {
 
   var visibleSorted = useMemo(
     function () {
-      // Card fissate (📌 pinned, solo prof può fissarle) in cima, poi per
-      // ordine: le card importanti restano visibili subito a tutti.
+      // Card fissate (📌) sempre in cima, poi le card aperte di recente: le
+      // card che l'utente ha appena aperto restano raggiungibili in un click.
       return visible.slice().sort(function (a: any, b: any) {
-        var pa = a.pinned ? 0 : 1;
-        var pb = b.pinned ? 0 : 1;
-        if (pa !== pb) return pa - pb;
-        return (a.ordine || 0) - (b.ordine || 0);
+        return compareCards(a, b, aperti);
       });
     },
-    [visible]
+    [visible, aperti]
   );
 
   // ── INTERFACE (identica a prima) ──────────────────────────────────────
@@ -345,6 +433,8 @@ export function useCards(user: any, annoScolastico: string) {
     confirmRimuovi: confirmRimuovi,
     setConfirmRimuovi: setConfirmRimuovi,
     seenRef: seenRef,
+    markAperto: markAperto,
+    clearAperti: clearAperti,
     addingClasse: addingClasse,
     setAddingClasse: setAddingClasse,
     newClasseInput: newClasseInput,

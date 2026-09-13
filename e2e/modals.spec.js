@@ -35,6 +35,7 @@ test.describe('Modali (verifica Chrome reale)', () => {
     // Apre la modale dal bottone 📅 della card c1 (aria-label "Copia in altro
     // anno"). NB: anche la card p1 (proposta) ha lo stesso bottone → scoping
     // sulla card c1 per evitare ambiguity di Playwright.
+    await page.locator('#card-c1').getByRole('button', { name: 'Altre azioni' }).click();
     await page.locator('#card-c1').getByRole('button', { name: 'Copia in altro anno' }).click();
     await expect(page.getByText('Copia in altro anno').first()).toBeVisible({ timeout: 5000 });
 

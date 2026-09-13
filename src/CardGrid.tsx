@@ -2,6 +2,21 @@
 import CardItem from './CardItem.tsx';
 import { FORM0 } from './app-utils.tsx';
 
+// Griglia ROW-MAJOR (riga per riga, da sinistra a destra).
+// Prima si usavano le colonne CSS (masonry): riempiono una colonna dall'alto in
+// basso, quindi le card prioritarie (fissate, poi aperte di recente) finivano
+// IMPILATE in verticale nella prima colonna e la priorità non si leggeva come
+// "prima riga". Con il grid l'ordine di visibleSorted si legge da sinistra a
+// destra. `alignItems: start` evita che le card basse vengano allungate a
+// riempire l'altezza della riga.
+export const GRID_STYLE = {
+  display: 'grid',
+  // min(300px, 100%) evita lo scroll orizzontale su schermi stretti (< 300px).
+  gridTemplateColumns: 'repeat(auto-fill, minmax(min(300px, 100%), 1fr))',
+  gap: 16,
+  alignItems: 'start',
+} as const;
+
 function CardGrid__({ $ }: any) {
   // Skeleton SOLO durante il caricamento. Una volta caricate le card (anche
   // se zero), si scende allo stato vuoto → mai scheletri sur un account nuovo.
@@ -9,34 +24,45 @@ function CardGrid__({ $ }: any) {
     return (
       <div style={{ padding: '10px 14px 18px' }}>
         {
-          <div className="card-grid" style={{ columns: '300px', columnGap: 16 }}>
-            {[1, 2, 3, 4, 5, 6].map(function (i: number) {
+          <div className="card-grid" style={GRID_STYLE}>
+            {' '}
+            {[1, 2, 3, 4, 5, 6, 7, 8].map(function (i: number) {
+              // Skeleton fedele alla card vera (chip + titolo + due righe +
+              // pillole): lo stacco al caricamento si nota molto meno.
               return (
                 <div
                   key={i}
                   style={{
-                    breakInside: 'avoid',
-                    marginBottom: 16,
                     borderRadius: 18,
                     overflow: 'hidden',
                     border: '1px solid rgba(255,255,255,.06)',
                     background: 'rgba(255,255,255,.03)',
-                    borderTop: '3px solid rgba(255,255,255,.06)',
+                    borderTop: '3px solid rgba(255,255,255,.08)',
                   }}
                 >
                   {
-                    <div style={{ padding: '12px 14px 10px' }}>
-                      {<div className="skeleton" style={{ height: 14, width: '40%', marginBottom: 10 }} />}
-                      {<div className="skeleton" style={{ height: 16, width: '80%', marginBottom: 8 }} />}
-                      {<div className="skeleton" style={{ height: 11, width: '60%', marginBottom: 4 }} />}
-                      {<div className="skeleton" style={{ height: 11, width: '45%' }} />}
+                    <div
+                      style={{
+                        padding: '12px 14px 6px',
+                        background: 'linear-gradient(180deg,rgba(255,255,255,.04) 0%, transparent 65%)',
+                      }}
+                    >
+                      {
+                        <div
+                          className="skeleton"
+                          style={{ height: 18, width: 78, borderRadius: 20, marginBottom: 10 }}
+                        />
+                      }
+                      {<div className="skeleton" style={{ height: 15, width: '85%', marginBottom: 7 }} />}
+                      {<div className="skeleton" style={{ height: 11, width: '95%', marginBottom: 4 }} />}
+                      {<div className="skeleton" style={{ height: 11, width: '60%' }} />}
                     </div>
                   }
                   {
                     <div style={{ padding: '8px 14px 10px', display: 'flex', gap: 8 }}>
-                      {<div className="skeleton" style={{ height: 26, width: 52, borderRadius: 20 }} />}
-                      {<div className="skeleton" style={{ height: 26, width: 52, borderRadius: 20 }} />}
-                      {<div className="skeleton" style={{ height: 26, width: 90, borderRadius: 20 }} />}
+                      {<div className="skeleton" style={{ height: 24, width: 46, borderRadius: 20 }} />}
+                      {<div className="skeleton" style={{ height: 24, width: 84, borderRadius: 20 }} />}
+                      {<div className="skeleton" style={{ height: 24, width: 28, borderRadius: 20 }} />}
                     </div>
                   }
                 </div>
@@ -132,7 +158,7 @@ function CardGrid__({ $ }: any) {
   return (
     <div
       className="card-grid"
-      style={{ columns: '300px', columnGap: 16 }}
+      style={GRID_STYLE}
       onDragOver={function (e: any) {
         // Drop anche nei VUOTI tra le card (layout a colonne): senza questo il
         // browser non accetta il drop e la card tornava al punto di partenza.
@@ -142,8 +168,9 @@ function CardGrid__({ $ }: any) {
         if ($.onGridDrop) $.onGridDrop(e);
       }}
     >
-      {$.visibleSorted.map(function (c: any) {
-        return <CardItem key={c.id} $={$} c={c} />;
+      {$.visibleSorted.map(function (c: any, i: number) {
+        // idx = posizione nella griglia: guida l'entrata a cascata delle card.
+        return <CardItem key={c.id} $={$} c={c} idx={i} />;
       })}
     </div>
   );

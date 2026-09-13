@@ -48,6 +48,7 @@ describe('CardItem', () => {
       delCardWithUndo: vi.fn(),
       apriDuplica: vi.fn(),
       apriCopiaAnno: vi.fn(),
+      riprovaAnnuncio: vi.fn(),
     };
 
     card = {
@@ -96,9 +97,63 @@ describe('CardItem', () => {
     expect(screen.getByText('3A')).toBeInTheDocument();
   });
 
+  it('i badge extra sono marcati per la rivelazione al hover (a riposo: tipo + un stato)', () => {
+    renderCard();
+    // Il chip delle classi è "extra" (visibile solo al passaggio del mouse),
+    // il chip del tipo no: la gerarchia a riposo è tipo + stato.
+    var extra = document.querySelectorAll('.card-badge-extra');
+    expect(extra.length).toBe(1);
+    expect(extra[0].textContent).toContain('3A');
+    expect(screen.getByText(/NOTA/).className).not.toContain('card-badge-extra');
+  });
+
   it('shows NASCOSTA badge when hidden', () => {
     renderCard({ visibile: false });
     expect(screen.getByText(/NASCOSTA/)).toBeInTheDocument();
+  });
+  it('badge PERSISTENTE "avviso non inviato": dice CHI manca e offre il Riprova', () => {
+    const riprovaAnnuncio = vi.fn();
+    // Annuncio interrotto (istante vecchio): la coda è è rimasta aperta e
+    // sappiamo chi non ha ricevuto l'avviso.
+    const idVecchio = Date.now() - 10 * 60 * 1000;
+    const mancanti = [
+      { uid: 's1', nome: 'Anna Verdi' },
+      { uid: 's2', nome: 'Luca Bianchi' },
+    ];
+    renderCard({ id: idVecchio, avvisiPendenti: true, avvisiMancanti: mancanti }, { riprovaAnnuncio });
+
+    const badge = document.querySelector('.card-avviso') as HTMLElement;
+    expect(badge).toBeTruthy();
+    // I nomi sono visibili senza dover passare il mouse.
+    expect(badge.textContent).toContain('mancano Anna Verdi, Luca Bianchi');
+    // E il tooltip li ripete per esteso, come promemoria.
+    expect(badge.getAttribute('title')).toContain('Mancano Anna Verdi, Luca Bianchi');
+    // È un problema da segnalare, non uno stato informativo: resta visibile a
+    // riposo (a differenza dei badge "extra").
+    expect(badge.className).not.toContain('card-badge-extra');
+
+    // Il pulsante rilancia l'annuncio per QUELLA card, senza aprire il dettaglio.
+    fireEvent.click(screen.getByLabelText('Riprova avviso'));
+    expect(riprovaAnnuncio).toHaveBeenCalledTimes(1);
+    expect(riprovaAnnuncio.mock.calls[0][0].id).toBe(idVecchio);
+    expect($.openCard).not.toHaveBeenCalled();
+  });
+
+  it('niente badge avviso per lo studente (il segnale è del docente)', () => {
+    renderCard(
+      {
+        id: Date.now() - 10 * 60 * 1000,
+        avvisiPendenti: true,
+        avvisiMancanti: [{ uid: 's1', nome: 'Anna Verdi' }],
+      },
+      { isProf: false }
+    );
+    expect(document.querySelector('.card-avviso')).toBeNull();
+  });
+
+  it('niente badge avviso quando l annuncio è concluso (flag chiuso)', () => {
+    renderCard({ avvisiPendenti: false });
+    expect(document.querySelector('.card-avviso')).toBeNull();
   });
 
   it('renders like count', () => {
@@ -147,8 +202,14 @@ describe('CardItem', () => {
     expect(toggle).toHaveBeenCalledWith('c1');
   });
 
-  it('renders reaction buttons', () => {
+  it('mostra le reazioni solo dopo il toggle "Altre azioni"', () => {
+    // La fila a riposo è corta (👍 💬 ★/✏️ ⋯): reazioni e azioni di gestione
+    // stanno dietro il toggle, così la card resta leggibile.
     renderCard();
+    expect(screen.queryByText('🤔')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Altre azioni' }));
+    expect(screen.getByRole('button', { name: 'Altre azioni' }).getAttribute('aria-expanded')).toBe('true');
     expect(screen.getByText('🤔')).toBeInTheDocument();
     expect(screen.getByText('💡')).toBeInTheDocument();
     expect(screen.getByText('🔥')).toBeInTheDocument();
@@ -157,22 +218,33 @@ describe('CardItem', () => {
   it('calls toggleReazione on reaction click', () => {
     const toggleR = vi.fn();
     renderCard({}, { toggleReazione: toggleR });
+    fireEvent.click(screen.getByRole('button', { name: 'Altre azioni' }));
     fireEvent.click(screen.getByText('🤔'));
     expect(toggleR).toHaveBeenCalledWith('c1', '🤔');
   });
 
-  it('renders edit button for prof', () => {
+  it('il click sul toggle non apre la card', () => {
+    const open = vi.fn();
+    renderCard({}, { openCard: open });
+    fireEvent.click(screen.getByRole('button', { name: 'Altre azioni' }));
+    expect(open).not.toHaveBeenCalled();
+  });
+
+  it('renders edit button for prof (nel menu azioni)', () => {
     renderCard({}, { isProf: true, simulaSt: false });
+    fireEvent.click(screen.getByRole('button', { name: 'Altre azioni' }));
     expect(screen.getByText('✏️')).toBeInTheDocument();
   });
 
-  it('renders delete button for prof', () => {
+  it('renders delete button for prof (nel menu azioni)', () => {
     renderCard({}, { isProf: true, simulaSt: false });
+    fireEvent.click(screen.getByRole('button', { name: 'Altre azioni' }));
     expect(screen.getByText('🗑️')).toBeInTheDocument();
   });
 
   it('does not show edit button for students', () => {
     renderCard({}, { isProf: false, simulaSt: false });
+    fireEvent.click(screen.getByRole('button', { name: 'Altre azioni' }));
     expect(screen.queryByText('✏️')).toBeNull();
   });
 
