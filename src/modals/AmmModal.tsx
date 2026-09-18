@@ -161,7 +161,6 @@ function AmmModal(props: any) {
                   {[
                     'Commento non pertinente',
                     'Linguaggio inappropriato',
-                    'Risposta superficiale o vuota',
                     'Mancanza di rispetto',
                     'Copia da un compagno',
                     'Non partecipa alla discussione',
