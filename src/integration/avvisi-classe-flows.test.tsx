@@ -249,6 +249,124 @@ describe('avvisi di classe: indicatore in alto con "Riprova tutti"', () => {
   });
 });
 
+// ── COMMENTI: i compagni di classe vengono avvisati ──────────────────────
+// Il commento di uno studente è una notizia per la classe, non solo per i
+// prof: il fan-out usa tipo 'risposta' + cmId del commento, così l'id
+// deterministico (risposta_<cardId>_<cmId>) è DISTINTO per ogni intervento e
+// non collide con l'annuncio della card (nuova_card_<cardId>).
+describe('avvisi di classe: commento di uno studente', () => {
+  it('il commento avvisa i compagni di classe (e i prof), non chi lo scrive', async () => {
+    const seed = {
+      users: { prof1: PROF_DOC, stud1: STUD_DOC, stud2: STUD2_DOC },
+      cards: { c1: mkCard('c1', { titolo: 'Uscita didattica', classi: ['3AI'], annoScolastico: '2026/2027' }) },
+    };
+    const { db } = await renderApp({ seed, user: STUD });
+
+    fireEvent.click(await screen.findByText('Uscita didattica', {}, { timeout: 4000 }));
+    const input = await screen.findByPlaceholderText('Scrivi un commento…', {}, { timeout: 4000 });
+    fireEvent.input(input, { target: { value: 'Che posto fantastico!' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    await screen.findByText('Che posto fantastico!', {}, { timeout: 4000 });
+
+    // Il compagno riceve l'avviso, con l'id del SUO commento.
+    await waitFor(() => {
+      const doc = db._get('notifiche', 'stud2');
+      expect(doc && doc.lista && doc.lista.length).toBe(1);
+      const n = doc.lista[0];
+      expect(n.tipo).toBe('risposta');
+      expect(String(n.id).indexOf('risposta_c1_')).toBe(0);
+      expect(String(n.msg).indexOf('ha commentato')).toBeGreaterThanOrEqual(0);
+    });
+    // L'autore non si avvisa da solo; i prof ricevono il loro avviso dedicato.
+    expect(db._get('notifiche', 'stud1')).toBeFalsy();
+    await waitFor(() => {
+      const prof = db._get('notifiche', 'prof1');
+      expect(prof && prof.lista && prof.lista.some((n) => n.tipo === 'risposta')).toBe(true);
+    });
+  });
+
+  it('un secondo commento sulla stessa card arriva a sua volta (no collisione con l annuncio)', async () => {
+    // Regressione del bug segnalato: prima del fix ogni commento riusava
+    // l'id nuova_card_<cardId>, così il primo commento "spariva" nella dedupe
+    // con l'annuncio della pubblicazione e i compagni non ricevevano nulla.
+    const seed = {
+      users: { prof1: PROF_DOC, stud1: STUD_DOC, stud2: STUD2_DOC },
+      cards: {
+        c1: mkCard('c1', {
+          titolo: 'Uscita didattica',
+          classi: ['3AI'],
+          annoScolastico: '2026/2027',
+          commenti: [{ id: 1, autore: 'Luca Bianchi', testo: 'Che posto fantastico!', data: '2026-09-01', risposte: [] }],
+        }),
+      },
+      notifiche: {
+        stud1: {
+          lista: [
+            {
+              id: 'nuova_card_c1',
+              tipo: 'nuova_card',
+              cardId: 'c1',
+              titolo: 'Uscita didattica',
+              msg: 'Nuova card per la tua classe',
+              createdAt: new Date().toISOString(),
+              letta: true,
+            },
+          ],
+          aggiornato: new Date().toISOString(),
+        },
+      },
+    };
+    const { db } = await renderApp({ seed, user: STUD2 });
+
+    fireEvent.click(await screen.findByText('Uscita didattica', {}, { timeout: 4000 }));
+    const input = await screen.findByPlaceholderText('Scrivi un commento…', {}, { timeout: 4000 });
+    fireEvent.input(input, { target: { value: 'Io vengo!' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    await screen.findByText('Io vengo!', {}, { timeout: 4000 });
+
+    // Luca ha già l'annuncio della card in lista: il nuovo avviso deve
+    // AFFIANCARLO (id diverso), non essere inghiottito dalla dedupe.
+    await waitFor(() => {
+      const doc = db._get('notifiche', 'stud1');
+      expect(doc && doc.lista && doc.lista.length).toBe(2);
+    });
+    const ids = db._get('notifiche', 'stud1').lista.map((n) => n.id);
+    expect(ids[0]).toBe('nuova_card_c1');
+    expect(String(ids[1]).indexOf('risposta_c1_')).toBe(0);
+    // Chi commenta non si avvisa da solo.
+    expect(db._get('notifiche', 'stud2')).toBeFalsy();
+  });
+
+  it("il messaggio porta l'ANTEPRIMA del commento, non solo l'autore", async () => {
+    // Così chi riceve capisce subito SE vale l'apertura: «Luca ha commentato:
+    // Che posto fantastico!». Un commento lungo viene accorciato al confine
+    // di parola con «…»; un commento multilinea non rompe la riga dell'elenco.
+    const testoLungo =
+      'Il posto è meraviglioso, ma ricordate che il bus parte alle sette in punto e chi arriva tardi resta a terra';
+    const seed = {
+      users: { prof1: PROF_DOC, stud1: STUD_DOC, stud2: STUD2_DOC },
+      cards: { c1: mkCard('c1', { titolo: 'Uscita didattica', classi: ['3AI'], annoScolastico: '2026/2027' }) },
+    };
+    const { db } = await renderApp({ seed, user: STUD });
+
+    fireEvent.click(await screen.findByText('Uscita didattica', {}, { timeout: 4000 }));
+    const input = await screen.findByPlaceholderText('Scrivi un commento…', {}, { timeout: 4000 });
+    fireEvent.input(input, { target: { value: testoLungo } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    await screen.findByText(/Il posto è meraviglioso/, {}, { timeout: 4000 });
+
+    await waitFor(() => {
+      const doc = db._get('notifiche', 'stud2');
+      expect(doc && doc.lista && doc.lista.length).toBe(1);
+      const msg = doc.lista[0].msg;
+      expect(String(msg).indexOf('Luca Bianchi ha commentato: ')).toBe(0);
+      expect(msg.length).toBeLessThanOrEqual('Luca Bianchi ha commentato: '.length + 61);
+      expect(msg.endsWith('…')).toBe(true);
+      expect(String(msg).indexOf('  ') < 0).toBe(true); // nessun doppio spazio
+    });
+  });
+});
+
 describe('avvisi di classe: nessun avviso doppio nella lista', () => {
   it('due notifiche con lo stesso id vengono mostrate una volta sola', async () => {
     // Scenario reale: il fan-out riparte perché la marcatura non era riuscita,

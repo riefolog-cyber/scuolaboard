@@ -127,6 +127,12 @@ async function notifyClasse(opts: {
   msg: string;
   tipo?: string;
   excludeUid?: string;
+  // Serve all'id DETERMINISTICO: con un commento l'id diventa
+  // `risposta_<cardId>_<cmId>`, così ogni commento è un avviso DISTINTO e i
+  // commenti successivi sulla stessa card non collidono con `nuova_card_<cardId>`
+  // (prima di questo fix il secondo commento della classe non arrivava mai a
+  // nessuno: dedupe in lettura, vedi useNotifiche).
+  cmId?: string | number;
   // Riprova MIRATA: avvisa SOLO questi studenti (quelli rimasti senza avviso),
   // saltando il filtro per classe. Senza, il fan-out è per classe come sempre.
   soloUid?: string[];
@@ -160,10 +166,12 @@ async function notifyClasse(opts: {
         promises.push(
           notifyUser(d.id, {
             tipo: tipo,
-            // Un solo avviso per (tipo, card) e per studente: il recupero di un
-            // invio interrotto non può produrre una notifica doppia.
-            id: tipo + '_' + opts.cardId,
+            // Un solo avviso per (tipo, card, cmId) e per studente: il recupero di
+            // un invio interrotto non può produrre una notifica doppia. Senza
+            // cmId (nuova card) l'id resta `tipo_<cardId>` come sempre.
+            id: tipo + '_' + opts.cardId + (opts.cmId != null ? '_' + opts.cmId : ''),
             cardId: opts.cardId,
+            cmId: opts.cmId != null ? String(opts.cmId) : undefined,
             titolo: opts.titolo,
             msg: opts.msg,
             annoScolastico: anno,

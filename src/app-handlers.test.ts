@@ -6,10 +6,43 @@
 // PRIMA di createAppHandlers.
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { setupTestEnv, teardownTestEnv } from './integration/fixtures';
-import { createAppHandlers } from './app-handlers.ts';
+import { createAppHandlers, anteprimaTesto } from './app-handlers.ts';
 
 beforeEach(setupTestEnv);
 afterEach(teardownTestEnv);
+
+// ── anteprimaTesto: il testo nel messaggio di notifica ──────────────────────
+// Il messaggio deve dire SE vale l'apertura: testo del commento accorciato al
+// confine di parola, whitespace unificato, «…» solo se tagliato.
+describe('anteprimaTesto', () => {
+  it('testo corto: passa intatto', () => {
+    expect(anteprimaTesto('Che posto fantastico!')).toBe('Che posto fantastico!');
+  });
+
+  it('testo lungo: taglio al confine di parola con «…»', () => {
+    const out = anteprimaTesto('parola '.repeat(30), 60);
+    expect(out.length).toBeLessThanOrEqual(61);
+    expect(out.endsWith('…')).toBe(true);
+    expect(out.endsWith('parol…')).toBe(false); // non a metà parola
+  });
+
+  it('a capo e spazi multipli diventano UNO spazio', () => {
+    expect(anteprimaTesto('prima  riga\n\nseconda  riga')).toBe('prima riga seconda riga');
+  });
+
+  it('null/undefined: stringa vuota (nessun «null» nel messaggio)', () => {
+    expect(anteprimaTesto(null)).toBe('');
+    expect(anteprimaTesto(undefined)).toBe('');
+    expect(anteprimaTesto('   ')).toBe('');
+  });
+
+  it('senza spazi: taglio netto a max caratteri + «…»; a max esatti non taglia', () => {
+    const s61 = 'a'.repeat(61);
+    expect(anteprimaTesto(s61, 60)).toBe('a'.repeat(60) + '…');
+    const s60 = 'b'.repeat(60);
+    expect(anteprimaTesto(s60, 60)).toBe(s60);
+  });
+});
 
 function clearServices() {
   delete window.SB.services;
@@ -534,6 +567,15 @@ describe('addCom/addReply: notifiche', () => {
       expect.objectContaining({ tipo: 'risposta', cardId: 'c1' })
     );
     expect(window.SB.notifyClasse).toHaveBeenCalledWith(expect.objectContaining({ classi: ['3AI'] }));
+    // Il messaggio porta l'ANTEPRIMA del commento, non solo il titolo della card:
+    // chi riceve capisce subito se vale l'apertura.
+    expect(window.SB.notifyUser).toHaveBeenCalledWith(
+      'prof1',
+      expect.objectContaining({ msg: 'Luca ha commentato: Ciao prof' })
+    );
+    expect(window.SB.notifyClasse).toHaveBeenCalledWith(
+      expect.objectContaining({ msg: 'Luca ha commentato: Ciao prof' })
+    );
     expect(setNc).toHaveBeenCalledWith({ testo: '' });
   });
 

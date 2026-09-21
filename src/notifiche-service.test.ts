@@ -60,6 +60,14 @@ function fakeDb(studenti: Studente[], opts: { failQuery?: boolean; failPush?: bo
   return db;
 }
 
+// Estrae le notifiche scritte per uno studente dal payload grezzo
+// ({ lista: { __arrayUnion: n } }): ogni chiamata a notifyUser aggiunge una riga.
+function notificheA(db: any, uid: string) {
+  return (db._scritti[uid] || []).map(function (p: any) {
+    return p.lista.__arrayUnion;
+  });
+}
+
 function setupWindow(db: any) {
   (window as any).db = db;
   (window as any).firebase = { firestore: { FieldValue: { arrayUnion: (v: any) => ({ __arrayUnion: v }) } } };
@@ -182,6 +190,36 @@ describe('notifyClasse: esito del fan-out', () => {
     await expect(
       notifyClasse({ classi: ['3AI'], annoScolastico: '2026/2027', cardId: 'c1', titolo: 'X', msg: 'Y' })
     ).resolves.toEqual({ ok: false, avvisati: 0, totale: 0, mancanti: [] });
+  });
+});
+
+describe('notifyClasse: id deterministico con cmId (commenti)', () => {
+  it("senza cmId l'id resta tipo_<cardId> (annuncio card, com'era prima)", async () => {
+    await notifyClasse({ classi: ['3AI'], annoScolastico: '2026/2027', cardId: 'c1', titolo: 'X', msg: 'Y' });
+    expect(notificheA((window as any).db, 's1')[0].id).toBe('nuova_card_c1');
+  });
+
+  it("con cmId l'id è tipo_<cardId>_<cmId>: ogni commento è un avviso DISTINTO", async () => {
+    await notifyClasse({ classi: ['3AI'], annoScolastico: '2026/2027', cardId: 'c1', cmId: 111, tipo: 'risposta', titolo: 'X', msg: 'commento 1' });
+    await notifyClasse({ classi: ['3AI'], annoScolastico: '2026/2027', cardId: 'c1', cmId: 222, tipo: 'risposta', titolo: 'X', msg: 'commento 2' });
+    const ricevute = notificheA((window as any).db, 's1');
+    expect(ricevute.map((n: any) => n.id)).toEqual(['risposta_c1_111', 'risposta_c1_222']);
+    expect(ricevute.map((n: any) => n.msg)).toEqual(['commento 1', 'commento 2']);
+  });
+
+  it('il cmId arriva anche sulla notifica (serve a aprire il commento giusto)', async () => {
+    await notifyClasse({ classi: ['3AI'], annoScolastico: '2026/2027', cardId: 'c1', cmId: 111, tipo: 'risposta', titolo: 'X', msg: 'Y' });
+    expect(notificheA((window as any).db, 's1')[0].cmId).toBe('111');
+  });
+
+  it("i due id di commento NON collidono con quello dell'annuncio della card", async () => {
+    // La collisione era il bug: il primo commento della classe produceva
+    // nuova_card_<cardId>, lo stesso id della pubblicazione della card, e la
+    // dedupe in lettura (useNotifiche) lo nascondeva agli studenti.
+    await notifyClasse({ classi: ['3AI'], annoScolastico: '2026/2027', cardId: 'c1', titolo: 'X', msg: 'card pubblicata' });
+    await notifyClasse({ classi: ['3AI'], annoScolastico: '2026/2027', cardId: 'c1', cmId: 111, tipo: 'risposta', titolo: 'X', msg: 'primo commento' });
+    const ids = notificheA((window as any).db, 's1').map((n: any) => n.id);
+    expect(ids).toEqual(['nuova_card_c1', 'risposta_c1_111']); // entrambe sopravvivono alla dedupe
   });
 });
 

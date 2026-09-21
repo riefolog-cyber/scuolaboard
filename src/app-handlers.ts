@@ -3,6 +3,28 @@
 // da AppProvider al momento della creazione.
 import { classeCorrenteOf, ANNO_LEGACY } from './app-provider-helpers.ts';
 
+// Anteprima del testo di un commento/risposta per il messaggio di notifica:
+// whitespace unificato (un commento multilinea non deve rompere la riga
+// dell'elenco notifiche), taglio al confine di parola e puntini di sospensione.
+// Così chi riceve l'avviso capisce subito SE vale l'apertura, senza aprire la card.
+export function anteprimaTesto(testo: any, max = 60) {
+  var s = String(testo == null ? '' : testo)
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (s.length <= max) return s;
+  var taglio = s.slice(0, max);
+  var spazio = taglio.lastIndexOf(' ');
+  if (spazio > max * 0.5) taglio = taglio.slice(0, spazio);
+  return taglio + '…';
+}
+
+// Messaggio di notifica con anteprima. Se il testo è vuoto NON aggiunge ": ":
+// il messaggio resta pulito ("Luca ha commentato", non "Luca ha commentato: ").
+function msgConAnteprima(base: string, testo: any) {
+  var ant = anteprimaTesto(testo);
+  return ant ? base + ': ' + ant : base;
+}
+
 var SB: any = window.SB || {};
 window.SB = SB;
 
@@ -382,6 +404,10 @@ export function createAppHandlers(ctx: any) {
         return String(c.id) === String(getShowCard() && getShowCard().id);
       });
       if (!card) return;
+      // Testo catturato SUBITO (sincrono): le notifiche partono dentro il
+      // .then di saveCard, quando ctx.nc è già stato svuotato da setNc —
+      // leggerlo lì darebbe un'anteprima vuota (o null) nel messaggio.
+      var testoCommento = getNc().testo;
       // NB: il testo va salvato RAW (senza escapeForPrompt): l'escaping serve
       // solo quando si costruisce il prompt per l'AI (ai-services lo rifà al
       // momento della chiamata). Escapare qui corromperebbe il testo con
@@ -419,21 +445,28 @@ export function createAppHandlers(ctx: any) {
                       cardId: card.id,
                       cmId: cmIdNew,
                       titolo: card.titolo,
-                      msg: getMyName()(user) + ' ha commentato: ' + card.titolo,
+                      msg: msgConAnteprima(getMyName()(user) + ' ha commentato', testoCommento),
                       annoScolastico: card.annoScolastico,
                     });
                   });
                 })
                 .catch(function () {});
             }
-            // Notifica anche ai compagni di classe della card (se card ha classi target)
+            // Notifica anche ai compagni di classe della card (se card ha classi target).
+            // tipo 'risposta' + cmId: l'id deterministico della notifica diventa
+            // risposta_<cardId>_<cmId>, un avviso DISTINTO per ogni commento. Prima
+            // di questo fix era nuova_card_<cardId>: il PRIMO commento della classe
+            // sembrava "già avvisato" dalla pubblicazione della card e i compagni
+            // non ricevevano niente (dedupe in lettura, useNotifiche).
             if (SBn.notifyClasse) {
               SBn.notifyClasse({
                 classi: card.classi || ['TUTTE'],
                 annoScolastico: card.annoScolastico,
                 cardId: card.id,
+                cmId: cmIdNew,
+                tipo: 'risposta',
                 titolo: card.titolo,
-                msg: getMyName()(user) + ' ha commentato',
+                msg: msgConAnteprima(getMyName()(user) + ' ha commentato', testoCommento),
                 excludeUid: user.uid,
               });
             }
@@ -511,7 +544,7 @@ export function createAppHandlers(ctx: any) {
                         cardId: card.id,
                         cmId: cmId,
                         titolo: card.titolo,
-                        msg: getMyName()(user) + ' ha risposto al tuo commento',
+                        msg: msgConAnteprima(getMyName()(user) + ' ha risposto al tuo commento', nuova.testo),
                         annoScolastico: card.annoScolastico,
                       });
                     }
@@ -529,7 +562,7 @@ export function createAppHandlers(ctx: any) {
                             cardId: card.id,
                             cmId: cmId,
                             titolo: card.titolo,
-                            msg: getMyName()(user) + ' ha risposto',
+                            msg: msgConAnteprima(getMyName()(user) + ' ha risposto', nuova.testo),
                             annoScolastico: card.annoScolastico,
                           });
                         });
@@ -550,21 +583,25 @@ export function createAppHandlers(ctx: any) {
                       cardId: card.id,
                       cmId: cmId,
                       titolo: card.titolo,
-                      msg: getMyName()(user) + ' ha risposto',
+                      msg: msgConAnteprima(getMyName()(user) + ' ha risposto', nuova.testo),
                       annoScolastico: card.annoScolastico,
                     });
                   });
                 })
                 .catch(function () {});
             }
-            // anche fan-out alla classe della card (per compagni)
+            // anche fan-out alla classe della card (per compagni). tipo 'risposta'
+            // + cmId della RISPOSTA: come in addCom, ogni intervento è un avviso
+            // distinto, non una riedizione di nuova_card_<cardId>.
             if (SBn2.notifyClasse)
               SBn2.notifyClasse({
                 classi: card.classi || ['TUTTE'],
                 annoScolastico: card.annoScolastico,
                 cardId: card.id,
+                cmId: nuova.id,
+                tipo: 'risposta',
                 titolo: card.titolo,
-                msg: getMyName()(user) + ' ha risposto',
+                msg: msgConAnteprima(getMyName()(user) + ' ha risposto', nuova.testo),
                 excludeUid: user.uid,
               });
           } catch (e) {}
