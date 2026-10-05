@@ -12,7 +12,13 @@
 ## ⚠️ DA FARE SUBITO (al prossimo deploy)
 
 - [ ] Pubblicare le regole aggiornate: Firebase Console → Firestore → Rules → Pubblica (file: `rules firestore.txt`)
-- [ ] **Creare l'indice composito `(annoScolastico ASC, visibile ASC)`** — Firestore → Indexes (o clicca il link nell'errore al primo accesso studente). Senza, la query card degli studenti fallisce
+- [x] ~~Creare l'indice composito `(annoScolastico ASC, visibile ASC)`~~ **NON SERVE, verificato il 05/10/2026.**
+  La query dello studente (`src/firestore-sync.ts`: `where('annoScolastico','==',anno).where('visibile','==',true)`)
+  è passata su Firestore reale (`npm run dev` → progetto `scuolaboard-874d4`, non l'emulatore) restituendo
+  le card. L'indicazione era un residuo: l'indice composito si rende necessario quando un `orderBy` su un
+  campo diverso accompagna i filtri, e l'`orderBy('ordine')` fu tolto di proposito per questo motivo
+  (l'ordinamento è client-side, vedi `visibleSorted` in `cards.ts`). Nota: due filtri di sola uguaglianza
+  sono serviti dagli indici singoli automatici.
 - [ ] Verificare che in `users/{uid}` non esistano profili legacy con email fuori whitelist
 - [ ] Verificare che il docente abbia `role: "prof"` nel proprio `users/{uid}` (il login crea il profilo con `role: "studente"` di default → vista studente)
 - [ ] Test pre-settembre: Gmail docente ✅ / account scuola ✅ / Gmail estraneo ❌ (messaggio accesso negato)
