@@ -1,7 +1,7 @@
 // e2e/allegati.spec.js — l'allegato HTML in Chrome REALE.
 //
 // I test in jsdom (src/) provano che il codice c'è: attributo `download` presente,
-// `sandbox=""` presente. Quello che NON possono provare è se Chrome salva davvero il
+// il contenimento della sandbox presente. Quello che NON possono provare è se Chrome salva davvero il
 // file e se dentro l'iframe lo script del file gira o no — due fatti che sono
 // esattamente le due cose che interessano. Qui si verifica nel browser vero.
 //
@@ -41,26 +41,93 @@ async function apriCardConHtml(page) {
   await expect(page.getByRole('button', { name: '🌐 lezione.html' })).toBeVisible({ timeout: 5000 });
 }
 
+// Pagina che mostra il contenuto SOLO via JavaScript: è la forma tipica di un file
+// allegato (un quiz, una scheda interattiva) e il motivo per cui l'iframe deve poter
+// eseguire script. Con la sandbox a zero permessi restava VUOTO — riprodotto con il
+// file reale segnalato dall'utente (Chrome e WebKit: 0 elementi visibili su entrambi).
+const PAGINA_JS =
+  '<!doctype html><html><head><meta charset="utf-8"><title>doc</title></head><body>' +
+  '<div id="solo-js" style="display:none">Mostrato dal file stesso</div>' +
+  '<script>document.getElementById("solo-js").style.display="block";document.title="ESEGUITO";</script>' +
+  '</body></html>';
+
+// Dal dentro dell'iframe si prova a reachedere l'app. Tutto deve essere BLOCCATO:
+// è questa la garanzia che tiene fermo lo stored XSS ora che gli script girano.
+async function verificaContenimento(dentro) {
+  return dentro.locator('body').evaluate(() => {
+    const esito = { documento: 'BLOCCATO', storage: 'BLOCCATO', app: 'BLOCCATO' };
+    try {
+      esito.documento = 'LEGGERE:' + window.parent.document.title;
+    } catch (e) {}
+    try {
+      window.localStorage.setItem('sb-prova', '1');
+      esito.storage = window.localStorage.getItem('sb-prova') === '1' ? 'ACCESSO' : 'BLOCCATO';
+    } catch (e) {}
+    try {
+      if (window.parent.SB || window.parent.db) esito.app = 'VEDE_APP';
+    } catch (e) {}
+    return esito;
+  });
+}
+
+function raccoglieErrori(page) {
+  const errori = [];
+  page.on('pageerror', (e) => errori.push('PAGEERROR: ' + e.message));
+  return errori;
+}
+
 test.describe('Allegati (Chrome reale)', () => {
-  test('HTML: anteprima renderizzata ma script NON eseguito (sandbox="")', async ({ page }) => {
-    await apriCardConHtml(page);
-    await page.getByRole('button', { name: '🌐 lezione.html' }).click();
+  test('HTML: la preview mostra anche i file che si costruiscono con JavaScript', async ({ page }) => {
+    await page.goto(HARNESS, { waitUntil: 'domcontentloaded' });
+    await expect(page.getByText('Lezione su X').first()).toBeVisible({ timeout: 10000 });
+    await page.evaluate(
+      ([url, size]) => {
+        window.__db._seed('cards', {
+          c1: Object.assign({}, window.__db._get('cards', 'c1'), {
+            allegati: [{ id: 'a1', name: 'quiz.html', type: 'text/html', size: size, url: url }],
+          }),
+        });
+      },
+      [dataUrl(PAGINA_JS), PAGINA_JS.length]
+    );
+    await page.locator('#card-c1').getByText('Lezione su X').first().click();
+    await page.getByRole('button', { name: '🌐 quiz.html' }).click();
 
-    const frame = page.locator('[data-testid="anteprima-html"] iframe');
-    await expect(frame).toBeVisible();
-    await expect(frame).toHaveAttribute('sandbox', '');
-
-    // Il contenuto è realmente renderizzato…
     const dentro = page.frameLocator('[data-testid="anteprima-html"] iframe');
-    await expect(dentro.locator('#titolo')).toHaveText('Ripasso');
+    // Il contenuto c'è, ma solo perché il file lo ha costruito: questo è il
+    // comportamento atteso e il motivo di allow-scripts.
+    await expect(dentro.locator('#solo-js')).toBeVisible({ timeout: 10000 });
+    expect(await dentro.locator('body').evaluate((b) => b.ownerDocument.title)).toBe('ESEGUITO');
+  });
 
-    // …ma lo script NON è stato eseguito: questo è il punto dell'intera faccenda.
-    const eseguito = await dentro.locator('body').evaluate((b) => ({
-      titolo: b.ownerDocument.title,
-      xss: b.getAttribute('xss'),
-    }));
-    expect(eseguito.titolo, 'lo script del file è stato eseguito dentro la iframe').toBe('doc');
-    expect(eseguito.xss, 'lo script del file è stato eseguito dentro la iframe').toBeNull();
+  test('HTML: i script girano ma NON possono toccare l app né la sessione', async ({ page }) => {
+    const errori = raccoglieErrori(page);
+    await page.goto(HARNESS, { waitUntil: 'domcontentloaded' });
+    await expect(page.getByText('Lezione su X').first()).toBeVisible({ timeout: 10000 });
+    await page.evaluate(
+      ([url, size]) => {
+        window.__db._seed('cards', {
+          c1: Object.assign({}, window.__db._get('cards', 'c1'), {
+            allegati: [{ id: 'a1', name: 'quiz.html', type: 'text/html', size: size, url: url }],
+          }),
+        });
+      },
+      [dataUrl(PAGINA_JS), PAGINA_JS.length]
+    );
+    await page.locator('#card-c1').getByText('Lezione su X').first().click();
+    await page.getByRole('button', { name: '🌐 quiz.html' }).click();
+    await expect(page.frameLocator('[data-testid="anteprima-html"] iframe').locator('#solo-js')).toBeVisible({
+      timeout: 10000,
+    });
+
+    const contenimento = await verificaContenimento(page.frameLocator('[data-testid="anteprima-html"] iframe'));
+    // Lo script è partito (ESEGUITO), eppure non vede né l'app né il suo storage:
+    // è questo che rende sicuro allow-scripts senza allow-same-origin.
+    expect(contenimento.documento, 'il file ha letto il DOM dell app').toBe('BLOCCATO');
+    expect(contenimento.storage, 'il file ha scritto nel localStorage dell app').toBe('BLOCCATO');
+    expect(contenimento.app, 'il file ha raggiunto SB/db della pagina').toBe('BLOCCATO');
+    // Nessun errore non gestito sulla pagina principale.
+    expect(errori.filter((e) => !e.includes('favicon'))).toEqual([]);
   });
 
   test('HTML: il click su Scarica salva davvero il file con il nome giusto', async ({ page }) => {
@@ -79,8 +146,8 @@ test.describe('Allegati (Chrome reale)', () => {
     expect(percorso, 'nessun file scaricato').toBeTruthy();
     const contenuto = readFileSync(percorso, 'utf8');
     expect(contenuto).toContain('Ripasso');
-    // Il file scaricato è INTERO: lo script c'è, semplicemente non viene eseguito
-    // quando lo si apre dal disco. È il comportamento atteso, non un difetto.
+    // Il file scaricato è INTERO: lo script c'è, e quando lo si apre dal disco
+    // (o da un'app che lo rende) gira normalmente. È il comportamento atteso.
     expect(contenuto).toContain('<script>');
   });
 

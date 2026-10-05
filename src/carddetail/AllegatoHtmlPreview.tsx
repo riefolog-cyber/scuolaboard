@@ -1,12 +1,26 @@
 // AllegatoHtmlPreview.tsx · ScuolaBoard · anteprima degli allegati .html/.htm
 //
-// Sicurezza: `sandbox=""` (sandbox completamente vuoto) disattiva script, form,
-// popup, navigazione e same-origin. Il contenuto arriva in `srcDoc`, non in `src`:
-// niente Blob URL da revocare e nessun `data:` URL navigabile. L'unico modo per
-// portare il file fuori dal sandbox è il link "Scarica", che lo salva su disco — e
-// quel link compare SOLO se l'URL supera l'allowlist dei protocolli: `javascript:`
-// in un href è codice che gira nel contesto di chi clicca, quindi non lo si mette
-// in pagina nemmeno per sbaglio (doppio controllo rispetto a CardDetail).
+// Sicurezza: la preview è un iframe SABBIATO. `allow-scripts` senza
+// `allow-same-origin` è la configurazione standard per mostrare HTML non fidato:
+// l'origine è opaca, quindi il file NON può leggere il DOM dell'app, i cookie,
+// localStorage, IndexedDB né il token Firebase della sessione, non può navigare
+// la pagina sopra e non può aprire popup. Non aggiungere mai `allow-same-origin`
+// (che gli darebbe la nostra origine: stored XSS vero) né `allow-top-navigation`.
+//
+// allow-scripts è necessario perché i file che si allegano di solito sono
+// applicazioni web, non pagine statiche: il quiz di esempio ha TUTTE le domande in
+// `.question{display:none}` e le mostra solo con una funzione `init()` che aggiunge
+// `.active`. Con la sandbox a zero permessi l'allegato si apriva e restava VUOTO —
+// verificato con il file reale su Chrome e WebKit: 0 domande visibili su entrambi.
+// Perché è accettabile: `allegati` è vietato allo studente nelle Firestore Rules e il
+// pannello di caricamento è solo del docente, quindi il file lo ha scritto il
+// prof stesso. Resta il limite: il file può fare richieste di rete (caricare
+// risorse esterne, e in teoria tracciare chi apre) e mostrare grafica a piacere
+// dentro il riquadro di anteprima.
+//
+// Il contenuto arriva in `srcDoc` e non in `src`: niente Blob URL da revocare e
+// nessun `data:` URL navigabile. Il download è l'unico modo per portare il file
+// fuori dal sandbox.
 
 import { allegatoNome, htmlSrcDoc, urlAllegatoSicuro } from '../allegati.ts';
 
@@ -48,7 +62,7 @@ function AllegatoHtmlPreview({ al, indice, onChiudi }: any) {
             🌐 {nome}
           </div>
           <div style={{ fontSize: 10, color: 'rgba(255,255,255,.45)' }}>
-            Anteprima senza script: il file viene mostrato, non eseguito.
+            Isolato in una sandbox: il file non può leggere i dati dell'app né la tua sessione.
           </div>
         </div>
         {scaricabile ? (
@@ -93,10 +107,25 @@ function AllegatoHtmlPreview({ al, indice, onChiudi }: any) {
       </div>
       <iframe
         title={'Anteprima di ' + nome}
-        sandbox=""
+        // allow-scripts serve (i file allegati sono app web: senza script restano
+        // vuoti). NON aggiungere allow-same-origin: darebbe al file la nostra origine
+        // e con il DOM dell'app, la sessione Firebase di chi guarda. Vedi l'intestazione.
+        sandbox="allow-scripts"
         srcDoc={htmlSrcDoc(al)}
         referrerPolicy="no-referrer"
-        style={{ width: '100%', height: 320, border: 'none', background: '#fff', display: 'block' }}
+        // Altezza maggiorata e proporzionale: i file allegati sono pagine lunghe
+        // (il quiz di esempio ha 12 domande) e 320px fissi rendevano l'anteprima
+        // inutilizzabile su telefono, costringendo a scorrere dentro un riquadro
+        // strettissimo. 62vh con min/max: comodo su desktop, leggibile su mobile.
+        style={{
+          width: '100%',
+          height: '62vh',
+          minHeight: 360,
+          maxHeight: 620,
+          border: 'none',
+          background: '#fff',
+          display: 'block',
+        }}
       />
     </div>
   );

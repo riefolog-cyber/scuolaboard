@@ -74,8 +74,11 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Installa browser (Chromium)
-        run: npx playwright install --with-deps chromium
+      # Anche webkit, non solo chromium: senza il motore di Safari la preview degli
+      # allegati HTML non è coperta e il difetto sui telefoni iPhone tornerebbe
+      # silenzioso (è successo: restava bianca su iOS e nessun test lo vedeva).
+      - name: Installa browser (Chromium + WebKit)
+        run: npx playwright install --with-deps chromium webkit
       # Serve la build di produzione su 4173 (test "PROD 4173"):
       # il preview (vite preview) serve la cartella docs/ appena generata.
       - name: Build di produzione (per il test PROD 4173)

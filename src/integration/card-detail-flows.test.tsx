@@ -101,7 +101,7 @@ describe('CardDetail — stato APERTO', () => {
     expect(detail.getByText('📄 dispensa.pdf')).toBeTruthy();
   });
 
-  it('allegato HTML: anteprima in iframe SENZA script + download, non un link alla data URL', async () => {
+  it('allegato HTML: anteprima in iframe SABBIATO (contenimento) + download, non un link alla data URL', async () => {
     const seed = {
       users: { prof1: PROF_DOC },
       cards: {
@@ -135,9 +135,13 @@ describe('CardDetail — stato APERTO', () => {
       if (!f) throw new Error('anteprima non aperta');
       return f;
     });
-    // sandbox="" ( attributo vuoto ) ⇒ nessuno script, nessun form, nessun same-origin
-    expect(frame.getAttribute('sandbox')).toBe('');
-    expect(frame.getAttribute('srcdoc')).toBe('<h1 id="titolo">Ripasso</h1><script>1</script>');
+    // allow-scripts serve perché i file allegati sono app web (mostrano il contenuto
+    // solo via JS). L'invariante che tiene fermo lo stored XSS NON è "niente script":
+    // è che il file non abbia la nostra origine.
+    expect(frame.getAttribute('sandbox')).toBe('allow-scripts');
+    expect(frame.getAttribute('sandbox')).not.toContain('allow-same-origin');
+    expect(frame.getAttribute('sandbox')).not.toContain('allow-top-navigation');
+    expect(frame.getAttribute('srcdoc')).toContain('Ripasso');
     expect(frame.getAttribute('src')).toBeNull();
 
     // Scarica: attributo download sul nome originale (l'unico modo per portarlo fuori)

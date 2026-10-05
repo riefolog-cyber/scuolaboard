@@ -9,17 +9,41 @@ export default defineConfig({
   workers: 1,
   retries: 1,
   reporter: [['list']],
+  // PROGETTI: il motore conta e non è ridondante. Chromium (Chrome di sistema in
+  // locale) copre il comportamento generale; WebKit copre il motore di Safari, cioè
+  // quello degli iPhone. È proprio WebKit ad aver mostrato che la preview HTML con
+  // srcDoc + sandbox="" restava BIANCA su iOS mentre su Chrome andava
+  // (e2e/allegati-webkit.spec.js è la guardia: senza, il difetto torna silenzioso).
+  projects: [
+    {
+      name: 'chromium',
+      testIgnore: /webkit\.spec\.js/,
+      // In locale usa il Chrome già installato (nessun download); in CI il Chromium
+      // bundle installato con `npx playwright install`.
+      use: {
+        browserName: 'chromium',
+        channel: process.env.CI ? undefined : 'chrome',
+        // Necessario per il test "Copia link": senza clipboard-write il Chromium
+        // headless di CI rifiuta navigator.clipboard.writeText → il toast di
+        // conferma non appare mai (fallisce il test, che in locale passa).
+        // È un permesso solo di Chromium: WebKit risponde "Unknown permission" e non
+        // si avvia, quindi va dichiarato qui e non al livello comune.
+        permissions: ['clipboard-read', 'clipboard-write'],
+      },
+    },
+    {
+      name: 'webkit',
+      testMatch: /webkit\.spec\.js/,
+      // Niente channel: è quello che faceva fallire l'avvio ("Unsupported webkit
+      // channel chrome") quando il canale veniva ereditato dal livello superiore.
+      // Niente clipboard: WebKit non conosce quei permessi.
+      use: { browserName: 'webkit', permissions: [] },
+    },
+  ],
   use: {
-    // In locale usa il Chrome gia installato (nessun download); in CI il
-    // Chromium bundle installato con `npx playwright install`.
-    channel: process.env.CI ? undefined : 'chrome',
     headless: true,
     viewport: { width: 1280, height: 800 },
     locale: 'it-IT',
-    // Necessario per il test "Copia link": senza clipboard-write il Chromium
-    // headless di CI rifiuta navigator.clipboard.writeText → il toast di
-    // conferma non appare mai (fallisce il test, che in locale passa).
-    permissions: ['clipboard-read', 'clipboard-write'],
     baseURL: 'http://localhost:5173',
     trace: 'retain-on-failure',
   },
