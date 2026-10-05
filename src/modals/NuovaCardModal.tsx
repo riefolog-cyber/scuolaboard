@@ -620,7 +620,13 @@ function NuovaCardModal(props: any) {
             />
           )}
           {form.tipo === 'sondaggio' && <OpzioniSondaggio form={form} setForm={setForm} S={S} />}
-          {form.tipo === 'quiz' && (
+          // Solo docente: le regole non vietano `quizDomande` in una proposta, quindi senza
+          // questo gate lo studente potrebbe proporre un quiz — e farlo comparire con il
+          // badge "🤖 Supporto IA" su domande scritte a mano (il flag `ai` è suo). Il
+          // tipo di card `quiz` è già sceltabile solo dal docente (i gate isPref qui e
+          // in CardDetail), ma il pannello andava protetto per lo stesso motivo di
+          // `allegati`.
+          {isProf && form.tipo === 'quiz' && (
             <QuizBuilder form={form} setForm={setForm} S={S} setShowAiQuizGen={props.setShowAiQuizGen} />
           )}
           {

@@ -1,7 +1,9 @@
 // CardDetail.jsx · ScuolaBoard
 import { useContext, useState } from 'react';
 import { normalizeLinks } from './app-utils.tsx';
+import { sbSafeUrl } from './utils/format.ts';
 import { allegatoIcona, allegatoNome, isHtmlAllegato, urlAllegatoSicuro } from './allegati.ts';
+import BadgeAi from './BadgeAi.tsx';
 import FormContext from './contexts/FormContext.tsx';
 import { useCountdown, countdownStr } from './Countdown.tsx';
 
@@ -386,6 +388,14 @@ function CardDetail__({ $: props$ }: any) {
           {cardLinks.length > 0 && (
             <div style={{ marginBottom: 14 }}>
               {cardLinks.map(function (link: any, i: any) {
+                // Allowlist URL: senza questo, `javascript:` finiva in un href e il
+                // click del docente eseguiva codice con la sua sessione aperta. Il
+                // blocco 🔗 LINK della modale NON è gated su isProf e `links` non è
+                // fra i campi vietati dalle rules: la proposta di uno studente porta
+                // i link che vuole. Lo stesso controllo esiste già in app-utils.tsx
+                // (normalizeLinks) per l'altro renderer dei link: qui mancava, quindi
+                // due renderer dello stesso dato con regole diverse.
+                if (!link.url || !sbSafeUrl(link.url)) return null;
                 return (
                   <a
                     key={i}
@@ -664,7 +674,7 @@ function CardDetail__({ $: props$ }: any) {
               🤖 Analizza sondaggio
             </button>
           )}
-          {c.tipo === 'sondaggio' && $.sondaggioAiResult[c.id] && (
+{$.isProf && c.tipo === 'sondaggio' && $.sondaggioAiResult[c.id] && (
             <div
               style={{
                 background: 'rgba(99,102,241,.08)',
@@ -673,11 +683,12 @@ function CardDetail__({ $: props$ }: any) {
                 padding: '8px 12px',
                 marginBottom: 12,
                 fontSize: 12,
-                color: 'rgba(255,255,255,.75)',
-                lineHeight: 1.6,
               }}
             >
               {$.sondaggioAiResult[c.id]}
+              {/* Output IA senza badge: la PrivacyModal promette che ogni contenuto
+                  generato è contrassegnato (regola 3). */}
+              <BadgeAi separatore={false} />
             </div>
           )}
 

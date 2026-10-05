@@ -2,7 +2,7 @@
 import { Fragment } from 'react';
 import BadgeAi from '../BadgeAi.tsx';
 // Unico criterio di "risposta giusta" per punteggio, pannello prof e pannello studente.
-import { rispostaGiusta, testoRisposta } from '../quiz-corretta.ts';
+import { rispostaGiusta, testoRisposta, quizTotale } from '../quiz-corretta.ts';
 
 // Un quiz contiene domande generate dall'IA se ALMENO una ce n'è. Basta il badge a
 // livello di quiz: segnalare ogni singola domanda renderebbe il pannello illeggibile,
@@ -35,7 +35,16 @@ function QuizPanel({ $, c }: any) {
           }}
         >
           {'🧩 QUIZ · ' + c.quizDomande.length + ' domande'}
-          {c.quizTimer && ' ⏱ ' + c.quizTimer + ' min'}
+          {/* Il timer è REALE (scorre e, a zero, consegna da solo). `qSecondi` esiste
+              solo per lo studente: il prof non risponde e non ha un orologio. */}
+          {$.qSecondi && $.qSecondi[String(c.id)] != null
+            ? ' ⏱ ' +
+              Math.floor(($.qSecondi[String(c.id)] || 0) / 60) +
+              ':' +
+              String($.qSecondi[String(c.id)] % 60).padStart(2, '0')
+            : c.quizTimer
+              ? ' ⏱ ' + c.quizTimer + ' min'
+              : ''}
         </div>
         {haDomandeAi(c.quizDomande) && <BadgeAi separatore={false} />}
         {$.isProf && !$.simulaSt
@@ -48,11 +57,18 @@ function QuizPanel({ $, c }: any) {
               var haAperte = domProf.some(function (d: any) {
                 return d.tipo === 'aperta';
               });
-              var tutteValutate =
-                risProf.length > 0 &&
-                risProf.every(function (r: any) {
-                  return r.aiValutato;
-                });
+              // "Tutte valutate" vuol dire che non c'è più NULLA da fare: le valutazioni
+              // fallite restano in `aiErrori` e il bottone torna utilizzabile (prima un
+              // fallimento silenzioso metteva il docente davanti a "✓ Tutte valutate"
+              // con il bottone disabilitato, e l'unica uscita era cancellare le risposte
+              // della classe intera).
+              var errorCount = risProf.reduce(function (n: number, r: any) {
+                return n + ((r.aiErrori || []).length ? r.aiErrori.length : 0);
+              }, 0);
+              var daValutare = risProf.filter(function (r: any) {
+                return !r.aiValutato || (r.aiErrori || []).length;
+              }).length;
+              var tutteValutate = risProf.length > 0 && daValutare === 0;
               var pendingCount = risProf.filter(function (r: any) {
                 return !r.aiValutato;
               }).length;
@@ -90,7 +106,7 @@ function QuizPanel({ $, c }: any) {
                         onClick={function () {
                           $.valutaAperteProfAI(c, risProf);
                         }}
-                        disabled={$.qLoading || tutteValutate}
+                        disabled={$.qLoading || (tutteValutate && !errorCount)}
                         style={{
                           fontSize: 11,
                           padding: '5px 12px',
@@ -101,7 +117,7 @@ function QuizPanel({ $, c }: any) {
                               : 'linear-gradient(135deg,#6366f1,#8b5cf6)',
                           border: 'none',
                           borderRadius: 8,
-                          cursor: tutteValutate || $.qLoading ? 'not-allowed' : 'pointer',
+                          cursor: $.qLoading || (tutteValutate && !errorCount) ? 'not-allowed' : 'pointer',
                           color: tutteValutate ? '#4ade80' : '#fff',
                           fontWeight: 700,
                           display: 'flex',
@@ -116,10 +132,20 @@ function QuizPanel({ $, c }: any) {
                         )}
                         {$.qLoading
                           ? 'Valutazione in corso…'
-                          : tutteValutate
-                            ? '✓ Tutte valutate'
-                            : 'Valuta risposte aperte con AI' + (pendingCount > 0 ? ' (' + pendingCount + ')' : '')}
+                          : errorCount > 0
+                            ? '↻ Riprova (' + errorCount + ' non riuscite)'
+                            : tutteValutate
+                              ? '✓ Tutte valutate'
+                              : 'Valuta risposte aperte con AI' + (pendingCount > 0 ? ' (' + pendingCount + ')' : '')}
                       </button>
+                    )}
+                    {errorCount > 0 && (
+                      // Dillo esplicitamente: prima un fallimento era invisibile e il
+                      // punteggio restava quello senza quelle risposte.
+                      <div style={{ fontSize: 10, color: '#fbbf24', marginTop: 6, lineHeight: 1.5 }}>
+                        ⚠️ {errorCount} valutazioni non sono riuscite (throttle o rete): non entrano nel
+                        punteggio finché non le rilanci. Il voto dell'IA è un riscontro, non un voto.
+                      </div>
                     )}
                   </div>
                   {risProf.length === 0 && (
@@ -222,18 +248,11 @@ function QuizPanel({ $, c }: any) {
                             <div>
                               {domProf.map(function (d: any, di: number) {
                                 if (d.tipo !== 'aperta') return null;
-                                var s =
-                                  r.aiScores &&
-                                  (r.aiScores[di] ||
-                                    r.aiScores[di + 1] ||
-                                    (function () {
-                                      var k = Object.keys(r.aiScores || {});
-                                      var oi =
-                                        domProf.slice(0, di + 1).filter(function (x: any) {
-                                          return x.tipo === 'aperta';
-                                        }).length - 1;
-                                      return r.aiScores[k[oi]] || null;
-                                    })());
+                                // `aiScores` è indicizzato dall'indice ASSOLUTO della domanda
+                                // (`aiScores[out.idx]` in useQuiz). I due fallback che c'erano
+                                // prima (di+1 e "la prima aperta") potevano attribuire a una
+                                // domanda il giudizio di un'altra, in silenzio.
+                                var s = (r.aiScores || {})[di] || null;
                                 var risposta = r.risposte && r.risposte[di];
                                 return <Fragment key={di}>{$.ValutazioneApertaAI(s, risposta, di, d, true)}</Fragment>;
                               })}
@@ -388,9 +407,14 @@ function QuizPanel({ $, c }: any) {
               });
               // Badge di chiusura: mostra "Quiz completato" sia quando il
               // doc dal listener è arrivato (miaRisposta) sia subito dopo
-              // l'invio (qInviato) — feedback immediato senza aspettare il
+              // l'invio (qInviati per card) — feedback immediato senza aspettare il
               // roundtrip Firestore (che prima falliva per permission-denied).
-              var giaRisposto = (miaRisposta && miaRisposta.risposte) || $.qInviato;
+              // `qInviati` è per cardId: con il vecchio booleano globale,aprendo un
+              // secondo quiz il bottone ricompariva pur avendo già consegnato.
+              var giaRisposto =
+                (miaRisposta && miaRisposta.risposte) ||
+                ($.qInviati && $.qInviati[String(c.id)] === true) ||
+                $.qInviato;
               return giaRisposto ? (
                 <div>
                   <div
@@ -410,7 +434,10 @@ function QuizPanel({ $, c }: any) {
                         {(miaRisposta || {}).punteggio && miaRisposta.punteggio.score != null
                           ? miaRisposta.punteggio.score
                           : 0}
-                        /{c.quizDomande.length}
+                        {/* Denominatore UNICO: prima lo studente vedeva "3/4" mentre il
+                            docente leggeva "3/3" sulla stessa card, perché qui si
+                            contavano TUTTE le domande e lì solo quelle valutabili. */}
+                        /{quizTotale(c.quizDomande)}
                       </strong>
                     </div>
                   </div>
@@ -431,19 +458,10 @@ function QuizPanel({ $, c }: any) {
                       {c.quizDomande.map(function (d: any, di: number) {
                         var risp = miaRisposta.risposte[di];
                         if (d.tipo === 'aperta') {
-                          // Valutazione AI del prof (se già fatta)
-                          var s =
-                            miaRisposta.aiScores &&
-                            (miaRisposta.aiScores[di] ||
-                              miaRisposta.aiScores[di + 1] ||
-                              (function () {
-                                var k = Object.keys(miaRisposta.aiScores || {});
-                                var oi =
-                                  c.quizDomande.slice(0, di + 1).filter(function (x: any) {
-                                    return x.tipo === 'aperta';
-                                  }).length - 1;
-                                return miaRisposta.aiScores[k[oi]] || null;
-                              })());
+                          // Valutazione AI del prof (se già fatta). Stessa indicizzazione
+                          // assoluta del ramo docente: niente fallback che possono
+                          // mostrare il giudizio di un'altra domanda.
+                          var s = (miaRisposta.aiScores || {})[di] || null;
                           return (
                             <div
                               key={di}
@@ -481,7 +499,11 @@ function QuizPanel({ $, c }: any) {
                                 <div style={{ fontSize: 11, color: 'rgba(255,255,255,.40)' }}>(nessuna risposta)</div>
                               )}
                               {miaRisposta.aiValutato && s ? (
-                                <Fragment key={di}>{$.ValutazioneApertaAI(s, risp, di, d, true)}</Fragment>
+                                // isProf reale: passava `true` fisso anche nel ramo
+                                // studente, quindi il blocco "solo prof" (il
+                                // suggerimento didattico) arrivava anche a chi non
+                                // è il docente.
+                                <Fragment key={di}>{$.ValutazioneApertaAI(s, risp, di, d, !!$.isProf)}</Fragment>
                               ) : (
                                 <div style={{ fontSize: 11, color: '#fbbf24', fontWeight: 700 }}>
                                   ⏳ attende la valutazione del prof
@@ -595,6 +617,10 @@ function QuizPanel({ $, c }: any) {
                             }}
                             placeholder="Scrivi qui la tua risposta…"
                             aria-label={'Risposta aperta alla domanda ' + (di + 1)}
+                            // Il prompt tronca a 2000 caratteri: senza un limite qui
+                            // lo studente scriveva un testo che poi arrivava all'IA
+                            // tagliato a metà, senza che nessuno lo sapesse.
+                            maxLength={2000}
                             rows={3}
                             style={{
                               width: '100%',

@@ -191,11 +191,20 @@ function AppProvider({ children }: any) {
     cards: cardsHook.cards,
     showToast: showToast,
     showCard: showCard,
+    // Consegna automatica a tempo scaduto: vive qui perché il timer (nel hook) deve
+    // poterla chiamare senza conoscere il provider. Mostra un avviso: lo studente
+    // deve sapere che il tempo è finito, non trovarsi il quiz già spedito.
+    inviaRisposteQuizAuto: function (cardId: any) {
+      showToast('⏱ Tempo scaduto: risposte inviate automaticamente', 'warn');
+      quiz.inviaRisposteQuiz(cardId);
+    },
   });
   var qRisposte = quiz.qRisposte,
     setQRisposte = quiz.setQRisposte,
     qInviato = quiz.qInviato,
     setQInviato = quiz.setQInviato,
+    qInviati = quiz.qInviati,
+    qSecondi = quiz.qSecondi,
     qLoading = quiz.qLoading,
     setQLoading = quiz.setQLoading,
     quizRisposte = quiz.quizRisposte,
@@ -950,12 +959,17 @@ function AppProvider({ children }: any) {
       return x.id === id;
     });
     if (c) {
-      // Approvare = pubblicare: la card diventa visibile alla classe, quindi entra
-      // in coda d'annuncio come una card nuova. `conAnnuncioInCoda` è lo stesso
+// Approvare = pubblicare: la card diviene visibile alla classe, quindi entra
+      // in coda d'annuncio come card nuova. `conAnnuncioInCoda` è lo stesso
       // punto usato dalla pubblicazione: per una proposta approvata l'istante di
       // annuncio è ORA, non la data di creazione della proposta (altrimenti il
       // recupero la considererebbe troppo vecchia e non la annuncerebbe mai).
-      var approvata = conAnnuncioInCoda(Object.assign({}, c, { proposta: false }));
+      //
+      // `visibile: true` va scritto QUI, non prima: la proposta dello studente viene
+      // creata senza quel campo (le regole lo vietano, vedi buildNewCard), quindi
+      // senza questa riga la card approvata resterebbe invisibile ai compagni — la
+      // loro query filtra `where('visibile','==',true)`.
+      var approvata = conAnnuncioInCoda(Object.assign({}, c, { proposta: false, visibile: true }));
       fbSave(approvata)
         .then(function () {
           notifyProposalAuthor(db, c, 'Proposta approvata: ' + c.titolo);
@@ -1714,6 +1728,8 @@ function AppProvider({ children }: any) {
         setQRisposte: setQRisposte,
         qInviato: qInviato,
         setQInviato: setQInviato,
+        qInviati: qInviati,
+        qSecondi: qSecondi,
         qLoading: qLoading,
         setQLoading: setQLoading,
         quizRisposte: quizRisposte,

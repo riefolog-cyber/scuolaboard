@@ -229,8 +229,11 @@ function PrivacyModal(props: any) {
             <span style={{ fontWeight: 700, color: stepTitleColor }}>Dati mai esposti</span>
           </div>
           <p style={{ ...infoTextStyle, color: infoTextColor }}>
-            Le chiavi API e i dati sensibili non sono mai nel browser. Le chiamate IA passano da un proxy sicuro che
-            protegge le credenziali.
+            Le credenziali dei modelli IA non sono mai nel browser: le chiamate passano da un proxy
+            sicuro che le custodisce e che verifica che chi chiama sia un docente. Nel browser
+            non ci sono i dati del modello, ma solo l'identificatore pubblico del progetto
+            Firebase, che da solo non permette di leggere o scrivere dati senza le regole del
+            database.
           </p>
         </div>
 

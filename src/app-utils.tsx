@@ -3,6 +3,7 @@
 // buildWordCloud/collectCloudStats sono solo re-export (vedi fondo file, Wave 2).
 import { Component } from 'react';
 import { CLASSI_DEFAULT, classeColor, sbSafeUrl, safeDocId, normalizeLinks, escapeForPrompt } from './utils/format.ts';
+import BadgeAi from './BadgeAi.tsx';
 
 var SB = window.SB || {};
 window.SB = SB;
@@ -479,6 +480,10 @@ export function ValutazioneApertaAI(s: any, risposta: any, di: number, d: any, i
           </div>
         </div>
       )}
+      {/* Il giudizio è GENERATO DALL'IA ed è mostrato anche allo studente: senza badge
+          la PrivacyModal promette una cosa che il codice non fa (regola 3: ogni
+          contenuto IA è contrassegnato). */}
+      <BadgeAi separatore={false} />
     </div>
   );
 }

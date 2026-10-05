@@ -76,7 +76,15 @@ function msgAuth(e: any): string {
 // Firma esplicita: script UMD — una function diventerebbe globale e TS6
 // inferirebbe `() => void` (zero argomenti) → TS2554 sulle chiamate.
 var isEmailAutorizzata = function (email: string | null | undefined): boolean {
-  if (window.SB_DEBUG) console.log('[auth] filtro accesso, email dal token:', JSON.stringify(email));
+  // Solo il DOMINIO, mai l'indirizzo completo: l'email è un dato personale di
+  // minorenne e la regola 3 vieta di loggarlo (in console, in un issue, in un test).
+  // Il dominio basta a diagnosticare il filtro accesso.
+  if (window.SB_DEBUG)
+    console.log(
+      '[auth] filtro accesso, dominio dal token:',
+      String(email || '')
+        .split('@')[1] || '(nessuna)'
+    );
   // Allineato al server (rules firestore.txt → emailUtente()): un'email assente
   // NON è autorizzata. Prima il client lasciava passare (return true) e poi il
   // server negava la lettura di users/{uid} con un confuso permission-denied
@@ -594,6 +602,25 @@ export function useAuth(_annoScolastico: string) {
     setUser(null);
     setIsProf(false);
     setAuthErr(null);
+    // Pulisci le chiavi per-utente: bozza della card e card aperte resterebbero nel
+    // localStorage di un PC scolastico condiviso, e chi si siede dopo legge il testo
+    // di quello che aveva scritto il collega.
+    try {
+      var daCancellare: string[] = [];
+      for (var k = 0; k < localStorage.length; k++) {
+        var key = localStorage.key(k) || '';
+        if (
+          key.indexOf('sb_card_draft_') === 0 ||
+          key.indexOf('sb_aperti_') === 0 ||
+          key.indexOf('sb_quiz_') === 0
+        ) {
+          daCancellare.push(key);
+        }
+      }
+      daCancellare.forEach(function (key) {
+        localStorage.removeItem(key);
+      });
+    } catch (e) {}
   }
   return { user, isProf, loginGoogle, logout, authLoad, authErr, setUser };
 }

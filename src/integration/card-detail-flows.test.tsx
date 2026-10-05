@@ -256,6 +256,32 @@ describe('CardDetail — stato APERTO', () => {
     expect(screen.queryByText('Supporto IA – revisionato dal docente')).toBeNull();
   });
 
+  it('link con url javascript: (campo scrivibile dallo studente) → non diventa un link', async () => {
+    // Il blocco LINK della modale non è gated su isProf e `links` non è fra i campi
+    // vietati dalle rules: uno studente può mandare `javascript:` in una proposta, e
+    // chi clicca è il DOCENTE che la apre per approvarla, con la sessione aperta.
+    const seed = {
+      users: { prof1: PROF_DOC },
+      cards: {
+        c1: mkCard('c1', {
+          titolo: 'Card con link malevolo',
+          links: [
+            { url: 'javascript:window.__PWNED=1', label: 'Link' },
+            { url: 'https://ok.it/pagina', label: 'Buono' },
+          ],
+        }),
+      },
+    };
+    await renderApp({ seed, user: PROF });
+    const detail = await openCard('Card con link malevolo');
+
+    expect(document.querySelectorAll('a[href^="javascript:"]').length).toBe(0);
+    // Il link legittimo resta cliccabile: il filtro non deve spegnere tutto.
+    const buono = detail.getByText(/Buono/).closest('a');
+    expect(buono.getAttribute('href')).toBe('https://ok.it/pagina');
+    expect(buono.getAttribute('rel')).toBe('noopener noreferrer');
+  });
+
   it('lo studente vota nel sondaggio dalla card aperta', async () => {
     const seed = {
       users: { stud1: STUD_DOC },

@@ -144,7 +144,10 @@ function AiQuizGenModal(props: any) {
                             { v: 'multipla', i: '🔘', l: 'Scelta multipla' },
                             { v: 'verofalso', i: '☑️', l: 'Vero / Falso' },
                             { v: 'aperta', i: '✍️', l: 'Risposta aperta' },
-                            { v: 'misto', i: '🔀', l: 'Misto' },
+                    // NON esiste un tipo "misto": il prompt lo passava al modello e il risultato
+                    // non era gestito da nessuna parte (QuizBuilder non mostrava le opzioni e lo
+                    // studente non poteva consegnare). La scelta la fa il validatore di
+                    // quiz-import.ts sul contenuto della domanda.
                           ].map(function (t) {
                             var sel = aqg.tipo === t.v;
                             return (

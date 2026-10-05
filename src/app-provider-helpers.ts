@@ -153,17 +153,29 @@ export function buildNewCard(opts: {
     testo: opts.form.testo.trim(),
     data: new Date().toISOString().slice(0, 10),
     autore: opts.myName(opts.user),
-    likes: 0,
     commenti: [],
     ordine: opts.ordine,
     links: opts.links,
-    visibile: true,
     classi: opts.form.classi,
     immagini: opts.immagini,
     copertina: opts.form.copertina || null,
     allegati: opts.form.allegati || [],
     annoScolastico: opts.annoScolastico,
   };
+  // likes e visibile si scrivono SOLO per il docente. Motivo: la create della proposta
+  // dello studente vieta quei campi (rules firestore.txt) e `keys().hasAny([...])`
+  // conta una chiave presente anche se il valore è 0/true — quindi scriverli sempre
+  // rendeva ILLEGALI tutte le proposte degli studenti. Non è una difesa teorica: le
+  // rules sono state pubblicate e il create è stato negato davvero.
+  //
+  // Lasciandoli via, la proposta resta per costruzione invisibile agli altri: non ha
+  // `visibile: true`, quindi non entra nella query dei compagni
+  // (where('visibile','==',true)) né soddisfa la regola di lettura. Diventa pubblica
+  // solo quando il prof approva, ed è lì che `appCard` scrive `visibile: true`.
+  if (opts.isProf) {
+    newCard.likes = 0;
+    newCard.visibile = true;
+  }
   if (opts.opzioni) newCard['opzioni'] = opts.opzioni;
   if (opts.quizDomande) newCard['quizDomande'] = opts.quizDomande;
   if (opts.form.tipo === 'quiz') newCard['quizTimer'] = opts.form.quizTimer || 10;

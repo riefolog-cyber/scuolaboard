@@ -81,3 +81,44 @@ export function rispostaGiusta(d: any, risposta: any): boolean {
 
   return false;
 }
+
+/**
+ * DENOMINATORE del punteggio: quante domande contano davvero. Unico criterio per il
+ * punteggio salvato, quello mostrato allo studente, quello nella classifica del docente
+ * e quello nella testata del pannello.
+ *
+ * Contano le domande chiuse e valutabili (multipla/verofalso con una risposta giusta
+ * impostata). NON contano:
+ *  - le domande APERTE: il loro giudizio è dell'IA, che è un riscontro e non un voto
+ *    (AGENTS.md regola 3, e la PrivacyModal lo promette agli studenti). Se contassero,
+ *    ogni domanda aperta sarebbe un punto perso che lo studente non può recuperare;
+ *  - le domande senza risposta giusta: nessuno può azzeccarle, quindi sarebbero un
+ *    punto perso per tutti.
+ *
+ * Prima ognuno dei quattro punti contava per conto suo: lo studente vedeva "3/4" mentre
+ * il docente leggeva "3/3" sulla stessa card.
+ */
+export function quizTotale(domande: any[]): number {
+  return (domande || []).filter(function (d: any) {
+    if (!d || d.tipo === 'aperta') return false;
+    var c = d.corretta;
+    if (c === null || c === undefined || c === '') return false;
+    // Risposta giusta FUORI scala: su una multipla con 4 opzioni, `corretta: "7"`
+    // non è azzeccabile da nessuno. Contarla sarebbe un punto perso per tutti, e
+    // nessuno lo può recuperare. (Per vero/falso la scala è il testo, non l'indice.)
+    if (d.tipo === 'multipla') {
+      var n = indiceDi(c);
+      var opzioni = (d && d.opzioni) || [];
+      if (n < 0 || n >= opzioni.length) return false;
+    }
+    return true;
+  }).length;
+}
+
+/** Quante domande aperte hanno una risposta non vuota (cioè valutabili dall'IA). */
+export function aperteConRisposta(domande: any[], risposte: any): number {
+  return (domande || []).filter(function (d: any, i: number) {
+    if (!d || d.tipo !== 'aperta') return false;
+    return String((risposte || {})[i] || '').trim() !== '';
+  }).length;
+}

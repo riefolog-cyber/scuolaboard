@@ -249,11 +249,10 @@ describe('buildNewCard: i campi scritti SEMPRE (vincolo per le Firestore Rules)'
     expect(card.allegati).toEqual([]);
   });
 
-  it('lo stesso vale per likes e visibile, che le rules vietano già al prof', () => {
-    const card = buildNewCard(base);
-    expect('likes' in card).toBe(true);
-    expect('visibile' in card).toBe(true);
-  });
+  // likes e visibile NON li vediamo più qui: sono campi del DOCENTE e la create della
+  // proposta li vieta (src/rules-proposta-studente.test.ts verifica meccanicamente che
+  // il documento dello studente non tocchi nessun campo vietato — è il test che
+  // protegge questa cosa, non questo).
 
   it('la card del docente non è una proposta', () => {
     const card = buildNewCard(Object.assign({}, base, { isProf: true, form: { ...base.form, allegati: [{ id: 'a1' }] } }));

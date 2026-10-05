@@ -263,6 +263,10 @@ if (window.SB) {
   SB.aiCacheSetAll = cacheSetAll;
 }
 import { useState, useEffect } from 'react';
+// Validatore condiviso con l'import da file: l'output del generatore IA viene
+// normalizzato dallo STESSO codice, così non esistono due definizioni di "che cosa
+// è una domanda valida" (è il caso di `misto` e delle aperte con opzioni allegate).
+import { importaQuizDaTesto } from './quiz-import.ts';
 
 export function useAI(user: any) {
   // Cattura locale dei riferimenti con firma esplicita: nel pattern UMD le
@@ -281,7 +285,7 @@ export function useAI(user: any) {
   var [aiMap, setAiMap] = useState<any>({});
 
   // Quiz AI States
-  var AQG0 = { testo: '', loading: false, err: '', numDom: 4, tipo: 'multipla', anteprima: null, regenIdx: null };
+  var AQG0 = { testo: '', loading: false, err: '', numDom: 4, tipo: 'multipla', anteprima: null, regenIdx: null, scartate: [] as any[], avviso: '' };
   var [aqg, setAqg] = useState(AQG0);
   var [showAiQuizGen, setShowAiQuizGen] = useState(false);
 
@@ -332,12 +336,16 @@ export function useAI(user: any) {
         var text = (c.testo || '').replace(/\s+/g, ' ').trim().slice(0, 160);
         return (
           'CARD: "' +
-          c.titolo +
+          // Titolo, tipo e classi finiscono DENTRO <USER_DATA>: possono contenere
+          // testo di uno studente (titolo di una proposta approvata), quindi vanno
+          // escaped come il resto. Senza, un titolo con `</USER_DATA>` chiudeva la
+          // delimitazione e il resto del testo diventava un'istruzione.
+          SB.escapeForPrompt(c.titolo) +
           '" (tipo: ' +
-          c.tipo +
+          SB.escapeForPrompt(c.tipo) +
           ')\n' +
           'Classi: ' +
-          (c.classi || []).join(', ') +
+          (c.classi || []).map(function (k: any) { return SB.escapeForPrompt(k); }).join(', ') +
           '\n' +
           'Commenti: ' +
           (c.commenti || []).length +
@@ -641,17 +649,52 @@ export function useAI(user: any) {
     // `ai: true` (boolean esplicito, non truthy) perché finisce su Firestore dentro
     // l'array quizDomande: le card vecchie non hanno il campo e restano senza badge,
     // che è il comportamento corretto (non sono state generate dall'IA).
-    // any esplicito: lo stato `aqg.anteprima` parte da null e TS lo tipizza come
-    // `never` (non c'è un tipo per "array di domande" nello stato iniziale).
-    var anteprima: any = aqg.anteprima;
-    var marcate = anteprima.map(function (d: any) {
+    //
+    // NORMALIZZAZIONE (obbligatoria, non cosmetica): il modello può restituire
+    // `tipo:"misto"` — che da nessun'altra parte esiste — e può allegare opzioni e
+    // `corretta` a una domanda `aperta`. Senza normalizzare, `misto` rendeva il quiz
+    // NON CONSEGNABILE per tutti gli studenti (il controllo di completezza non si
+    // soddisfa e il bottone resta disabilitato per sempre, senza messaggio) e una
+    // aperta con opzioni mostrava bottoni E textarea sulla stessa domanda, con i due
+    // controlli che si sovrascrivevano. Riusiamo lo stesso validatore
+    // dell'import (src/quiz-import.ts): una sola definizione di "che domanda è".
+    var normalizzate = normalizzaDomandeIA(aqg.anteprima);
+    if (!normalizzate.length) {
+      setAqg(function (p: any) {
+        return Object.assign({}, p, { err: 'Nessuna domanda generata è utilizzabile: correggi e riprova.' });
+      });
+      return;
+    }
+    var marcate = normalizzate.map(function (d: any) {
       return Object.assign({}, d, { ai: true });
     });
     setForm(function (p: any) {
-      return Object.assign({}, p, { tipo: 'quiz', quizDomande: (p.quizDomande || []).concat(marcate) });
+      return Object.assign({}, p, {
+        tipo: 'quiz',
+        quizDomande: (p.quizDomande || []).concat(marcate),
+      });
     });
+    // Niente scarti silenziosi: il docente deve sapere se ha perso qualcosa.
+    var scartate = (aqg.scartate || []).length;
     setShowAiQuizGen(false);
-    setAqg(AQG0);
+    setAqg(
+      Object.assign({}, AQG0, {
+        avviso: scartate ? scartate + ' domande non utilizzabili scartate: la prima non aveva una risposta giusta valida.' : '',
+      })
+    );
+  }
+
+  // Normalizza l'output del generatore usando lo stesso validatore dell'import da
+  // file. `misto` non è un tipo gestito da QuizBuilder/QuizPanel: si risolve sul
+  // contenuto (2 opzioni Vero/Falso → verofalso, opzioni coerenti → multipla, nessuna
+  // opzione → aperta). Una domanda APERTA viene ripulita da opzioni e `corretta`.
+  function normalizzaDomandeIA(lista: any[]): any[] {
+    var esito = importaQuizDaTesto(JSON.stringify({ domande: lista }));
+    // Lo stato mette in mostra gli scarti così il docente li vede dopo la conferma.
+    setAqg(function (p: any) {
+      return Object.assign({}, p, { scartate: esito.scartate });
+    });
+    return esito.domande || [];
   }
 
   // 7. Riassunto discussione commenti (pseudonimizzato)

@@ -158,12 +158,17 @@ service cloud.firestore {
         )
       );
 
-      // Update: prof tutto; studente solo campi consentiti (commenti, like, reazioni, voti, visto)
+      // Update: prof tutto; studente solo campi consentiti (commenti, like, reazioni,
+      // voti, visto, ordine).
+      // `ordine` è ammesso perché il client, su una card legacy che ne è priva,
+      // ripara chiamando createCardWithOrder → che fa set() del documento intero
+      // aggiungendo `ordine`: senza questo l'update veniva negato. Non è un
+      // vantaggio per lo studente (l'ordine della griglia è comunque client-side).
       allow update: if isAuth() && (
         isProf()
         || (isStudente() && (
           request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['commenti', 'likes', 'likesBy', 'reazioni', 'opzioni', 'visto'])
+            .hasOnly(['commenti', 'likes', 'likesBy', 'reazioni', 'opzioni', 'visto', 'ordine'])
         ))
       );
 
@@ -274,17 +279,43 @@ service cloud.firestore {
 
     // ── NOTIFICHE (in-app, solo app aperta) ──
     // Doc per utente: notifiche/{uid} { lista: [...], aggiornato: ISO }
-    // - Ogni utente legge/scrive solo il proprio doc (come preferiti)
-    // - Il prof può scrivere sul doc di qualsiasi studente per fan-out (nuova card, proposta esito, risposta, ammonizione)
-    // - Lo studente può marcare letta (solo campo letta -> true, senza cambiare altro)
+    // Scritture ammesse, e SOLO queste:
+    // - il prof su qualsiasi doc (fan-out di classe e di risposta);
+    // - lo studente sul PROPRIO prof, ma solo aggiungendo voci (il caso "uno studente
+    //   risponde a un commento del prof": deve poter accodare la sua risposta);
+    // - il proprietario, ma solo sul campo `letta` (segnalato come letto).
+    // Prima era `allow create/update: if isAuth()`, cioè QUALSIASI autenticato poteva
+    // scrivere sulla lista di chiunque: azzerare gli avvisi veri di un compagno o
+    // iniettare voci false (per es. "Proposta approvata") era a portata di mano. La
+    // lettura resta privata.
+    // Solo UPDATE: su create `resource` è null, e `resource.data` su un null fa
+    // scattare l'errore di valutazione (l'intera espressione diventa false). Quindi
+    // il create è separato e ristretto al prof.
+    function aggiornaNotifica(targetUid) {
+      return isProf()
+        || (
+          // marcatore letta sul proprio doc
+          request.auth.uid == targetUid
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['letta', 'aggiornato'])
+        )
+        || (
+          // lo studente accoda sul doc del prof. Il ruolo va letto dal doc users:
+          // il doc notifiche NON ha un campo `role`. La lista può solo CRESCERE di
+          // uno (è un arrayUnion): altrimenti lo studente riscriverebbe anche gli
+          // avvisi degli altri.
+          isStudente()
+          && get(/databases/$(database)/documents/users/$(targetUid)).data.role == "prof"
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lista', 'aggiornato'])
+          && request.resource.data.lista.size() == resource.data.lista.size() + 1
+        );
+    }
     match /notifiche/{uid} {
-      // Lettura: solo proprietario (privacy). Scrittura: qualsiasi autenticato
-      // può creare/accodare una notifica per un altro utente (es. studente
-      // notifica prof su nuovo commento). Senza questo lo studente avrebbe
-      // permission-denied su notifiche/{profUid}.
       allow read: if isAuth() && request.auth.uid == uid;
-      allow create: if isAuth();
-      allow update: if isAuth();
+      // Solo il prof crea: il caso "lo studente risponde a un commento del prof"
+      // accoda sul doc del prof, che è già stato creato dal prof stesso.
+      allow create: if isProf();
+      allow update: if isAuth() && aggiornaNotifica(uid);
       allow delete: if isAuth() && request.auth.uid == uid;
     }
 

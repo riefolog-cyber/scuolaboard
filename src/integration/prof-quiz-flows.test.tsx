@@ -80,8 +80,14 @@ describe('Valutazione quiz lato prof', () => {
       expect(doc).toBeTruthy();
       expect(doc.aiValutato).toBe(true);
       expect(doc.aiScores['1'].voto).toBe(0.8);
-      expect(doc.punteggio.score).toBe(1.8);
-      expect(doc.punteggio.pct).toBe(90);
+      // Il voto dell'IA NON entra nel punteggio: è un riscontro, non un voto
+      // (AGENTS.md regola 3, e la PrivacyModal lo promette agli studenti). Il
+      // punteggio resta quello delle domande chiuse, già salvato dallo studente.
+      expect(doc.punteggio.score).toBe(1);
+      // resta com'era (totale 2 nel seed): la valutazione IA non riscrive il
+      // punteggio, lo lascia com'è.
+      expect(doc.punteggio.totale).toBe(2);
+      expect(doc.aiErrori).toEqual([]);
     });
 
     // UI: il bottone passa a "✓ Tutte valutate" (regex: il bottone contiene

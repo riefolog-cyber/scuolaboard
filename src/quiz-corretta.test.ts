@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { indiceDi, rispostaGiusta, testoCorretta, testoRisposta } from './quiz-corretta.ts';
+import { aperteConRisposta, indiceDi, rispostaGiusta, testoCorretta, testoRisposta, quizTotale } from './quiz-corretta.ts';
 
 // I due formati di `corretta` (AGENTS.md regola 12): per `multipla` è l'indice 0-based
 // COME STRINGA, per `verofalso` è il TESTO dell'opzione. La risposta dello studente è
@@ -102,5 +102,50 @@ describe('indiceDi', () => {
     expect(indiceDi('')).toBe(-1);
     expect(indiceDi('Terza')).toBe(-1);
     expect(indiceDi(null)).toBe(-1);
+  });
+});
+describe('quizTotale — il denominatore UNICO del punteggio', () => {
+  // La divergenza-denominatore-e-unita-cos-e-il-punteggio. Prima quattro punti
+  // contavano per conto proprio: lo studente vedeva "3/4" e il docente "3/3" sulla
+  // stessa card.
+  const DOMANDE = [
+    { tipo: 'multipla', testo: 'Q1', opzioni: ['a', 'b'], corretta: '0' },
+    { tipo: 'multipla', testo: 'Q2', opzioni: ['a', 'b'], corretta: '' }, // nessuna giusta
+    { tipo: 'verofalso', testo: 'Q3', opzioni: ['Vero', 'Falso'], corretta: 'Falso' },
+    { tipo: 'aperta', testo: 'Q4' },
+  ];
+
+  it('contano solo le domande chiuse con una risposta giusta impostata', () => {
+    // Q2 non è azzeccabile (nessuna chiave), Q4 è aperta e il suo giudizio è un
+    // riscontro IA, non un voto: nessuna delle due può stare nel denominatore.
+    expect(quizTotale(DOMANDE)).toBe(2);
+  });
+
+  it('un quiz senza domande o vuoto non explota', () => {
+    expect(quizTotale([])).toBe(0);
+    expect(quizTotale(null as any)).toBe(0);
+    expect(quizTotale([{ tipo: 'aperta', testo: 'solo aperta' }])).toBe(0);
+  });
+
+  it('una risposta giusta fuori scala non la conta (nessuno può azzeccarla)', () => {
+    // 2 opzioni, corretta "7": la domanda è irraggiungibile. Contandola sarebbe un
+    // punto perso per tutti, e nessuno potrebbe recuperarlo.
+    expect(quizTotale([{ tipo: 'multipla', opzioni: ['a', 'b'], corretta: '7' }])).toBe(0);
+    expect(quizTotale([{ tipo: 'multipla', opzioni: ['a', 'b'], corretta: '1' }])).toBe(1);
+    // Per vero/falso la scala è il TESTO, quindi "Vero"/"Falso" va bene.
+    expect(quizTotale([{ tipo: 'verofalso', opzioni: ['Vero', 'Falso'], corretta: 'Falso' }])).toBe(1);
+  });
+});
+
+describe('aperteConRisposta — quante aperte sono valutabili', () => {
+  it('conta solo le aperte con testo non vuoto', () => {
+    const domande = [
+      { tipo: 'aperta', testo: 'A' },
+      { tipo: 'aperta', testo: 'B' },
+      { tipo: 'multipla', testo: 'C', opzioni: ['a', 'b'], corretta: '0' },
+    ];
+    expect(aperteConRisposta(domande, { 0: 'risposta', 1: '   ', 2: 0 })).toBe(1);
+    expect(aperteConRisposta(domande, {})).toBe(0);
+    expect(aperteConRisposta(domande, null as any)).toBe(0);
   });
 });

@@ -207,4 +207,27 @@ describe('Quiz interattivo (studente)', () => {
     expect(await screen.findByText(/Chiaro/, {}, { timeout: 4000 })).toBeTruthy();
     expect(screen.queryByText(/attende la valutazione del prof/)).toBeNull();
   });
+
+
+  // Dopo il consegno il bottone NON deve tornare. Prima qInviato era un booleano
+  // globale azzerato alla chiusura della card: riaprendo il quiz lo studente vedeva di
+  // nuovo 'Invia risposte', e quel secondo invio e un UPDATE che le Firestore Rules
+  // negavano (il payload vecchio toccava punteggio e data): vicolo cieco, con il solo
+  // messaggio 'Errore salvataggio risposte'.
+  it('dopo il consegno, riaprendo la card il bottone Invia NON torna', async () => {
+    const seed = { users: { stud1: STUD_DOC }, cards: { q1: mkQuizCard('q1', { titolo: 'Quiz una volta sola' }) } };
+    await renderApp({ seed, user: STUD });
+    fireEvent.click(await screen.findByText('Quiz una volta sola', {}, { timeout: 4000 }));
+    fireEvent.click(await screen.findByRole('button', { name: '4' }, {}, { timeout: 4000 }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Milano' }, {}, { timeout: 4000 }));
+    fireEvent.click(screen.getByRole('button', { name: 'Invia risposte' }));
+    await waitFor(() => expect(screen.getByText(/Quiz completato/i, {}, { timeout: 4000 })).toBeTruthy());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Chiudi card' }));
+    await waitFor(() => expect(document.querySelector('.modal-inner')).toBeNull());
+    fireEvent.click(await screen.findByText('Quiz una volta sola', {}, { timeout: 4000 }));
+
+    // Riaperta: niente bottone di invio, e' gia' stato consegnato.
+    expect(screen.queryByRole('button', { name: 'Invia risposte' })).toBeNull();
+  });
 });
