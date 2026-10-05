@@ -122,7 +122,16 @@ export function createFakeDb(seed = {}) {
     }
   }
 
-  class FakeDocRef {
+  // Fallimenti iniezionabili per collection: il fake, come le Rules, può rifiutare
+// una scrittura. Serve a provare che il CODICE CLIENTE non mente quando Firestore
+// nega: senza questo, un `showToast('salvata ✓')` lanciato prima della promessa
+// passerebbe il test e in produzione direbbe il falso all'utente.
+const fallimenti: Record<string, any> = {};
+function fallisce(coll: string): any {
+  return fallimenti[coll] || null;
+}
+
+class FakeDocRef {
     constructor(name, id) {
       this.name = name;
       this.id = id;
@@ -132,6 +141,8 @@ export function createFakeDb(seed = {}) {
       return { exists: !!data, data: () => data, id: this.id };
     }
     async set(data, opts) {
+      const falla = fallisce(this.name);
+      if (falla) throw falla;
       collections[this.name] = collections[this.name] || {};
       const existing = collections[this.name][this.id] || {};
       const merged = resolveFieldValues(data, opts && opts.merge ? existing : null);
@@ -140,6 +151,8 @@ export function createFakeDb(seed = {}) {
       notifyDoc(this.name, this.id);
     }
     async update(patch) {
+      const falla = fallisce(this.name);
+      if (falla) throw falla;
       collections[this.name] = collections[this.name] || {};
       const existing = collections[this.name][this.id] || {};
       collections[this.name][this.id] = applyPatch(existing, patch);
@@ -171,9 +184,17 @@ export function createFakeDb(seed = {}) {
       for (const k of Object.keys(collections)) delete collections[k];
       for (const k of Object.keys(queryListeners)) delete queryListeners[k];
       for (const k of Object.keys(docListeners)) delete docListeners[k];
+      for (const k of Object.keys(fallimenti)) delete fallimenti[k];
       for (const [coll, docs] of Object.entries(seed)) {
         collections[coll] = { ...docs };
       }
+    },
+    // Fa fallire le prossime scritture su `coll` con un errore tipo permission-denied.
+    _failWrites(coll, code = 'permission-denied') {
+      fallimenti[coll] = Object.assign(new Error('scrittura negata: ' + code), { code });
+    },
+    _allowWrites(coll) {
+      delete fallimenti[coll];
     },
     runTransaction(fn) {
       const tx = {

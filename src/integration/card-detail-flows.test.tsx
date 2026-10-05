@@ -307,7 +307,7 @@ describe('CardDetail — stato APERTO', () => {
     });
   });
 
-  it('lo studente mette like; se la card è sua vede ✏️ Modifica (isOwner)', async () => {
+  it('lo studente mette like ma NON vede ✏️ Modifica sulla card di cui è autore', async () => {
     const seed = {
       users: { stud1: STUD_DOC },
       cards: { c1: mkCard('c1', { titolo: 'Card studente', autore: 'Luca Bianchi' }) },
@@ -318,8 +318,14 @@ describe('CardDetail — stato APERTO', () => {
     fireEvent.click(await detail.findByRole('button', { name: /👍/ }, {}, { timeout: 4000 }));
 
     await waitFor(() => expect(db._get('cards', 'c1').likes).toBe(1));
-    // isOwner: autore === myName(user) ('Luca Bianchi') e !isProf
-    expect(detail.getAllByRole('button', { name: '✏️ Modifica' }).length).toBeGreaterThan(0);
+
+    // Il like è concesso (update/carta ammette `likes`), la modifica NO: le Rules
+    // lasciano allo studente solo commenti, like, reazioni, voti, visto e ordine.
+    // Questo test asseriva il contrario e il Firestore finto lo permetteva, quindi
+    // in produzione il salvataggio finiva con permission-denied e un toast di
+    // successo. Non è un caso raro: dopo l'approvazione `appCard` mette
+    // proposta=false, quindi il proponente è l'autore di una card pubblicata.
+    expect(detail.queryByRole('button', { name: /Modifica/ })).toBeNull();
   });
 
   it('regression: drag/click che parte DENTRO la card e finisce sul backdrop NON chiude il dettaglio', async () => {

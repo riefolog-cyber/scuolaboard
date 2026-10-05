@@ -34,7 +34,8 @@ function CardDetail__({ $: props$ }: any) {
       }, 0)
     : 0;
   var liked = $.myLikes.current.has(String(c.id));
-  var isOwner = !$.isProf && $.user && c.autore === $.myName($.user) && !c.proposta;
+  // Cfr. la nota in CardItem: nessun "isOwner" per lo studente, perché le Rules non
+  // gli permettono di riscrivere una card e il salvataggio falliva in silenzio.
   var cardLinks = normalizeLinks ? normalizeLinks(c) : [];
   var nascosta = c.visibile === false;
   var cc = c.classi || ['TUTTE'];
@@ -604,22 +605,6 @@ function CardDetail__({ $: props$ }: any) {
             })}
             <span style={{ flex: 1 }} />
             {$.isProf && !$.simulaSt && (
-              <button
-                onClick={function (e: any) {
-                  e.stopPropagation();
-                  $.editCard(c);
-                }}
-                className="cd-pill"
-                style={{
-                  background: 'rgba(59,130,246,.2)',
-                  border: '1px solid rgba(59,130,246,.4)',
-                  color: '#60a5fa',
-                }}
-              >
-                ✏️ Modifica
-              </button>
-            )}
-            {isOwner && (
               <button
                 onClick={function (e: any) {
                   e.stopPropagation();

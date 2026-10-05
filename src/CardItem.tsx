@@ -14,7 +14,12 @@ function CardItem__({ $, c, idx }: any) {
   var liked = $.myLikes.current.has(String(c.id));
   var aiD = ($.aiMap && $.aiMap[String(c.id)]) || {};
   var cRes = c.aiAnalisi || (aiD && aiD.analisi);
-  var isOwner = !$.isProf && $.user && c.autore === $.myName($.user) && !c.proposta;
+  // NB: niente "isOwner" per lo studente. Esisteva e offriva a chiunque fosse l'autore
+  // la modifica della card, ma le Firestore Rules non lo permettono (update/carta
+  // studente ammette solo commenti, like, reazioni, voti, visto, ordine): la
+  // scrittura veniva negata e il toast diceva comunque "Card aggiornata". Dopo
+  // l'approvazione la card è del docente, e l'ho verificato che il caso non è una
+  // rarità: appCard mette proposta=false, quindi il proponente diventava isOwner.
   var cardLinks = normalizeLinks(c);
   var nascosta = c.visibile === false;
   var nuova = !$.seenRef.current.has(String(c.id));
@@ -775,27 +780,6 @@ function CardItem__({ $, c, idx }: any) {
               }}
               style={{
                 order: 12,
-                background: 'rgba(59,130,246,.2)',
-                border: '1px solid rgba(59,130,246,.4)',
-                color: '#60a5fa',
-                fontWeight: 700,
-              }}
-            >
-              ✏️
-            </button>
-          )}
-          {isOwner && (
-            <button
-              aria-label="Modifica card"
-              className="pill-btn"
-              onClick={function (e: any) {
-                e.stopPropagation();
-                $.editCard(c);
-              }}
-              style={{
-                // L'autore vede la sua ✏️ tra le azioni primarie: è l'azione
-                // che usa di più e non deve stare dietro il menu.
-                order: 3,
                 background: 'rgba(59,130,246,.2)',
                 border: '1px solid rgba(59,130,246,.4)',
                 color: '#60a5fa',

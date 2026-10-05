@@ -695,12 +695,21 @@ function AppProvider({ children }: any) {
       return true;
     }
 
-    if (editMode) {
+if (editMode) {
       var c = buildEditCard(editMode, form, links, immagini, opzioni, quizDomande);
       if (!guardSize(c)) return;
-      fbSave(c);
-      setEditMode(null);
-      showToast('Card aggiornata ✓', 'ok');
+      // Il toast di successo aspetta la PROMESSA. Prima partiva subito e la modale si
+      // chiudeva a prescindere dall'esito: con una scrittura negata dalle Rules si
+      // leggeva "Card aggiornata ✓" e le modifiche sparivano senza lasciare traccia. È
+      // così che è passato inosservato che lo studente non può modificare una card.
+      // L'errore non lo annunciamo qui: fbSave ha già una rete di sicurezza che mostra
+      // il toast su ogni percorso di scrittura, e due messaggi insieme farebbero
+      // doppio.
+      fbSave(c).then(function () {
+        setEditMode(null);
+        modals.setShowModal(false);
+        showToast('Card aggiornata ✓', 'ok');
+      });
     } else {
       // nextOrd.current++ SOLO dopo il guard: un tentativo bloccato per
       // dimensione non deve bruciare un numero d'ordine (gap innocui, ma pulito).

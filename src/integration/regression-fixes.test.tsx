@@ -31,6 +31,28 @@ describe('regression: editCard dal CardItem', () => {
 
     expect(await screen.findByText('✏️ Modifica card', {}, { timeout: 4000 })).toBeTruthy();
   });
+
+  // Il toast di successo usciva PRIMA della promessa di scrittura e la modale si
+  // chiudeva comunque: con le Rules che negano la scrittura l'utente leggeva
+  // "Card aggiornata ✓" e le modifiche sparivano. È la ragione per cui il divieto di
+  // modifica allo studente (che le Rules negavano) non si è mai visto.
+  it('se Firestore nega la scrittura, NON dice "aggiornata" e lascia la modale aperta', async () => {
+    const seed = { users: { prof1: PROF_DOC }, cards: { c1: mkCard('c1', { titolo: 'Card negata' }) } };
+    const { db } = await renderApp({ seed, user: PROF });
+
+    fireEvent.click(await screen.findByText('Card negata', {}, { timeout: 4000 }));
+    fireEvent.click(screen.getByRole('button', { name: 'Altre azioni' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Modifica card' }, {}, { timeout: 4000 }));
+    await screen.findByText('✏️ Modifica card', {}, { timeout: 4000 });
+
+    db._failWrites('cards');
+    fireEvent.click(screen.getByRole('button', { name: /Salva/ }));
+
+    // L'errore lo segnala fbErrTxt (la rete di sicurezza in fbSave): qui conta che
+    // il messaggio di SUCCESSO non compaia e che il documento non sia cambiato.
+    await waitFor(() => expect(db._get('cards', 'c1').titolo).toBe('Card negata'));
+    expect(screen.queryByText(/Card aggiornata/)).toBeNull();
+  });
 });
 
 describe('regression: notifiche segna letto singolo', () => {
