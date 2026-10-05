@@ -221,6 +221,25 @@ describe('useAI — quiz generato', () => {
     expect(apiRef.showAiQuizGen).toBe(false);
     await waitFor(() => expect(apiRef.aqg.anteprima).toBeNull());
   });
+
+  // Obbligo di trasparenza (AGENTS.md regola 3): ogni contenuto generato dall'IA
+  // deve essere contrassegnato, e la PrivacyModal lo promette agli studenti. Prima di
+  // questo flag i quiz generati con l'IA erano indistinguibili da quelli scritti a
+  // mano, e il badge esisteva solo dove era stato incollato (AIPanel). Il test congela
+  // il punto in cui il marchio viene messo: se qualcuno lo sposta nella UI, si rompe.
+  it('aiConfirmaQuiz: le domande importate vengono marcate come generate dall IA', async () => {
+    apiRef.setAqg((p: any) => ({ ...p, anteprima: [{ testo: 'q1' }, { testo: 'q2' }] }));
+    await waitFor(() => expect(apiRef.aqg.anteprima).toHaveLength(2));
+    const setForm = vi.fn();
+    apiRef.aiConfirmaQuiz(setForm);
+    const next = setForm.mock.calls[0][0]({ quizDomande: [] });
+    expect(next.quizDomande.map((d: any) => d.ai)).toEqual([true, true]);
+    // Le domande scritte a mano che erano già nel quiz restano SENZA marchio:
+    // dichiarare IA il contenuto del docente sarebbe falso.
+    const conManuali = setForm.mock.calls[0][0]({ quizDomande: [{ testo: 'mia', ai: undefined }] });
+    expect(conManuali.quizDomande[0].ai).toBeUndefined();
+    expect(conManuali.quizDomande[1].ai).toBe(true);
+  });
 });
 
 describe('useAI — sommario e sondaggio', () => {

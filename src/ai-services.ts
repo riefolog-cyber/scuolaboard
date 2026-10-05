@@ -633,8 +633,22 @@ export function useAI(user: any) {
   // 6. Conferma e importa il quiz generato
   function aiConfirmaQuiz(setForm: any) {
     if (!aqg.anteprima) return;
+    // QUI nasce l'obbligo di trasparenza: è l'unico punto in cui contenuto
+    // generato dall'IA entra in una card (AGENTS.md regola 3 — ogni contenuto IA
+    // deve mostrare "🤖 Supporto IA", e la PrivacyModal lo promette agli studenti).
+    // Marchiamo qui e non nel rendering: se il flag lo aggiungesse la UI, un quiz
+    // copiato o duplicato perderebbe la marcatura, e con lei la conformità.
+    // `ai: true` (boolean esplicito, non truthy) perché finisce su Firestore dentro
+    // l'array quizDomande: le card vecchie non hanno il campo e restano senza badge,
+    // che è il comportamento corretto (non sono state generate dall'IA).
+    // any esplicito: lo stato `aqg.anteprima` parte da null e TS lo tipizza come
+    // `never` (non c'è un tipo per "array di domande" nello stato iniziale).
+    var anteprima: any = aqg.anteprima;
+    var marcate = anteprima.map(function (d: any) {
+      return Object.assign({}, d, { ai: true });
+    });
     setForm(function (p: any) {
-      return Object.assign({}, p, { tipo: 'quiz', quizDomande: (p.quizDomande || []).concat(aqg.anteprima) });
+      return Object.assign({}, p, { tipo: 'quiz', quizDomande: (p.quizDomande || []).concat(marcate) });
     });
     setShowAiQuizGen(false);
     setAqg(AQG0);

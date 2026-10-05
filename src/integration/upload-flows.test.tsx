@@ -125,3 +125,107 @@ describe('Upload immagini (prof)', () => {
     expect(galleryImg.getAttribute('src')).toBe('data:image/png;base64,IMMAGINE2');
   });
 });
+
+// L'import da JSON/HTML porta le domande fino alla CARD SALVATA, non solo nel form:
+// e' l'unico modo per accorgersi che una domanda importata venga pero' scartata da
+// buildQuizDomande al momento del salvataggio (il lavoro del docente perso in silenzio).
+describe('Import quiz da file (docente)', () => {
+  function scegliTipoQuiz() {
+    // Il tipo di card è un BOTTONE (🧩 quiz), non un select: sceglierlo monta il
+    // QuizBuilder, con i bottoni "Genera con AI" e "Importa da JSON/HTML".
+    fireEvent.click(screen.getByRole('button', { name: /quiz/i }));
+  }
+
+  function scriviTitolo(t: string) {
+    fireEvent.input(screen.getByPlaceholderText('Es. Riflessione su…'), { target: { value: t } });
+  }
+
+  function carica(nome: string, contenuto: string, tipo: string) {
+    const file = new File([contenuto], nome, { type: tipo });
+    fireEvent.change(screen.getByLabelText('Importa quiz da file JSON o HTML'), { target: { files: [file] } });
+  }
+
+  it('importa un .json con 2 domande e le salva nella card con le risposte corrette', async () => {
+    const { db } = await renderApp({ seed: { users: { prof1: PROF_DOC }, cards: {} }, user: PROF });
+    fireEvent.click(await screen.findByTitle('Nuova card', {}, { timeout: 4000 }));
+    scriviTitolo('Quiz importato');
+    scegliTipoQuiz();
+
+    carica(
+      'quiz.json',
+      JSON.stringify({
+        domande: [
+          { question: 'Domanda uno?', options: [{ text: 'A', isCorrect: true }, { text: 'B', isCorrect: false }] },
+          { question: 'Domanda due?', options: [{ text: 'C', isCorrect: false }, { text: 'D', isCorrect: true }] },
+        ],
+      }),
+      'application/json'
+    );
+
+    await waitFor(() => expect(screen.getByText(/domande importate/)).toBeTruthy(), { timeout: 5000 });
+    // Le domande sono visibili nel pannello di editing.
+    expect(screen.getByDisplayValue('Domanda uno?')).toBeTruthy();
+    expect(screen.getByDisplayValue('Domanda due?')).toBeTruthy();
+
+    fireEvent.click(screen.getByText('✅ Crea card'));
+    await waitFor(() => {
+      const found = db._all('cards').find(([, c]) => c.titolo === 'Quiz importato');
+      expect(found).toBeTruthy();
+      expect(found[1].quizDomande).toHaveLength(2);
+      // corretta e' l'INDICE come stringa: e' il formato che QuizBuilder e useQuiz usano.
+      expect(found[1].quizDomande.map((d) => d.corretta)).toEqual(['0', '1']);
+      expect(found[1].quizDomande[0].opzioni).toEqual(['A', 'B']);
+      // Importato != generato dall'IA: nessun badge, nessun flag.
+      expect(found[1].quizDomande[0].ai).toBeUndefined();
+    });
+  });
+
+  it('un file non valido spiega il motivo e NON aggiunge domande', async () => {
+    const { db } = await renderApp({ seed: { users: { prof1: PROF_DOC }, cards: {} }, user: PROF });
+    fireEvent.click(await screen.findByTitle('Nuova card', {}, { timeout: 4000 }));
+    scriviTitolo('Quiz rotto');
+    scegliTipoQuiz();
+
+    carica('rotto.json', '{ non e json', 'application/json');
+
+    await waitFor(() => expect(screen.getByText(/JSON non valido/)).toBeTruthy(), { timeout: 5000 });
+    expect(screen.queryByText(/domande importate/)).toBeNull();
+
+    fireEvent.click(screen.getByText('✅ Crea card'));
+    await waitFor(() => {
+      const found = db._all('cards').find(([, c]) => c.titolo === 'Quiz rotto');
+      expect(found).toBeTruthy();
+      // Nessuna domanda aggiunta: il file rotto non puo creare un quiz vuoto.
+      expect(found[1].quizDomande).toBeUndefined();
+    });
+  });
+
+  it('importa da un file HTML (quizData dentro lo script) come quello segnalato', async () => {
+    const { db } = await renderApp({ seed: { users: { prof1: PROF_DOC }, cards: {} }, user: PROF });
+    fireEvent.click(await screen.findByTitle('Nuova card', {}, { timeout: 4000 }));
+    scriviTitolo('Da html');
+    scegliTipoQuiz();
+
+    carica(
+      'quiz.html',
+      '<!doctype html><html><body><div class="q" style="display:none">Domanda</div><script>quizData=[' +
+        '{"question":"Perche rispondere peggiora le cose?","hint":"un aiuto",' +
+        '"options":[{"label":"A","text":"Copia","isCorrect":false},{"label":"B","text":"Ignorare","isCorrect":true}]}' +
+        ']</script></body></html>',
+      'text/html'
+    );
+
+    await waitFor(() => expect(screen.getByText(/domande importate/)).toBeTruthy(), { timeout: 5000 });
+    expect(screen.getByText(/lette dal file HTML/)).toBeTruthy();
+
+    fireEvent.click(screen.getByText('✅ Crea card'));
+    await waitFor(() => {
+      const found = db._all('cards').find(([, c]) => c.titolo === 'Da html');
+      expect(found).toBeTruthy();
+      expect(found[1].quizDomande).toHaveLength(1);
+      expect(found[1].quizDomande[0].opzioni).toEqual(['Copia', 'Ignorare']);
+      expect(found[1].quizDomande[0].corretta).toBe('1');
+      expect(found[1].quizDomande[0].hint).toBe('un aiuto');
+    });
+  });
+});

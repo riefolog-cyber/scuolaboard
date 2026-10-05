@@ -1,11 +1,44 @@
 import { S as SGlobal } from '../app-utils.tsx';
 // QuizBuilder.tsx  ·  estratto da NuovaCardModal (split God-file)
+import { useRef, useState } from 'react';
+import { importaQuizDaTesto } from '../quiz-import.ts';
 
 function QuizBuilder(props: any) {
   var form = props.form,
     setForm = props.setForm;
   var S = props.S || SGlobal;
   var setShowAiQuizGen = props.setShowAiQuizGen;
+  // Stato locale del pannello (non nel FormContext): il file scelto e il messaggio
+  // d'esito sono cosa del docente in questo momento, non della card.
+  var [esitoImport, setEsitoImport] = useState<any>(null);
+  var fileRef = useRef<any>(null);
+
+  function importaDaFile(file: File) {
+    var lettore = new FileReader();
+    lettore.onload = function () {
+      var esito = importaQuizDaTesto(String(lettore.result || ''));
+      if (esito.errore || !esito.domande.length) {
+        setEsitoImport({ errore: esito.errore || 'Nessuna domanda trovata nel file' });
+        return;
+      }
+      // Appende come fa aiConfirmaQuiz con l'IA. Nessun flag `ai`: un quiz importato
+      // non è generato dall'IA, e dichiararlo sarebbe falso (AGENTS.md regola 3).
+      setForm(function (p: any) {
+        return Object.assign({}, p, { quizDomande: (p.quizDomande || []).concat(esito.domande) });
+      });
+      setEsitoImport({
+        importate: esito.domande.length,
+        scartate: esito.scartate,
+        fonte: (esito as any).fonte,
+        nomeFile: file.name,
+      });
+    };
+    lettore.onerror = function () {
+      setEsitoImport({ errore: 'Non sono riuscito a leggere il file' });
+    };
+    lettore.readAsText(file);
+  }
+
   return (
     <div style={{ marginBottom: 10 }}>
       {
@@ -22,6 +55,39 @@ function QuizBuilder(props: any) {
           {<label className="u-label">🧩 DOMANDE QUIZ</label>}
           {
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              {
+                <label
+                  style={{
+                    background: 'rgba(255,255,255,.06)',
+                    border: '1px solid rgba(255,255,255,.15)',
+                    borderRadius: 7,
+                    padding: '4px 11px',
+                    cursor: 'pointer',
+                    fontSize: 11,
+                    color: 'rgba(255,255,255,.75)',
+                    fontWeight: 800,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                  }}
+                >
+                  📥 Importa da JSON/HTML
+                  <input
+                    type="file"
+                    aria-label="Importa quiz da file JSON o HTML"
+                    accept=".json,.html,.htm,.txt"
+                    style={{ display: 'none' }}
+                    ref={fileRef}
+                    onChange={function (e: any) {
+                      var f = e.target.files && e.target.files[0];
+                      if (f) importaDaFile(f);
+                      // Svuota il campo: senza, riselezionare lo stesso file non
+                      // riporterebbe l'evento change e l'in sembrerebbe non funzionare.
+                      e.target.value = '';
+                    }}
+                  />
+                </label>
+              }
               {
                 <button
                   onClick={function () {
@@ -64,18 +130,61 @@ function QuizBuilder(props: any) {
           }
         </div>
       }
+      {esitoImport && (
+        <div
+          role="status"
+          style={{
+            background: esitoImport.errore ? 'rgba(239,68,68,.12)' : 'rgba(34,197,94,.12)',
+            border: '1px solid ' + (esitoImport.errore ? 'rgba(239,68,68,.35)' : 'rgba(34,197,94,.3)'),
+            borderRadius: 8,
+            padding: '7px 10px',
+            marginBottom: 8,
+            fontSize: 11,
+            color: esitoImport.errore ? '#fca5a5' : '#86efac',
+            lineHeight: 1.5,
+          }}
+        >
+          {esitoImport.errore ? (
+            '⚠️ ' + esitoImport.errore
+          ) : (
+            <>
+              <div>
+                ✅ {esitoImport.importate} domande importate da <b>{esitoImport.nomeFile}</b>
+                {esitoImport.fonte === 'html' ? ' (lette dal file HTML)' : ''}. Ora puoi modificarle e
+                pubblicarle: sono domande native, quindi risposte, punteggio e classifica funzionano.
+              </div>
+              {esitoImport.scartate && esitoImport.scartate.length > 0 && (
+                // Niente silenzio: se 3 domande su 12 non sono entrate, il docente
+                // deve saperlo con il motivo, altrimenti crede che il file avesse 9 domande.
+                <div style={{ marginTop: 3, color: 'rgba(255,255,255,.5)' }}>
+                  ⚠️ {esitoImport.scartate.length} scartate — la prima (n. {esitoImport.scartate[0].indice}):{' '}
+                  {esitoImport.scartate[0].motivo}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
       {(form.quizDomande || []).map(function (d: any, i: number) {
         return (
-          <div
-            key={i}
-            style={{
-              background: 'rgba(236,72,153,.07)',
-              border: '1px solid rgba(236,72,153,.2)',
-              borderRadius: 10,
-              padding: '10px 12px',
-              marginBottom: 8,
-            }}
-          >
+<div
+              key={i}
+              style={{
+                background: d.ai === true ? 'rgba(99,102,241,.09)' : 'rgba(236,72,153,.07)',
+                border: '1px solid ' + (d.ai === true ? 'rgba(99,102,241,.3)' : 'rgba(236,72,153,.2)'),
+                borderRadius: 10,
+                padding: '10px 12px',
+                marginBottom: 8,
+              }}
+            >
+              {d.ai === true && (
+                // Il colore diverso della card della domanda è il segnale veloce per
+                // l'insegnante: sa subito quali domande ha scritto lui e quali sono
+                // uscite dall'IA, prima di pubblicare.
+                <div style={{ fontSize: 9, color: 'rgba(165,180,252,.75)', marginBottom: 5, fontStyle: 'italic' }}>
+                  🤖 Generata con l'IA — da rivedere prima di pubblicare
+                </div>
+              )}
             {
               <div style={{ display: 'flex', gap: 6, marginBottom: 6, alignItems: 'center' }}>
                 {

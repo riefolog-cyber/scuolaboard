@@ -1,5 +1,18 @@
 // QuizPanel.tsx · ScuolaBoard · pannello estratto da CardDetail
 import { Fragment } from 'react';
+import BadgeAi from '../BadgeAi.tsx';
+
+// Un quiz contiene domande generate dall'IA se ALMENO una ce n'è. Basta il badge a
+// livello di quiz: segnalare ogni singola domanda renderebbe il pannello illeggibile,
+// e la regola di AGENTS.md chiede che il contenuto IA sia contrassegnato — qui
+// l'unità di contenuto che lo studente consuma è il quiz stesso.
+// Le card create prima di questa marcatura non hanno il campo `ai` e restano senza
+// badge: non sono state generate dall'IA e dichiararlo sarebbe falso.
+function haDomandeAi(domande: any[]): boolean {
+  return (domande || []).some(function (d: any) {
+    return d && d.ai === true;
+  });
+}
 
 function QuizPanel({ $, c }: any) {
   // Tratta come quiz ogni card che ha domande salvate (c.quizDomande non vuote),
@@ -22,6 +35,7 @@ function QuizPanel({ $, c }: any) {
           {'🧩 QUIZ · ' + c.quizDomande.length + ' domande'}
           {c.quizTimer && ' ⏱ ' + c.quizTimer + ' min'}
         </div>
+        {haDomandeAi(c.quizDomande) && <BadgeAi separatore={false} />}
         {$.isProf && !$.simulaSt
           ? (function () {
               // ── VISTA PROF: RISULTATI + classifica + valutazione aperte ──

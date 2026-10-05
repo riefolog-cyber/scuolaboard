@@ -5,6 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   buildNewCard,
+  buildQuizDomande,
   cardJsonSize,
   CARD_SIZE_LIMIT,
   imgUsageKB,
@@ -183,6 +184,48 @@ describe('classeCorrenteOf', () => {
 // Conseguenza: una regola che vieti un campo per iscritto lo vieta anche quando è
 // vuoto. Oggi `allegati` è l'unico campo che le rules trattano così (array ammesso
 // solo se vuoto) — gli altri o non vengono scritti dagli studenti o sono già vietati.
+// Il flag `ai` (marcatura "contenuto generato dall'IA", AGENTS.md regola 3) deve
+// SOPRAVVIVERE a tutti i passaggi che costruiscono il documento: il filtro di
+// validazione, la copia in un altro anno e il duplicato. Se si perdesse qui, la card
+// pubblicata non mostrerebbe più il badge e la conformità evaporerebbe in silenzio.
+describe('marcatura ai sui quiz: sopravvive a filtro, copia e duplicato', () => {
+  const conIA: any = {
+    tipo: 'quiz',
+    quizDomande: [
+      { tipo: 'multipla', testo: 'Domanda generata', opzioni: ['a', 'b'], corretta: '0', ai: true },
+      { tipo: 'multipla', testo: 'Domanda scritta a mano', opzioni: ['a', 'b'], corretta: '1' },
+    ],
+  };
+
+  it('buildQuizDomande conserva il flag (filtra solo le domande vuote)', () => {
+    const out = buildQuizDomande(
+      Object.assign({}, conIA, { quizDomande: conIA.quizDomande.concat([{ testo: '' }]) })
+    );
+    expect(out || []).toHaveLength(2);
+    expect((out || [])[0].ai).toBe(true);
+    // Una domanda senza `ai` resta senza: dichiarare IA il contenuto del docente
+    // sarebbe falso, e la PrivacyModal lo promette agli studenti.
+    expect((out || [])[1].ai).toBeUndefined();
+  });
+
+  it('copia in un altro anno e duplicato conservano il flag (copiano il documento)', () => {
+    const card = buildNewCard({
+      form: { tipo: 'quiz', titolo: 'T', testo: 'X', classi: ['3AO'], quizDomande: conIA.quizDomande },
+      myName: () => 'Prof',
+      user: { uid: 'prof1' },
+      isProf: true,
+      classeCorrente: null,
+      annoScolastico: '2026/2027',
+      ordine: 1,
+      opzioni: null,
+      quizDomande: conIA.quizDomande,
+      links: [],
+      immagini: [],
+    });
+    expect(card.quizDomande[0].ai).toBe(true);
+  });
+});
+
 describe('buildNewCard: i campi scritti SEMPRE (vincolo per le Firestore Rules)', () => {
   const base = {
     form: { tipo: 'domanda', titolo: 'T', testo: 'X', classi: ['3AO'], allegati: undefined },

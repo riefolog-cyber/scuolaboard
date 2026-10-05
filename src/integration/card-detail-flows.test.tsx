@@ -220,6 +220,42 @@ describe('CardDetail — stato APERTO', () => {
     expect(input.accept).not.toContain('.svg');
   });
 
+  it('quiz generato dall IA: lo studente vede il badge "Supporto IA"', async () => {
+    // Regola di trasparenza (AGENTS.md 3): il quiz è contenuto IA, quindi chi lo
+    // sostiene deve poterlo vedere. Prima non c'era nessun badge sui quiz.
+    const seed = {
+      users: { stud1: STUD_DOC },
+      cards: {
+        c1: mkCard('c1', {
+          titolo: 'Quiz IA',
+          quizDomande: [
+            { tipo: 'multipla', testo: 'Domanda IA', opzioni: ['a', 'b'], corretta: '0', ai: true },
+            { tipo: 'multipla', testo: 'Domanda mia', opzioni: ['a', 'b'], corretta: '0' },
+          ],
+        }),
+      },
+    };
+    await renderApp({ seed, user: STUD });
+    fireEvent.click(await screen.findByText('Quiz IA', {}, { timeout: 4000 }));
+    expect(await screen.findByText('Supporto IA – revisionato dal docente', {}, { timeout: 4000 })).toBeTruthy();
+  });
+
+  it('quiz scritto a mano: NESSUN badge (dichiarare IA sarebbe falso)', async () => {
+    const seed = {
+      users: { prof1: PROF_DOC },
+      cards: {
+        c1: mkCard('c1', {
+          titolo: 'Quiz manuale',
+          quizDomande: [{ tipo: 'multipla', testo: 'Domanda', opzioni: ['a', 'b'], corretta: '0' }],
+        }),
+      },
+    };
+    await renderApp({ seed, user: PROF });
+    fireEvent.click(await screen.findByText('Quiz manuale', {}, { timeout: 4000 }));
+    await screen.findByText(/QUIZ · 1 domande/, {}, { timeout: 4000 });
+    expect(screen.queryByText('Supporto IA – revisionato dal docente')).toBeNull();
+  });
+
   it('lo studente vota nel sondaggio dalla card aperta', async () => {
     const seed = {
       users: { stud1: STUD_DOC },
