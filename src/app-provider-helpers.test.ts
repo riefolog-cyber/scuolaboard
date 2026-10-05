@@ -4,6 +4,7 @@
 // prima con un toast (vedi AppProvider.addCard).
 import { describe, it, expect } from 'vitest';
 import {
+  buildNewCard,
   cardJsonSize,
   CARD_SIZE_LIMIT,
   imgUsageKB,
@@ -173,6 +174,48 @@ describe('classeCorrenteOf', () => {
   it('utente assente → null (nessun crash)', () => {
     expect(classeCorrenteOf(null, '2026/2027', ANNO_LEGACY)).toBeNull();
     expect(classeCorrenteOf(undefined, '2026/2027', ANNO_LEGACY)).toBeNull();
+  });
+});
+
+// La trappola che lega buildNewCard alle Firestore Rules. `keys()` conta una chiave
+// presente ANCHE quando il valore è un array vuoto, quindi i campi "semprenti"
+// nell'oggetto card finiscono nella richiesta per ogni utente, prof incluso.
+// Conseguenza: una regola che vieti un campo per iscritto lo vieta anche quando è
+// vuoto. Oggi `allegati` è l'unico campo che le rules trattano così (array ammesso
+// solo se vuoto) — gli altri o non vengono scritti dagli studenti o sono già vietati.
+describe('buildNewCard: i campi scritti SEMPRE (vincolo per le Firestore Rules)', () => {
+  const base = {
+    form: { tipo: 'domanda', titolo: 'T', testo: 'X', classi: ['3AO'], allegati: undefined },
+    myName: () => 'Luca Bianchi',
+    user: { uid: 'stud1' },
+    isProf: false,
+    classeCorrente: '3AO',
+    annoScolastico: '2026/2027',
+    ordine: 1,
+    opzioni: null,
+    quizDomande: null,
+    links: [],
+    immagini: [],
+  };
+
+  it('la proposta dello studente scrive allegati anche quando NON ce ne sono', () => {
+    // È il motivo per cui le rules non possono usare hasAny(['allegati']):
+    // la chiave c'è(ed è un array vuoto), quindi hasAny la vede.
+    const card = buildNewCard(base);
+    expect('allegati' in card).toBe(true);
+    expect(card.allegati).toEqual([]);
+  });
+
+  it('lo stesso vale per likes e visibile, che le rules vietano già al prof', () => {
+    const card = buildNewCard(base);
+    expect('likes' in card).toBe(true);
+    expect('visibile' in card).toBe(true);
+  });
+
+  it('la card del docente non è una proposta', () => {
+    const card = buildNewCard(Object.assign({}, base, { isProf: true, form: { ...base.form, allegati: [{ id: 'a1' }] } }));
+    expect(card.proposta).toBeUndefined();
+    expect(card.allegati).toHaveLength(1);
   });
 });
 

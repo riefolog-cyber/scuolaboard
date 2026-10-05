@@ -19,16 +19,35 @@ const RULES: string = regoleRaw;
 const ALLEGATI_TS: string = allegatiRaw;
 const PANEL: string = panelRaw;
 
+// Le regole sono piene di commenti che CITANO il codice vietato ("non usare
+// hasAny(['allegati'])") e devono spiegare il perché. Per cercare le regole
+// bisogna quindi leggere il testo senza commenti, altrimenti un test statico
+// trova la spiegazione invece della regola (bug già successo).
+function senzaCommenti(testo: string): string {
+  return (
+    testo
+      // CRLF → LF PRIMA: in JavaScript anche \r è un line terminator, quindi `.*$`
+      // non raggiunge la fine della riga se il file è in CRLF e il regex NON
+      // abbinava nulla (le regole sono in CRLF: bug reale, cascata).
+      .replace(/\r\n/g, '\n')
+      .split('\n')
+      // `//` senza $: il punto si ferma da solo al terminatore di riga.
+      .map((r) => r.replace(/\/\/.*/, ''))
+      .join('\n')
+  );
+}
+
 // Solo il blocco match /cards/{cardId}: nel file ci sono altri hasAny/hasOnly
 // (users, classiPerAnno, _internal_) e regex sul testo intero prenderebbero quelli.
 function bloccoCards(testo: string): string {
-  const m = testo.match(/match \/cards\/\{cardId\}[\s\S]*?allow delete: if isProf\(\);/);
+  const m = senzaCommenti(testo).match(/match \/cards\/\{cardId\}[\s\S]*?allow delete: if isProf\(\);/);
   expect(m, 'blocco match /cards/{cardId} non trovato in rules firestore.txt').toBeTruthy();
   return m![0];
 }
 
 // I campi che uno studente NON può scrivere in una proposta (blocco hasAny della
-// regola create su /cards).
+// regola create su /cards). NOTA: `allegati` NON sta in questo hasAny, per un motivo
+// che è il punto di questa regola — vedi il test sotto.
 function campiVietatiAllaProposta(testo: string): string[] {
   const m = bloccoCards(testo).match(/hasAny\(\[([^\]]*)\]\)/);
   expect(m, 'nessun hasAny([...]) nella regola create su /cards').toBeTruthy();
@@ -43,8 +62,25 @@ function campiAggiornabiliDalloStudente(testo: string): string[] {
 }
 
 describe('Allegati: regole Firestore vs client', () => {
-  it('lo studente NON può scrivere allegati in una proposta', () => {
-    expect(campiVietatiAllaProposta(RULES)).toContain('allegati');
+  // Il test più importante di questo file. `allegati` NON deve stare nel hasAny dei
+  // campi vietati: buildNewCard() scrive il campo SEMPRE, anche vuoto, e
+  // request.resource.data.keys() conta una chiave presente anche quando il valore è
+  // un array vuoto ⇒ hasAny(['allegati']) farebbe fallire OGNI proposta dello
+  // studente, comprese quelle senza allegati.
+  it('"allegati" non è nel hasAny dei vietati (romperebbe le proposte vuote)', () => {
+    expect(campiVietatiAllaProposta(RULES)).not.toContain('allegati');
+    // Sanity check del test stesso: se il blocco non fosse più quello giusto,
+    // l'asserzione sopra passerebbe sempre e non proteggerebbe nulla.
+    expect(campiVietatiAllaProposta(RULES)).toContain('aiDomandePubbliche');
+  });
+
+  it('lo studente può scrivere allegati solo se assenti, null o lista vuota', () => {
+    const create = bloccoCards(RULES);
+    // La forma tollerante: == null (assente o null) OPPURE lista di size 0.
+    expect(create).toMatch(/request\.resource\.data\.allegati == null/);
+    expect(create).toMatch(/request\.resource\.data\.allegati is list && request\.resource\.data\.allegati\.size\(\) == 0/);
+    // E non deve esistere una seconda forma che pretende l'assenza del campo.
+    expect(create).not.toMatch(/keys\(\)\.hasAny\(\[[^\]]*'allegati'/);
   });
 
   it('il divieto vale solo sul create: le proposte già esistenti restano modificabili', () => {

@@ -136,6 +136,13 @@ service cloud.firestore {
       // Senza questo, uno studente potrebbe pushare base64 arbitrario (fino al tetto
       // di 1 MiB del documento) o un url "javascript:" che il docente cliccherebbe
       // con la sessione aperta. Gli allegati li carica il docente dal suo editor.
+      //
+      // ATTENZIONE — non usare hasAny(['allegati']): buildNewCard() scrive SEMPRE il
+      // campo, anche vuoto (`allegati: form.allegati || []`), e keys() conta una chiave
+      // presente anche se il valore è un array vuoto. Con hasAny ogni proposta dello
+      // studente verrebbe negata, anche quella senza allegati. Qui si vieta solo
+      // l'array NON vuoto, e si vieta comunque ogni altro tipo (stringa, numero:
+      // romperebbe il .map() della CardDetail). Assente o null restano ammessi.
       // Nota: le proposte GIÀ approvate/vietate con allegati restano modificabili —
       // l'update studente controlla solo i campi che cambiano (diff().affectedKeys()).
       allow create: if isAuth() && (
@@ -143,7 +150,11 @@ service cloud.firestore {
         || (
           isStudente()
           && request.resource.data.proposta == true
-          && !request.resource.data.keys().hasAny(['likes', 'likesBy', 'reazioni', 'visibile', 'pinned', 'aiAnalisi', 'aiDomandePubbliche', 'allegati'])
+          && !request.resource.data.keys().hasAny(['likes', 'likesBy', 'reazioni', 'visibile', 'pinned', 'aiAnalisi', 'aiDomandePubbliche'])
+          && (
+            request.resource.data.allegati == null
+            || (request.resource.data.allegati is list && request.resource.data.allegati.size() == 0)
+          )
         )
       );
 
