@@ -2,6 +2,10 @@
 // valutazione AI delle aperte, reset). Dipendenze passate via deps:
 // { user, myName, cards, showToast, showCard }
 import { useState, useEffect, useRef } from 'react';
+// La regola di correzione vive in src/quiz-corretta.ts, non qui: era duplicata in
+// tre punti con tre criteri diversi (punteggio, pannello prof, pannello studente) e i
+// pannelli si contraddicevano fra loro.
+import { rispostaGiusta } from '../quiz-corretta.ts';
 
 var db = window.db;
 var quizListenRisposte = window.quizListenRisposte;
@@ -17,16 +21,6 @@ type QuizDeps = {
 // Confronto risposta/corretta robusto: per le domande a scelta multipla
 // `corretta` è l'INDICE (stringa) dell'opzione giusta, per vero/falso è il
 // TESTO dell'opzione ('Vero'/'Falso'). Le risposte interattive salvano sempre
-// l'indice dell'opzione cliccata → confrontare con String() e, se non
-// combacia, provare il testo dell'opzione.
-function quizRispostaGiusta(d: any, rispostaIdx: any) {
-  if (rispostaIdx == null || rispostaIdx === '') return false;
-  if (d.corretta == null || d.corretta === '') return false;
-  if (String(rispostaIdx) === String(d.corretta)) return true; // multipla: indice
-  var testo = d.opzioni && d.opzioni[rispostaIdx];
-  return testo != null && String(testo) === String(d.corretta); // vero/falso: testo
-}
-
 function useQuiz(deps: QuizDeps) {
   var user = deps.user;
   var myName = deps.myName;
@@ -104,7 +98,7 @@ function useQuiz(deps: QuizDeps) {
           totale--;
           return;
         }
-        if (quizRispostaGiusta(d, risposteUtente[i])) score += 1;
+        if (rispostaGiusta(d, risposteUtente[i])) score += 1;
       });
       var pct = totale > 0 ? Math.round((score / totale) * 100) : 0;
       await db
@@ -161,7 +155,7 @@ function useQuiz(deps: QuizDeps) {
             totale--;
             return;
           }
-          if (r.risposte && quizRispostaGiusta(d, r.risposte[i])) score++;
+          if (r.risposte && rispostaGiusta(d, r.risposte[i])) score++;
         });
         var openTasks = domAI.map(function (item: any) {
           var risposta = (r.risposte && r.risposte[item.i]) || '';

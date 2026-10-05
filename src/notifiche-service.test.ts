@@ -308,4 +308,27 @@ describe('diagnostica', () => {
     expect(warn.mock.calls.some((c) => String(c[0]).indexOf('fan-out incompleto') >= 0)).toBe(true);
     warn.mockRestore();
   });
+
+  // Il rumore per-studente era 34 righe di warning per ogni card pubblicata: chi
+  // leggeva la console imparava a ignorarla, e i fallimenti veri erano dentro lo
+  // stesso mucchio. Ora il successo è UNA riga sola e non è un warning.
+  it('fan-out riuscito: una sola riga in console, e non è un warn', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    setupWindow(fakeDb(STUDENTI, {}));
+    const esito = await notifyClasse({ classi: ['3AI'], annoScolastico: '2026/2027', cardId: 'c9', titolo: 'X', msg: 'Y' });
+
+    expect(esito.ok).toBe(true);
+    // Non tutti i studenti del seed sono della classe 3AI: conta quelli avvisati.
+    expect(esito.avvisati).toBeGreaterThan(0);
+    expect(esito.avvisati).toBe(esito.totale);
+    const righe = log.mock.calls.filter((c) => String(c[0]).indexOf('[notifiche] fan-out') >= 0);
+    expect(righe).toHaveLength(1);
+    // La riga riporta il conteggio per card (n/N), che è l'informazione utile.
+    expect(String(righe[0][3])).toBe(esito.avvisati + '/' + esito.totale);
+    // Nessun warning di successo: un invio riuscito non è un problema.
+    expect(warn.mock.calls.some((c) => String(c[0]).indexOf('push ok') >= 0)).toBe(false);
+    warn.mockRestore();
+    log.mockRestore();
+  });
 });

@@ -1,6 +1,8 @@
 // QuizPanel.tsx · ScuolaBoard · pannello estratto da CardDetail
 import { Fragment } from 'react';
 import BadgeAi from '../BadgeAi.tsx';
+// Unico criterio di "risposta giusta" per punteggio, pannello prof e pannello studente.
+import { rispostaGiusta, testoRisposta } from '../quiz-corretta.ts';
 
 // Un quiz contiene domande generate dall'IA se ALMENO una ce n'è. Basta il badge a
 // livello di quiz: segnalare ogni singola domanda renderebbe il pannello illeggibile,
@@ -181,17 +183,21 @@ function QuizPanel({ $, c }: any) {
                               {domProf.map(function (d: any, di: number) {
                                 if (d.tipo === 'aperta') return null;
                                 var risp = r.risposte && r.risposte[di];
-                                var corretta = risp === d.corretta;
-                                var corrIdx = parseInt(risp);
-                                var rispTxt =
-                                  d.tipo === 'multipla'
-                                    ? d.opzioni && !isNaN(corrIdx) && d.opzioni[corrIdx]
-                                      ? d.opzioni[corrIdx]
-                                      : risp || '—'
-                                    : risp || '—';
+                                // STESSA regola del punteggio (src/quiz-corretta.ts). Qui
+                                // il confronto era `risp === d.corretta`: numero contro
+                                // stringa, quindi segnava ❌ anche le risposte giuste
+                                // mentre il punteggio le contava — due pannelli che si
+                                // contraddicevano. E sui vero/falso mostrava "0"/"1"
+                                // invece di "Vero"/"Falso".
+                                var corretta = rispostaGiusta(d, risp);
+                                var rispTxt = testoRisposta(d, risp);
                                 return (
                                   <div
                                     key={di}
+                                    // data-testid: il test d'integrazione verifica che i
+                                    // segni dicano la stessa cosa del punteggio, e per
+                                    // farlo deve poterli leggere senza dipendere dagli stili.
+                                    data-testid="segno-risposta"
                                     style={{
                                       background: corretta ? 'rgba(34,197,94,.12)' : 'rgba(239,68,68,.1)',
                                       border: '1px solid ' + (corretta ? 'rgba(34,197,94,.3)' : 'rgba(239,68,68,.25)'),
@@ -484,14 +490,11 @@ function QuizPanel({ $, c }: any) {
                             </div>
                           );
                         }
-                        var corretta = String(risp) === String(d.corretta);
-                        var corrIdx = parseInt(risp);
-                        var rispTxt =
-                          d.tipo === 'multipla'
-                            ? d.opzioni && !isNaN(corrIdx) && d.opzioni[corrIdx]
-                              ? d.opzioni[corrIdx]
-                              : risp || '—'
-                            : risp || '—';
+                        // Stessa regola del punteggio: senza il fallback sul testo, sui quiz vero/falso
+                        // (dove `corretta` è 'Vero'/'Falso' e la risposta è l'indice)
+                        // lo studente vedeva "risposta sbagliata" anche avendo azzeccato.
+                        var corretta = rispostaGiusta(d, risp);
+                        var rispTxt = testoRisposta(d, risp);
                         return (
                           <div
                             key={di}

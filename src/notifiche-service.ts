@@ -43,7 +43,12 @@ function pushNotifica(uid: string, n: any): Promise<boolean> {
       .doc(uid)
       .set({ lista: fv.arrayUnion(n), aggiornato: new Date().toISOString() }, { merge: true })
       .then(function () {
-        console.warn('[notifiche] push ok', uid, n.tipo);
+        // Una volta sola per fan-out, non uno per studente: 34 "push ok" in
+        // console per ogni card pubblicata sono rumore che allena a ignorare la
+        // console (e spruzzano uid di studenti). Il dettaglio per studente l'hai
+        // già nella risposta `{ avvisati, totale, mancanti }` e nei pulsanti
+        // "Riprova", che è dove serve. I FALLIMENTI restano warn: quelli devono
+        // essere visibili, è da lì che si capisce un invio a metà.
         return true;
       })
       .catch(function (err: any) {
@@ -190,6 +195,8 @@ async function notifyClasse(opts: {
       // Diagnostica: senza questo, un invio a metà sarebbe indistinguibile da
       // "classe senza studenti" mentre si guarda la console.
       console.warn('[notifiche] fan-out incompleto', opts.cardId, avvisati + '/' + destinatari.length);
+    } else if (destinatari.length) {
+      console.log('[notifiche] fan-out', opts.cardId, tipo, avvisati + '/' + destinatari.length);
     }
     return { ok: ok, avvisati: avvisati, totale: destinatari.length, mancanti: mancanti };
   } catch (e) {
