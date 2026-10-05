@@ -2,6 +2,14 @@
 // Il ctx è tipizzato strutturalmente: i campi opzionali sono quelli forniti
 // da AppProvider al momento della creazione.
 import { classeCorrenteOf, ANNO_LEGACY } from './app-provider-helpers.ts';
+import {
+  MAX_ALLEGATO_KB,
+  eContenutoPericoloso,
+  estensioneConsentita,
+  estensioneDi,
+  haEstensioneDoppia,
+  mimeConsentito,
+} from './allegati.ts';
 
 // Anteprima del testo di un commento/risposta per il messaggio di notifica:
 // whitespace unificato (un commento multilinea non deve rompere la riga
@@ -716,27 +724,9 @@ export function createAppHandlers(ctx: any) {
       var files = Array.from((e && e.target && e.target.files) || []) as File[];
       if (!files.length) return;
       setAllegatiUploading(true);
-      // Allowlist MIME esplicita e stretta (invece di startsWith("image/") che permette SVG).
-      // SVG è escluso perché <img src=data:image/svg+xml,...> in molti viewer inline è ok,
-      // ma se mai fosse embeddato in <object>/<iframe>, gli script SVG vengono eseguiti.
-      // HTML escluso per stored XSS. Anche i file "image/*" sconosciuti sono ora bloccati.
-      var allowedMimeImages = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-      var allowedTypes = [
-        'application/pdf',
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'text/plain',
-        'text/markdown',
-        'text/csv',
-        'application/vnd.ms-excel',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'application/vnd.ms-powerpoint',
-        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-        'application/zip',
-        'application/x-rar-compressed',
-      ].concat(allowedMimeImages);
-      var allowedExts = /^(pdf|doc|docx|txt|md|csv|xls|xlsx|ppt|pptx|zip|rar|jpg|jpeg|png|gif|webp)$/i;
-      var maxSize = 700 * 1024;
+      // Formati, limiti e blocco SVG vivono in src/allegati.ts (fonte unica: da lì
+      // deriva anche l'attributo `accept` del picker, che non può più divergere).
+      var maxSize = MAX_ALLEGATO_KB * 1024;
       // Budget Firestore (~900KB): gli allegati sono base64 DENTRO il doc card.
       // Stima l'occupazione corrente (copertina + immagini + allegati) per dare
       // feedback immediato, invece di bloccare solo al salvataggio finale (guardSize).
@@ -755,25 +745,29 @@ export function createAppHandlers(ctx: any) {
         });
       }
       var promises = files.map(function (file) {
-        var ext = (file.name.split('.').pop() || '').toLowerCase();
-        var extOk = allowedExts.test(ext);
+        var ext = estensioneDi(file.name);
         // Controllo estensione doppia (es. file.pdf.exe)
-        var baseName = file.name.slice(0, -(ext.length + 1));
-        if (baseName.indexOf('.') >= 0) {
+        if (haEstensioneDoppia(file.name)) {
           showToast('Nome file non valido (estensione doppia): ' + file.name, 'warn');
           return Promise.resolve(null);
         }
-        var mimeOk = allowedTypes.indexOf(file.type) >= 0;
-        if (!mimeOk && !extOk) {
+        // MIME ed estensione in OR, non in AND: alcuni browser non dichiarano il tipo
+        // dei .md/.htm, quindi va bene che uno solo dei due sia noto. Entrambi sconosciuti
+        // ⇒ rifiutato. (La validazione resta comunque di sola UI: vedi rules firestore.txt.)
+        if (!mimeConsentito(file.type) && !estensioneConsentita(ext)) {
           showToast('Tipo file non supportato: ' + file.name + ' (' + file.type + ')', 'warn');
           return Promise.resolve(null);
         }
         if (file.size > maxSize) {
-          showToast('File ' + file.name + ' troppo grande (max 700KB per Firestore)', 'warn');
+          showToast(
+            'File ' + file.name + ' troppo grande (max ' + MAX_ALLEGATO_KB + 'KB per Firestore)',
+            'warn'
+          );
           return Promise.resolve(null);
         }
-        // HTML e SVG non consentiti come allegati per evitare stored XSS
-        if (ext === 'html' || ext === 'svg' || file.type === 'text/html' || file.type === 'image/svg+xml') {
+        // SVG non consentito come allegato: <img>/<object>/<iframe> con
+        // data:image/svg+xml eseguono gli script incorporati (stored XSS).
+        if (eContenutoPericoloso(file.name, file.type)) {
           showToast('File non consentito per motivi di sicurezza: ' + file.name, 'warn');
           return Promise.resolve(null);
         }

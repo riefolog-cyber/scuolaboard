@@ -652,13 +652,68 @@ describe('handleAllegatiUpload (allowlist MIME e sicurezza)', () => {
     expect(ctx.showToast).toHaveBeenCalledWith(expect.stringMatching(/troppo grande/), 'warn');
   });
 
-  it('HTML/SVG → bloccati per sicurezza (stored XSS)', async () => {
+  it('SVG → bloccato per sicurezza (stored XSS)', async () => {
     const ctx = allegatiCtx();
     const handlers = createAppHandlers({});
-    // MIME consentito ma estensione html → passa il primo guard, blocca qui
-    handlers.handleAllegatiUpload(fakeEvent([fileOf('page.html', 'application/pdf')]), {}, ctx.setForm, ctx.setAllegatiUploading, ctx.showToast);
+    // .svg non è in allowlist, ma un nome consentito (.png) con MIME image/svg+xml
+    // passa i guard precedenti: è il caso che il blocco dedicated deve chiudere.
+    handlers.handleAllegatiUpload(
+      fakeEvent([fileOf('logo.png', 'image/svg+xml')]),
+      {},
+      ctx.setForm,
+      ctx.setAllegatiUploading,
+      ctx.showToast
+    );
     await new Promise((r) => setTimeout(r, 0));
     expect(ctx.showToast).toHaveBeenCalledWith(expect.stringMatching(/sicurezza/), 'warn');
+    expect(ctx.setForm).not.toHaveBeenCalled();
+  });
+
+  it('HTML → ammesso (si anteprima sabbiata, non si esegue)', async () => {
+    const ctx = allegatiCtx();
+    const handlers = createAppHandlers({});
+    handlers.handleAllegatiUpload(
+      fakeEvent([fileOf('pagina.html', 'text/html', 5000)]),
+      {},
+      ctx.setForm,
+      ctx.setAllegatiUploading,
+      ctx.showToast
+    );
+    await vi.waitFor(() => expect(ctx.setForm).toHaveBeenCalledTimes(1), { timeout: 3000 });
+    const next = ctx.setForm.mock.calls[0][0]({ allegati: [] });
+    expect(next.allegati).toHaveLength(1);
+    expect(next.allegati[0].name).toBe('pagina.html');
+    expect(next.allegati[0].url).toMatch(/^data:text\/html/);
+    expect(ctx.showToast).not.toHaveBeenCalledWith(expect.stringMatching(/sicurezza/), 'warn');
+  });
+
+  it('.htm ammesso anche con MIME vuoto (molti browser non lo dichiarano)', async () => {
+    const ctx = allegatiCtx();
+    const handlers = createAppHandlers({});
+    handlers.handleAllegatiUpload(
+      fakeEvent([fileOf('dispensa.htm', '', 5000)]),
+      {},
+      ctx.setForm,
+      ctx.setAllegatiUploading,
+      ctx.showToast
+    );
+    await vi.waitFor(() => expect(ctx.setForm).toHaveBeenCalledTimes(1), { timeout: 3000 });
+    expect(ctx.setForm.mock.calls[0][0]({ allegati: [] }).allegati).toHaveLength(1);
+  });
+
+  it('estensione doppia travestita da .html (logo.svg.html) → bloccata', async () => {
+    const ctx = allegatiCtx();
+    const handlers = createAppHandlers({});
+    handlers.handleAllegatiUpload(
+      fakeEvent([fileOf('logo.svg.html', 'image/svg+xml')]),
+      {},
+      ctx.setForm,
+      ctx.setAllegatiUploading,
+      ctx.showToast
+    );
+    await new Promise((r) => setTimeout(r, 0));
+    expect(ctx.showToast).toHaveBeenCalledWith(expect.stringMatching(/estensione doppia/), 'warn');
+    expect(ctx.setForm).not.toHaveBeenCalled();
   });
 
   it('file valido → letto e aggiunto al form', async () => {

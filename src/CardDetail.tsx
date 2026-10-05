@@ -1,6 +1,7 @@
 // CardDetail.jsx · ScuolaBoard
-import { useContext } from 'react';
+import { useContext, useState } from 'react';
 import { normalizeLinks } from './app-utils.tsx';
+import { allegatoIcona, allegatoNome, isHtmlAllegato, urlAllegatoSicuro } from './allegati.ts';
 import FormContext from './contexts/FormContext.tsx';
 import { useCountdown, countdownStr } from './Countdown.tsx';
 
@@ -10,6 +11,7 @@ import PartecipazionePanel from './carddetail/PartecipazionePanel.tsx';
 import DomandeLiberePanel from './carddetail/DomandeLiberePanel.tsx';
 import CommentsSection from './carddetail/CommentsSection.tsx';
 import RifiutaModal from './carddetail/RifiutaModal.tsx';
+import AllegatoHtmlPreview from './carddetail/AllegatoHtmlPreview.tsx';
 
 function CardDetail__({ $: props$ }: any) {
   // Merge del FormContext (split di UIContext): i pannelli (commenti, quiz,
@@ -19,6 +21,9 @@ function CardDetail__({ $: props$ }: any) {
   // Hook chiamato SEMPRE (prima dell'early return): il timer locale aggiorna
   // solo questo pannello, non l'intera app (vedi Countdown.tsx).
   var cdNow = useCountdown(c && c.scadenza);
+  // Allegato HTML in anteprima: stato locale del pannello (non nel FormContext),
+  // perché non deve sopravvivire alla chiusura della card.
+  var [htmlPreview, setHtmlPreview] = useState<any>(null);
   if (!c) return null;
   var isLight = !!$.isLight;
   var totV = c.opzioni
@@ -308,31 +313,72 @@ function CardDetail__({ $: props$ }: any) {
                 📎 ALLEGATI
               </div>
               {c.allegati.map(function (al: any, i: any) {
+                var nome = allegatoNome(al, i);
+                // Allowlist URL: le Firestore Rules non validano `allegati`, quindi
+                // l'URL è il campo più economico da falsificare ("javascript:...").
+                // Un protocollo non consentito non diventa un link cliccabile: la riga
+                // resta visibile ma inerte, così il docente vede che l'allegato esiste.
+                var urlSicuro = urlAllegatoSicuro(al.url);
+                var stileFile = {
+                  display: 'flex' as const,
+                  alignItems: 'center' as const,
+                  gap: 6,
+                  padding: '6px 10px',
+                  background: 'rgba(255,255,255,.04)',
+                  borderRadius: 8,
+                  marginBottom: 4,
+                  color: urlSicuro ? '#60a5fa' : 'rgba(255,255,255,.35)',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                  border: '1px solid rgba(255,255,255,.06)',
+                };
+                if (!urlSicuro) {
+                  return (
+                    <div key={i} data-testid="allegato-non-cliccabile" title="Allegato non apribile: link non sicuro">
+                      {allegatoIcona(al)} {nome} 🔒
+                    </div>
+                  );
+                }
+                // HTML: nessun link verso la data URL (i browser bloccano la navigazione
+                // top-level verso data:), quindi pulsante di anteprima sabbiata + download.
+                if (isHtmlAllegato(al)) {
+                  return (
+                    <div key={i} data-testid="riga-allegato-html" style={{ display: 'flex', gap: 4 }}>
+                      <button
+                        onClick={function () {
+                          setHtmlPreview({ al: al, i: i });
+                        }}
+                        style={Object.assign({}, stileFile, {
+                          flex: 1,
+                          minWidth: 0,
+                          cursor: 'pointer',
+                          textAlign: 'left' as const,
+                        })}
+                      >
+                        {allegatoIcona(al)} {nome}
+                      </button>
+                      <a href={al.url} download={nome} title="Scarica" aria-label={'Scarica ' + nome} style={stileFile}>
+                        ⬇
+                      </a>
+                    </div>
+                  );
+                }
                 return (
-                  <a
-                    key={i}
-                    href={al.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      padding: '6px 10px',
-                      background: 'rgba(255,255,255,.04)',
-                      borderRadius: 8,
-                      marginBottom: 4,
-                      color: '#60a5fa',
-                      fontSize: 12,
-                      fontWeight: 600,
-                      textDecoration: 'none',
-                      border: '1px solid rgba(255,255,255,.06)',
-                    }}
-                  >
-                    📄 {al.nome || 'File ' + (i + 1)}
+                  <a key={i} href={al.url} target="_blank" rel="noopener noreferrer" style={stileFile}>
+                    {allegatoIcona(al)} {nome}
                   </a>
                 );
               })}
+              {htmlPreview && (
+                <AllegatoHtmlPreview
+                  al={htmlPreview.al}
+                  indice={htmlPreview.i}
+                  onChiudi={function () {
+                    setHtmlPreview(null);
+                  }}
+                />
+              )}
             </div>
           )}
 

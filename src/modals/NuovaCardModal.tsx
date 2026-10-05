@@ -4,6 +4,7 @@
 // va importato esplicitamente.
 import filterBtn from './filterBtn.ts';
 import { S as SGlobal } from '../app-utils.tsx';
+import AllegatiPanel from './AllegatiPanel.tsx';
 import QuizBuilder from './QuizBuilder.tsx';
 import OpzioniSondaggio from './OpzioniSondaggio.tsx';
 
@@ -287,11 +288,11 @@ function NuovaCardModal(props: any) {
               )}
             </div>
           )}
-          {
+{
             <div style={{ marginBottom: 10 }}>
               {
                 <div
-                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}
+                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}
                 >
                   {<label className="u-label">🔗 LINK</label>}
                   {(form.links || []).length < 10 && (
@@ -610,140 +611,14 @@ function NuovaCardModal(props: any) {
               )}
             </div>
           }
-          {
-            <div style={{ marginBottom: 10 }}>
-              {
-                <div
-                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}
-                >
-                  {<label className="u-label">📎 ALLEGATI</label>}
-                  {(function () {
-                    var kb = 0;
-                    (form.allegati || []).forEach(function (a: any) {
-                      kb += Math.round((a.size || 0) / 1024);
-                    });
-                    var color = kb > 500 ? '#f87171' : kb > 200 ? '#fbbf24' : 'rgba(255,255,255,.40)';
-                    var warn =
-                      kb > 500 ? ' ⚠️ attento al limite (700KB/file)' : kb > 200 ? ' — attento alle dimensioni' : '';
-                    return kb > 0 ? (
-                      <span style={{ fontSize: 11, color: color, fontWeight: 700 }}>{kb + ' KB' + warn}</span>
-                    ) : (
-                      <span style={{ fontSize: 11, color: 'rgba(255,255,255,.40)' }}>Max 700KB per file</span>
-                    );
-                  })()}
-                </div>
-              }
-              {
-                <label
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    background: 'rgba(255,255,255,.04)',
-                    border: '1px dashed rgba(255,255,255,.1)',
-                    borderRadius: 8,
-                    padding: '6px 10px',
-                    cursor: 'pointer',
-                    fontSize: 11,
-                    color: 'rgba(255,255,255,.52)',
-                  }}
-                >
-                  📄{allegatiUploading ? 'Caricamento…' : '+ Aggiungi file'}
-                  {
-                    <input
-                      type="file"
-                      accept=".pdf,.doc,.docx,.txt,.md,.csv,.xls,.xlsx,.ppt,.pptx,.zip,.rar"
-                      multiple={true}
-                      style={{ display: 'none' }}
-                      disabled={allegatiUploading}
-                      onChange={function (e: any) {
-                        handleAllegatiUpload(e);
-                      }}
-                    />
-                  }
-                </label>
-              }
-              {(form.allegati || []).length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 8 }}>
-                  {(form.allegati || []).map(function (a: any) {
-                    var icon =
-                      a.type && a.type.startsWith('image')
-                        ? '🖼️'
-                        : a.type && a.type.startsWith('application/pdf')
-                          ? '📄'
-                          : a.type && a.type.includes('word')
-                            ? '📝'
-                            : a.type && a.type.includes('spreadsheet')
-                              ? '📊'
-                              : a.type && a.type.includes('presentation')
-                                ? '📽️'
-                                : '📎';
-                    return (
-                      <div
-                        key={a.id}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 8,
-                          background: 'rgba(255,255,255,.03)',
-                          border: '1px solid rgba(255,255,255,.08)',
-                          borderRadius: 8,
-                          padding: '6px 10px',
-                        }}
-                      >
-                        {<span style={{ fontSize: 16 }}>{icon}</span>}
-                        {
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            {
-                              <div
-                                style={{
-                                  fontSize: 12,
-                                  color: '#f1f5f9',
-                                  whiteSpace: 'nowrap',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                }}
-                              >
-                                {a.name}
-                              </div>
-                            }
-                            {
-                              <div style={{ fontSize: 10, color: 'rgba(255,255,255,.45)' }}>
-                                {Math.round(a.size / 1024) + ' KB'}
-                              </div>
-                            }
-                          </div>
-                        }
-                        {
-                          <button
-                            onClick={function () {
-                              handleRimuoviAllegato(a.id);
-                            }}
-                            style={{
-                              background: 'rgba(239,68,68,.2)',
-                              color: '#f87171',
-                              border: 'none',
-                              borderRadius: 6,
-                              width: 24,
-                              height: 24,
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontSize: 14,
-                              flexShrink: 0,
-                            }}
-                          >
-                            ×
-                          </button>
-                        }
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          }
+          {isProf && (
+            <AllegatiPanel
+              form={form}
+              allegatiUploading={allegatiUploading}
+              handleAllegatiUpload={handleAllegatiUpload}
+              handleRimuoviAllegato={handleRimuoviAllegato}
+            />
+          )}
           {form.tipo === 'sondaggio' && <OpzioniSondaggio form={form} setForm={setForm} S={S} />}
           {form.tipo === 'quiz' && (
             <QuizBuilder form={form} setForm={setForm} S={S} setShowAiQuizGen={props.setShowAiQuizGen} />

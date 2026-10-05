@@ -151,6 +151,34 @@ describe('Modals', () => {
     expect(setShowModal).toHaveBeenCalledWith(false);
   });
 
+  // Le Firestore Rules vietano allo studente di scrivere `allegati` in una proposta
+  // (vedi rules firestore.txt): senza questo gate lo studente caricherebbe i file e la
+  // card fallirebbe con permission-denied solo al salvataggio, perdendo anche il testo.
+  it('NuovaCardModal: il pannello allegati c\'è solo per il docente', () => {
+    function inputAllegati() {
+      return Array.from(document.querySelectorAll('input[type="file"]')).find((i) => (i as HTMLInputElement).accept.indexOf('.pdf') >= 0);
+    }
+
+    var $prof = make$();
+    $prof.showModal = true;
+    $prof.isProf = true;
+    $prof.form = Object.assign({}, $prof.form, { titolo: 'Card del prof', allegati: [] });
+    var { unmount } = render(React.createElement(Modals, { $: $prof }));
+    expect(screen.getByText('📎 ALLEGATI')).toBeTruthy();
+    expect(inputAllegati()).toBeTruthy();
+    unmount();
+
+    var $stud = make$();
+    $stud.showModal = true;
+    $stud.isProf = false;
+    $stud.form = Object.assign({}, $stud.form, { titolo: 'Proposta', allegati: [] });
+    render(React.createElement(Modals, { $: $stud }));
+    expect(screen.queryByText('📎 ALLEGATI')).toBeNull();
+    expect(inputAllegati()).toBeUndefined();
+    // Il resto del compositore funziona: si può comunque proporre una card.
+    expect(screen.getByLabelText('Titolo della card')).toBeTruthy();
+  });
+
   it('EditAmm: salvare una modifica scrive e CHIUDE la modale (FIX bug E2E)', () => {
     // Bug trovato dall'esplorazione E2E: dopo "✓ Salva modifica" la modale
     // restava aperta e l'overlay z-600 bloccava i click su tutta la UI.
