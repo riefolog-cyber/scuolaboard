@@ -281,8 +281,9 @@ service cloud.firestore {
     // Doc per utente: notifiche/{uid} { lista: [...], aggiornato: ISO }
     // Scritture ammesse, e SOLO queste:
     // - il prof su qualsiasi doc (fan-out di classe e di risposta);
-    // - lo studente sul PROPRIO prof, ma solo aggiungendo voci (il caso "uno studente
-    //   risponde a un commento del prof": deve poter accodare la sua risposta);
+    // - lo studente che ACCODA UNA voce sul doc di chiunque (prof o compagno: autore
+    //   della card, autore del commento a cui risponde), senza creare il doc, senza
+    //   toccare `letta` altrui e senza togliere voci;
     // - il proprietario, ma solo sul campo `letta` (segnalato come letto).
     // Prima era `allow create/update: if isAuth()`, cioè QUALSIASI autenticato poteva
     // scrivere sulla lista di chiunque: azzerare gli avvisi veri di un compagno o
@@ -291,6 +292,14 @@ service cloud.firestore {
     // Solo UPDATE: su create `resource` è null, e `resource.data` su un null fa
     // scattare l'errore di valutazione (l'intera espressione diventa false). Quindi
     // il create è separato e ristretto al prof.
+    // Lo studente che risponde a un commento accoda sul doc di CHIUNQUE sia
+    // l'autore: prof o compagno (autore della card, autore del commento parent).
+    // Quindi la destinazione non può essere limitata al prof: si permette solo di
+    // ACCODARE, mai creare il doc, mai toccare `letta` altrui, mai togliere voci.
+    // `hasAll` è la garanzia che tutto ciò che c'era resta (se lo studente riscrivesse
+    // una voce esistente, il vecchio elemento non sarebbe più nella lista).
+    // `<= +1` invece di `== +1`: il fallback manuale del client tiene `.slice(-50)`,
+    // quindi a lista piena la dimensione resta identica e un `== +1` lo negherebbe.
     function aggiornaNotifica(targetUid) {
       return isProf()
         || (
@@ -300,21 +309,23 @@ service cloud.firestore {
             .hasOnly(['letta', 'aggiornato'])
         )
         || (
-          // lo studente accoda sul doc del prof. Il ruolo va letto dal doc users:
-          // il doc notifiche NON ha un campo `role`. La lista può solo CRESCERE di
-          // uno (è un arrayUnion): altrimenti lo studente riscriverebbe anche gli
-          // avvisi degli altri.
           isStudente()
-          && get(/databases/$(database)/documents/users/$(targetUid)).data.role == "prof"
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lista', 'aggiornato'])
-          && request.resource.data.lista.size() == resource.data.lista.size() + 1
+          && request.resource.data.lista.hasAll(resource.data.lista)
+          && request.resource.data.lista.size() <= resource.data.lista.size() + 1
         );
     }
     match /notifiche/{uid} {
       allow read: if isAuth() && request.auth.uid == uid;
-      // Solo il prof crea: il caso "lo studente risponde a un commento del prof"
-      // accoda sul doc del prof, che è già stato creato dal prof stesso.
-      allow create: if isProf();
+      // Solo il prof crea liberamente. Lo studente può creare SOLO il doc del prof,
+      // e solo con UNA voce: quel doc non nasce dal fan-out (che avvisa solo studenti),
+      // quindi senza questa clausola il primo avviso di uno studente al prof verrebbe
+      // negato finché il prof non apre l'app. Vietare le liste pre-riempite evita che
+      // uno studente si semini 50 notifiche false.
+      allow create: if isProf()
+        || (isStudente()
+          && get(/databases/$(database)/documents/users/$(uid)).data.role == "prof"
+          && request.resource.data.lista.size() == 1);
       allow update: if isAuth() && aggiornaNotifica(uid);
       allow delete: if isAuth() && request.auth.uid == uid;
     }
