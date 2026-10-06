@@ -179,6 +179,34 @@ describe('Modals', () => {
     expect(screen.getByLabelText('Titolo della card')).toBeTruthy();
   });
 
+  // Un commento `//` scritto fra i figli di un elemento JSX viene RENDUTO come
+  // nodo di testo: è successo con la nota sul gate di QuizBuilder
+  // (NuovaCardModal), che compariva come blocco di testo nella modale di
+  // creazione card. In JSX un commento è `{/* … */}`; il `//` è lecito solo
+  // dentro un tag (posizione attributo), dove non finisce nel DOM.
+  // Guardia: NESSUN nodo di testo renderizzato può iniziare con `//`.
+  // Si scandiscono i NODI DI TESTO (non gli elementi): il commento finiva
+  // dentro un contenitore che ha anche figli element, quindi un controllo sui
+  // soli elementi senza figli non lo vedeva e la guardia passava anche col bug.
+  it('nessun commento di codice finisce nel DOM della modale di creazione card', () => {
+    var $ = make$();
+    $.showModal = true;
+    $.isProf = true;
+    // tipo 'quiz': è il ramo in cui il pannello QuizBuilder (preceduto dal
+    // commento che lo spiega) viene renderizzato dal docente.
+    $.form = Object.assign({}, $.form, { titolo: 'Quiz del prof', tipo: 'quiz' });
+    render(React.createElement(Modals, { $ }));
+
+    var leak: string[] = [];
+    var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    var node = walker.nextNode();
+    while (node) {
+      if (/^\s*\/\//.test(node.nodeValue || '')) leak.push((node.nodeValue || '').trim().slice(0, 60));
+      node = walker.nextNode();
+    }
+    expect(leak).toEqual([]);
+  });
+
   it('EditAmm: salvare una modifica scrive e CHIUDE la modale (FIX bug E2E)', () => {
     // Bug trovato dall'esplorazione E2E: dopo "✓ Salva modifica" la modale
     // restava aperta e l'overlay z-600 bloccava i click su tutta la UI.
