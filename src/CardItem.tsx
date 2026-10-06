@@ -862,32 +862,94 @@ function CardItem__({ $, c, idx }: any) {
 // (cardsHookRef.current), quindi un riferimento vecchio continua a lavorare
 // su dati freschi. Senza questo, ogni cambio di uiValue (es. likeHoverCard,
 // toasts, bulkMode) ri-renderizzava TUTTE le card della griglia.
-function cardItemAreEqual(prev: any, next: any) {
+//
+// ── Perché due liste esplicite e non 14 `if` a mano ────────────────────────
+// Il pericolo di questo comparatore è che il guasto è SILENZIOSO: domani
+// aggiungi a CardItem una lettura di `$.qualcosa` e non lo metti fra i campi
+// confrontati → la card smette di aggiornarsi e nessun test, nessun errore, nessun
+// warning: si vede solo che "la card non reagisce". È già successo tre volte in
+// questo repo, ogni volta nella stessa forma (corretto un call site, gli altri
+// lasciati fuori).
+// Perciò i campi sono due elenchi NOME per elencati, e il test
+// src/carditem-memo-campi.test.ts fallisce se in CardItem compare un `$.campo`
+// che non è in nessuno dei due. Aggiungere una lettura è quindi un atto
+// consapevole: o la aggiungi a CAMPI_CARD_ITEM (va ri-renderizzata) o a
+// CAMPI_NON_CONFRONTATI (devi poter spiegare perché non serve).
+
+/** Campi di `$` confrontati: se ne cambia l'identità, la card si ri-renderizza. */
+export var CAMPI_CARD_ITEM: string[] = [
+  'isLight', // tema chiaro/scuro
+  'isProf', // badge e azioni da docente
+  'simulaSt', // anteprima studente
+  'bulkMode', // barra selezione multipla
+  'bulkSelected', // id selezionati nel blocco
+  'likeHoverCard', // stato hover del like
+  'likeAnimCard', // animazione del like
+  'myLikes', // Set dei like dell'utente
+  'seenRef', // Set delle card già viste
+  'user', // nome utente (azioni, "modifica di")
+  'classiCustom', // colore delle chip classe
+  'preferiti', // stato ★
+  'aiMap', // "Analisi disponibile" / riassunti
+  'sommarioResult', // visibilità del bottone "Riassumi" (prof)
+];
+
+/**
+ * Campi di `$` letti ma NON confrontati: handler e utility la cui identità è
+ * garantita stabile da un `useMemo(..., [])` in AppProvider (`appHandlerCtx`,
+ * `__handlers`) o che leggono dati freschi via ref. Non confrontarli è ciò che
+ * evita il ri-render di tutta la griglia a ogni keystroke: AGGIUNGERCI DENTRO
+ * qualcosa che non è stabile per identità significa che la card userà una
+ * chiusura vecchia.
+ */
+export var CAMPI_NON_CONFRONTATI: string[] = [
+  // handler di azione (stabili: appHandlerCtx / __handlers sono memoizzati su [])
+  'openCard',
+  'editCard',
+  'toggleLike',
+  'togglePin',
+  'toggleVisibile',
+  'togglePreferito',
+  'toggleReazione',
+  'riassuntiCommentiRun',
+  'apriDuplica',
+  'apriCopiaAnno',
+  'delCardWithUndo',
+  'riprovaAnnuncio',
+  'setShowSommario',
+  'setLightbox',
+  'setLikeHoverCard',
+  'showToast',
+  // drag & drop
+  'onDragStart',
+  'onDragOver',
+  'onDragLeave',
+  'onDragEnd',
+  'onDrop',
+  // utility/format (funzioni pure dal modulo utils)
+  'badgeBg',
+  'classeColor',
+  'tipoIcon',
+  'timeAgo',
+  'fmt',
+  'myName',
+  // dati già coperti dai campi confrontati o non influenzano il render
+  'CLASSI_DEFAULT',
+];
+
+// Esportata solo per i test: il comportamento del memo è un contratto (quando
+// ri-renderizza e quando no), non un dettaglio interno.
+export function cardItemAreEqual(prev: any, next: any) {
   if (prev.c !== next.c) return false;
   // idx guida solo il ritardo dell'entrata a cascata: se cambia (riordino), la
   // card va ri-renderizzata per non trascinarsi dietro il delay vecchio.
   if (prev.idx !== next.idx) return false;
   var a = prev.$;
   var b = next.$;
-  // Campi scalari/ref che la card renderizza direttamente
-  if (a.isLight !== b.isLight) return false;
-  if (a.isProf !== b.isProf) return false;
-  if (a.simulaSt !== b.simulaSt) return false;
-  if (a.bulkMode !== b.bulkMode) return false;
-  if (a.bulkSelected !== b.bulkSelected) return false;
-  if (a.likeHoverCard !== b.likeHoverCard) return false;
-  if (a.likeAnimCard !== b.likeAnimCard) return false;
-  if (a.myLikes !== b.myLikes) return false;
-  if (a.seenRef !== b.seenRef) return false;
-  if (a.user !== b.user) return false;
-  // `classiCustom` guida il colore delle chip classe; `preferiti` lo stato ★
-  if (a.classiCustom !== b.classiCustom) return false;
-  if (a.preferiti !== b.preferiti) return false;
-  // aiMap è un oggetto che cambia identità a ogni update AI: se cambia, la
-  // card può mostrare/ nascondere "Analisi disponibile" / riassunti.
-  if (a.aiMap !== b.aiMap) return false;
-  // sommarioResult guida la visibilità del bottone "📝 Riassumi" per il prof.
-  if (a.sommarioResult !== b.sommarioResult) return false;
+  for (var i = 0; i < CAMPI_CARD_ITEM.length; i++) {
+    var campo = CAMPI_CARD_ITEM[i];
+    if (a[campo] !== b[campo]) return false;
+  }
   return true;
 }
 

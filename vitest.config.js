@@ -1,15 +1,22 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 
+// ⚠️ Il runtime JSX è AUTOMATICO, in test come in build.
+// Qui c'era `jsxRuntime: 'classic'` con il plugin babel `{ pragma: 'h',
+// pragmaFrag: 'Fragment' }`: non era solo inutile, era IMPOSSIBILE applicarlo —
+// Babel rifiuta pragma/pragmaFrag quando il runtime è automatico ("pragma and
+// pragmaFrag cannot be set when runtime is automatic"), quindi le opzioni
+// venivano scartate e il runtime restava automatico. Lo si è verificato in tre
+// modi: la trasformazione Babel diretta, il fatto che togliere
+// `import { Fragment }` non rompesse nessun test (lo `<>` non usa quell'import),
+// e il bundle di produzione che chiama `(0, jsxs)('div', …)` invece di
+// `React.createElement`.
+// Le opzioni sono state rimosse perché una configurazione che dice una cosa e ne
+// fa un'altra è peggio di nessuna: faceva leggere `Fragment` come codice morto
+// (è importato in due file e sembra inutilizzato) e il pragma `h` come se fosse
+// attivo. AGENTS.md è stato corretto di conseguenza.
 export default defineConfig({
-  plugins: [
-    react({
-      jsxRuntime: 'classic',
-      babel: {
-        plugins: [['@babel/plugin-transform-react-jsx', { pragma: 'h', pragmaFrag: 'Fragment' }]],
-      },
-    }),
-  ],
+  plugins: [react()],
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test-setup.js'],
