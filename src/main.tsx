@@ -3,12 +3,30 @@
 import './globals.ts'; // window.firebase (test seam, letto dai moduli legacy all'import)
 // Font Inter self-hosted (niente Google Fonts: zero richieste terze parti e
 // offline-friendly). @fontsource include font-display:swap, come prima.
-import '@fontsource/inter/400.css';
-import '@fontsource/inter/500.css';
-import '@fontsource/inter/600.css';
-import '@fontsource/inter/700.css';
-import '@fontsource/inter/800.css';
-import '@fontsource/inter/900.css';
+// ── Solo i subset latin e latin-ext, e solo i pesi REALMENTE usati.
+// Prima si importava `@fontsource/inter/<peso>.css`, che dichiara TUTTI i subset
+// (latin, latin-ext, cyrillic, cyrillic-ext, greek, greek-ext, vietnamese):
+// 42 @font-face e 84 file di font finivano in docs/ per un'app italiana. Il
+// browser non li scaricava (unicode-range li esclude), quindi il guadagno per
+// l'utente era ~0: era solo peso del repository. Ora si dichiarano i subset che
+// servono e nient'altro.
+// · PERCHÉ si tiene latin-ext: i nomi degli studenti e i testi delle card
+//   arrivano da Firestore e possono contenere caratteri fuori dal latino base
+//   (ł, š, ř, ă…). Toglierlo mostrerebbe quadratini. Costa 0 byte finché quei
+//   caratteri non compaiono (è lo stesso meccanismo unicode-range di prima).
+// · PERCHÉ il peso 500 è stato tolto: `font-weight: 500` non compare da nessuna
+//   parte nel codice (styles.css né inline nei .tsx). 900 invece resta: compare
+//   17 volte come fontWeight inline.
+import '@fontsource/inter/latin-400.css';
+import '@fontsource/inter/latin-ext-400.css';
+import '@fontsource/inter/latin-600.css';
+import '@fontsource/inter/latin-ext-600.css';
+import '@fontsource/inter/latin-700.css';
+import '@fontsource/inter/latin-ext-700.css';
+import '@fontsource/inter/latin-800.css';
+import '@fontsource/inter/latin-ext-800.css';
+import '@fontsource/inter/latin-900.css';
+import '@fontsource/inter/latin-ext-900.css';
 import './styles.css'; // Global styles
 
 // Setup dell'ambiente legacy in ordine di dipendenza: alcuni moduli leggono i

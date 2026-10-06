@@ -11,6 +11,8 @@ import { initializeApp, getApp, getApps } from 'firebase/app';
 import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider } from 'firebase/auth';
 import {
   initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
   collection,
   doc,
   query,
@@ -113,17 +115,53 @@ function compatCollection(db: any, name: string) {
   return api([], []);
 }
 
+// ── Firestore: cache PERSISTENTE (IndexedDB) ────────────────────────────────
+// Senza questa la cache è solo in memoria: a ogni riapertura dell'app la bacheca
+// riparte dagli skeleton e aspetta la rete. Con la persistenza le card escono da
+// IndexedDB al primo paint e si riconciliano con il server dopo. Misure del
+// rendering lato client (src/integration): il montaggio della griglia costa
+// ~700 ms fissi + ~5,7 ms per card, e il re-render è costante (~160 ms) a 12 o
+// 200 card — cioè il tempo percepito NON è il rendering ma l'attesa dei dati.
+// Per questo il cache è l'intervento su quel tempo, non i byte del bundle.
+// · tabManager: senza,due tab aperte su Firebase si avvisano ("multiple tabs")
+//   e possono vedere dati incoerenti.
+// · cacheSizeBytes 40 MB: è già il default, ma si dichiara. Motivo: `allegati`
+//   sta base64 DENTRO il documento card (fino a ~900 KB a card, vedi
+//   src/allegati.ts) → la cache su disco cresce in fretta, e la soglia con
+//   evicting LRU è ciò che tiene sotto controllo lo spazio sul telefono.
+// · try/catch: Safari in privata (o IndexedDB bloccato) non ha uno store
+//   disponibile. In quel caso si degrada alla cache in memoria e l'app parte
+//   ugualmente: meglio una riapertura lenta che un'app che non parte.
+let _fs: any = null;
+function fs(): any {
+  if (!_fs) {
+    try {
+      _fs = initializeFirestore(_app, {
+        experimentalAutoDetectLongPolling: true,
+        localCache: persistentLocalCache({
+          tabManager: persistentMultipleTabManager(),
+          cacheSizeBytes: 40 * 1024 * 1024,
+        }),
+      });
+    } catch (e) {
+      console.warn('[firestore] cache persistente non disponibile, si usa quella in memoria');
+      _fs = initializeFirestore(_app, { experimentalAutoDetectLongPolling: true });
+    }
+  }
+  return _fs;
+}
+
 // ── db compat: collection()/runTransaction()/batch() ────────────────────────
 // Memoizzata: window.db, SB.db e i moduli che catturano il riferimento al primo
 // import (firestore-sync, app-utils) devono ricevere lo STESSO wrapper, altrimenti
 // si romperebbe l'identità tra le istanze.
 function compatDb() {
   if (!_db) {
-    const fs = initializeFirestore(_app, { experimentalAutoDetectLongPolling: true });
+    const fs_ = fs();
     _db = {
-      collection: (name: string) => compatCollection(fs, name),
+      collection: (name: string) => compatCollection(fs_, name),
       runTransaction: (fn: any) =>
-        runTransaction(fs, async (tx) =>
+        runTransaction(fs_, async (tx) =>
           fn({
             get: async (ref: any) => compatDocSnap(await tx.get(ref.ref || ref)),
             set: (ref: any, data: any, opts?: any) => tx.set(ref.ref || ref, data, opts || {}),
@@ -131,7 +169,7 @@ function compatDb() {
           })
         ),
       batch: () => {
-        const b = writeBatch(fs);
+        const b = writeBatch(fs_);
         return {
           delete: (ref: any) => b.delete(ref.ref || ref),
           set: (ref: any, data: any, opts?: any) => b.set(ref.ref || ref, data, opts || {}),

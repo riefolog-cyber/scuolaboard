@@ -10,12 +10,17 @@ import { render } from '@testing-library/react';
 import React from 'react';
 
 // Componenti lazy di AppLayout (CardDetail, SommarioModal) e Modals
-// (WordCloud, QR, Duplica, CopiaAnno, Cerca, Profilo, Timer).
+// (Guida, AiQuizGen, Amm, EditAmm, WordCloud, QR, Duplica, CopiaAnno, Cerca,
+// Profilo, Timer, Stampa).
 // NB: import dinamici come nell'app — se un chunk ha un errore di modulo
 // (ReferenceError, import mancante), il test fallisce QUI, non in produzione.
 const LAZY = [
   ['CardDetail', () => import('./CardDetail.tsx'), { $: { showCard: null } }],
   ['SommarioModal', () => import('./SommarioModal.tsx'), { $: { showSommario: null } }],
+  ['GuidaModal', () => import('./modals/GuidaModal.tsx'), { showGuida: false }],
+  ['AiQuizGenModal', () => import('./modals/AiQuizGenModal.tsx'), { showAiQuizGen: false }],
+  ['AmmModal', () => import('./modals/AmmModal.tsx'), { showAmm: null }],
+  ['EditAmmModal', () => import('./modals/EditAmmModal.tsx'), { editAmm: null }],
   ['WordCloudModal', () => import('./modals/WordCloudModal.tsx'), { showWordCloud: false, isProf: true }],
   ['QRModal', () => import('./modals/QRModal.tsx'), { showQR: false }],
   ['DuplicaModal', () => import('./modals/DuplicaModal.tsx'), { showDuplica: null }],
