@@ -9,15 +9,19 @@
     <!-- Connessione ANTICIPATA ai servizi Google (nessuna richiesta parte prima:
          sono solo hint DNS/TCP/TLS). Senza questi l'app scarica prima ~280 KB di
          JS e solo DOPO apre la WebSocket Firestore: DNS + TLS finivano in coda,
-         100-400 ms sul 4G. Tutti gli host sono già in connect-src della CSP
-         (vite.config.js), quindi nessun cambiamento di policy.
+         100-400 ms sul 4G.
+         Tutti questi host sono ammessi da connect-src (vite.config.js) per il
+         wildcard *.googleapis.com o per voce esatta: un preconnect su un host
+         che connect-src vieta NON serve a nulla, perché la connessione non può
+         essere riusata. apis.google.com, per esempio, sta in default-src ma non
+         in connect-src, e serve il popup Auth via script: niente XHR, quindi niente
+         preconnect.
          crossorigin è NECESSARIO su firestore/identitytoolkit: senza, l'hint
          aprirebbe una connessione non riusabile da fetch()/XHR (che sono
          CORS-mode) e il guadagno sarebbe nullo. -->
     <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin />
     <link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin />
     <link rel="preconnect" href="https://www.googleapis.com" crossorigin />
-    <link rel="preconnect" href="https://apis.google.com" crossorigin />
     <!-- Solo DNS: host usati una volta sola (installazione, token, iframe Auth). -->
     <link rel="dns-prefetch" href="https://firebaseinstallations.googleapis.com" />
     <link rel="dns-prefetch" href="https://securetoken.googleapis.com" />
