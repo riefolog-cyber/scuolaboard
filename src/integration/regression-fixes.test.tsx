@@ -84,6 +84,36 @@ describe('regression: editCard dal CardItem', () => {
     await waitFor(() => expect(screen.queryByText(/Card copiata nell'anno/)).toBeNull());
     expect(db._all('cards').filter((c: any) => c.annoScolastico === '2027/2028').length).toBe(0);
   });
+
+  // Il caso più grave della stessa classe: il COMMENTO dello studente.
+  // Prima il toast "Commento inviato ✓" e l'azzeramento del campo erano due righe
+  // SINCRONE dopo la catena delle promise: partivano insieme al click e dicevano
+  // "inviato" anche quando le Rules negavano la scrittura. Il campo si svuotava,
+  // l'overlay ottimistico veniva potato al primo snapshot e il commento spariva
+  // senza traccia. È il difetto già corretto sul percorso di modifica card, mai
+  // applicato a commenti e risposte.
+  //
+  // Nota sul perché il test serve: `fake-firestore` NON applica le Rules, quindi
+  // qui la negazione va simulata con `_failWrites`.
+  it('se Firestore nega il commento, NON dice "inviato" e lascia il testo', async () => {
+    const seed = { users: { prof1: PROF_DOC }, cards: { c1: mkCard('c1', { titolo: 'Card letta' }) } };
+    const { db } = await renderApp({ seed, user: PROF });
+
+    fireEvent.click(await screen.findByText('Card letta', {}, { timeout: 4000 }));
+    const ta = (await screen.findByRole('textbox', { name: 'Scrivi un commento' }, {}, { timeout: 4000 })) as HTMLTextAreaElement;
+    fireEvent.input(ta, { target: { value: 'Domanda sulla lezione' } });
+
+    db._failWrites('cards');
+    fireEvent.click(screen.getByRole('button', { name: 'Invia' }));
+    await new Promise((r) => setTimeout(r, 150));
+
+    // Il messaggio di SUCCESSO non deve comparire…
+    expect(screen.queryByText(/Commento inviato/)).toBeNull();
+    // …e il testo deve restare, così lo studente può riprovare.
+    expect(ta.value).toBe('Domanda sulla lezione');
+    // Nessun commento salvato.
+    expect(db._get('cards', 'c1').commenti.length).toBe(0);
+  });
 });
 
 describe('regression: notifiche segna letto singolo', () => {

@@ -480,9 +480,20 @@ export function createAppHandlers(ctx: any) {
             }
           } catch (e) {}
         })
+        // Toast e azzeramento del campo SOLO dopo la conferma di scrittura. Prima
+        // erano due righe sincrone DOPO la catena: partivano subito, insieme al
+        // click, e dicevano "Commento inviato ✓" anche quando le Rules negavano la
+        // scrittura (o la rete era giù): il campo si svuotava, l'overlay ottimistico
+        // veniva poi potato e il commento spariva senza lasciare traccia. È lo
+        // stesso difetto corretto sul percorso di modifica card, mai applicato qui.
+        .then(function () {
+          if (ctx.setNc) ctx.setNc({ testo: '' });
+          if (ctx.showToast) ctx.showToast('Commento inviato ✓', 'ok');
+        })
+        // Il catch è vuoto PERCHÉ fbSave ha già mostrato il toast d'errore
+        // (app-utils.tsx): un secondo messaggio sarebbe doppio. Soprattutto il testo
+        // NON viene azzerato: lo studente lo ritrova e può riprovare.
         .catch(function () {});
-      if (ctx.setNc) ctx.setNc({ testo: '' });
-      if (ctx.showToast) ctx.showToast('Commento inviato ✓', 'ok');
     },
     addReply: function (cmId: any) {
       var user = getUser();
@@ -614,10 +625,13 @@ export function createAppHandlers(ctx: any) {
               });
           } catch (e) {}
         })
-        .catch(function () {});
-      if (ctx.setReplyTo) ctx.setReplyTo(null);
-      if (ctx.setReplyTesto) ctx.setReplyTesto('');
-      if (ctx.showToast) ctx.showToast('Risposta inviata ✓', 'ok');
+        // Stessa regola di addCom: la conferma arriva dalla promise, non dal click.
+        .then(function () {
+          if (ctx.setReplyTo) ctx.setReplyTo(null);
+          if (ctx.setReplyTesto) ctx.setReplyTesto('');
+          if (ctx.showToast) ctx.showToast('Risposta inviata ✓', 'ok');
+        })
+        .catch(function () {}); // fbSave ha già mostrato l'errore: il testo resta
     },
     executeDelReply: function (cmId: any, rId: any, cardId: any) {
       var card = getCards().find(function (c: any) {
