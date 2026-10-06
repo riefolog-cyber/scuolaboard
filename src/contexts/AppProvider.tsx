@@ -542,9 +542,14 @@ function AppProvider({ children }: any) {
     if (!modals.showCopiaAnno || !copiaAnnoTarget) return;
     var newId = Date.now() + '_ca_' + Math.random().toString(36).slice(2, 5);
     var copia = buildCopiaAnno(modals.showCopiaAnno, newId, cardsHook.nextOrd.current++, copiaAnnoTarget);
-    fbSave(copia).then(function () {
-      showToast("Card copiata nell'anno " + copiaAnnoTarget, 'ok');
-    });
+    fbSave(copia)
+      .then(function () {
+        showToast('Card copiata nell\'anno ' + copiaAnnoTarget, 'ok');
+      })
+      // Come sotto: fbSave mostra già il toast d'errore, qui basta marcare la
+      // promise come gestita. Senza, una scrittura negata dalle Rules finiva
+      // come unhandled rejection (e faceva fallire la CI).
+      .catch(function () {});
     modals.setShowCopiaAnno(null);
     setCopiaAnnoTarget('');
   }
@@ -705,11 +710,18 @@ if (editMode) {
       // L'errore non lo annunciamo qui: fbSave ha già una rete di sicurezza che mostra
       // il toast su ogni percorso di scrittura, e due messaggi insieme farebbero
       // doppio.
-      fbSave(c).then(function () {
-        setEditMode(null);
-        modals.setShowModal(false);
-        showToast('Card aggiornata ✓', 'ok');
-      });
+      fbSave(c)
+        .then(function () {
+          setEditMode(null);
+          modals.setShowModal(false);
+          showToast('Card aggiornata ✓', 'ok');
+        })
+        // Il `.catch` vuoto è deliberato e NON è un dimenticato: fbSave ha già
+        // mostrato il toast d'errore (app-utils.tsx), quindi qui la promise
+        // derivata va solo marcata come gestita. Senza, una scrittura negata
+        // dalle Rules finiva come unhandled rejection — è così che la CI è
+        // rimasta rossa su questo test per un commit intero.
+        .catch(function () {});
     } else {
       // nextOrd.current++ SOLO dopo il guard: un tentativo bloccato per
       // dimensione non deve bruciare un numero d'ordine (gap innocui, ma pulito).

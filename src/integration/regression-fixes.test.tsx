@@ -53,6 +53,37 @@ describe('regression: editCard dal CardItem', () => {
     await waitFor(() => expect(db._get('cards', 'c1').titolo).toBe('Card negata'));
     expect(screen.queryByText(/Card aggiornata/)).toBeNull();
   });
+
+  // Stessa cosa sulla COPIA IN ALTRO ANNO. Il percorso di modifica aveva già il
+  // test, quello della copia no: ed è così che il `.catch` mancante è rimasto
+  // invisibile. `fbSave` (app-utils.tsx) mostra il toast d'errore e poi restituisce
+  // la promise ORIGINALE, ancora rifiutata: un chiamante che fa solo `.then()`
+  // lascia una promise derivata senza gestore, cioè un unhandled rejection.
+  //
+  // ⚠️ Qui la copertura è l'exit code di `vitest run`, non un'asserzione: unhandled
+  // rejection ⇒ codice 1 anche con tutti i test verdi (è così che la CI è rimasta
+  // rossa per un commit intero). In locale il verde sui test lo nasconde: se
+  // questo test passa ma `npx vitest run` esce 1, la promisesono gestita.
+  it('se Firestore nega la copia in altro anno, NON dice "copiata" e non genera rejection', async () => {
+    const seed = { users: { prof1: PROF_DOC }, cards: { c1: mkCard('c1', { titolo: 'Card origine' }) } };
+    const { db } = await renderApp({ seed, user: PROF });
+
+    fireEvent.click(await screen.findByText('Card origine', {}, { timeout: 4000 }));
+    fireEvent.click(screen.getByRole('button', { name: 'Altre azioni' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Copia in altro anno' }, {}, { timeout: 4000 }));
+    const modale = (await screen.findByText('Copia in altro anno', {}, { timeout: 4000 })).closest(
+      '[style*="z-index: 500"]'
+    ) as HTMLElement;
+    fireEvent.change(modale.querySelector('select') as HTMLSelectElement, { target: { value: '2027/2028' } });
+
+    db._failWrites('cards');
+    fireEvent.click(screen.getByRole('button', { name: /^Copia$/ }));
+
+    // Il messaggio di SUCCESSO non deve comparire e nessuna card deve essere stata
+    // scritta: con la scrittura negata l'errore lo segnala fbSave (toast rosso).
+    await waitFor(() => expect(screen.queryByText(/Card copiata nell'anno/)).toBeNull());
+    expect(db._all('cards').filter((c: any) => c.annoScolastico === '2027/2028').length).toBe(0);
+  });
 });
 
 describe('regression: notifiche segna letto singolo', () => {
