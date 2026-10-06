@@ -105,7 +105,12 @@ describe('regression: editCard dal CardItem', () => {
 
     db._failWrites('cards');
     fireEvent.click(screen.getByRole('button', { name: 'Invia' }));
-    await new Promise((r) => setTimeout(r, 150));
+
+    // Segnale POSITIVO che la scrittura è fallita: fbSave mostra il toast d'errore
+    // (app-utils.tsx, via window.SB.showToast impostato in useToast). Aspettare
+    // questo — invece di un setTimeout — rende il test deterministico: senza, un
+    // runner lento passerebbe perché l'errore non c'era ancora.
+    await waitFor(() => expect(screen.getAllByText(/Permesso negato|Errore di salvataggio/).length).toBeGreaterThan(0));
 
     // Il messaggio di SUCCESSO non deve comparire…
     expect(screen.queryByText(/Commento inviato/)).toBeNull();
@@ -123,6 +128,12 @@ describe('regression: editCard dal CardItem', () => {
 // "scomparse" spegnendo la rete. Ora si conserva l'ultimo snapshot valido e si
 // avvisa l'utente una volta per episodio.
 describe('regression: errore di rete non svuota la bacheca', () => {
+  // NB: niente attese a tempo fisso. Un `setTimeout(100)` va bene sul portatile e
+  // fallisce su un runner caricato: è il flake già documentato in
+  // perf-profiler.test.tsx. Qui si usa waitFor, che ripete la condizione finché
+  // non è soddisfatta entro il timeout del test.
+  var AVVISO = /Connessione assente|Impossibile leggere le card/;
+
   it('le card restano visibili e l utente viene avvisato', async () => {
     const seed = {
       users: { prof1: PROF_DOC },
@@ -133,31 +144,30 @@ describe('regression: errore di rete non svuota la bacheca', () => {
     expect(screen.getByText('Card B')).toBeTruthy();
 
     db._failReads('cards', 'unavailable');
-    await new Promise((r) => setTimeout(r, 120));
 
     // Le card NON spariscono: meglio dati un po' datati che bacheca vuota.
-    expect(screen.queryByText('Card A')).toBeTruthy();
+    await waitFor(() => expect(screen.queryByText('Card A')).toBeTruthy());
     expect(screen.queryByText('Card B')).toBeTruthy();
-    // E l'utente sa cosa sta succedendo (una volta sola).
-    expect(screen.getAllByText(/Connessione assente|Impossibile leggere le card/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Nessun contenuto visibile/)).toBeNull();
+    // E l'utente sa cosa sta succedendo.
+    await waitFor(() => expect(screen.getAllByText(AVVISO).length).toBeGreaterThan(0));
 
     db._allowReads('cards');
   });
 
-  it('dopo la riconnessione l avviso non si ripete', async () => {
+  it('un secondo errore dello stesso episodio non ripete l avviso', async () => {
     const seed = { users: { prof1: PROF_DOC }, cards: { c1: mkCard('c1', { titolo: 'Card A' }) } };
     const { db } = await renderApp({ seed, user: PROF });
     await screen.findByText('Card A', {}, { timeout: 4000 });
 
     db._failReads('cards', 'unavailable');
-    await new Promise((r) => setTimeout(r, 100));
-    const primo = screen.getAllByText(/Connessione assente|Impossibile leggere le card/).length;
+    await waitFor(() => expect(screen.getAllByText(AVVISO).length).toBe(1));
 
-    // Un secondo errore dello stesso episodio non aggiunge altri messaggi.
+    // Stesso codice di errore: l'episodio non si riapre. `_failReads` notifica i
+    // listener in modo sincrono, quindi l'eventuale secondo toast ci sarebbe
+    // già: qui non serve aspettare.
     db._failReads('cards', 'unavailable');
-    await new Promise((r) => setTimeout(r, 100));
-    expect(screen.getAllByText(/Connessione assente|Impossibile leggere le card/).length).toBe(primo);
-    expect(primo).toBeGreaterThan(0);
+    expect(screen.getAllByText(AVVISO).length).toBe(1);
 
     db._allowReads('cards');
   });
