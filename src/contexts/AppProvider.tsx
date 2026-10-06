@@ -1197,9 +1197,17 @@ if (editMode) {
         });
     });
     // Toast di conferma SOLO quando tutte le scritture sono concluse
-    Promise.all(ops).then(function () {
-      showToast(ids.length + ' card modificate', 'ok');
-    });
+    Promise.all(ops)
+      .then(function () {
+        showToast(ids.length + ' card modificate', 'ok');
+      })
+      // Se una sola card è negata dalle Rules, `Promise.all` rigetta: senza
+      // questo `.catch` è una unhandled rejection (la CI esce con codice 1 anche
+      // con tutti i test verdi) e resta aperta la domanda "quante sono state
+      // modificate?". fbSave ha già mostrato il toast d'errore per ogni card, e
+      // il successo NON deve comparire: qui basta marcare la promise come
+      // gestita, senza un secondo messaggio.
+      .catch(function () {});
     setBulkSelected([]);
     setBulkMode(false);
   }

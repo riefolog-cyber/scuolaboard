@@ -815,7 +815,20 @@ export function createAppHandlers(ctx: any) {
         }
         setAllegatiUploading(false);
         e.target.value = '';
-      });
+      })
+        // Se la callback qui sopra lancia (es. un allegato malformato su cui
+        // kbOf/url esplode), senza questo `.catch` `setAllegatiUploading(false)`
+        // non viene MAI chiamato: lo spinner del pannello allegati resta appeso
+        // per sempre e l'unica via d'uscita è ricaricare la pagina. In più la
+        // promise derivata resterebbe rifiutata senza gestore (unhandled
+        // rejection ⇒ `vitest run` esce con codice 1 anche con tutti i test verdi).
+        // NB: qui `e` non è più l'evento DOM ma l'errore, quindi l'input non si
+        // tocca: il file picker verrà comunque svuotato al prossimo click.
+        .catch(function (err: any) {
+          console.error('[ScuolaBoard] handleAllegatiUpload fallito:', (err && err.message) || err);
+          setAllegatiUploading(false);
+          showToast('Caricamento allegati fallito', 'err');
+        });
     },
     handleRimuoviAllegato: function (allegatoId: any, setForm: any) {
       setForm(function (p: any) {
