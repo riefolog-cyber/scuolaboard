@@ -335,6 +335,10 @@ export function useCards(user: any, annoScolastico: string) {
     });
   }
   var cardsLoaded = snap.loaded === undefined ? true : snap.loaded;
+  // Ultimo errore della listener (vedi firestore-sync.ts): null se tutto bene.
+  // Serve a distinguere "non ci sono card" da "non riesco a leggerle", che è la
+  // differenza fra uno stato legittimo e un problema di rete/permessi.
+  var erroreSync = snap.errore || null;
 
   // ── FILTRAGGIO PER ANNO SCOLASTICO (sui dati ottimistici fusion) ────────
   var cards = useMemo(
@@ -405,6 +409,7 @@ export function useCards(user: any, annoScolastico: string) {
     visible: visible,
     visibleSorted: visibleSorted,
     cardsLoaded: cardsLoaded,
+    erroreSync: erroreSync,
     applyOptimistic: applyOptimistic,
     nextOrd: nextOrd,
     dragId: dragId,

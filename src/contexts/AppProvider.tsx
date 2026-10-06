@@ -1471,7 +1471,41 @@ if (editMode) {
     [auth.user, auth.isProf, auth.authLoad, auth.authErr]
   );
 
-  var cardsValue = useMemo(
+  // AVVISO DI CONNESSIONE, una volta per episodio.
+// Senza questo, perdita di rete e bacheca vuota erano indistinguibili: l'errore
+// della listener finiva in console e la griglia mostrava "Nessun contenuto
+// visibile", che è un'affermazione falsa (le card non sono sparite, non le
+// stiamo leggendo).
+//
+// L'episodio si identifica per CODICE, non per identità dell'oggetto Error: ogni
+// errore di rete è un Error nuovo, quindi confrontare l'oggetto mostrerebbe un
+// avviso nuovo a ogni oscillazione della connessione. Il ref si azzera quando la
+// listener torna a funzionare, quindi un problema davvero diverso più tardi viene
+// segnalato.
+var erroreSyncVisto = useRef<string | null>(null);
+useEffect(
+  function () {
+    var e = cardsHook.erroreSync;
+    var codice = e ? String((e && e.code) || 'unknown') : null;
+    if (!codice) {
+      erroreSyncVisto.current = null;
+      return;
+    }
+    if (erroreSyncVisto.current === codice) return;
+    erroreSyncVisto.current = codice;
+    var offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+    console.error('[AppProvider] errore sync card:', e && e.code, e && e.message);
+    showToast(
+      offline
+        ? 'Connessione assente: le card mostrate sono quelle già scaricate'
+        : 'Impossibile leggere le card: riprovo tra poco',
+      'err'
+    );
+  },
+  [cardsHook.erroreSync]
+);
+
+var cardsValue = useMemo(
     function () {
       return {
         allCards: cardsHook.allCards,
@@ -1479,6 +1513,7 @@ if (editMode) {
         visible: cardsHook.visible,
         visibleSorted: cardsHook.visibleSorted,
         cardsLoaded: cardsHook.cardsLoaded,
+        erroreSync: cardsHook.erroreSync,
         nextOrd: cardsHook.nextOrd,
         dragId: cardsHook.dragId,
         previewSt: cardsHook.previewSt,

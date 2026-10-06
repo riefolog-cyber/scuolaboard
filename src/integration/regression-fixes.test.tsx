@@ -116,6 +116,53 @@ describe('regression: editCard dal CardItem', () => {
   });
 });
 
+// Errore transitorio di rete: la bachecha NON deve svuotarsi.
+// Prima l'handler di errore della listener faceva `snapshot = []`: perdeva il
+// segnale e la griglia passava da "card visibili" a "Nessun contenuto visibile"
+// senza che l'utente avesse fatto nulla. È quello che rendeva le card
+// "scomparse" spegnendo la rete. Ora si conserva l'ultimo snapshot valido e si
+// avvisa l'utente una volta per episodio.
+describe('regression: errore di rete non svuota la bacheca', () => {
+  it('le card restano visibili e l utente viene avvisato', async () => {
+    const seed = {
+      users: { prof1: PROF_DOC },
+      cards: { c1: mkCard('c1', { titolo: 'Card A' }), c2: mkCard('c2', { titolo: 'Card B' }) },
+    };
+    const { db } = await renderApp({ seed, user: PROF });
+    await screen.findByText('Card A', {}, { timeout: 4000 });
+    expect(screen.getByText('Card B')).toBeTruthy();
+
+    db._failReads('cards', 'unavailable');
+    await new Promise((r) => setTimeout(r, 120));
+
+    // Le card NON spariscono: meglio dati un po' datati che bacheca vuota.
+    expect(screen.queryByText('Card A')).toBeTruthy();
+    expect(screen.queryByText('Card B')).toBeTruthy();
+    // E l'utente sa cosa sta succedendo (una volta sola).
+    expect(screen.getAllByText(/Connessione assente|Impossibile leggere le card/).length).toBeGreaterThan(0);
+
+    db._allowReads('cards');
+  });
+
+  it('dopo la riconnessione l avviso non si ripete', async () => {
+    const seed = { users: { prof1: PROF_DOC }, cards: { c1: mkCard('c1', { titolo: 'Card A' }) } };
+    const { db } = await renderApp({ seed, user: PROF });
+    await screen.findByText('Card A', {}, { timeout: 4000 });
+
+    db._failReads('cards', 'unavailable');
+    await new Promise((r) => setTimeout(r, 100));
+    const primo = screen.getAllByText(/Connessione assente|Impossibile leggere le card/).length;
+
+    // Un secondo errore dello stesso episodio non aggiunge altri messaggi.
+    db._failReads('cards', 'unavailable');
+    await new Promise((r) => setTimeout(r, 100));
+    expect(screen.getAllByText(/Connessione assente|Impossibile leggere le card/).length).toBe(primo);
+    expect(primo).toBeGreaterThan(0);
+
+    db._allowReads('cards');
+  });
+});
+
 describe('regression: notifiche segna letto singolo', () => {
   it('segna letto singolo aggiorna solo quella notifica', async () => {
     const n2 = Object.assign({}, notif, { id: 'n2', titolo: 'Altra card', msg: 'Altro messaggio' });

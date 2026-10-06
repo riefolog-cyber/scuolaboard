@@ -105,8 +105,17 @@ export function createFakeDb(seed = {}) {
         },
       };
     }
-    onSnapshot(cb) {
+    onSnapshot(cb, errCb) {
       const fire = () => {
+        // Simulazione di una connessione persa: se la collection è "in errore di
+        // lettura", il listener riceve l'errore invece dei dati (è quello che fa
+        // Firestore quando cade la WebSocket). Serve a provare che il codice
+        // conserva l'ultimo snapshot valido invece di svuotare la bacheca.
+        const err = fallimentiLettura[this.name];
+        if (err) {
+          if (typeof errCb === 'function') errCb(err);
+          return;
+        }
         const docs = queryDocs(this.name, this.wheres, this._orderBy);
         cb({
           docs: docs.map((d) => ({ id: d.id, exists: true, data: () => d.data })),
@@ -127,6 +136,9 @@ export function createFakeDb(seed = {}) {
 // nega: senza questo, un `showToast('salvata ✓')` lanciato prima della promessa
 // passerebbe il test e in produzione direbbe il falso all'utente.
 const fallimenti: Record<string, any> = {};
+// Errori di LETTURA iniettabili per collection: simulano la caduta della
+// connessione (la listener onSnapshot riceve l'errore invece dei dati).
+const fallimentiLettura: Record<string, any> = {};
 function fallisce(coll: string): any {
   return fallimenti[coll] || null;
 }
@@ -185,6 +197,7 @@ class FakeDocRef {
       for (const k of Object.keys(queryListeners)) delete queryListeners[k];
       for (const k of Object.keys(docListeners)) delete docListeners[k];
       for (const k of Object.keys(fallimenti)) delete fallimenti[k];
+      for (const k of Object.keys(fallimentiLettura)) delete fallimentiLettura[k];
       for (const [coll, docs] of Object.entries(seed)) {
         collections[coll] = { ...docs };
       }
@@ -195,6 +208,18 @@ class FakeDocRef {
     },
     _allowWrites(coll) {
       delete fallimenti[coll];
+    },
+    // Fa ricevere un errore a TUTTI i listener già registrati su `coll`: è quello
+    // che vede l'utente quando cade la rete. Serve a verificare che la bacheca non
+    // si svuoti (vedi firestore-sync.ts, handler di errore della listener).
+    _failReads(coll, code = 'unavailable') {
+      const err = Object.assign(new Error('lettura non riuscita: ' + code), { code });
+      fallimentiLettura[coll] = err;
+      const set = queryListeners[coll];
+      if (set) set.forEach((fire) => fire());
+    },
+    _allowReads(coll) {
+      delete fallimentiLettura[coll];
     },
     runTransaction(fn) {
       const tx = {

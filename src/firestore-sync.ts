@@ -35,6 +35,7 @@ function createCardsStore(user: any, anno: string | null, onInvalidate?: () => v
   // condividono nulla — il destroy() di uno non tocca l'altro.
   var snapshot: any[] = [];
   var loaded = false;
+  var errore: any = null;
   var listeners = new Set<() => void>();
   var unsub: (() => void) | null = null;
 
@@ -68,15 +69,31 @@ function createCardsStore(user: any, anno: string | null, onInvalidate?: () => v
             });
             snapshot = a;
             loaded = true;
+            errore = null;
             invalidate();
             fire();
           },
           function (err: any) {
-            // Senza error handler un permission-denied/errore di rete lasciava
-            // loaded=false per sempre → UI bloccata sullo skeleton.
+            // ⚠️ NON azzerare più `snapshot` qui. Prima questo handler faceva
+            // `snapshot = []`, e la conseguenza era che un QUALSIASI errore
+            // transitorio — il segnale che cala, un cambio di rete, la WebSocket
+            // che si chiude — cancellava la bacheca: la griglia passava da "card
+            // visibili" a "Nessun contenuto visibile" senza che l'utente avesse
+            // fatto nulla. È la ragione per cui spegnere la rete faceva sparire
+            // le card anche con i dati già in memoria.
+            //
+            // Ora si CONSERVA l'ultimo snapshot valido: meglio card un po'
+            // datate che nessuna card. Se invece non è mai arrivato nulla (primo
+            // caricamento senza rete), `snapshot` è ancora [] e la griglia mostra
+            // correttamente lo stato vuoto — con l'avviso "connessione assente".
+            //
+            // Il gesto è nato da un problema reale: senza error handler un
+            // permission-denied o un errore di rete lasciava `loaded=false` per
+            // sempre e la UI bloccata sullo skeleton. Quello resta risolto, ma
+            // senza distruggere i dati.
             console.error('[firestore-sync] cards onSnapshot:', err && err.code, err && err.message);
-            snapshot = [];
-            loaded = true; // stato vuoto invece dello spinner infinito
+            errore = err || { code: 'unknown' };
+            loaded = true;
             invalidate();
             fire();
           }
@@ -92,6 +109,9 @@ function createCardsStore(user: any, anno: string | null, onInvalidate?: () => v
     getLoaded: function () {
       return loaded;
     },
+    getErrore: function () {
+      return errore;
+    },
     destroy: function () {
       if (unsub) {
         unsub();
@@ -99,6 +119,7 @@ function createCardsStore(user: any, anno: string | null, onInvalidate?: () => v
       }
       snapshot = [];
       loaded = false;
+      errore = null;
       listeners.clear(); // SOLO i listener di questa istanza
     },
   };
@@ -227,6 +248,7 @@ function createCombinedStore(user: any, annoScolastico: string | null) {
     classiNascoste: string[];
     preferiti: string[];
     loaded: boolean;
+    errore: any;
   } | null = null;
 
   function invalidate() {
@@ -257,6 +279,10 @@ function createCombinedStore(user: any, annoScolastico: string | null) {
           classiNascoste: classiData.nascoste,
           preferiti: favStore.getSnapshot(),
           loaded: cardsStore.getLoaded(),
+          // Ultimo errore della listener: distingue "bacheca vuota" da
+          // "connessione assente / lettura negata", che per l'utente sono due
+          // situazioni opposte.
+          errore: cardsStore.getErrore(),
         };
       }
       return cachedCombined;
