@@ -90,10 +90,72 @@ export function esclusa(file: string, rigaTesto: string): Esclusione | null {
 }
 
 /**
- * Sanitizza il sorgente: commenti e stringhe diventano spazi, ma le
- * newline restano tali (così i numeri di riga restano giusti). Un
- * unico passaggio tiene insieme i due stati, perché un commento può
- * contenere un apice e una stringa può contenere `//` (gli URL).
+ * Il `/` che inizia all'indice `i` apre un letterale regex o è una
+ * divisione? Lo decide il token PRECEDENTE: dopo un operatore, una
+ * virgola, una parentesi aperta o una parola chiave (`return …`) si
+ * tratta di una regex; dopo un identificatore, un numero o una
+ * parentesi chiusa è una divisione (`a / b`).
+ *
+ * Limite noto: `if (x) /re/.test(s)` (regex dopo una `)`) resta letto
+ * come divisione — stile che in questo repo non c'è, e un falso "non
+ * regex" qui non fa danni (la divisione va solo lasciata com'è).
+ */
+const PAROLE_PRIMA_DI_REGEX = [
+  'return',
+  'typeof',
+  'case',
+  'in',
+  'of',
+  'delete',
+  'void',
+  'instanceof',
+  'new',
+  'do',
+  'else',
+  'yield',
+  'await',
+];
+
+function apreRegex(fuori: string): boolean {
+  let j = fuori.length - 1;
+  while (j >= 0 && /\s/.test(fuori[j])) j--;
+  if (j < 0) return true; // inizio del file
+  const c = fuori[j];
+  if ('(,=:[!&|?{};+-*/%<>~^'.indexOf(c) >= 0) return true;
+  const parola = fuori.slice(0, j + 1).match(/[A-Za-z_$][\w$]*$/);
+  return parola ? PAROLE_PRIMA_DI_REGEX.indexOf(parola[0]) >= 0 : false;
+}
+
+/** Indice della `/` che chiude la regex aperta in `i` (-1 se non chiude). */
+function fineRegex(s: string, i: number): number {
+  let inClasse = false;
+  for (let p = i + 1; p < s.length; p++) {
+    const c = s[p];
+    if (c === '\\') {
+      p++;
+      continue;
+    }
+    if (c === '\n') return -1; // una regex non può andare a capo
+    if (c === '[') inClasse = true;
+    else if (c === ']') inClasse = false;
+    else if (c === '/' && !inClasse) return p;
+  }
+  return -1;
+}
+
+/**
+ * Sanitizza il sorgente: commenti, stringhe e letterali regex diventano
+ * spazi, ma le newline restano tali (così i numeri di riga restano
+ * giusti). Un unico passaggio tiene insieme gli stati, perché un
+ * commento può contenere un apice e una stringa può contenere `//`
+ * (gli URL).
+ *
+ * ⚠️ Le regex servono davvero, non è teoria: `/Card copiata nell'anno/`
+ * (in `src/integration/regression-fixes.test.tsx`) contiene un apice, e
+ * senza questo stato il lessico apriva una finta "stringa" che si chiudeva
+ * righe dopo: da lì in poi il resto del file risultava testo e
+ * l'analizzatore NON vedeva più le catene `.then(` di quel tratto
+ * (falso negativo silenzioso, cioè la forma peggiore).
  */
 export function sanitizza(src: string): string {
   const s = src.replace(/\r\n/g, '\n');
@@ -131,6 +193,16 @@ export function sanitizza(src: string): string {
         i += 2;
       }
       continue;
+    }
+
+    // Letterale regex: contenuto (e parentesi) fuori dal codice.
+    if (c === '/' && apreRegex(fuori)) {
+      const fine = fineRegex(s, i);
+      if (fine > 0) {
+        for (let k = i; k <= fine; k++) fuori += s[k] === '\n' ? '\n' : ' ';
+        i = fine + 1;
+        continue;
+      }
     }
 
     // Stringa (singola, doppia, template): il contenuto è testo.

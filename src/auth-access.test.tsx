@@ -314,12 +314,9 @@ describe('useAuth — filtro d\'accesso e ciclo di vita', () => {
     render(React.createElement(errProbe));
 
     fireEvent.click(screen.getByText('login'));
-    await waitFor(
-      () => {
-        expect(screen.getByTestId('autherr').textContent).toContain('database non raggiungibile');
-      },
-      { timeout: 6000 }
-    );
+    await waitFor(() => {
+      expect(screen.getByTestId('autherr').textContent).toContain('database non raggiungibile');
+    });
     // Popup riuscito + Firestore giù: ricaricare la pagina via redirect sarebbe
     // sbagliato (utente già autenticato) → nessun redirect.
     expect(fake.calls.signInWithRedirect).toBe(0);
@@ -373,12 +370,9 @@ describe('useAuth — filtro d\'accesso e ciclo di vita', () => {
     (window as any).db = db;
     render(React.createElement(errProbe));
 
-    await waitFor(
-      () => {
-        expect(screen.getByTestId('autherr').textContent).toContain('dominio non autorizzato');
-      },
-      { timeout: 6000 }
-    );
+    await waitFor(() => {
+      expect(screen.getByTestId('autherr').textContent).toContain('dominio non autorizzato');
+    });
     await new Promise((r) => setTimeout(r, 200)); // lascia arrivare il null tardivo
     expect(screen.getByTestId('autherr').textContent).toContain('dominio non autorizzato');
     expect(screen.getByTestId('role').textContent).toBe('none');
@@ -405,12 +399,9 @@ describe('useAuth — filtro d\'accesso e ciclo di vita', () => {
     (window as any).db = db;
     render(React.createElement(errProbe));
 
-    await waitFor(
-      () => {
-        expect(screen.getByTestId('autherr').textContent).toContain('non è tornato correttamente');
-      },
-      { timeout: 10000 }
-    );
+    await waitFor(() => {
+      expect(screen.getByTestId('autherr').textContent).toContain('non è tornato correttamente');
+    });
     expect(screen.getByTestId('role').textContent).toBe('none');
     // Il flag viene pulito: il messaggio non si ripresenta a ogni reload
     expect(localStorage.getItem('sb_login_pending')).toBeNull();
@@ -489,7 +480,11 @@ describe('useAuth — filtro d\'accesso e ciclo di vita', () => {
     expect(screen.getByTestId('role').textContent).toBe('none');
   });
 
-  it('Firestore irraggiungibile in lettura → authErr visibile (non login muta)', async () => {
+  // Budget per-test esplicito, stesso motivo di auth-retry.test.tsx: il backoff
+  // di loadProfilo è deterministico e dura ~14,3s (somma di BACKOFF_MS in
+  // auth.ts) contro un testTimeout globale di 15s. Senza margine, un runner
+  // lento produce un "test timeout" generico al posto dell'assert sull'errore.
+  it('Firestore irraggiungibile in lettura → authErr visibile (non login muta)', { timeout: 40000 }, async () => {
     const errProbe = () => {
       const { user, authLoad, authErr } = useAuth('2026/2027');
       return React.createElement(

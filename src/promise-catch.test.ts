@@ -24,7 +24,7 @@
 // review e dei test di integrazione.
 
 import { describe, it, expect } from 'vitest';
-import { cercaCateneScoperte, esclusa, ESCLUSIONI, PROMESSE_SICURE } from './promise-utils.ts';
+import { cercaCateneScoperte, esclusa, sanitizza, ESCLUSIONI, PROMESSE_SICURE } from './promise-utils.ts';
 
 // I sorgenti li legge il glob di vitest: `?raw` porta il testo
 // del file, che è quello che serve (il codice non deve girare,
@@ -227,5 +227,39 @@ describe('promise-utils: i casi che hanno morso davvero', () => {
     const trovate = cercaCateneScoperte(src);
     expect(trovate).toHaveLength(1);
     expect(trovate[0].catena).toContain('.then(b)');
+  });
+});
+
+// ── Il lessico: commenti, stringhe e LETTERALI REGEX ─────────
+// Sanitizzare male non fa fallire nulla: fa VEDERE MENO. Un apice dentro una
+// regex (`/Card copiata nell'anno/`, vero codice in regression-fixes.test.tsx)
+// apriva una finta "stringa" che si chiudeva righe dopo, e da lì in poi il file
+// risultava testo: l'analizzatore smetteva di vedere le catene `.then(` di
+// quel tratto senza dirlo a nessuno. Questi test tengono il lessico onesto.
+describe('sanitizza: commenti, stringhe e letterali regex', () => {
+  it('una regex con un apice non apre una finta stringa', () => {
+    const src = "expect(screen.queryByText(/Card copiata nell'anno/)).toBeNull();";
+    const s = sanitizza(src);
+    // Le parentesi del CODICE restano (3 aperte, 3 chiuse)…
+    expect((s.match(/\(/g) || []).length).toBe(3);
+    expect((s.match(/\)/g) || []).length).toBe(3);
+    expect(s).toContain('toBeNull');
+    // …e il contenuto della regex è fuori dal codice.
+    expect(s).not.toContain('anno');
+  });
+
+  it('una divisione non viene scambiata per una regex', () => {
+    const src = 'const p = n / 2; x.get().then(function (d) { return d; });';
+    expect(sanitizza(src)).toContain('.then(');
+    expect(cercaCateneScoperte(src)).toHaveLength(1);
+  });
+
+  it('una regex che cita .then( non è una catena', () => {
+    expect(cercaCateneScoperte('const re = /\\.then\\(/;')).toEqual([]);
+  });
+
+  it('le newline restano: i numeri di riga non si spostano', () => {
+    const src = 'a\n// commento\nb\n/* blocco\nsu due righe */\nf\nconst r = /x/g;\n';
+    expect(sanitizza(src).split('\n').length).toBe(src.split('\n').length);
   });
 });

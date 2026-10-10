@@ -73,59 +73,66 @@ describe('useAuth — retry loadProfilo (race redirect)', () => {
     render(React.createElement(AuthProbe));
 
     // Il profilo esiste solo dalla 2a lettura: senza retry resterebbe 'none'.
-    await waitFor(
-      () => {
-        expect(screen.getByTestId('role').textContent).toBe('prof');
-      },
-      { timeout: 6000 }
-    );
+    await waitFor(() => {
+      expect(screen.getByTestId('role').textContent).toBe('prof');
+    });
     expect(screen.getByTestId('load').textContent).toBe('false');
   });
 
-  it('self-healing: doc mai creato dal redirect → loadProfilo lo crea (niente parcheggio sulla login)', async () => {
-    // Simula il caso dei nuovi utenti con rete lenta / create persa:
-    // get restituisce sempre exists:false finché qualcuno non fa set().
-    // Prima del fix, esauriti i retry l'utente autenticato veniva parcheggiato
-    // sulla login (setUser null) fino al refresh manuale.
-    const uid = 'u-new';
-    const user = { uid, email: 'nuovo@ferrarisfermiclass.it', displayName: 'Nuovo Alunno' };
-    const store: Record<string, any> = {};
-    const db: any = {
-      collection: (name: string) => ({
-        doc: (id: string) => ({
-          get: async () => {
-            const data = store[id];
-            return data ? { exists: true, data: () => ({ ...data }) } : { exists: false, data: () => ({}) };
-          },
-          set: async (data: any) => {
-            store[id] = data;
-          },
-          update: async (data: any) => {
-            store[id] = { ...store[id], ...data };
-          },
+  // Budget per-test esplicito: i retry deterministici di loadProfilo sommano
+  // ~14,25s (BACKOFF_MS in auth.ts) e il test misurato ne dura ~14,3s, quindi
+  // col testTimeout globale di 15s basta un runner lento perché il fallimento
+  // sia un "test timeout" che non dice COSA non è arrivato. Con 40s a fallire
+  // torna l'assert qui sotto, e i 30s dell'attesa sono il suo budget reale
+  // invece di un limite che il test non poteva mai raggiungere.
+  it(
+    'self-healing: doc mai creato dal redirect → loadProfilo lo crea (niente parcheggio sulla login)',
+    { timeout: 40000 },
+    async () => {
+      // Simula il caso dei nuovi utenti con rete lenta / create persa:
+      // get restituisce sempre exists:false finché qualcuno non fa set().
+      // Prima del fix, esauriti i retry l'utente autenticato veniva parcheggiato
+      // sulla login (setUser null) fino al refresh manuale.
+      const uid = 'u-new';
+      const user = { uid, email: 'nuovo@ferrarisfermiclass.it', displayName: 'Nuovo Alunno' };
+      const store: Record<string, any> = {};
+      const db: any = {
+        collection: (name: string) => ({
+          doc: (id: string) => ({
+            get: async () => {
+              const data = store[id];
+              return data ? { exists: true, data: () => ({ ...data }) } : { exists: false, data: () => ({}) };
+            },
+            set: async (data: any) => {
+              store[id] = data;
+            },
+            update: async (data: any) => {
+              store[id] = { ...store[id], ...data };
+            },
+          }),
         }),
-      }),
-    };
+      };
 
-    (window as any).firebase = {
-      auth: () => makeAuth(user),
-      firestore: () => db,
-    };
-    (window as any).db = db;
+      (window as any).firebase = {
+        auth: () => makeAuth(user),
+        firestore: () => db,
+      };
+      (window as any).db = db;
 
-    render(React.createElement(AuthProbe));
+      render(React.createElement(AuthProbe));
 
-    // Backoff totale ~14s + self-heal: attende la creazione autonoma.
-    await waitFor(
-      () => {
-        expect(screen.getByTestId('role').textContent).toBe('studente');
-      },
-      { timeout: 30000 }
-    );
-    expect(screen.getByTestId('load').textContent).toBe('false');
-    expect(store[uid]).toBeTruthy();
-    expect(store[uid].role).toBe('studente');
-  });
+      // Backoff totale ~14s + self-heal: attende la creazione autonoma.
+      await waitFor(
+        () => {
+          expect(screen.getByTestId('role').textContent).toBe('studente');
+        },
+        { timeout: 30000 }
+      );
+      expect(screen.getByTestId('load').textContent).toBe('false');
+      expect(store[uid]).toBeTruthy();
+      expect(store[uid].role).toBe('studente');
+    }
+  );
 
   it('email transiente (null al primo tick) → reload prima del sign-out, utente legittimo NON buttato fuori', async () => {
     const uid = 'u-mail';
@@ -150,12 +157,9 @@ describe('useAuth — retry loadProfilo (race redirect)', () => {
 
     render(React.createElement(AuthProbe));
 
-    await waitFor(
-      () => {
-        expect(screen.getByTestId('role').textContent).toBe('prof');
-      },
-      { timeout: 6000 }
-    );
+    await waitFor(() => {
+      expect(screen.getByTestId('role').textContent).toBe('prof');
+    });
     expect(signOut).not.toHaveBeenCalled();
   });
 });
