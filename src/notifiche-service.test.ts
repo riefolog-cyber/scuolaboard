@@ -193,6 +193,55 @@ describe('notifyClasse: esito del fan-out', () => {
   });
 });
 
+// ── CONTRATTO DI NON-RIFIUTABILITÀ ────────────────────────────────────────
+// `notifyClasse` non deve MAI rigettare: i chiamanti storici non hanno un
+// `.catch` (AppProvider chiama notifyClasse a piede, gli handler dei commenti
+// pure), quindi un rifiuto qui diventa una unhandled rejection — che fa uscire
+// `vitest run` con codice 1 anche a test verdi, e in produzione non dice nulla.
+//
+// I test qui sopra verificano i VALORI in ogni ramo di errore, ma nessuno
+// dice "la promise risolve sempre": un refactor che lasciasse sfuggire un
+// rifiuto passerebbe comunque. Qui si fissa esplicitamente, in ogni scenario.
+describe('notifyClasse: non rifiuta MAI (presupposto delle catene senza catch)', () => {
+  const base = { classi: ['3AI'], annoScolastico: '2026/2027', cardId: 'c1', titolo: 'X', msg: 'Y' };
+
+  async function risolveInOgniCaso(nome: string, opts: any, dbPrima?: () => void) {
+    setupWindow(fakeDb(STUDENTI, opts));
+    if (dbPrima) dbPrima();
+    // `.resolves` fallisce il test se la promise rigetta: è l'asserzione.
+    await expect(notifyClasse(base)).resolves.toBeTruthy();
+    void nome;
+  }
+
+  it('caso nominale', async () => {
+    await risolveInOgniCaso('nominale', {});
+  });
+
+  it('query degli studenti fallita', async () => {
+    await risolveInOgniCaso('query', { failQuery: true });
+  });
+
+  it('scrittura della notifica negata per tutti', async () => {
+    await risolveInOgniCaso('push', { failPush: true });
+  });
+
+  it('scrittura negata per uno studente', async () => {
+    await risolveInOgniCaso('push-uno', { failPushUid: 's2' });
+  });
+
+  it('db assente', async () => {
+    delete (window as any).db;
+    await expect(notifyClasse(base)).resolves.toEqual({ ok: false, avvisati: 0, totale: 0, mancanti: [] });
+  });
+
+  it('annuncio senza destinatari (classe vuota)', async () => {
+    setupWindow(fakeDb([]));
+    // "nessuno da avvisare" NON è un errore: si risolve ok:true con zero
+    // avvisati. L'asserzione che conta è che la promise RISOLVA.
+    await expect(notifyClasse(base)).resolves.toEqual({ ok: true, avvisati: 0, totale: 0, mancanti: [] });
+  });
+});
+
 describe('notifyClasse: id deterministico con cmId (commenti)', () => {
   it("senza cmId l'id resta tipo_<cardId> (annuncio card, com'era prima)", async () => {
     await notifyClasse({ classi: ['3AI'], annoScolastico: '2026/2027', cardId: 'c1', titolo: 'X', msg: 'Y' });

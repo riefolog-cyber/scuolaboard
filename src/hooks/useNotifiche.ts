@@ -141,7 +141,16 @@ function useNotifiche(deps: { user: any }) {
         })
         .catch(function (e: any) {
           console.warn('[notifiche] markAndWrite fallback (read: ' + ((e && e.code) || e) + ')');
-          writeLista(dedupeNotifiche(markLette(lista, id)));
+          // writeLista RESTITUISCE una promise: senza il catch qui sotto nasce
+          // una promise floating che il gestore del ramo originale non copre
+          // (copre la catena del read, non questa). È il caso più probabile di
+          // fallire: siamo già nel fallback perché la rete o i permessi non
+          // reggono, quindi il set di riserva fallirà per le stesse ragioni.
+          var p = writeLista(dedupeNotifiche(markLette(lista, id)));
+          // Il catch vuoto NON è un dimenticato: segna la promise come gestita
+          // perché un rifiuto qui è già stato segnalato col warn sopra, e non
+          // vogliamo la notifica "non letta" bloccata su un errore non recuperabile.
+          if (p && typeof p.catch === 'function') p.catch(function (_e2: any) {});
         });
     },
     [user, lista, writeLista, markLette, mergeListe]

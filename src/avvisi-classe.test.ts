@@ -654,3 +654,53 @@ describe('confermaAnnuncio (cosa vede il docente)', () => {
     expect(fb.type).toBe('warn');
   });
 });
+
+// ── CONTRATTO DI NON-RIFIUTABILITÀ ────────────────────────────────────────
+// `annunciaClasse` non deve MAI rigettare: in AppProvider la si chiama senza
+// `.catch` in almeno sei punti (`ritentativi.esegui(...).then(...)`,
+// `Promise.all(...).then(...)`), e quei `.then` sono al sicuro SOLO perché
+// questa funzione risolve sempre `{ ok: false }` invece di rigettare. Se un
+// refactor lasciasse sfuggire un rifiuto, quelle sei catene diventerebbero
+// unhandled rejection: `vitest` uscirebbe con codice 1 a test verdi (è già
+// successo in questo repo) e in produzione fallirebbe in silenzio.
+//
+// I test qui sopra verificano i VALORI per ciascun modo di fallimento, ma
+// nessuno asseriva "risolve sempre". Questo blocco è l'asserzione mancante.
+describe('annunciaClasse: non rifiuta MAI in nessun modo di fallimento', () => {
+  var card: any = { id: 'c1', titolo: 'Compiti', classi: ['3AO'], annoScolastico: '2026/2027' };
+
+  beforeEach(() => {
+    azzeraAnnunciTentati();
+    (window as any).SB = (window as any).SB || {};
+    (window as any).SB.services = { updateCard: vi.fn().mockResolvedValue(undefined) };
+  });
+
+  it('fan-out che rigetta', async () => {
+    (window as any).SB.notifyClasse = vi.fn().mockRejectedValue(new Error('fan-out ko'));
+    await expect(annunciaClasse({ card, anno: '2026/2027' })).resolves.toEqual(
+      expect.objectContaining({ ok: false })
+    );
+  });
+
+  it('fan-out che rigetta con codice Firestore', async () => {
+    (window as any).SB.notifyClasse = vi
+      .fn()
+      .mockRejectedValue(Object.assign(new Error('no'), { code: 'permission-denied' }));
+    await expect(annunciaClasse({ card, anno: '2026/2027' })).resolves.toEqual(
+      expect.objectContaining({ ok: false })
+    );
+  });
+
+  it('scrittura del flag sulla card negata (il fan-out è andato, il flag no)', async () => {
+    (window as any).SB.notifyClasse = vi.fn().mockResolvedValue({ ok: true, avvisati: 3 });
+    (window as any).SB.services.updateCard = vi.fn().mockRejectedValue(new Error('update negata'));
+    await expect(annunciaClasse({ card, anno: '2026/2027' })).resolves.toEqual(
+      expect.objectContaining({ ok: false })
+    );
+  });
+
+  it('nessun servizio di notifica disponibile', async () => {
+    delete (window as any).SB.notifyClasse;
+    await expect(annunciaClasse({ card, anno: '2026/2027' })).resolves.toBeTruthy();
+  });
+});

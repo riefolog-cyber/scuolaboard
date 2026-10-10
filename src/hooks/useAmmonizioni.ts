@@ -52,7 +52,12 @@ function useAmmonizioni(deps: AmmDep) {
       var lista = (ammonizioniMap[nome] || []).map(function (a: Amm) {
         return a.id === id ? Object.assign({}, a, { motivazione: mot, modificata: true }) : a;
       });
-      db.collection('ammonizioni').doc(nome).set({ lista: lista });
+      // Safety-net: senza, una scrittura negata da Firestore lasciava l'utente
+      // convinto del salvataggio (l'elenco ottimistico è già aggiornato) e al
+      // reload l'ammonizione tornava quella vecchia. Il catch vuoto è
+      // commentato: serve a marcare la promise come gestita.
+      var p = db.collection('ammonizioni').doc(nome).set({ lista: lista });
+      if (p && typeof p.catch === 'function') p.catch(function (_e: any) {});
     },
     [ammonizioniMap]
   );
@@ -63,7 +68,8 @@ function useAmmonizioni(deps: AmmDep) {
         var lista = (ammonizioniMap[nome] || []).filter(function (a: Amm) {
           return a.id !== id;
         });
-        db.collection('ammonizioni').doc(nome).set({ lista: lista });
+        var p = db.collection('ammonizioni').doc(nome).set({ lista: lista });
+        if (p && typeof p.catch === 'function') p.catch(function (_e: any) {});
       }
     },
     [ammonizioniMap]

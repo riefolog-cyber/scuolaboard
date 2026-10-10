@@ -214,6 +214,15 @@ function useClassi(deps: ClassiDeps) {
               showToast('Errore aggiornamento classe', 'err');
             });
         }
+      })
+      // Il catch qui sopra copre la UPDATE, non questa catena: senza questo
+      // `.catch` una lettura fallita (permission-denied, rete giù) rigettava
+      // senza gestore. Il prof cambiava classe e non vedeva né errore né
+      // conferma: la classe risultava cambiata solo in locale, e al reload
+      // tornava quella di prima.
+      .catch(function (e: any) {
+        console.error('[ScuolaBoard] aggiornaClasseStudente (lettura):', e && e.code);
+        showToast('Errore aggiornamento classe', 'err');
       });
   }
 

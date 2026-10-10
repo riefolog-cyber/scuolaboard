@@ -14,20 +14,36 @@ var db = SB.db;
 SB.CLASSI_DEFAULT = CLASSI_DEFAULT;
 SB.classeColor = classeColor;
 // ── DESIGN TOKENS ───────────────────────────────────────────────────
+// Safety-net centralizzata, come fbSave/fbDel: il toast parte da QUI, quindi
+// ogni chiamante è al sicuro anche se scrive la promise e basta. Prima queste
+// tre non avevano nulla e i chiamanti (es. togglePreferito) facevano
+// `fbFavSave(uid, next);` a vuoto: la rejection non gestita teneva la CI
+// rossa e, sul piano utente, il preferito risultava salvato ma non lo era.
+function conToast(p: any) {
+  if (!p || typeof p.catch !== 'function') return p;
+  p.catch(function (e: any) {
+    if (SB.showToast) SB.showToast(fbErrTxt(e), 'err');
+  });
+  return p;
+}
 export function fbClassiSave(arr: string[], anno: string) {
-  return db
-    .collection('config')
-    .doc('classi_custom_' + safeDocId(anno || ''))
-    .set({ lista: arr, aggiornato: new Date().toISOString() }, { merge: true });
+  return conToast(
+    db
+      .collection('config')
+      .doc('classi_custom_' + safeDocId(anno || ''))
+      .set({ lista: arr, aggiornato: new Date().toISOString() }, { merge: true })
+  );
 }
 export function fbNascosteSave(arr: string[], anno: string) {
-  return db
-    .collection('config')
-    .doc('classi_custom_' + safeDocId(anno || ''))
-    .set({ nascoste: arr, aggiornato: new Date().toISOString() }, { merge: true });
+  return conToast(
+    db
+      .collection('config')
+      .doc('classi_custom_' + safeDocId(anno || ''))
+      .set({ nascoste: arr, aggiornato: new Date().toISOString() }, { merge: true })
+  );
 }
 export function fbFavSave(uid: string, ids: string[]) {
-  return db.collection('preferiti').doc(uid).set({ ids: ids, aggiornato: new Date().toISOString() });
+  return conToast(db.collection('preferiti').doc(uid).set({ ids: ids, aggiornato: new Date().toISOString() }));
 }
 export var FORM0 = {
   tipo: 'domanda',

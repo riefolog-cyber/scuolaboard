@@ -492,7 +492,7 @@ describe('eseguiRinomina', () => {
 
 // ── togglePreferito ────────────────────────────────────────────────────────
 describe('togglePreferito', () => {
-  it('aggiunge e rimuove dai preferiti con salvataggio e toast', () => {
+  it('aggiunge e rimuove dai preferiti con salvataggio e toast', async () => {
     const fbFavSave = vi.fn().mockResolvedValue({});
     const showToast = vi.fn();
     const setPreferiti = vi.fn();
@@ -512,11 +512,35 @@ describe('togglePreferito', () => {
     handlers.togglePreferito('c1');
     expect(setPreferiti).toHaveBeenCalledWith(['c1']);
     expect(fbFavSave).toHaveBeenCalledWith('u1', ['c1']);
-    expect(showToast).toHaveBeenCalledWith('Aggiunto ai preferiti ★', 'ok');
+    // Il toast aspetta la PROMESSA della scrittura: prima confermava "Aggiunto"
+    // mentre il salvataggio era ancora in corso, quindi se Firestore negava la
+    // stella restava accesa e il preferito spariva al reload.
+    expect(showToast).not.toHaveBeenCalled();
+    await vi.waitFor(() => expect(showToast).toHaveBeenCalledWith('Aggiunto ai preferiti ★', 'ok'));
 
     handlers.togglePreferito('c1');
     expect(setPreferiti).toHaveBeenLastCalledWith([]);
-    expect(showToast).toHaveBeenLastCalledWith('Rimosso dai preferiti', 'ok');
+    await vi.waitFor(() => expect(showToast).toHaveBeenLastCalledWith('Rimosso dai preferiti', 'ok'));
+  });
+
+  // Il caso che la regola "il toast aspetta la promessa" protegge davvero: se la
+  // scrittura viene negata, l'utente NON deve vedere il messaggio di successo.
+  // fbFavSave ha già il proprio safety-net che mostra l'errore, quindi qui il
+  // catch serve solo a non duplicarlo.
+  it('scrittura negata → nessun toast di successo (l utente non viene ingannato)', async () => {
+    const fbFavSave = vi.fn().mockRejectedValue(Object.assign(new Error('no'), { code: 'permission-denied' }));
+    const showToast = vi.fn();
+    const ctx: any = {
+      preferiti: [],
+      setPreferiti: vi.fn(),
+      fbFavSave: fbFavSave,
+      showToast: showToast,
+      user: { uid: 'u1' },
+    };
+    const handlers = createAppHandlers(ctx);
+    handlers.togglePreferito('c1');
+    await new Promise((r) => setTimeout(r, 0));
+    expect(showToast).not.toHaveBeenCalledWith('Aggiunto ai preferiti ★', 'ok');
   });
 });
 

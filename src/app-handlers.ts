@@ -308,6 +308,15 @@ export function createAppHandlers(ctx: any) {
                   });
                 } catch (e: any) {}
               });
+            })
+            // Il try/catch qui fuori cattura solo errori SINCRONI: una rejection
+            // della query non lo attraversa. Senza questo catch la rinomina
+            // falliva in silenzio — la classe risultava rinominata nella lista
+            // del prof ma non sugli studenti, che al reload tornavano a quella
+            // vecchia senza che nulla lo segnalasse.
+            .catch(function (e: any) {
+              if (window.SB_DEBUG)
+                console.warn('[ScuolaBoard] rinomina: lettura studenti fallita:', e && e.code ? e.code : e);
             });
         }
       } catch (e: any) {}
@@ -324,12 +333,33 @@ export function createAppHandlers(ctx: any) {
             })
           : preferiti.concat([id]);
       if (ctx.setPreferiti) ctx.setPreferiti(next);
+      var messaggioOk = preferiti.indexOf(id) < 0 ? 'Aggiunto ai preferiti ★' : 'Rimosso dai preferiti';
       try {
-        if (fbFavSave) fbFavSave((getUser() && getUser().uid) || '', next);
+        if (fbFavSave) {
+          // Il toast aspetta la PROMESSA: prima confermava "Aggiunto ai
+          // preferiti" mentre la scrittura era ancora in corso, quindi se
+          // Firestore negava (rules, rete) la stella restava accesa e il
+          // preferito spariva al reload. fbFavSave mostra già l'errore nel suo
+          // safety-net: qui il catch vuoto serve solo a non duplicarlo.
+          var p = fbFavSave((getUser() && getUser().uid) || '', next);
+          if (p && typeof p.then === 'function') {
+            p.then(function () {
+              if (ctx.showToast)
+                try {
+                  ctx.showToast(messaggioOk, 'ok');
+                } catch (e: any) {}
+            }).catch(function () {});
+          } else if (ctx.showToast) {
+            try {
+              ctx.showToast(messaggioOk, 'ok');
+            } catch (e: any) {}
+          }
+          return;
+        }
       } catch (e: any) {}
       if (ctx.showToast)
         try {
-          ctx.showToast(preferiti.indexOf(id) < 0 ? 'Aggiunto ai preferiti ★' : 'Rimosso dai preferiti', 'ok');
+          ctx.showToast(messaggioOk, 'ok');
         } catch (e: any) {}
     },
     toggleLike: function (cardId: any) {
@@ -585,7 +615,13 @@ export function createAppHandlers(ctx: any) {
                             annoScolastico: card.annoScolastico,
                           });
                         });
-                      });
+                      })
+                      // Catena ANNIDATA: il `.catch` che chiude il `get()`
+                      // esterno (più sotto) copre quello, non questa. Senza
+                      // questo catch il fallback "notifica ai prof" — che
+                      // scatta proprio sui dati legacy, cioè in produzione —
+                      // poteva rigettare senza gestore.
+                      .catch(function () {});
                   }
                 })
                 .catch(function () {});
@@ -708,6 +744,16 @@ export function createAppHandlers(ctx: any) {
                       });
                     }
                   });
+                })
+                // notifyAmm è un callback che avvia una promise indipendente e
+                // ritorna undefined: il .catch(errAmm) più sotto protegge la
+                // promise di addAmmonizione, NON questa. La notifica all'autore
+                // è un extra (l'ammonizione è già salvata), quindi il catch è
+                // vuoto e commentato: segna la promise come gestita senza
+                // duplicare il messaggio d'errore dell'ammonizione.
+                .catch(function (e: any) {
+                  if (window.SB_DEBUG)
+                    console.warn('[ScuolaBoard] ammonizione: notifica all\'autore non riuscita:', e && e.code);
                 });
           }
         } catch (e) {}
