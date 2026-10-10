@@ -19,14 +19,14 @@ describe('Duplica card (prof)', () => {
   it('apre la DuplicaModal, seleziona una classe e crea la copia', async () => {
     const seed = { users: { prof1: PROF_DOC }, cards: { c1: mkCard('c1', { titolo: 'Lezione su X' }) } };
     const { db } = await renderApp({ seed, user: PROF });
-    await screen.findByText('Lezione su X', {}, { timeout: 4000 });
+    await screen.findByText('Lezione su X', {});
 
     // Apre la modal (bottone 📋 nella card, dentro il menu azioni)
     apriAltreAzioni();
     const duplicaBtn = screen.getAllByRole('button').find((b) => b.textContent === '📋');
     fireEvent.click(duplicaBtn);
 
-    await screen.findByText('Duplica card', {}, { timeout: 4000 });
+    await screen.findByText('Duplica card', {});
     const modal = modalRoot('Duplica card');
     // Scoping alla modale: la chip '3AO' esiste anche in FilterBar
     fireEvent.click(within(modal).getByRole('button', { name: '3AO' }));
@@ -49,11 +49,11 @@ describe('Copia in altro anno (prof)', () => {
   it('crea la copia nascosta nell anno selezionato, senza commenti e voti', async () => {
     const seed = { users: { prof1: PROF_DOC }, cards: { c1: mkCard('c1', { titolo: 'Lezione su Y' }) } };
     const { db } = await renderApp({ seed, user: PROF });
-    await screen.findByText('Lezione su Y', {}, { timeout: 4000 });
+    await screen.findByText('Lezione su Y', {});
 
     apriAltreAzioni();
     fireEvent.click(screen.getByRole('button', { name: 'Copia in altro anno' }));
-    await screen.findByText('Copia in altro anno', {}, { timeout: 4000 });
+    await screen.findByText('Copia in altro anno', {});
     const modal = modalRoot('Copia in altro anno');
 
     // Scoping alla modale: la Header ha un altro <select> per l'anno scolastico
@@ -78,12 +78,12 @@ describe('Elimina card con undo (prof)', () => {
   it('mostra il toast e al clic su "Annulla" la card resta', async () => {
     const seed = { users: { prof1: PROF_DOC }, cards: { c1: mkCard('c1', { titolo: 'Da eliminare' }) } };
     const { db } = await renderApp({ seed, user: PROF });
-    await screen.findByText('Da eliminare', {}, { timeout: 4000 });
+    await screen.findByText('Da eliminare', {});
 
     apriAltreAzioni();
     fireEvent.click(screen.getByRole('button', { name: 'Elimina' }));
     // Il toast contiene icona + messaggio + bottone undo: match parziale
-    expect(await screen.findByText(/Card eliminata/, {}, { timeout: 4000 })).toBeTruthy();
+    expect(await screen.findByText(/Card eliminata/, {})).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: '↩ Annulla' }));
     await waitFor(() => {
@@ -98,11 +98,11 @@ describe('Elimina card con undo (prof)', () => {
   it('smontando l app prima dei 5s la card NON viene cancellata dopo (timer pulito)', async () => {
     const seed = { users: { prof1: PROF_DOC }, cards: { c1: mkCard('c1', { titolo: 'Da non cancellare' }) } };
     const { db, unmount } = await renderApp({ seed, user: PROF });
-    await screen.findByText('Da non cancellare', {}, { timeout: 4000 });
+    await screen.findByText('Da non cancellare', {});
 
     apriAltreAzioni();
     fireEvent.click(screen.getByRole('button', { name: 'Elimina' }));
-    await screen.findByText(/Card eliminata/, {}, { timeout: 4000 });
+    await screen.findByText(/Card eliminata/, {});
 
     // Smonta SUBITO (prima dello scadere dei 5s): il cleanup deve fare
     // clearTimeout sul ref del timer di undo.
@@ -120,7 +120,7 @@ describe('Proposte studente → approva/rifiuta (prof)', () => {
   it('lo studente invia una proposta che finisce in attesa', async () => {
     const seed = { users: { stud1: STUD_DOC }, cards: {} };
     const { db } = await renderApp({ seed, user: STUD });
-    fireEvent.click(await screen.findByTitle('Proponi card', {}, { timeout: 4000 }));
+    fireEvent.click(await screen.findByTitle('Proponi card', {}));
     fireEvent.input(screen.getByPlaceholderText('Es. Riflessione su…'), { target: { value: 'Proposta studente' } });
     fireEvent.input(screen.getByPlaceholderText('Descrizione, spunti…'), { target: { value: 'contenuto proposta' } });
     fireEvent.click(screen.getByText('📤 Invia proposta'));
@@ -140,9 +140,9 @@ describe('Proposte studente → approva/rifiuta (prof)', () => {
       },
     };
     const { db } = await renderApp({ seed, user: PROF });
-    await screen.findByText('⏳ PROPOSTE IN ATTESA', {}, { timeout: 4000 });
+    await screen.findByText('⏳ PROPOSTE IN ATTESA', {});
     // La proposta appare sia nel pannello sia nella griglia: match multiplo
-    await screen.findAllByText('Proposta di Luca', {}, { timeout: 4000 });
+    await screen.findAllByText('Proposta di Luca', {});
 
     // Il bottone ✓ approva
     const approveBtn = screen.getAllByRole('button').find((b) => b.textContent.trim() === '✓');
@@ -162,12 +162,12 @@ describe('Proposte studente → approva/rifiuta (prof)', () => {
       },
     };
     const { db } = await renderApp({ seed, user: PROF });
-    await screen.findByText('⏳ PROPOSTE IN ATTESA', {}, { timeout: 4000 });
+    await screen.findByText('⏳ PROPOSTE IN ATTESA', {});
 
     const rejectBtn = screen.getAllByRole('button').find((b) => b.textContent.trim() === '✕');
     fireEvent.click(rejectBtn);
 
-    await screen.findByText('Rifiuta proposta', {}, { timeout: 4000 });
+    await screen.findByText('Rifiuta proposta', {});
     fireEvent.input(screen.getByPlaceholderText('Es. Argomento già trattato, fuori tema…'), {
       target: { value: 'Fuori programma' },
     });
@@ -186,8 +186,8 @@ describe('Gating AI (solo prof)', () => {
   it("il prof vede il bottone '🤖 + AI' nella card", async () => {
     const seed = { users: { prof1: PROF_DOC }, cards: { c1: mkCard('c1', { titolo: 'Card AI prof' }) } };
     await renderApp({ seed, user: PROF });
-    fireEvent.click(await screen.findByText('Card AI prof', {}, { timeout: 4000 }));
-    await screen.findByText('🤖 + AI', {}, { timeout: 4000 });
+    fireEvent.click(await screen.findByText('Card AI prof', {}));
+    await screen.findByText('🤖 + AI', {});
   });
 });
 
@@ -236,12 +236,12 @@ describe('Gestione studenti (prof)', () => {
 
     // Attende il caricamento dell'app (auth prof) prima di cliccare la tab 👥
     // (Fase 8b: il bottone ora ha aria-label "Gestione studenti" invece del solo emoji)
-    const tabStudenti = await screen.findByRole('button', { name: /Gestione studenti/ }, {}, { timeout: 4000 });
+    const tabStudenti = await screen.findByRole('button', { name: /Gestione studenti/ }, {});
     fireEvent.click(tabStudenti);
-    expect(await screen.findByText('👥 Gestione Studenti', {}, { timeout: 4000 })).toBeTruthy();
+    expect(await screen.findByText('👥 Gestione Studenti', {})).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: /Carica studenti/ }));
-    expect(await screen.findByText('Luca Bianchi', {}, { timeout: 4000 })).toBeTruthy();
+    expect(await screen.findByText('Luca Bianchi', {})).toBeTruthy();
     expect(screen.getByText('Giulia Verdi')).toBeTruthy();
     // Lo studente con la sola classe legacy dello scorso anno è escluso
     expect(screen.queryByText('Marco Neri')).toBeNull();
@@ -262,15 +262,15 @@ describe('Gestione studenti (prof)', () => {
     await renderApp({ seed, user: PROF });
 
     // Cambia anno scolastico a 2025/2026 dal menu dell'Header
-    fireEvent.click(await screen.findByRole('button', { name: /2026\/2027/ }, {}, { timeout: 4000 }));
-    fireEvent.click(await screen.findByRole('button', { name: '2025/2026' }, {}, { timeout: 4000 }));
+    fireEvent.click(await screen.findByRole('button', { name: /2026\/2027/ }, {}));
+    fireEvent.click(await screen.findByRole('button', { name: '2025/2026' }, {}));
 
-    const tabStudenti = await screen.findByRole('button', { name: /Gestione studenti/ }, {}, { timeout: 4000 });
+    const tabStudenti = await screen.findByRole('button', { name: /Gestione studenti/ }, {});
     fireEvent.click(tabStudenti);
     fireEvent.click(screen.getByRole('button', { name: /Carica studenti/ }));
 
     // Lo studente legacy compare nell'anno vecchio
-    expect(await screen.findByText('Marco Neri', {}, { timeout: 4000 })).toBeTruthy();
+    expect(await screen.findByText('Marco Neri', {})).toBeTruthy();
   });
 
   it('ordina gli studenti per cognome (A→Z) e mostra numeri progressivi per classe', async () => {
@@ -304,11 +304,11 @@ describe('Gestione studenti (prof)', () => {
     };
     await renderApp({ seed, user: PROF });
 
-    const tabStudenti = await screen.findByRole('button', { name: /Gestione studenti/ }, {}, { timeout: 4000 });
+    const tabStudenti = await screen.findByRole('button', { name: /Gestione studenti/ }, {});
     fireEvent.click(tabStudenti);
     fireEvent.click(screen.getByRole('button', { name: /Carica studenti/ }));
 
-    await screen.findByText('Luca Bianchi', {}, { timeout: 4000 });
+    await screen.findByText('Luca Bianchi', {});
 
     // Ordinamento per cognome: Bianchi < Rossi < Verdi (posizione nel DOM,
     // jsdom non calcola il layout quindi getBoundingClientRect darebbe tutto 0)
@@ -343,14 +343,14 @@ describe('Gestione studenti (prof)', () => {
     };
     await renderApp({ seed, user: PROF });
 
-    const tabStudenti = await screen.findByRole('button', { name: /Gestione studenti/ }, {}, { timeout: 4000 });
+    const tabStudenti = await screen.findByRole('button', { name: /Gestione studenti/ }, {});
     fireEvent.click(tabStudenti);
 
     // Prima del caricamento il bottone di esportazione non deve esistere
     expect(screen.queryByRole('button', { name: /Esporta CSV/ })).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: /Carica studenti/ }));
-    await screen.findByText('Luca Bianchi', {}, { timeout: 4000 });
+    await screen.findByText('Luca Bianchi', {});
 
     // Dopo il caricamento compare il bottone Esporta CSV
     expect(screen.getByRole('button', { name: /Esporta CSV/ })).toBeTruthy();

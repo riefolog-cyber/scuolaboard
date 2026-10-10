@@ -22,14 +22,14 @@ describe('regression: editCard dal CardItem', () => {
     const seed = { users: { prof1: PROF_DOC }, cards: { c1: mkCard('c1', { titolo: 'Card da modificare' }) } };
     await renderApp({ seed, user: PROF });
 
-    fireEvent.click(await screen.findByText('Card da modificare', {}, { timeout: 4000 }));
+    fireEvent.click(await screen.findByText('Card da modificare', {}));
     // La ✏️ sta nel menu "⋯" della card (la fila di azioni a riposo resta corta):
     // la modale di modifica deve aprirsi anche con la CardDetail aperta.
     fireEvent.click(screen.getByRole('button', { name: 'Altre azioni' }));
-    const edit = await screen.findByRole('button', { name: 'Modifica card' }, {}, { timeout: 4000 });
+    const edit = await screen.findByRole('button', { name: 'Modifica card' }, {});
     fireEvent.click(edit);
 
-    expect(await screen.findByText('✏️ Modifica card', {}, { timeout: 4000 })).toBeTruthy();
+    expect(await screen.findByText('✏️ Modifica card', {})).toBeTruthy();
   });
 
   // Il toast di successo usciva PRIMA della promessa di scrittura e la modale si
@@ -40,10 +40,10 @@ describe('regression: editCard dal CardItem', () => {
     const seed = { users: { prof1: PROF_DOC }, cards: { c1: mkCard('c1', { titolo: 'Card negata' }) } };
     const { db } = await renderApp({ seed, user: PROF });
 
-    fireEvent.click(await screen.findByText('Card negata', {}, { timeout: 4000 }));
+    fireEvent.click(await screen.findByText('Card negata', {}));
     fireEvent.click(screen.getByRole('button', { name: 'Altre azioni' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Modifica card' }, {}, { timeout: 4000 }));
-    await screen.findByText('✏️ Modifica card', {}, { timeout: 4000 });
+    fireEvent.click(await screen.findByRole('button', { name: 'Modifica card' }, {}));
+    await screen.findByText('✏️ Modifica card', {});
 
     db._failWrites('cards');
     fireEvent.click(screen.getByRole('button', { name: /Salva/ }));
@@ -68,10 +68,10 @@ describe('regression: editCard dal CardItem', () => {
     const seed = { users: { prof1: PROF_DOC }, cards: { c1: mkCard('c1', { titolo: 'Card origine' }) } };
     const { db } = await renderApp({ seed, user: PROF });
 
-    fireEvent.click(await screen.findByText('Card origine', {}, { timeout: 4000 }));
+    fireEvent.click(await screen.findByText('Card origine', {}));
     fireEvent.click(screen.getByRole('button', { name: 'Altre azioni' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Copia in altro anno' }, {}, { timeout: 4000 }));
-    const modale = (await screen.findByText('Copia in altro anno', {}, { timeout: 4000 })).closest(
+    fireEvent.click(await screen.findByRole('button', { name: 'Copia in altro anno' }, {}));
+    const modale = (await screen.findByText('Copia in altro anno', {})).closest(
       '[style*="z-index: 500"]'
     ) as HTMLElement;
     fireEvent.change(modale.querySelector('select') as HTMLSelectElement, { target: { value: '2027/2028' } });
@@ -99,8 +99,8 @@ describe('regression: editCard dal CardItem', () => {
     const seed = { users: { prof1: PROF_DOC }, cards: { c1: mkCard('c1', { titolo: 'Card letta' }) } };
     const { db } = await renderApp({ seed, user: PROF });
 
-    fireEvent.click(await screen.findByText('Card letta', {}, { timeout: 4000 }));
-    const ta = (await screen.findByRole('textbox', { name: 'Scrivi un commento' }, {}, { timeout: 4000 })) as HTMLTextAreaElement;
+    fireEvent.click(await screen.findByText('Card letta', {}));
+    const ta = (await screen.findByRole('textbox', { name: 'Scrivi un commento' }, {})) as HTMLTextAreaElement;
     fireEvent.input(ta, { target: { value: 'Domanda sulla lezione' } });
 
     db._failWrites('cards');
@@ -140,7 +140,7 @@ describe('regression: errore di rete non svuota la bacheca', () => {
       cards: { c1: mkCard('c1', { titolo: 'Card A' }), c2: mkCard('c2', { titolo: 'Card B' }) },
     };
     const { db } = await renderApp({ seed, user: PROF });
-    await screen.findByText('Card A', {}, { timeout: 4000 });
+    await screen.findByText('Card A', {});
     expect(screen.getByText('Card B')).toBeTruthy();
 
     db._failReads('cards', 'unavailable');
@@ -158,7 +158,7 @@ describe('regression: errore di rete non svuota la bacheca', () => {
   it('un secondo errore dello stesso episodio non ripete l avviso', async () => {
     const seed = { users: { prof1: PROF_DOC }, cards: { c1: mkCard('c1', { titolo: 'Card A' }) } };
     const { db } = await renderApp({ seed, user: PROF });
-    await screen.findByText('Card A', {}, { timeout: 4000 });
+    await screen.findByText('Card A', {});
 
     db._failReads('cards', 'unavailable');
     await waitFor(() => expect(screen.getAllByText(AVVISO).length).toBe(1));

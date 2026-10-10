@@ -20,7 +20,7 @@ function ordineGriglia() {
 
 // Apre la CardDetail cliccando il titolo nella griglia e la richiude.
 async function apriEChiudi(titolo: string) {
-  fireEvent.click(await screen.findByText(titolo, {}, { timeout: 4000 }));
+  fireEvent.click(await screen.findByText(titolo, {}));
   const inner = await waitFor(function () {
     const node = document.querySelector('.modal-inner');
     if (!node) throw new Error('CardDetail non aperta');
@@ -50,7 +50,7 @@ function seed3() {
 describe('Ordine della griglia — apertura recente e card fissate', () => {
   it('aprire una card la porta in cima; il pin resta davanti a tutte', async () => {
     await renderApp({ seed: seed3(), user: PROF });
-    await screen.findByText('Card Alfa', {}, { timeout: 4000 });
+    await screen.findByText('Card Alfa', {});
 
     // Stato di partenza: ordine manuale (nessuna card ancora aperta)
     expect(ordineGriglia()).toEqual(['card-A', 'card-B', 'card-C']);
@@ -73,7 +73,7 @@ describe('Ordine della griglia — apertura recente e card fissate', () => {
 
   it('il trascinamento riprende il comando: le card aperte tornano al loro posto', async () => {
     await renderApp({ seed: seed3(), user: PROF });
-    await screen.findByText('Card Alfa', {}, { timeout: 4000 });
+    await screen.findByText('Card Alfa', {});
 
     // Apro l'ultima card → bump: sale in cima (C, A, B)
     await apriEChiudi('Card Gamma');
@@ -96,7 +96,7 @@ describe('Ordine della griglia — apertura recente e card fissate', () => {
 
   it("l'ordine di apertura è per utente e sopravvive al reload", async () => {
     await renderApp({ seed: seed3(), user: PROF });
-    await screen.findByText('Card Beta', {}, { timeout: 4000 });
+    await screen.findByText('Card Beta', {});
 
     await apriEChiudi('Card Beta');
     await waitFor(function () {
@@ -110,7 +110,7 @@ describe('Ordine della griglia — apertura recente e card fissate', () => {
     // "Reload": smonto l'app e la rimonto con la stessa memoria locale
     cleanup();
     await renderApp({ seed: seed3(), user: PROF });
-    await screen.findByText('Card Alfa', {}, { timeout: 4000 });
+    await screen.findByText('Card Alfa', {});
     await waitFor(function () {
       expect(ordineGriglia()[0]).toBe('card-B');
     });

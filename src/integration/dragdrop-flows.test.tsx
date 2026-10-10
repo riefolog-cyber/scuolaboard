@@ -26,8 +26,8 @@ describe('Drag & drop con filtro classe attivo', () => {
       },
     };
     const { db } = await renderApp({ seed, user: PROF });
-    await screen.findByText('Card Alfa', {}, { timeout: 4000 });
-    await screen.findByText('Card Gamma', {}, { timeout: 4000 });
+    await screen.findByText('Card Alfa', {});
+    await screen.findByText('Card Gamma', {});
 
     // Filtro classe 3AI → visibili solo Card Alfa (1) e Card Gamma (3)
     const row = screen.getByText('CLASSE:').closest('div');

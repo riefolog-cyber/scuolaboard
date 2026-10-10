@@ -39,18 +39,18 @@ describe('Eliminazione analisi AI (prof)', () => {
       },
     };
     const { db } = await renderApp({ seed, user: PROF });
-    fireEvent.click(await screen.findByText('Card con analisi', {}, { timeout: 8000 }));
+    fireEvent.click(await screen.findByText('Card con analisi', {}));
 
     // Attende che la CardDetail lazy-loaded sia aperta prima di cercare i
     // pulsanti del pannello AI (la card ha anche il titolo in griglia → serve
     // un selettore univoco della modale, es. il bottone Chiudi ✕).
-    await screen.findByRole('button', { name: /Chiudi card/ }, { timeout: 8000 });
+    await screen.findByRole('button', { name: /Chiudi card/ });
 
     // Apre il pannello AI (bottone "🤖 ▼ AI") e clicca "🗑️ Elimina analisi".
     // NB: CardDetail è lazy-loaded → findByRole (async), non getByRole.
     // NB: /AI/ da solo matcha anche "🤖 Fai una domanda all'AI" → usiamo /▼ AI/.
-    fireEvent.click(await screen.findByRole('button', { name: /▼ AI/ }, { timeout: 8000 }));
-    await screen.findByText('↻ Rigenera', {}, { timeout: 8000 });
+    fireEvent.click(await screen.findByRole('button', { name: /▼ AI/ }));
+    await screen.findByText('↻ Rigenera', {});
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     fireEvent.click(screen.getByRole('button', { name: '🗑️ Elimina analisi' }));
 
@@ -79,10 +79,10 @@ describe('Eliminazione analisi AI (prof)', () => {
       ai_results: { c1: { analisi: { sintesi: 'Da tenere' } } },
     };
     const { db } = await renderApp({ seed, user: PROF });
-    fireEvent.click(await screen.findByText('Card con analisi 2', {}, { timeout: 8000 }));
+    fireEvent.click(await screen.findByText('Card con analisi 2', {}));
 
-    fireEvent.click(await screen.findByRole('button', { name: /▼ AI/ }, { timeout: 8000 }));
-    await screen.findByText('↻ Rigenera', {}, { timeout: 8000 });
+    fireEvent.click(await screen.findByRole('button', { name: /▼ AI/ }));
+    await screen.findByText('↻ Rigenera', {});
     vi.spyOn(window, 'confirm').mockReturnValue(false);
     fireEvent.click(screen.getByRole('button', { name: '🗑️ Elimina analisi' }));
 
@@ -111,13 +111,13 @@ describe('Eliminazione analisi AI (prof)', () => {
       },
     };
     const { db } = await renderApp({ seed, user: PROF });
-    fireEvent.click(await screen.findByText('Card con domande AI', {}, { timeout: 8000 }));
+    fireEvent.click(await screen.findByText('Card con domande AI', {}));
 
     // Apre il riquadro "Fai una domanda all'AI" (CardDetail è lazy → findByRole)
-    fireEvent.click(await screen.findByRole('button', { name: /Fai una domanda all'AI/ }, { timeout: 8000 }));
+    fireEvent.click(await screen.findByRole('button', { name: /Fai una domanda all'AI/ }));
     // Le domande già salvate sono visibili nel riquadro.
     // NB: la domanda è renderizzata come "❓ <testo>" → match parziale (regex).
-    await screen.findByText(/Spiega il teorema/, {}, { timeout: 8000 });
+    await screen.findByText(/Spiega il teorema/, {});
 
     vi.spyOn(window, 'confirm').mockReturnValue(true);
     fireEvent.click(screen.getByRole('button', { name: '🗑️ Elimina domande' }));
@@ -150,10 +150,10 @@ describe('Eliminazione analisi AI (prof)', () => {
       },
     };
     const { db } = await renderApp({ seed, user: PROF });
-    fireEvent.click(await screen.findByText('Card con domande AI 2', {}, { timeout: 8000 }));
+    fireEvent.click(await screen.findByText('Card con domande AI 2', {}));
 
-    fireEvent.click(await screen.findByRole('button', { name: /Fai una domanda all'AI/ }, { timeout: 8000 }));
-    await screen.findByText(/Domanda da tenere/, {}, { timeout: 8000 });
+    fireEvent.click(await screen.findByRole('button', { name: /Fai una domanda all'AI/ }));
+    await screen.findByText(/Domanda da tenere/, {});
 
     vi.spyOn(window, 'confirm').mockReturnValue(false);
     fireEvent.click(screen.getByRole('button', { name: '🗑️ Elimina domande' }));
@@ -192,12 +192,12 @@ describe('REGRESSIONE crash: runCardAI non deve mai portare aiMap a undefined', 
       }),
     });
     const { db } = await renderApp({ seed, user: PROF });
-    fireEvent.click(await screen.findByText('Card da analizzare', {}, { timeout: 8000 }));
+    fireEvent.click(await screen.findByText('Card da analizzare', {}));
 
     // Avvia l'analisi AI (bottone "🤖 + AI": la card non ha ancora analisi)
-    fireEvent.click(await screen.findByRole('button', { name: /\+ AI/ }, { timeout: 8000 }));
+    fireEvent.click(await screen.findByRole('button', { name: /\+ AI/ }));
     // Attende il completamento (la sintesi appare nel pannello AI)
-    await screen.findByText(/Sintesi nuova generata/, {}, { timeout: 5000 });
+    await screen.findByText(/Sintesi nuova generata/, {});
 
     // Ora apre il riquadro "Fai una domanda all'AI": con il bug qui avveniva
     // il crash (aiMap=undefined); con il fix aiMap resta un oggetto.
@@ -230,11 +230,11 @@ describe('Pannello AI: spunti per riflettere (domande_stimolo)', () => {
       },
     };
     const { db } = await renderApp({ seed, user: PROF });
-    fireEvent.click(await screen.findByText('Card con spunti', {}, { timeout: 8000 }));
+    fireEvent.click(await screen.findByText('Card con spunti', {}));
 
     // Apre il pannello AI del prof (bottone "🤖 ▼ AI")
-    fireEvent.click(await screen.findByRole('button', { name: /▼ AI/ }, { timeout: 8000 }));
-    await screen.findByText('↻ Rigenera', {}, { timeout: 8000 });
+    fireEvent.click(await screen.findByRole('button', { name: /▼ AI/ }));
+    await screen.findByText('↻ Rigenera', {});
 
     // Gli spunti (prima visibili SOLO agli studenti) ora compaiono anche al prof
     expect(screen.getByText('Domanda stimolo 1')).toBeTruthy();
@@ -261,10 +261,10 @@ describe('Pannello AI: spunti per riflettere (domande_stimolo)', () => {
       },
     };
     const { db } = await renderApp({ seed, user: STUD });
-    fireEvent.click(await screen.findByText('Card con spunti', {}, { timeout: 8000 }));
+    fireEvent.click(await screen.findByText('Card con spunti', {}));
 
     // Lo studente apre il pannello con "🤖 ▼ Analisi AI"
-    fireEvent.click(await screen.findByRole('button', { name: /Analisi AI/ }, { timeout: 8000 }));
+    fireEvent.click(await screen.findByRole('button', { name: /Analisi AI/ }));
 
     // L'analisi è completa: lo studente vede tutte e 4 le sezioni come il prof
     expect(screen.getByText(/Sintesi del tema/)).toBeTruthy();

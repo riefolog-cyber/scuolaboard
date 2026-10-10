@@ -51,7 +51,7 @@ function seed() {
 }
 
 async function appSettled() {
-  await screen.findByText('Card 1', {}, { timeout: 4000 });
+  await screen.findByText('Card 1', {});
   // Lascia assestare i commit di mount/subscription prima di misurare
   await new Promise((r) => setTimeout(r, 50));
 }
@@ -105,7 +105,7 @@ describe('C1 — Profiler: guadagno del context-split durante la digitazione', (
     await appSettled();
 
     fireEvent.click(screen.getByText('Card 1')); // apre CardDetail
-    const ta = await screen.findByRole('textbox', { name: 'Scrivi un commento' }, {}, { timeout: 4000 });
+    const ta = await screen.findByRole('textbox', { name: 'Scrivi un commento' }, {});
     await new Promise((r) => setTimeout(r, 30));
     profilerMetrics.length = 0;
 
@@ -139,7 +139,7 @@ describe('C1 — Profiler: guadagno del context-split durante la digitazione', (
     await appSettled();
 
     // La barra è già aperta (filtroBarOpen true al mount)
-    await screen.findAllByRole('button', { name: /Rinomina classe / }, {}, { timeout: 4000 });
+    await screen.findAllByRole('button', { name: /Rinomina classe / }, {});
     await new Promise((r) => setTimeout(r, 20));
 
     // 1) FULL RENDER: click su una classe → CardsContext → griglia ri-renderizzata

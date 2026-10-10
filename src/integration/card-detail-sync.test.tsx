@@ -28,7 +28,7 @@ describe('REGRESSIONE: CardDetail sincronizzata con lo snapshot Firestore', () =
     const { db } = await renderApp({ seed, user: PROF });
 
     // Il deep link apre la card automaticamente
-    await screen.findByText('Card aggiornata', {}, { timeout: 4000 });
+    await screen.findByText('Card aggiornata', {});
     await waitFor(() => {
       expect(screen.queryAllByText('Card aggiornata').length).toBeGreaterThan(0);
     });
@@ -44,6 +44,6 @@ describe('REGRESSIONE: CardDetail sincronizzata con lo snapshot Firestore', () =
     });
 
     // Il dettaglio APERTO deve mostrare i dati freschi: pannello quiz visibile
-    expect(await screen.findByText(/QUIZ · 1 domande/, {}, { timeout: 4000 })).toBeTruthy();
+    expect(await screen.findByText(/QUIZ · 1 domande/, {})).toBeTruthy();
   });
 });

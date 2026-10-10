@@ -26,12 +26,12 @@ describe('403 del Worker AI: il toast mostra la causa (hint)', () => {
 
     const seed = { users: { prof1: PROF_DOC }, cards: { c1: mkCard('c1', { titolo: 'Card AI' }) } };
     const { db } = await renderApp({ seed, user: PROF });
-    fireEvent.click(await screen.findByText('Card AI', {}, { timeout: 8000 }));
+    fireEvent.click(await screen.findByText('Card AI', {}));
 
     // Avvia l'analisi AI: il 403 deve trasformarsi in un messaggio leggibile
-    fireEvent.click(await screen.findByRole('button', { name: /\+ AI/ }, { timeout: 8000 }));
-    expect(await screen.findByText(/Origine non autorizzata/, {}, { timeout: 5000 })).toBeTruthy();
-    expect(await screen.findByText(/ALLOWED_ORIGINS/, {}, { timeout: 5000 })).toBeTruthy();
+    fireEvent.click(await screen.findByRole('button', { name: /\+ AI/ }));
+    expect(await screen.findByText(/Origine non autorizzata/, {})).toBeTruthy();
+    expect(await screen.findByText(/ALLOWED_ORIGINS/, {})).toBeTruthy();
     // Nessuna analisi salvata (la chiamata è fallita)
     expect(db._get('ai_results', 'c1')).toBeFalsy();
   });
@@ -50,8 +50,8 @@ describe('403 del Worker AI: il toast mostra la causa (hint)', () => {
 
     const seed = { users: { prof1: PROF_DOC }, cards: { c1: mkCard('c1', { titolo: 'Card role' }) } };
     await renderApp({ seed, user: PROF });
-    fireEvent.click(await screen.findByText('Card role', {}, { timeout: 8000 }));
-    fireEvent.click(await screen.findByRole('button', { name: /\+ AI/ }, { timeout: 8000 }));
-    expect(await screen.findByText(/Accesso AI riservato ai docenti/, {}, { timeout: 5000 })).toBeTruthy();
+    fireEvent.click(await screen.findByText('Card role', {}));
+    fireEvent.click(await screen.findByRole('button', { name: /\+ AI/ }));
+    expect(await screen.findByText(/Accesso AI riservato ai docenti/, {})).toBeTruthy();
   });
 });

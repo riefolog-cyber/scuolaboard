@@ -16,18 +16,18 @@ describe('Flussi principali — prof', () => {
       cards: { c1: mkCard('c1', { titolo: 'Card uno' }), c2: mkCard('c2', { titolo: 'Card due' }) },
     };
     await renderApp({ seed, user: PROF });
-    expect(await screen.findByText('Card uno', {}, { timeout: 4000 })).toBeTruthy();
+    expect(await screen.findByText('Card uno', {})).toBeTruthy();
     expect(screen.getByText('Card due')).toBeTruthy();
   });
 
   it('crea una card dal FAB e la salva su Firestore', async () => {
     const seed = { users: { prof1: PROF_DOC }, cards: {} };
     const { db } = await renderApp({ seed, user: PROF });
-    fireEvent.click(await screen.findByTitle('Nuova card', {}, { timeout: 4000 }));
+    fireEvent.click(await screen.findByTitle('Nuova card', {}));
     fireEvent.input(screen.getByPlaceholderText('Es. Riflessione su…'), { target: { value: 'Nuova card test' } });
     fireEvent.input(screen.getByPlaceholderText('Descrizione, spunti…'), { target: { value: 'contenuto' } });
     fireEvent.click(screen.getByText('✅ Crea card'));
-    expect(await screen.findByText('Nuova card test', {}, { timeout: 4000 })).toBeTruthy();
+    expect(await screen.findByText('Nuova card test', {})).toBeTruthy();
     await waitFor(() => {
       const found = db._all('cards').find(([, c]) => c.titolo === 'Nuova card test');
       expect(found).toBeTruthy();
@@ -37,11 +37,11 @@ describe('Flussi principali — prof', () => {
   it('aggiunge un commento a una card', async () => {
     const seed = { users: { prof1: PROF_DOC }, cards: { c1: mkCard('c1', { titolo: 'Card uno' }) } };
     const { db } = await renderApp({ seed, user: PROF });
-    fireEvent.click(await screen.findByText('Card uno', {}, { timeout: 4000 }));
-    const input = await screen.findByPlaceholderText('Scrivi un commento…', {}, { timeout: 4000 });
+    fireEvent.click(await screen.findByText('Card uno', {}));
+    const input = await screen.findByPlaceholderText('Scrivi un commento…', {});
     fireEvent.input(input, { target: { value: 'Ottima lezione!' } });
     fireEvent.keyDown(input, { key: 'Enter' });
-    expect(await screen.findByText('Ottima lezione!', {}, { timeout: 4000 })).toBeTruthy();
+    expect(await screen.findByText('Ottima lezione!', {})).toBeTruthy();
     await waitFor(() => {
       const c1 = db._get('cards', 'c1');
       expect(c1.commenti.length).toBe(1);
@@ -52,7 +52,7 @@ describe('Flussi principali — prof', () => {
     const seed = { users: { prof1: PROF_DOC }, cards: { c1: mkCard('c1', { titolo: 'Card uno' }) } };
     const { db } = await renderApp({ seed, user: PROF });
     // Il bottone like ha aria-label="Aggiungi like" (accessibile name), non 👍
-    const likeBtn = await screen.findByRole('button', { name: /like/i }, { timeout: 4000 });
+    const likeBtn = await screen.findByRole('button', { name: /like/i });
     fireEvent.click(likeBtn);
     await waitFor(() => {
       expect(db._get('cards', 'c1').likes).toBe(1);
@@ -70,7 +70,7 @@ describe('Flussi principali — prof', () => {
       },
     };
     await renderApp({ seed, user: PROF });
-    await screen.findByText('Card TUTTE', {}, { timeout: 4000 });
+    await screen.findByText('Card TUTTE', {});
     fireEvent.click(screen.getByRole('button', { name: '3AO' }));
     expect(screen.getByText('Card 3AO')).toBeTruthy();
     expect(screen.getByText('Card TUTTE')).toBeTruthy(); // TUTTE resta sempre visibile
@@ -97,8 +97,8 @@ describe('Modifica ed elimina il proprio commento', () => {
       },
     };
     const { db } = await renderApp({ seed, user: STUD });
-    fireEvent.click(await screen.findByText('Card uno', {}, { timeout: 4000 }));
-    await screen.findByText('Commento originale', {}, { timeout: 4000 });
+    fireEvent.click(await screen.findByText('Card uno', {}));
+    await screen.findByText('Commento originale', {});
     expect(screen.getByText('Commento di un altro')).toBeTruthy();
 
     // Solo il commento PROPRIO ha i pulsanti modifica/elimina
@@ -110,7 +110,7 @@ describe('Modifica ed elimina il proprio commento', () => {
     fireEvent.input(ta, { target: { value: 'Commento modificato!' } });
     fireEvent.click(screen.getByRole('button', { name: 'Salva commento' }));
 
-    expect(await screen.findByText('Commento modificato!', {}, { timeout: 4000 })).toBeTruthy();
+    expect(await screen.findByText('Commento modificato!', {})).toBeTruthy();
     expect(screen.queryByText('Commento originale')).toBeNull();
     await waitFor(() => {
       const c1 = db._get('cards', 'c1');
@@ -133,12 +133,12 @@ describe('Modifica ed elimina il proprio commento', () => {
       },
     };
     const { db } = await renderApp({ seed, user: STUD });
-    fireEvent.click(await screen.findByText('Card uno', {}, { timeout: 4000 }));
-    await screen.findByText('Da eliminare', {}, { timeout: 4000 });
+    fireEvent.click(await screen.findByText('Card uno', {}));
+    await screen.findByText('Da eliminare', {});
 
     fireEvent.click(screen.getByRole('button', { name: 'Elimina commento' }));
     // Modale di conferma (stesso titolo dell'aria-label: l'h3, non un bottone)
-    await screen.findByText('Elimina commento', {}, { timeout: 4000 });
+    await screen.findByText('Elimina commento', {});
     const modal = modalRoot('Elimina commento');
     fireEvent.click(within(modal).getByRole('button', { name: '🗑️ Elimina' }));
 
@@ -162,8 +162,8 @@ describe('Modifica ed elimina il proprio commento', () => {
       },
     };
     const { db } = await renderApp({ seed, user: PROF });
-    fireEvent.click(await screen.findByText('Card uno', {}, { timeout: 4000 }));
-    await screen.findByText('Avviso prof', {}, { timeout: 4000 });
+    fireEvent.click(await screen.findByText('Card uno', {}));
+    await screen.findByText('Avviso prof', {});
     expect(screen.getByText('Commento studente')).toBeTruthy();
 
     // Il prof vede i pulsanti su TUTTI i commenti (propri e degli studenti)
@@ -177,7 +177,7 @@ describe('Modifica ed elimina il proprio commento', () => {
     fireEvent.input(ta, { target: { value: 'Commento corretto dal prof' } });
     fireEvent.click(screen.getByRole('button', { name: 'Salva commento' }));
 
-    expect(await screen.findByText('Commento corretto dal prof', {}, { timeout: 4000 })).toBeTruthy();
+    expect(await screen.findByText('Commento corretto dal prof', {})).toBeTruthy();
     await waitFor(() => {
       const c1 = db._get('cards', 'c1');
       expect(c1.commenti[1].testo).toBe('Commento corretto dal prof');
@@ -206,8 +206,8 @@ describe('Rispondi ai commenti', () => {
       },
     };
     const { db } = await renderApp({ seed, user: STUD });
-    fireEvent.click(await screen.findByText('Card uno', {}, { timeout: 4000 }));
-    await screen.findByText('Bella lezione', {}, { timeout: 4000 });
+    fireEvent.click(await screen.findByText('Card uno', {}));
+    await screen.findByText('Bella lezione', {});
 
     fireEvent.click(screen.getByRole('button', { name: 'Rispondi' }));
     const ta = await screen.findByPlaceholderText('Scrivi una risposta…');
@@ -216,7 +216,7 @@ describe('Rispondi ai commenti', () => {
 
     // La risposta appare nel thread e viene salvata su Firestore con testo
     // integro (niente backslash davanti all'apostrofo)
-    expect(await screen.findByText("Sono d'accordo!", {}, { timeout: 4000 })).toBeTruthy();
+    expect(await screen.findByText("Sono d'accordo!", {})).toBeTruthy();
     await waitFor(() => {
       const c1 = db._get('cards', 'c1');
       expect(c1.commenti[0].risposte.length).toBe(1);
@@ -248,15 +248,15 @@ describe('Rispondi ai commenti', () => {
       },
     };
     const { db } = await renderApp({ seed, user: STUD });
-    fireEvent.click(await screen.findByText('Card uno', {}, { timeout: 4000 }));
-    await screen.findByText('La mia risposta', {}, { timeout: 4000 });
+    fireEvent.click(await screen.findByText('Card uno', {}));
+    await screen.findByText('La mia risposta', {});
     expect(screen.getByText('Risposta altrui')).toBeTruthy();
 
     // Solo la risposta propria ha il pulsante elimina (1 su 2)
     expect(screen.getAllByRole('button', { name: 'Elimina commento' }).length).toBe(1);
 
     fireEvent.click(screen.getByRole('button', { name: 'Elimina commento' }));
-    await screen.findByText('Elimina risposta', {}, { timeout: 4000 });
+    await screen.findByText('Elimina risposta', {});
     const modal = modalRoot('Elimina risposta');
     fireEvent.click(within(modal).getByRole('button', { name: '🗑️ Elimina' }));
 
@@ -290,15 +290,15 @@ describe('Rispondi ai commenti', () => {
       },
     };
     const { db } = await renderApp({ seed, user: STUD });
-    fireEvent.click(await screen.findByText('Card uno', {}, { timeout: 4000 }));
-    await screen.findByText('La mia risposta', {}, { timeout: 4000 });
+    fireEvent.click(await screen.findByText('Card uno', {}));
+    await screen.findByText('La mia risposta', {});
 
     fireEvent.click(screen.getByRole('button', { name: 'Modifica commento' }));
     const ta = await screen.findByDisplayValue('La mia risposta');
     fireEvent.input(ta, { target: { value: 'Risposta aggiornata' } });
     fireEvent.click(screen.getByRole('button', { name: 'Salva commento' }));
 
-    expect(await screen.findByText('Risposta aggiornata', {}, { timeout: 4000 })).toBeTruthy();
+    expect(await screen.findByText('Risposta aggiornata', {})).toBeTruthy();
     await waitFor(() => {
       const risp = db._get('cards', 'c1').commenti[0].risposte[0];
       expect(risp.testo).toBe('Risposta aggiornata');
@@ -323,27 +323,24 @@ describe('Bozza nuova card (autosave)', () => {
     const seed = { users: { prof1: PROF_DOC }, cards: {} };
     await renderApp({ seed, user: PROF });
 
-    fireEvent.click(await screen.findByTitle('Nuova card', {}, { timeout: 4000 }));
+    fireEvent.click(await screen.findByTitle('Nuova card', {}));
     fireEvent.input(screen.getByPlaceholderText('Es. Riflessione su…'), {
       target: { value: 'Bozza in corso' },
     });
     fireEvent.input(screen.getByPlaceholderText('Descrizione, spunti…'), { target: { value: 'contenuto bozza' } });
 
     // La bozza viene salvata (debounce ~500ms → waitFor aspetta il poll)
-    await waitFor(
-      function () {
-        expect(readDraft() && readDraft().titolo).toBe('Bozza in corso');
-      },
-      { timeout: 3000 }
-    );
+    await waitFor(function () {
+      expect(readDraft() && readDraft().titolo).toBe('Bozza in corso');
+    });
 
     // Chiude la modale con Esc (scenario "si chiude da sola") e riapre il FAB
     // → la bozza salvata viene ripristinata, niente lavoro perso
     fireEvent.keyDown(document, { key: 'Escape' });
     await waitFor(() => expect(screen.queryByPlaceholderText('Es. Riflessione su…')).toBeNull());
 
-    fireEvent.click(await screen.findByTitle('Nuova card', {}, { timeout: 4000 }));
-    expect(await screen.findByDisplayValue('Bozza in corso', {}, { timeout: 4000 })).toBeTruthy();
+    fireEvent.click(await screen.findByTitle('Nuova card', {}));
+    expect(await screen.findByDisplayValue('Bozza in corso', {})).toBeTruthy();
     expect(screen.getByDisplayValue('contenuto bozza')).toBeTruthy();
     // Chip di bozza attiva + possibilità di scartarla
     expect(screen.getByText('📋 Bozza ripristinata')).toBeTruthy();
@@ -354,8 +351,8 @@ describe('Bozza nuova card (autosave)', () => {
     localStorage.setItem(DRAFT_KEY, JSON.stringify({ titolo: 'Bozza vecchia', testo: 'x', salvata: Date.now() }));
     await renderApp({ seed, user: PROF });
 
-    fireEvent.click(await screen.findByTitle('Nuova card', {}, { timeout: 4000 }));
-    expect(await screen.findByDisplayValue('Bozza vecchia', {}, { timeout: 4000 })).toBeTruthy();
+    fireEvent.click(await screen.findByTitle('Nuova card', {}));
+    expect(await screen.findByDisplayValue('Bozza vecchia', {})).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: 'Scarta bozza' }));
     expect(readDraft()).toBeNull();
@@ -368,12 +365,12 @@ describe('Bozza nuova card (autosave)', () => {
     localStorage.setItem(DRAFT_KEY, JSON.stringify({ titolo: 'Bozza da pubblicare', testo: '', salvata: Date.now() }));
     await renderApp({ seed, user: PROF });
 
-    fireEvent.click(await screen.findByTitle('Nuova card', {}, { timeout: 4000 }));
-    await screen.findByDisplayValue('Bozza da pubblicare', {}, { timeout: 4000 });
+    fireEvent.click(await screen.findByTitle('Nuova card', {}));
+    await screen.findByDisplayValue('Bozza da pubblicare', {});
     fireEvent.click(screen.getByText('✅ Crea card'));
-    await screen.findByText('Bozza da pubblicare', {}, { timeout: 4000 });
+    await screen.findByText('Bozza da pubblicare', {});
 
-    await waitFor(() => expect(readDraft()).toBeNull(), { timeout: 3000 });
+    await waitFor(() => expect(readDraft()).toBeNull());
   });
 });
 
@@ -389,7 +386,7 @@ describe('Vista studente', () => {
       },
     };
     await renderApp({ seed, user: STUD });
-    await screen.findByText('Card TUTTE', {}, { timeout: 4000 });
+    await screen.findByText('Card TUTTE', {});
     expect(screen.getByText('Card 3AI')).toBeTruthy();
     expect(screen.queryByText('Card 4AI')).toBeNull();
   });
@@ -400,8 +397,8 @@ describe('Vista studente', () => {
       cards: { c1: mkCard('c1', { titolo: 'Card uno', classi: ['3AI'] }) },
     };
     await renderApp({ seed, user: STUD });
-    fireEvent.click(await screen.findByText('Card uno', {}, { timeout: 4000 }));
-    await screen.findByPlaceholderText('Scrivi un commento…', {}, { timeout: 4000 });
+    fireEvent.click(await screen.findByText('Card uno', {}));
+    await screen.findByPlaceholderText('Scrivi un commento…', {});
     // Nessun pulsante "+ AI" per lo studente
     expect(screen.queryByText('🤖 + AI')).toBeNull();
     // E nessuna chiamata di rete verso il worker AI

@@ -89,7 +89,7 @@ describe('avvisi di classe: pubblicazione dal FAB', () => {
     const seed = { users: { prof1: PROF_DOC, stud2: STUD2_DOC }, cards: {} };
     const { db } = await renderApp({ seed, user: PROF });
 
-    fireEvent.click(await screen.findByTitle('Nuova card', {}, { timeout: 4000 }));
+    fireEvent.click(await screen.findByTitle('Nuova card', {}));
     fireEvent.input(screen.getByPlaceholderText('Es. Riflessione su…'), { target: { value: 'Verifica di domani' } });
     fireEvent.input(screen.getByPlaceholderText('Descrizione, spunti…'), { target: { value: 'contenuto' } });
     // Senza classi selezionate la card non è visibile a nessuno (stessa regola
@@ -100,7 +100,7 @@ describe('avvisi di classe: pubblicazione dal FAB', () => {
     // Il docente vede la CONFERMA di quanti studenti ha avvisato (qui un solo
     // studente in classe): è la risposta alla sua azione, non un log. Va
     // verificata SUBITO: il toast dura 2,4s e le attese sul db vengono dopo.
-    expect(await screen.findByText(/1 studente avvisato/, {}, { timeout: 4000 })).toBeTruthy();
+    expect(await screen.findByText(/1 studente avvisato/, {})).toBeTruthy();
 
     await waitFor(() => {
       const doc = db._get('notifiche', 'stud2');
@@ -132,11 +132,11 @@ describe('avvisi di classe: proposta approvata dal docente', () => {
     };
     const { db } = await renderApp({ seed, user: PROF });
 
-    fireEvent.click(await screen.findByLabelText('Accetta proposta', {}, { timeout: 4000 }));
+    fireEvent.click(await screen.findByLabelText('Accetta proposta', {}));
 
     // Il docente vede la conferma dell'annuncio (due studenti in 3AI; va
     // verificata subito, il toast dura 2,4s).
-    expect(await screen.findByText(/2 studenti avvisati/, {}, { timeout: 4000 })).toBeTruthy();
+    expect(await screen.findByText(/2 studenti avvisati/, {})).toBeTruthy();
 
     // La classe riceve l'annuncio come per una card nuova...
     await waitFor(() => {
@@ -179,7 +179,7 @@ describe('avvisi di classe: badge persistente sulla card (annuncio non partito)'
 
       // Il badge non è un toast: resta sulla card e dice CHI non ha ricevuto
       // l'avviso (elenco scritto sulla card dal tentativo fallito).
-      const badge = await screen.findByText(/mancano Anna Verdi/, {}, { timeout: 4000 });
+      const badge = await screen.findByText(/mancano Anna Verdi/, {});
       expect(badge).toBeTruthy();
       expect(db._get('cards', String(cardId)).avvisiPendenti).toBe(true);
       expect(db._get('cards', String(cardId)).avvisiMancanti).toEqual([{ uid: 'stud2', nome: 'Anna Verdi' }]);
@@ -191,7 +191,7 @@ describe('avvisi di classe: badge persistente sulla card (annuncio non partito)'
         expect(fake).toHaveBeenCalledTimes(2);
       });
       expect(fake.mock.calls[1][0].soloUid).toEqual(['stud2']);
-      expect(await screen.findByText(/1 studente avvisato/, {}, { timeout: 4000 })).toBeTruthy();
+      expect(await screen.findByText(/1 studente avvisato/, {})).toBeTruthy();
 
       // ...e a invio concluso la coda si chiude e l'elenco dei mancanti si azzera.
       await waitFor(() => {
@@ -230,14 +230,14 @@ describe('avvisi di classe: indicatore in alto con "Riprova tutti"', () => {
 
       // L'indicatore sta nella fascia in alto e non è un toast: resta finché il
       // problema non è risolto.
-      const indicatore = await screen.findByText(/2 avvisi in sospeso/, {}, { timeout: 4000 });
+      const indicatore = await screen.findByText(/2 avvisi in sospeso/, {});
       expect(indicatore).toBeTruthy();
       expect(document.querySelector('.annunci-sospesi')).toBeTruthy();
 
       fireEvent.click(screen.getByLabelText('Riprova tutti gli avvisi'));
 
       // Un solo esito aggregato per entrambe le card.
-      expect(await screen.findByText(/4 studenti avvisati/, {}, { timeout: 4000 })).toBeTruthy();
+      expect(await screen.findByText(/4 studenti avvisati/, {})).toBeTruthy();
       await waitFor(() => {
         expect(db._get('cards', String(c1)).avvisiPendenti).toBe(false);
         expect(db._get('cards', String(c2)).avvisiPendenti).toBe(false);
@@ -262,11 +262,11 @@ describe('avvisi di classe: commento di uno studente', () => {
     };
     const { db } = await renderApp({ seed, user: STUD });
 
-    fireEvent.click(await screen.findByText('Uscita didattica', {}, { timeout: 4000 }));
-    const input = await screen.findByPlaceholderText('Scrivi un commento…', {}, { timeout: 4000 });
+    fireEvent.click(await screen.findByText('Uscita didattica', {}));
+    const input = await screen.findByPlaceholderText('Scrivi un commento…', {});
     fireEvent.input(input, { target: { value: 'Che posto fantastico!' } });
     fireEvent.keyDown(input, { key: 'Enter' });
-    await screen.findByText('Che posto fantastico!', {}, { timeout: 4000 });
+    await screen.findByText('Che posto fantastico!', {});
 
     // Il compagno riceve l'avviso, con l'id del SUO commento.
     await waitFor(() => {
@@ -318,11 +318,11 @@ describe('avvisi di classe: commento di uno studente', () => {
     };
     const { db } = await renderApp({ seed, user: STUD2 });
 
-    fireEvent.click(await screen.findByText('Uscita didattica', {}, { timeout: 4000 }));
-    const input = await screen.findByPlaceholderText('Scrivi un commento…', {}, { timeout: 4000 });
+    fireEvent.click(await screen.findByText('Uscita didattica', {}));
+    const input = await screen.findByPlaceholderText('Scrivi un commento…', {});
     fireEvent.input(input, { target: { value: 'Io vengo!' } });
     fireEvent.keyDown(input, { key: 'Enter' });
-    await screen.findByText('Io vengo!', {}, { timeout: 4000 });
+    await screen.findByText('Io vengo!', {});
 
     // Luca ha già l'annuncio della card in lista: il nuovo avviso deve
     // AFFIANCARLO (id diverso), non essere inghiottito dalla dedupe.
@@ -349,11 +349,11 @@ describe('avvisi di classe: commento di uno studente', () => {
     };
     const { db } = await renderApp({ seed, user: STUD });
 
-    fireEvent.click(await screen.findByText('Uscita didattica', {}, { timeout: 4000 }));
-    const input = await screen.findByPlaceholderText('Scrivi un commento…', {}, { timeout: 4000 });
+    fireEvent.click(await screen.findByText('Uscita didattica', {}));
+    const input = await screen.findByPlaceholderText('Scrivi un commento…', {});
     fireEvent.input(input, { target: { value: testoLungo } });
     fireEvent.keyDown(input, { key: 'Enter' });
-    await screen.findByText(/Il posto è meraviglioso/, {}, { timeout: 4000 });
+    await screen.findByText(/Il posto è meraviglioso/, {});
 
     await waitFor(() => {
       const doc = db._get('notifiche', 'stud2');

@@ -16,7 +16,7 @@ describe('Upload immagini (prof)', () => {
     const { db } = await renderApp({ seed: { users: { prof1: PROF_DOC }, cards: {} }, user: PROF });
     window.compressImage = compressMock;
 
-    fireEvent.click(await screen.findByTitle('Nuova card', {}, { timeout: 4000 }));
+    fireEvent.click(await screen.findByTitle('Nuova card', {}));
     fireEvent.input(screen.getByPlaceholderText('Es. Riflessione su…'), {
       target: { value: 'Card con foto' },
     });
@@ -49,7 +49,7 @@ describe('Upload immagini (prof)', () => {
     const { db } = await renderApp({ seed: { users: { prof1: PROF_DOC }, cards: {} }, user: PROF });
     window.compressImage = compressMock;
 
-    fireEvent.click(await screen.findByTitle('Nuova card', {}, { timeout: 4000 }));
+    fireEvent.click(await screen.findByTitle('Nuova card', {}));
     fireEvent.input(screen.getByPlaceholderText('Es. Riflessione su…'), {
       target: { value: 'Card senza foto' },
     });
@@ -76,7 +76,7 @@ describe('Upload immagini (prof)', () => {
     const { db } = await renderApp({ seed: { users: { prof1: PROF_DOC }, cards: {} }, user: PROF });
     window.compressImage = compressMock;
 
-    fireEvent.click(await screen.findByTitle('Nuova card', {}, { timeout: 4000 }));
+    fireEvent.click(await screen.findByTitle('Nuova card', {}));
     fireEvent.input(screen.getByPlaceholderText('Es. Riflessione su…'), {
       target: { value: 'Card foto enorme' },
     });
@@ -114,10 +114,10 @@ describe('Upload immagini (prof)', () => {
       },
     };
     await renderApp({ seed, user: PROF });
-    fireEvent.click(await screen.findByText('Card con copertina e galleria', {}, { timeout: 4000 }));
+    fireEvent.click(await screen.findByText('Card con copertina e galleria', {}));
 
     // La didascalia della galleria è visibile sotto la miniatura
-    expect(await screen.findByText('Seconda immagine', {}, { timeout: 4000 })).toBeTruthy();
+    expect(await screen.findByText('Seconda immagine', {})).toBeTruthy();
 
     // L'immagine galleria usa img.url (non l'oggetto intero)
     const galleryImg = screen.getAllByRole('img').find((i) => i.getAttribute('alt') === 'Seconda immagine');
@@ -147,7 +147,7 @@ describe('Import quiz da file (docente)', () => {
 
   it('importa un .json con 2 domande e le salva nella card con le risposte corrette', async () => {
     const { db } = await renderApp({ seed: { users: { prof1: PROF_DOC }, cards: {} }, user: PROF });
-    fireEvent.click(await screen.findByTitle('Nuova card', {}, { timeout: 4000 }));
+    fireEvent.click(await screen.findByTitle('Nuova card', {}));
     scriviTitolo('Quiz importato');
     scegliTipoQuiz();
 
@@ -162,7 +162,7 @@ describe('Import quiz da file (docente)', () => {
       'application/json'
     );
 
-    await waitFor(() => expect(screen.getByText(/domande importate/)).toBeTruthy(), { timeout: 5000 });
+    await waitFor(() => expect(screen.getByText(/domande importate/)).toBeTruthy());
     // Le domande sono visibili nel pannello di editing.
     expect(screen.getByDisplayValue('Domanda uno?')).toBeTruthy();
     expect(screen.getByDisplayValue('Domanda due?')).toBeTruthy();
@@ -182,13 +182,13 @@ describe('Import quiz da file (docente)', () => {
 
   it('un file non valido spiega il motivo e NON aggiunge domande', async () => {
     const { db } = await renderApp({ seed: { users: { prof1: PROF_DOC }, cards: {} }, user: PROF });
-    fireEvent.click(await screen.findByTitle('Nuova card', {}, { timeout: 4000 }));
+    fireEvent.click(await screen.findByTitle('Nuova card', {}));
     scriviTitolo('Quiz rotto');
     scegliTipoQuiz();
 
     carica('rotto.json', '{ non e json', 'application/json');
 
-    await waitFor(() => expect(screen.getByText(/JSON non valido/)).toBeTruthy(), { timeout: 5000 });
+    await waitFor(() => expect(screen.getByText(/JSON non valido/)).toBeTruthy());
     expect(screen.queryByText(/domande importate/)).toBeNull();
 
     fireEvent.click(screen.getByText('✅ Crea card'));
@@ -202,7 +202,7 @@ describe('Import quiz da file (docente)', () => {
 
   it('importa da un file HTML (quizData dentro lo script) come quello segnalato', async () => {
     const { db } = await renderApp({ seed: { users: { prof1: PROF_DOC }, cards: {} }, user: PROF });
-    fireEvent.click(await screen.findByTitle('Nuova card', {}, { timeout: 4000 }));
+    fireEvent.click(await screen.findByTitle('Nuova card', {}));
     scriviTitolo('Da html');
     scegliTipoQuiz();
 
@@ -215,7 +215,7 @@ describe('Import quiz da file (docente)', () => {
       'text/html'
     );
 
-    await waitFor(() => expect(screen.getByText(/domande importate/)).toBeTruthy(), { timeout: 5000 });
+    await waitFor(() => expect(screen.getByText(/domande importate/)).toBeTruthy());
     expect(screen.getByText(/lette dal file HTML/)).toBeTruthy();
 
     fireEvent.click(screen.getByText('✅ Crea card'));

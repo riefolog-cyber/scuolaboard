@@ -16,7 +16,7 @@ afterEach(teardownTestEnv);
 // (.modal-inner): CardDetail è un overlay z-index 200, la griglia sotto ha
 // bottoni con lo stesso testo (es. 👍 nella CardItem).
 async function openCard(titolo) {
-  fireEvent.click(await screen.findByText(titolo, {}, { timeout: 4000 }));
+  fireEvent.click(await screen.findByText(titolo, {}));
   const el = await waitFor(() => {
     const node = document.querySelector('.modal-inner');
     if (!node) throw new Error('CardDetail non aperta');
@@ -31,7 +31,7 @@ describe('CardDetail — stato APERTO', () => {
     const { db } = await renderApp({ seed, user: PROF });
 
     const detail = await openCard('Card like');
-    await detail.findByRole('button', { name: /👍/ }, {}, { timeout: 4000 });
+    await detail.findByRole('button', { name: /👍/ }, {});
 
     fireEvent.click(detail.getByRole('button', { name: /👍/ }));
     await waitFor(() => expect(db._get('cards', 'c1').likes).toBe(1));
@@ -42,7 +42,7 @@ describe('CardDetail — stato APERTO', () => {
     const { db } = await renderApp({ seed, user: PROF });
 
     const detail = await openCard('Card reazione');
-    fireEvent.click(await detail.findByRole('button', { name: 'Reagisci 🤔' }, {}, { timeout: 4000 }));
+    fireEvent.click(await detail.findByRole('button', { name: 'Reagisci 🤔' }, {}));
 
     await waitFor(() => {
       const re = db._get('cards', 'c1').reazioni;
@@ -55,7 +55,7 @@ describe('CardDetail — stato APERTO', () => {
     const { db } = await renderApp({ seed, user: PROF });
 
     const detail = await openCard('Card commento');
-    const ta = await detail.findByRole('textbox', { name: 'Scrivi un commento' }, {}, { timeout: 4000 });
+    const ta = await detail.findByRole('textbox', { name: 'Scrivi un commento' }, {});
 
     fireEvent.input(ta, { target: { value: 'Ottima lezione' } });
     fireEvent.click(detail.getByRole('button', { name: 'Invia' }));
@@ -77,7 +77,7 @@ describe('CardDetail — stato APERTO', () => {
 
     const detail = await openCard('Card scadenza');
     // Il countdown è '⏰ <tempo>' — regex esclude il bottone '⏰ Timer'
-    await detail.findByText(/⏰\s+\d/, {}, { timeout: 4000 });
+    await detail.findByText(/⏰\s+\d/, {});
 
     fireEvent.click(detail.getByRole('button', { name: 'Rimuovi scadenza' }));
     await waitFor(() => expect(db._get('cards', 'c1').scadenza).toBeFalsy());
@@ -97,7 +97,7 @@ describe('CardDetail — stato APERTO', () => {
     await renderApp({ seed, user: PROF });
 
     const detail = await openCard('Card nascosta');
-    expect(await detail.findByText('NASCOSTA', {}, { timeout: 4000 })).toBeTruthy();
+    expect(await detail.findByText('NASCOSTA', {})).toBeTruthy();
     expect(detail.getByText('📄 dispensa.pdf')).toBeTruthy();
   });
 
@@ -129,7 +129,7 @@ describe('CardDetail — stato APERTO', () => {
     expect(pdf.getAttribute('href')).toBe('data:application/pdf;base64,JVBER');
     expect(pdf.getAttribute('target')).toBe('_blank');
 
-    fireEvent.click(await detail.findByRole('button', { name: '🌐 lezione.html' }, {}, { timeout: 4000 }));
+    fireEvent.click(await detail.findByRole('button', { name: '🌐 lezione.html' }, {}));
     const frame = await waitFor(() => {
       const f = document.querySelector('[data-testid="anteprima-html"] iframe');
       if (!f) throw new Error('anteprima non aperta');
@@ -198,7 +198,7 @@ describe('CardDetail — stato APERTO', () => {
     const seed = { users: { stud1: STUD_DOC }, cards: {} };
     await renderApp({ seed, user: STUD });
 
-    fireEvent.click(await screen.findByTitle('Proponi card', {}, { timeout: 4000 }));
+    fireEvent.click(await screen.findByTitle('Proponi card', {}));
     await waitFor(() => {
       const inputs = Array.from(document.querySelectorAll('input[type="file"]'));
       expect(inputs.every((i) => i.accept.indexOf('.pdf') < 0)).toBe(true);
@@ -209,8 +209,8 @@ describe('CardDetail — stato APERTO', () => {
     const seed = { users: { prof1: PROF_DOC }, cards: {} };
     await renderApp({ seed, user: PROF });
 
-    fireEvent.click(await screen.findByTitle('Nuova card', {}, { timeout: 4000 }));
-    await screen.findByText('📎 ALLEGATI', {}, { timeout: 4000 });
+    fireEvent.click(await screen.findByTitle('Nuova card', {}));
+    await screen.findByText('📎 ALLEGATI', {});
 
     const input = Array.from(document.querySelectorAll('input[type="file"]')).find((i) => i.accept.indexOf('.pdf') >= 0);
     expect(input).toBeTruthy();
@@ -236,8 +236,8 @@ describe('CardDetail — stato APERTO', () => {
       },
     };
     await renderApp({ seed, user: STUD });
-    fireEvent.click(await screen.findByText('Quiz IA', {}, { timeout: 4000 }));
-    expect(await screen.findByText('Supporto IA – revisionato dal docente', {}, { timeout: 4000 })).toBeTruthy();
+    fireEvent.click(await screen.findByText('Quiz IA', {}));
+    expect(await screen.findByText('Supporto IA – revisionato dal docente', {})).toBeTruthy();
   });
 
   it('quiz scritto a mano: NESSUN badge (dichiarare IA sarebbe falso)', async () => {
@@ -251,8 +251,8 @@ describe('CardDetail — stato APERTO', () => {
       },
     };
     await renderApp({ seed, user: PROF });
-    fireEvent.click(await screen.findByText('Quiz manuale', {}, { timeout: 4000 }));
-    await screen.findByText(/QUIZ · 1 domande/, {}, { timeout: 4000 });
+    fireEvent.click(await screen.findByText('Quiz manuale', {}));
+    await screen.findByText(/QUIZ · 1 domande/, {});
     expect(screen.queryByText('Supporto IA – revisionato dal docente')).toBeNull();
   });
 
@@ -299,7 +299,7 @@ describe('CardDetail — stato APERTO', () => {
     const { db } = await renderApp({ seed, user: STUD });
 
     const detail = await openCard('Sondaggio');
-    fireEvent.click(await detail.findByRole('button', { name: 'Vota Sì' }, {}, { timeout: 4000 }));
+    fireEvent.click(await detail.findByRole('button', { name: 'Vota Sì' }, {}));
 
     await waitFor(() => {
       const opz = db._get('cards', 'c1').opzioni;
@@ -315,7 +315,7 @@ describe('CardDetail — stato APERTO', () => {
     const { db } = await renderApp({ seed, user: STUD });
 
     const detail = await openCard('Card studente');
-    fireEvent.click(await detail.findByRole('button', { name: /👍/ }, {}, { timeout: 4000 }));
+    fireEvent.click(await detail.findByRole('button', { name: /👍/ }, {}));
 
     await waitFor(() => expect(db._get('cards', 'c1').likes).toBe(1));
 
@@ -384,8 +384,8 @@ describe('CardDetail — stato APERTO', () => {
     const detail = await openCard('Card discussione');
 
     // 1) Primo click: chiama l'AI e PERSISTE il sommario con nCommenti
-    fireEvent.click(await detail.findByRole('button', { name: '📝 Riassumi' }, {}, { timeout: 4000 }));
-    expect(await screen.findByText(/riassunto persistito/, {}, { timeout: 6000 })).toBeTruthy();
+    fireEvent.click(await detail.findByRole('button', { name: '📝 Riassumi' }, {}));
+    expect(await screen.findByText(/riassunto persistito/, {})).toBeTruthy();
     await waitFor(() => {
       const saved = db._get('ai_results', 'c1');
       expect(saved && saved.sommario).toBeTruthy();
@@ -398,7 +398,7 @@ describe('CardDetail — stato APERTO', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Chiudi' }));
     await waitFor(() => expect(screen.queryByText(/Riassunto discussione/)).toBeNull());
     fireEvent.click(detail.getByRole('button', { name: '📝 Riassumi' }));
-    expect(await screen.findByText(/riassunto persistito/, {}, { timeout: 4000 })).toBeTruthy();
+    expect(await screen.findByText(/riassunto persistito/, {})).toBeTruthy();
     expect(window.fetch).toHaveBeenCalledTimes(callsDopoPrima);
   });
 });

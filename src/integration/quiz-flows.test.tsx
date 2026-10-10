@@ -31,18 +31,18 @@ describe('Quiz interattivo (studente)', () => {
   it('mostra il quiz a tempo con il timer', async () => {
     const seed = { users: { stud1: STUD_DOC }, cards: { q1: mkQuizCard('q1', { titolo: 'Quiz di prova' }) } };
     await renderApp({ seed, user: STUD });
-    fireEvent.click(await screen.findByText('Quiz di prova', {}, { timeout: 4000 }));
+    fireEvent.click(await screen.findByText('Quiz di prova', {}));
     // Header quiz + timer visibili. Il chip "⏱ 5 min" esiste sia nella griglia
     // sia nel dettaglio → getAllByText (getByText fallirebbe con elementi multipli).
-    expect(await screen.findByText(/QUIZ · 2 domande/, {}, { timeout: 4000 })).toBeTruthy();
+    expect(await screen.findByText(/QUIZ · 2 domande/, {})).toBeTruthy();
     expect(screen.getAllByText(/⏱ 5 min/).length).toBeGreaterThan(0);
   });
 
   it('risponde a tutte le domande e invia: punteggio salvato e "Quiz completato"', async () => {
     const seed = { users: { stud1: STUD_DOC }, cards: { q1: mkQuizCard('q1', { titolo: 'Quiz di prova' }) } };
     const { db } = await renderApp({ seed, user: STUD });
-    fireEvent.click(await screen.findByText('Quiz di prova', {}, { timeout: 4000 }));
-    await screen.findByText(/QUIZ · 2 domande/, {}, { timeout: 4000 });
+    fireEvent.click(await screen.findByText('Quiz di prova', {}));
+    await screen.findByText(/QUIZ · 2 domande/, {});
 
     // Il bottone Invia è disabilitato finché non risponde a tutto
     const inviaBtn = screen.getByRole('button', { name: 'Invia risposte' });
@@ -70,16 +70,16 @@ describe('Quiz interattivo (studente)', () => {
     // Il display passa a "Quiz completato" con il punteggio.
     // NB: "Punteggio: " e "1/2" sono nodi testo separati (il <strong> è figlio)
     // → getByText matcha SOLO i nodi testo diretti: cerchiamo il testo del <strong>.
-    expect(await screen.findByText('✅ Quiz completato', {}, { timeout: 4000 })).toBeTruthy();
+    expect(await screen.findByText('✅ Quiz completato', {})).toBeTruthy();
     // findByText (non getByText): aspetta il flush degli update React evitando il warning act()
-    expect(await screen.findByText('1/2', {}, { timeout: 4000 })).toBeTruthy();
+    expect(await screen.findByText('1/2', {})).toBeTruthy();
   });
 
   it('assegna il punteggio pieno con tutte le risposte corrette', async () => {
     const seed = { users: { stud1: STUD_DOC }, cards: { q1: mkQuizCard('q1', { titolo: 'Quiz facile' }) } };
     const { db } = await renderApp({ seed, user: STUD });
-    fireEvent.click(await screen.findByText('Quiz facile', {}, { timeout: 4000 }));
-    await screen.findByText(/QUIZ · 2 domande/, {}, { timeout: 4000 });
+    fireEvent.click(await screen.findByText('Quiz facile', {}));
+    await screen.findByText(/QUIZ · 2 domande/, {});
 
     fireEvent.click(screen.getByRole('button', { name: '4' })); // corretta
     fireEvent.click(screen.getByRole('button', { name: 'Roma' })); // corretta
@@ -90,9 +90,9 @@ describe('Quiz interattivo (studente)', () => {
       expect(doc.punteggio.score).toBe(2);
       expect(doc.punteggio.pct).toBe(100);
     });
-    expect(await screen.findByText('✅ Quiz completato', {}, { timeout: 4000 })).toBeTruthy();
+    expect(await screen.findByText('✅ Quiz completato', {})).toBeTruthy();
     // findByText (non getByText): aspetta il flush degli update React evitando il warning act()
-    expect(await screen.findByText('2/2', {}, { timeout: 4000 })).toBeTruthy();
+    expect(await screen.findByText('2/2', {})).toBeTruthy();
   });
 
   it('domanda APERTA: mostra la textarea e abilita Invia solo dopo aver scritto', async () => {
@@ -109,8 +109,8 @@ describe('Quiz interattivo (studente)', () => {
       },
     };
     const { db } = await renderApp({ seed, user: STUD });
-    fireEvent.click(await screen.findByText('Quiz con aperta', {}, { timeout: 4000 }));
-    await screen.findByText(/QUIZ · 2 domande/, {}, { timeout: 4000 });
+    fireEvent.click(await screen.findByText('Quiz con aperta', {}));
+    await screen.findByText(/QUIZ · 2 domande/, {});
 
     // 1) C'è un campo di testo per la risposta aperta (textbox)
     // NOTA: getByRole('textbox') in jsdom non matcha sempre la <textarea>;
@@ -139,7 +139,7 @@ describe('Quiz interattivo (studente)', () => {
       expect(doc.risposte[1]).toBe('Perché 3 + 1 fa 4');
       expect(doc.aiValutato).toBe(false);
     });
-    expect(await screen.findByText('✅ Quiz completato', {}, { timeout: 4000 })).toBeTruthy();
+    expect(await screen.findByText('✅ Quiz completato', {})).toBeTruthy();
   });
 
   it('al refresh (riapertura card) lo studente vede il quiz già completato, non riparte da zero', async () => {
@@ -161,11 +161,11 @@ describe('Quiz interattivo (studente)', () => {
       },
     };
     await renderApp({ seed, user: STUD });
-    fireEvent.click(await screen.findByText('Quiz già fatto', {}, { timeout: 4000 }));
+    fireEvent.click(await screen.findByText('Quiz già fatto', {}));
 
     // NON deve mostrare le domande da rispondere, ma il badge di completamento
-    expect(await screen.findByText('✅ Quiz completato', {}, { timeout: 4000 })).toBeTruthy();
-    expect(await screen.findByText('1/2', {}, { timeout: 4000 })).toBeTruthy();
+    expect(await screen.findByText('✅ Quiz completato', {})).toBeTruthy();
+    expect(await screen.findByText('1/2', {})).toBeTruthy();
     // Le domande interattive NON devono comparire (il quiz non riparte)
     expect(screen.queryByRole('button', { name: 'Invia risposte' })).toBeNull();
     // Lo studente vede l'esito (giusto/sbagliato) della domanda chiusa
@@ -197,17 +197,16 @@ describe('Quiz interattivo (studente)', () => {
       },
     };
     await renderApp({ seed, user: STUD });
-    fireEvent.click(await screen.findByText('Quiz con esiti', {}, { timeout: 4000 }));
+    fireEvent.click(await screen.findByText('Quiz con esiti', {}));
 
-    await screen.findByText('✅ Quiz completato', {}, { timeout: 4000 });
+    await screen.findByText('✅ Quiz completato', {});
     // Esito della domanda chiusa: la risposta "4" è corretta → ✅
-    expect(await screen.findByText(/Quanto fa 2\+2\?/, {}, { timeout: 4000 })).toBeTruthy();
+    expect(await screen.findByText(/Quanto fa 2\+2\?/, {})).toBeTruthy();
     expect(screen.getAllByText(/La tua risposta:/).length).toBeGreaterThan(0);
     // La valutazione AI del prof è visibile (punti di forza del feedback)
-    expect(await screen.findByText(/Chiaro/, {}, { timeout: 4000 })).toBeTruthy();
+    expect(await screen.findByText(/Chiaro/, {})).toBeTruthy();
     expect(screen.queryByText(/attende la valutazione del prof/)).toBeNull();
   });
-
 
   // Dopo il consegno il bottone NON deve tornare. Prima qInviato era un booleano
   // globale azzerato alla chiusura della card: riaprendo il quiz lo studente vedeva di
@@ -217,15 +216,15 @@ describe('Quiz interattivo (studente)', () => {
   it('dopo il consegno, riaprendo la card il bottone Invia NON torna', async () => {
     const seed = { users: { stud1: STUD_DOC }, cards: { q1: mkQuizCard('q1', { titolo: 'Quiz una volta sola' }) } };
     await renderApp({ seed, user: STUD });
-    fireEvent.click(await screen.findByText('Quiz una volta sola', {}, { timeout: 4000 }));
-    fireEvent.click(await screen.findByRole('button', { name: '4' }, {}, { timeout: 4000 }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Milano' }, {}, { timeout: 4000 }));
+    fireEvent.click(await screen.findByText('Quiz una volta sola', {}));
+    fireEvent.click(await screen.findByRole('button', { name: '4' }, {}));
+    fireEvent.click(await screen.findByRole('button', { name: 'Milano' }, {}));
     fireEvent.click(screen.getByRole('button', { name: 'Invia risposte' }));
-    await waitFor(() => expect(screen.getByText(/Quiz completato/i, {}, { timeout: 4000 })).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(/Quiz completato/i, {})).toBeTruthy());
 
     fireEvent.click(screen.getByRole('button', { name: 'Chiudi card' }));
     await waitFor(() => expect(document.querySelector('.modal-inner')).toBeNull());
-    fireEvent.click(await screen.findByText('Quiz una volta sola', {}, { timeout: 4000 }));
+    fireEvent.click(await screen.findByText('Quiz una volta sola', {}));
 
     // Riaperta: niente bottone di invio, e' gia' stato consegnato.
     expect(screen.queryByRole('button', { name: 'Invia risposte' })).toBeNull();

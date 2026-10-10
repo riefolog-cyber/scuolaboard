@@ -68,10 +68,10 @@ describe('Valutazione quiz lato prof', () => {
       lacune: 'Manca un esempio',
       suggerimento: 'Aggiungi un esempio concreto',
     });
-    fireEvent.click(await screen.findByText('Quiz con aperte', {}, { timeout: 4000 }));
+    fireEvent.click(await screen.findByText('Quiz con aperte', {}));
 
     // Vista prof: RISULTATI + bottone valutazione
-    await screen.findByText(/RISULTATI \(1 studenti\)/, {}, { timeout: 4000 });
+    await screen.findByText(/RISULTATI \(1 studenti\)/, {});
     const valutaBtn = screen.getByRole('button', { name: /Valuta risposte aperte con AI/ });
     fireEvent.click(valutaBtn);
 
@@ -92,7 +92,7 @@ describe('Valutazione quiz lato prof', () => {
 
     // UI: il bottone passa a "✓ Tutte valutate" (regex: il bottone contiene
     // anche l'emoji 🤖 come nodo testo separato → matcher esatto fallirebbe)
-    expect(await screen.findByText(/✓ Tutte valutate/, {}, { timeout: 4000 })).toBeTruthy();
+    expect(await screen.findByText(/✓ Tutte valutate/, {})).toBeTruthy();
   });
 
   // ── I segni per risposta devono dire la STESSA cosa del punteggio ────────────
@@ -120,10 +120,10 @@ describe('Valutazione quiz lato prof', () => {
       },
     };
     await renderApp({ seed, user: PROF });
-    fireEvent.click(await screen.findByText('Quiz concordanza', {}, { timeout: 4000 }));
+    fireEvent.click(await screen.findByText('Quiz concordanza', {}));
 
-    await screen.findByText(/RISULTATI \(1 studenti\)/, {}, { timeout: 4000 });
-    expect(await screen.findByText('67%', {}, { timeout: 4000 })).toBeTruthy();
+    await screen.findByText(/RISULTATI \(1 studenti\)/, {});
+    expect(await screen.findByText('67%', {})).toBeTruthy();
 
     // 2 giuste su 3 (Q2 e Q3): i segni devono dirlo. Prima del fix erano 3 ✗.
     const segni = document.querySelectorAll('[data-testid="segno-risposta"]');
@@ -150,9 +150,9 @@ describe('Valutazione quiz lato prof', () => {
       },
     };
     await renderApp({ seed, user: PROF });
-    fireEvent.click(await screen.findByText('Quiz vero falso', {}, { timeout: 4000 }));
+    fireEvent.click(await screen.findByText('Quiz vero falso', {}));
 
-    await screen.findByText(/RISULTATI \(1 studenti\)/, {}, { timeout: 4000 });
+    await screen.findByText(/RISULTATI \(1 studenti\)/, {});
     // L'invariante è che la riga nomini la risposta per TESTO. Prima mostrava "D1: 1".
     const riga = document.querySelector('[data-testid="segno-risposta"]');
     expect(riga.textContent).toBe('✓D1:Falso');
@@ -182,8 +182,8 @@ describe('Valutazione quiz lato prof', () => {
       },
     };
     await renderApp({ seed, user: PROF });
-    fireEvent.click(await screen.findByText('Quiz classifica', {}, { timeout: 4000 }));
-    await screen.findByText(/RISULTATI \(2 studenti\)/, {}, { timeout: 4000 });
+    fireEvent.click(await screen.findByText('Quiz classifica', {}));
+    await screen.findByText(/RISULTATI \(2 studenti\)/, {});
 
     // La classifica ordina per pct decrescente: Giulia (90%) prima di Luca (50%)
     const pcts = screen.getAllByText(/^\d+%$/);
@@ -206,8 +206,8 @@ describe('Valutazione quiz lato prof', () => {
       },
     };
     const { db } = await renderApp({ seed, user: PROF });
-    fireEvent.click(await screen.findByText('Quiz reset', {}, { timeout: 4000 }));
-    await screen.findByText(/RISULTATI \(1 studenti\)/, {}, { timeout: 4000 });
+    fireEvent.click(await screen.findByText('Quiz reset', {}));
+    await screen.findByText(/RISULTATI \(1 studenti\)/, {});
 
     fireEvent.click(screen.getByRole('button', { name: /Reset/ }));
 
