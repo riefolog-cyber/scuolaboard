@@ -6,6 +6,7 @@
 // classe (mai "Solo prof", proposte o card nascoste), nell'anno in bacheca.
 import { useState, useEffect, useMemo, createElement } from 'react';
 import { norm, hilite } from '../utils/search.ts';
+import { visibileAClasse } from '../card-classi.ts';
 
 function CercaModal(props: any) {
   if (!props.showCerca) return null;
@@ -162,10 +163,9 @@ function CercaModal(props: any) {
   // nascoste, "Solo prof" (classi vuote) o card di altre classi.
   function studentVisible(c: any) {
     if (c.proposta || c.visibile === false) return false;
-    var cc = c.classi || ['TUTTE'];
-    if (cc.length === 0) return false;
-    if (!stClasse || stClasse === 'TUTTE') return cc.indexOf('TUTTE') >= 0;
-    return cc.indexOf('TUTTE') >= 0 || cc.indexOf(stClasse) >= 0;
+    // Stesso criterio della griglia (card-classi.ts): niente terza copia della
+    // regola, così la ricerca non può mostrare una card che la bacheca nasconde.
+    return visibileAClasse(c, stClasse);
   }
 
   // Base della ricerca: tutti gli anni, un anno specifico (diverso da quello in

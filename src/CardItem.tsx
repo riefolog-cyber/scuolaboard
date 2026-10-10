@@ -837,7 +837,9 @@ function CardItem__({ $, c, idx }: any) {
               className="pill-btn"
               onClick={function (e: any) {
                 e.stopPropagation();
-                $.delCardWithUndo(c.id);
+                // chiediEliminazione: con il filtro classe attivo chiede se
+                // togliere la card solo da quella classe (vedi card-classi.ts).
+                $.chiediEliminazione(c.id);
               }}
               style={{
                 order: 15,
@@ -915,6 +917,10 @@ export var CAMPI_NON_CONFRONTATI: string[] = [
   'apriDuplica',
   'apriCopiaAnno',
   'delCardWithUndo',
+  // Chiede quale classe coinvolge l'eliminazione quando il filtro classe è
+  // attivo (vedi card-classi.ts). Stabile per identità: useCallback deps [] che
+  // legge cards e filtro classe da cardsHookRef.
+  'chiediEliminazione',
   'riprovaAnnuncio',
   'setShowSommario',
   'setLightbox',

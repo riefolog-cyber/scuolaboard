@@ -27,6 +27,7 @@ import {
   azzeraAnnunciTentati,
 } from './avvisi-classe.ts';
 import { buildNewCard, buildDuplicaCopia, buildCopiaAnno } from './app-provider-helpers.ts';
+import { visibileAClasse } from './card-classi.ts';
 
 // ── ConAnnuncioInCoda / senzaAnnuncio ───────────────────────────────────────
 
@@ -67,7 +68,29 @@ describe('le copie non annunciano la classe', () => {
   });
 
   it('copia in un altro anno', () => {
-    expect(buildCopiaAnno(sorgente, '999_ca', 5, '2027/2028').avvisiPendenti).toBe(false);
+expect(buildCopiaAnno(sorgente, '999_ca', 5, '2027/2028').avvisiPendenti).toBe(false);
+  });
+});
+
+// La duplica nasce per UNA classe sola: le esclusioni della sorgente valevano
+// per il suo pubblico e non hanno senso sulla copia. Soprattutto, devono
+// sparire: altrimenti duplicando in 3AO una card con classiEscluse ['3AO'] si
+// ottiene una copia che nessuno vede, senza alcun errore.
+describe('la duplica non eredita le esclusioni della sorgente', () => {
+const sorgente = { id: 7, titolo: 'Lezione', classi: ['TUTTE'], classiEscluse: ['3AO'] };
+
+it('la copia non ha il campo classiEscluse', () => {
+    const copia = buildDuplicaCopia(sorgente, '3AO', '999', 5);
+    expect(copia.classiEscluse).toBeUndefined();
+  });
+
+  it('la copia è visibile alla classe per cui è stata duplicata', () => {
+    expect(visibileAClasse(buildDuplicaCopia(sorgente, '3AO', '999', 5), '3AO')).toBe(true);
+  });
+
+  it('la sorgente NON viene modificata', () => {
+    buildDuplicaCopia(sorgente, '3AO', '999', 5);
+    expect(sorgente.classiEscluse).toEqual(['3AO']);
   });
 });
 

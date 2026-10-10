@@ -108,6 +108,10 @@ export function buildEditCard(
     testo: form.testo.trim(),
     links: links,
     classi: form.classi,
+    // Va scritto esplicitamente: `Object.assign` qui NON lo copierebbe dalla
+    // card originale (l'`editMode`), quindi rimuovere un'esclusione nell'editor
+    // non si salverebbe e la classe resterebbe esclusa per sempre.
+    classiEscluse: form.classiEscluse || [],
     immagini: immagini,
     copertina: form.copertina || null,
     allegati: form.allegati || [],
@@ -202,6 +206,11 @@ export function buildEditForm(card: any, normalizeLinks: (_c: any) => any[]): an
       : ['', ''],
     links: links.length ? links : [{ url: '', label: '' }],
     classi: card.classi || ['TUTTE'],
+    // Le esclusioni entrano nel form perché devono essere RIMUOVIBILI: se il
+    // docente esclude una classe per errore e poi modifica la card, senza questo
+    // campo l'editor non le mostrerebbe e l'esclusione diventerebbe definitiva
+    // (nessuna UI per tornare indietro). Vedi il pannello "Non per queste classi".
+    classiEscluse: card.classiEscluse || [],
     quizDomande: card.quizDomande || [],
     quizTimer: card.quizTimer || 10,
     immagini: card.immagini || [],
@@ -221,6 +230,12 @@ export function buildDuplicaCopia(src: any, cl: string, newId: string, ordine: n
     data: new Date().toISOString().slice(0, 10),
     titolo: src.titolo + ' [' + cl + ']',
   });
+  // La copia nasce per UNA classe sola, quindi le esclusioni della sorgente non
+  // hanno più senso:-erano state scelte per il suo pubblico. E non devono
+  // sopravvivere: duplicando in 3AO una card con classiEscluse ['3AO'] si
+  // otterrebbe una copia invisibile proprio a chi l'ha richiesta, senza
+  // alcun errore (la copia esiste, nessuno la vede).
+  delete copia.classiEscluse;
   // Una copia NON è una card nuova per la classe: nessun avviso da inviare.
   copia = senzaAnnuncio(copia);
   if (Array.isArray(src.opzioni) && src.opzioni.length > 0) {

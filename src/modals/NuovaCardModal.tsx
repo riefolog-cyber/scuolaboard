@@ -286,6 +286,60 @@ function NuovaCardModal(props: any) {
                   ⚠️ Nessuna classe: visibile solo al prof
                 </div>
               )}
+              {
+                // Classi escluse: nate da "Solo dalla classe X" nella bacheca.
+                // Devono essere visibili e rimuovibili qui, altrimenti
+                // l'esclusione è irreversibile dalla UI: il docente esclude per
+                // errore, corregge le classi, e la card resta esclusa per sempre
+                // senza nessun modo per recuperarla.
+                (form.classiEscluse || []).length > 0 && (
+                  <div
+                    style={{
+                      marginTop: 8,
+                      padding: '6px 8px',
+                      borderRadius: 8,
+                      background: 'rgba(239,68,68,.08)',
+                      border: '1px solid rgba(239,68,68,.25)',
+                    }}
+                  >
+                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,.5)', marginBottom: 4 }}>
+                      🚫 NON PER QUESTE CLASSI (toccate ✕ per rimetterle)
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                      {form.classiEscluse.map(function (cl: any) {
+                        return (
+                          <button
+                            type="button"
+                            key={'ex-' + cl}
+                            aria-label={'Rimuovi esclusione ' + cl}
+                            onClick={function () {
+                              setForm(function (f: any) {
+                                return Object.assign({}, f, {
+                                  classiEscluse: (f.classiEscluse || []).filter(function (x: any) {
+                                    return x !== cl;
+                                  }),
+                                });
+                              });
+                            }}
+                            style={{
+                              fontSize: 11,
+                              padding: '2px 8px',
+                              borderRadius: 20,
+                              background: 'rgba(239,68,68,.16)',
+                              border: '1px solid rgba(239,68,68,.4)',
+                              color: '#fca5a5',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            {cl} ✕
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )
+              }
             </div>
           )}
 {

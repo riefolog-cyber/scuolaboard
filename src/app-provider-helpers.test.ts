@@ -15,6 +15,8 @@ import {
   isDomandaPubblicata,
   classeCorrenteOf,
   ANNO_LEGACY,
+  buildEditForm,
+  buildEditCard,
 } from './app-provider-helpers.ts';
 
 function fakeImage(kb: number): string {
@@ -258,6 +260,48 @@ describe('buildNewCard: i campi scritti SEMPRE (vincolo per le Firestore Rules)'
     const card = buildNewCard(Object.assign({}, base, { isProf: true, form: { ...base.form, allegati: [{ id: 'a1' }] } }));
     expect(card.proposta).toBeUndefined();
     expect(card.allegati).toHaveLength(1);
+  });
+});
+
+// L'esclusione di classe deve essere un ciclo, non un vicolo cieco: il docente
+// esclude, si accorge di aver sbagliato, rimuove l'esclusione. Il pericolo è
+// che `buildEditCard` copi `classiEscluse` dalla card ORIGINALE (Object.assign
+// su editMode) e sovrascriva la lista modificata nell'editor: l'esclusione
+// sarebbe rimossa a schermo ma resterebbe su Firestore, e la card tornerebbe
+// invisibile alla classe al primo reload, senza alcun errore.
+describe('edit: le esclusioni di classe sono reversibili', () => {
+  const cardEsclusa = {
+    id: 'c1',
+    titolo: 'Compiti',
+    testo: 'x',
+    tipo: 'nota',
+    classi: ['TUTTE'],
+    classiEscluse: ['3AO'],
+  };
+
+  it('buildEditForm CARICA le esclusioni (senza, l\'editor non le mostrerebbe)', () => {
+    const form = buildEditForm(cardEsclusa, () => []);
+    expect(form.classiEscluse).toEqual(['3AO']);
+  });
+
+  it('buildEditForm su card senza esclusioni dà lista vuota, non undefined', () => {
+    const form = buildEditForm({ id: 'c2', titolo: 'T', classi: ['TUTTE'] }, () => []);
+    expect(form.classiEscluse).toEqual([]);
+  });
+
+  it('rimuovere l\'esclusione nell\'editor viene SALVATO (non ripescata dalla card)', () => {
+    const form = buildEditForm(cardEsclusa, () => []);
+    form.classiEscluse = []; // il docente tocca ✕
+    const salvata = buildEditCard(cardEsclusa, form, [], [], null, null);
+    expect(salvata.classiEscluse).toEqual([]);
+    // Il documento non è mai cancellato: resta visibile a tutte, 3AO compresa.
+    expect(salvata.classi).toEqual(['TUTTE']);
+  });
+
+  it('aggiungere un\'esclusione nell\'editor viene salvato', () => {
+    const form = buildEditForm(cardEsclusa, () => []);
+    form.classiEscluse = ['3AO', '4BO'];
+    expect(buildEditCard(cardEsclusa, form, [], [], null, null).classiEscluse).toEqual(['3AO', '4BO']);
   });
 });
 

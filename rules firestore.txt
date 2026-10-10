@@ -150,7 +150,7 @@ service cloud.firestore {
         || (
           isStudente()
           && request.resource.data.proposta == true
-          && !request.resource.data.keys().hasAny(['likes', 'likesBy', 'reazioni', 'visibile', 'pinned', 'aiAnalisi', 'aiDomandePubbliche'])
+          && !request.resource.data.keys().hasAny(['likes', 'likesBy', 'reazioni', 'visibile', 'pinned', 'aiAnalisi', 'aiDomandePubbliche', 'classiEscluse'])
           && (
             request.resource.data.allegati == null
             || (request.resource.data.allegati is list && request.resource.data.allegati.size() == 0)

@@ -4,6 +4,7 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback, useSyncExternalStore } from 'react';
 import { classeCorrenteOf, ANNO_LEGACY } from './app-provider-helpers.ts';
+import { visibileAClasse, visibileAlProf } from './card-classi.ts';
 
 // Confronto STRUTTURALE (per chiavi, non per ordine): JSON.stringify falliva
 // il prune dell'overlay ottimistico quando il server restituiva le chiavi in
@@ -265,14 +266,9 @@ export function useCards(user: any, annoScolastico: string) {
 
       var nuove = rawAllCards.filter(function (c: any) {
         if (c.proposta || c.visibile === false) return false;
-        var cc = c.classi || ['TUTTE'];
-        if (cc.length === 0) return false;
-        var stC = classeCorrente;
-        if (stC) {
-          if (cc.indexOf('TUTTE') < 0 && cc.indexOf(stC) < 0) return false;
-        } else {
-          if (cc.indexOf('TUTTE') < 0) return false;
-        }
+        // Unico criterio di visibilità (card-classi.ts): valuta anche
+        // `classiEscluse`, cioè le card tolte a questa classe dal docente.
+        if (!visibileAClasse(c, classeCorrente)) return false;
         return !seenRef.current.has(String(c.id));
       });
       if (nuove.length > 0) {
@@ -371,21 +367,11 @@ export function useCards(user: any, annoScolastico: string) {
       return cards.filter(function (c: any) {
         if (simulaSt || !isProf) {
           if (c.proposta || c.visibile === false) return false;
-          var cc = c.classi || ['TUTTE'];
-          if (cc.length === 0) return false;
-          var stC = simulaSt ? previewClasse : classeCorrente;
-          if (!stC || stC === 'TUTTE') return cc.indexOf('TUTTE') >= 0;
-          return cc.indexOf('TUTTE') >= 0 || cc.indexOf(stC) >= 0;
+          // `previewClasse` è già 'TUTTE' quando il prof guarda "tutte le
+          // classi" in modalità simulazione: visibileAClasse lo gestisce.
+          return visibileAClasse(c, simulaSt ? previewClasse : classeCorrente);
         }
-        if (filterClasse !== 'tutte') {
-          var cc2 = c.classi || [];
-          if (filterClasse === '_solo') {
-            if (cc2.length !== 0) return false;
-          } else {
-            if (cc2.indexOf('TUTTE') < 0 && cc2.indexOf(filterClasse) < 0) return false;
-          }
-        }
-        return true;
+        return visibileAlProf(c, filterClasse);
       });
     },
     [cards, simulaSt, isProf, previewClasse, user, filterClasse]

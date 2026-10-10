@@ -624,7 +624,10 @@ function CardDetail__({ $: props$ }: any) {
               <button
                 onClick={function (e: any) {
                   e.stopPropagation();
-                  $.delCardWithUndo(c.id);
+                  // chiediEliminazione, non delCardWithUndo diretto: è lui
+                  // che distingue "cancella ovunque" da "togli da questa
+                  // classe" quando il filtro classe è attivo.
+                  $.chiediEliminazione(c.id);
                 }}
                 className="cd-pill"
                 style={{

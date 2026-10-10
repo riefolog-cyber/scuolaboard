@@ -18,6 +18,7 @@ import { useCards } from '../cards.ts';
 import { useAI } from '../ai-services.ts';
 import { useModals } from '../modals.ts';
 import { createAppHandlers } from '../app-handlers.ts';
+import { conEsclusione, eliminabileSoloDaClasse } from '../card-classi.ts';
 import {
   fbSave,
   fbDel,
@@ -917,6 +918,42 @@ if (editMode) {
     modals.setConfirmDel({ type: 'card', id: id });
   }
 
+  // ── "Togli da questa classe" ────────────────────────────────────────────
+  // Il docente filtra la bacheca per 3A e preme Elimina su una card che vale
+  // per TUTTE: eliminare il DOCUMENTO la cancellerebbe per tutte le classi,
+  // mentre il suo gesto vale solo per la 3A che sta guardando. Qui la card
+  // viene esclusa da quella classe (`classiEscluse`) invece che cancellata.
+  //
+  // Perché non cancellare e basta: la cancellazione è irreversibile (l'undo
+  // copre 5 secondi e poi il documento è perso). Escludere è reversibile e
+  // lascia la card intatta per le altre classi.
+  function togliDaClasse(id: any, classe: string) {
+    var card = cardsHook.cards.find(function (c: any) {
+      return String(c.id) === String(id);
+    });
+    if (!card || !classe) return;
+    var escluse = conEsclusione(card, classe);
+    var patch: any = { classiEscluse: escluse };
+    fbSave(Object.assign({}, card, patch))
+      .then(function () {
+        // Il toast aspetta la PROMESSA, non il semplice avvio della scrittura:
+        // Firestore può negare (rules, rete) e un "fatto" prima dell'esito
+        // would be a bug così (vedi regola 13: il toast di successo aspetta).
+        showToast('Card tolta da ' + classe + ' ✓', 'ok');
+        // Se la card aperta è proprio questa, il dettaglio mostrava ancora le
+        // classi di prima: senza questo la modale mente fino al ricaricamento.
+        if (showCard && String(showCard.id) === String(id)) {
+          setShowCard(Object.assign({}, showCard, patch));
+        }
+      })
+      .catch(function (e: any) {
+        console.error('[ScuolaBoard] togliDaClasse:', e && e.code);
+        // fbSave mostra già il toast d'errore; questo catch serve a marcare la
+        // promise come gestita (il chiamante fa solo .then: senza, unhandled
+        // rejection → vitest esce 1 anche a test verdi).
+      });
+  }
+
   function confirmResetRisposte(cardId: any) {
     modals.setConfirmDel({ type: 'quiz_reset', cardId: cardId });
   }
@@ -938,7 +975,11 @@ if (editMode) {
 
   var delCardWithUndo = useCallback(
     function (id: any) {
-      var card = cardsHook.cards.find(function (c: any) {
+      // cardsHookRef.current, non `cardsHook`: i due possono divergere (il ref
+      // è aggiornato a ogni render). Con la copia chiusa l'array era vuoto e la
+      // cancellazione si fermava in silenzio — nessun toast, nessuna conferma,
+      // nessun errore: il semplice fatto che la card non venga trovata.
+      var card = cardsHookRef.current.cards.find(function (c: any) {
         return c.id === id;
       });
       if (!card) return;
@@ -974,6 +1015,36 @@ if (editMode) {
     setUndoDelete(null);
     showToast('Eliminazione annullata ✓', 'ok');
   }
+
+  // Decide se il gesto "Elimina" deve chiedere quale classe coinvolge: solo se
+  // c'è un filtro classe attivo E la card raggiunge altre classi. Se la card è
+  // già solo della 3A, "solo da 3A" e "da tutte" sono la stessa cosa e il
+  // pulsante sarebbe una scelta falsa (vedi eliminabileSoloDaClasse).
+  //
+  // useCallback con deps [] perché ciò di cui ha bisogno cambia a ogni
+  // interazione (cards, filtro classe): lo legge dal ref live invece di
+  // chiuderlo. Senza questo catturerebbe il filtro del PRIMO render e la
+  // CardItem — che non lo confronta nella memo — chiamerebbe sempre una
+  // chiusura vecchia: eliminare dopo aver spostato il filtro dalla 3A alla 4A
+  // toglierebbe la card dalla 4A, cioè dalla classe sbagliata.
+  var chiediEliminazione = useCallback(
+    function (id: any) {
+      var hook = cardsHookRef.current;
+      var card = hook.cards.find(function (c: any) {
+        return String(c.id) === String(id);
+      });
+      if (!card) return;
+      if (eliminabileSoloDaClasse(card, hook.filterClasse)) {
+        modals.setConfirmDel({ type: 'card', id: id, soloDaClasse: hook.filterClasse });
+        return;
+      }
+      // Nessun filtro classe, o card già di una sola classe: comportamento di
+      // sempre, cioè cancellazione immediata con l'undo di 5s. Non aprire qui
+      // una conferma: cambierebbe il gesto che il prof conosce già.
+      delCardWithUndo(id);
+    },
+    []
+  );
 
   function appCard(id: any) {
     var c = cardsHook.cards.find(function (x: any) {
@@ -1942,6 +2013,8 @@ var cardsValue = useMemo(
         openCard: openCard,
         delCard: delCard,
         delCardWithUndo: delCardWithUndo,
+        chiediEliminazione: chiediEliminazione,
+        togliDaClasse: togliDaClasse,
         undoDeleteCard: undoDeleteCard,
         appCard: appCard,
         rifiutaConMot: rifiutaConMot,

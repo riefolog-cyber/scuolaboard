@@ -7,20 +7,30 @@ function ConfirmDelModal(props: any) {
   var executeDelCom = props.executeDelCom;
   var executeDelReply = props.executeDelReply;
   var resetRisposte = props.resetRisposte;
+  var togliDaClasse = props.togliDaClasse;
   if (!confirmDel) return null;
   var isComment = confirmDel.type === 'comment';
   var isReply = confirmDel.type === 'reply';
   var isQuizReset = confirmDel.type === 'quiz_reset';
+  // Classe selezionata nel filtro: il docente sta guardando quella classe, e il
+  // suo "Elimina" vale per quella. Presente solo se la card raggiunge anche
+  // altre classi (vedi eliminabileSoloDaClasse), quindi i due pulsanti qui
+  // corrispondono a due esiti DIVERSI e non a una scelta finta.
+  var soloDa = confirmDel.soloDaClasse || null;
   var modalTitle = isQuizReset
     ? 'Reset risposte quiz'
     : 'Elimina ' + (isComment ? 'commento' : isReply ? 'risposta' : 'card');
   var modalMessage = isQuizReset
     ? "Vuoi davvero eliminare TUTTE le risposte al quiz? L'operazione è irreversibile."
-    : 'Vuoi davvero eliminare ' +
-      (isComment ? 'questo commento' : isReply ? 'questa risposta' : 'questa card') +
-      // Solo l'eliminazione card ha l'undo (toast con "Annulla"): per commenti e
-      // risposte l'operazione è subito persistita su Firestore, niente recupero.
-      (isComment || isReply ? "? L'operazione è irreversibile." : "? L'azione può essere annullata entro 5 secondi.");
+    : soloDa
+      ? 'Questa card vale per più classi. Vuoi toglierla solo dalla classe ' +
+        soloDa +
+        ' o eliminarla del tutto?'
+      : 'Vuoi davvero eliminare ' +
+        (isComment ? 'questo commento' : isReply ? 'questa risposta' : 'questa card') +
+        // Solo l'eliminazione card ha l'undo (toast con "Annulla"): per commenti e
+        // risposte l'operazione è subito persistita su Firestore, niente recupero.
+        (isComment || isReply ? "? L'operazione è irreversibile." : "? L'azione può essere annullata entro 5 secondi.");
   var confirmAction = function () {
     if (isQuizReset) {
       resetRisposte(confirmDel.cardId);
@@ -32,6 +42,12 @@ function ConfirmDelModal(props: any) {
     } else {
       delCardWithUndo(confirmDel.id);
     }
+    setConfirmDel(null);
+  };
+  // Percorso "solo da questa classe": non cancella il documento, esclude la
+  // classe. Reversibile e lascia intatte le altre classi.
+  var soloDaClasseAction = function () {
+    togliDaClasse(confirmDel.id, soloDa);
     setConfirmDel(null);
   };
   return (
@@ -83,7 +99,7 @@ function ConfirmDelModal(props: any) {
             </p>
           }
           {
-            <div style={{ display: 'flex', gap: 10 }}>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               {
                 <button
                   onClick={function () {
@@ -119,10 +135,34 @@ function ConfirmDelModal(props: any) {
                     cursor: 'pointer',
                   }}
                 >
-                  🗑️ Elimina
+                  {soloDa ? '🗑️ Elimina da tutte' : '🗑️ Elimina'}
                 </button>
               }
             </div>
+          }
+          {
+            // Secondo esito possibile: la card resta per le altre classi.
+            // Sta in una riga propria perché il testo ("Solo da " + classe) non
+            // entra nello spazio dei due pulsanti sopra senza spezzarli.
+            soloDa && (
+              <button
+                onClick={soloDaClasseAction}
+                style={{
+                  marginTop: 10,
+                  width: '100%',
+                  padding: 11,
+                  background: 'rgba(99,102,241,.18)',
+                  color: '#c4b5fd',
+                  border: '1px solid rgba(99,102,241,.45)',
+                  borderRadius: 11,
+                  fontSize: 13,
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                }}
+              >
+                Solo dalla classe {soloDa}
+              </button>
+            )
           }
         </div>
       }

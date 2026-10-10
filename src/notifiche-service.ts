@@ -132,6 +132,10 @@ async function notifyClasse(opts: {
   msg: string;
   tipo?: string;
   excludeUid?: string;
+  // Classi a cui il docente ha TOLTO la card (vedi card-classi.ts): se manca,
+  // uno studente escluso riceverebbe l'avviso di una card che non può
+  // aprire — la notifica tradirebbe il gesto del docente.
+  classiEscluse?: string[];
   // Serve all'id DETERMINISTICO: con un commento l'id diventa
   // `risposta_<cardId>_<cmId>`, così ogni commento è un avviso DISTINTO e i
   // commenti successivi sulla stessa card non collidono con `nuova_card_<cardId>`
@@ -162,6 +166,10 @@ async function notifyClasse(opts: {
           if (solo.indexOf(String(d.id)) < 0) return;
         } else {
           var classeStud = (u.classiPerAnno && u.classiPerAnno[anno]) || u.classe || null;
+          var escluse: string[] = opts.classiEscluse || [];
+          // La classe esclusa è fuori dal fan-out anche se la card è per TUTTE:
+          // l'avviso deve raggiungere chi può davvero aprire la card.
+          if (classeStud && escluse.indexOf(classeStud) >= 0) return;
           var match = classi.indexOf('TUTTE') >= 0 || (classeStud && classi.indexOf(classeStud) >= 0) || !classeStud;
           // se studente senza classe, riceve solo TUTTE (come visible in cards.ts:218)
           if (classi.indexOf('TUTTE') < 0 && !classeStud) return;
