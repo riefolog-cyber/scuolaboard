@@ -1,9 +1,9 @@
 # COSE IN SOSPESO
 
-Aggiornato al **11/10/2026**: le Rules Firestore (campo `classiEscluse`) sono
-state pubblicate in Firebase Console. **Non c'è più nulla che blocchi.**
+Aggiornato al **11/10/2026**. C'è **una cosa che blocca** (le Rules delle
+consegne allegati) e **una da verificare a mano** (Safari).
 Stato del repository: `main` in sync con `origin/main`, working tree pulito,
-**941 test verdi (exit 0)**, `tsc --noEmit` pulito, eslint senza warning.
+**987 test verdi (exit 0)**, `tsc --noEmit` pulito, eslint senza warning.
 
 Questo file elenca ciò che è **noto e non fatto**. Non è un piano di lavoro: è
 l'elenco delle cose che si sanno e che si è deciso di non fare subito, con la
@@ -11,13 +11,27 @@ ragione accanto. Se una voce non è più valida va cancellata, non spostata.
 
 ---
 
-## 1. Nessuna attesa: non c'è più nulla che blocchi
+## 1. In attesa di una tua conferma
+
+### 🔴 Regole Firestore — `allegati_consegne` va pubblicata a mano
+
+Con gli allegati HTML è arrivata una raccolta nuova (`allegati_consegne/{uid}`:
+il registro degli allegati che lo studente ha finito). La sua regola è in
+`rules firestore.txt` ma **non è pubblicata in Firebase Console**.
+
+**Come fare:** Firebase Console → Firestore → Rules → incolla il contenuto di
+`rules firestore.txt` → Publish.
+
+**Cosa succede se non la pubblichi:** niente che si veda. Lo schermo intero
+funziona lo stesso, l'allegato si apre e si chiude. Semplicemente la consegna
+**non viene registrata**, quindi l'allegato verrà riproposto come prima. Nessun
+errore, nessun crash: è il modo peggiore di fallire, e per questo sta in rosso.
 
 ### ✅ Regole Firestore — `classiEscluse` pubblicata (11/10/2026)
 
 La regola che vieta allo studente di scrivere `classiEscluse` è in
-`rules firestore.txt:153` (blocco `create` della collection `cards`) ed è stata
-**pubblicata in Firebase Console** → Firestore → Rules.
+`rules firestore.txt` (blocco `create` della collection `cards`) ed è stata
+**pubblicata** in Firebase Console → Firestore → Rules.
 
 Una proposta dello studente non può più portarsi dietro esclusioni di classe:
 il buco che la regola chiude è chiuso.
@@ -105,8 +119,8 @@ bloccare la build.
 ## 4. Cose che NON saprei fare senza di te
 
 - **Ripubblicare le rules**: serve l'accesso alla Console. L'ultima volta è
-  stata fatta (11/10/2026, `classiEscluse`); la prossima sarà ogni volta che si
-  tocca `rules firestore.txt`.
+  stata fatta (11/10/2026, `classiEscluse`); quella delle `allegati_consegne` è
+  ancora da fare. La prossima sarà ogni volta che si tocca `rules firestore.txt`.
 - **Il bundle da 1083 KB** (vendor-firebase 606 KB): si può valutare un import
   selettivo di Firebase, ma è un intervento che tocca l'inizializzazione
   dell'app — da fare con calma, non di corsa.
