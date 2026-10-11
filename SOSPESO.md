@@ -38,6 +38,30 @@ verdi con le Rules in produzione diverse da quelle del repository.
 
 ---
 
+## 1b. Decisioni prese (non da riproporre)
+
+### ⛔ La grafica si lascia com'è — deciso l'11/10/2026
+
+Il tema scuro attuale è **confermato**: è quello che l'utente preferisce. Sono
+state presentate e scartate, nell'ordine, tre proposte grafiche:
+
+1. tre direzioni di stile (aria e gerarchia / denso e compatto / caldo e scuola);
+2. un «tocco moderno» sopra il tema attuale (elevazione, grigi più presenti,
+   anello di fuoco);
+3. una proposta a piena libertà (meno colori, gerarchia neutra).
+
+Tutte e tre rifiutate a favore del tema di adesso. **Non riproporre varianti
+grafiche senza un motivo nuovo**: non un rafforzamento estetico, non una
+palette "più moderna", non l'occasione di un commit. Se un giorno il tema
+cambia, cambia perché è successo qualcosa (una lamentanza precisa, un
+accessibilità, una prova che non si legge), non perché è ora di ridisegnare.
+
+Il lavoro sui token (`--c-*`) resta comunque valido e va tenuto: è ciò che
+rende un eventuale cambiamento futuro economico, e senza non costerebbe un
+rifacimento. Tenere i token non è un impegno a cambiare i colori.
+
+---
+
 ## 2. Deciso di non fare ora (con la ragione)
 
 ### ✅ I colori con `var()` negli attributi SVG — verificato su WebKit (11/10/2026)
