@@ -13,7 +13,12 @@ beforeEach(setupTestEnv);
 afterEach(teardownTestEnv);
 
 describe('403 del Worker AI: il toast mostra la causa (hint)', () => {
-  it('origine non autorizzata → messaggio con hint del worker', async () => {
+  // Budget 40s: questo file aspetta davvero 5,2s per far scadere il throttle
+  // client-side (AI_THROTTLE_MS, condiviso via _lastAiCall), e paga anche il
+  // caricamento pigro della CardDetail con la coverage attiva. Misurato 15,4s
+  // su un tetto di 15s: il fallimento in CI era il "test timeout", non un
+  // assert. Stesso trattamento dei retry di auth-retry.test.tsx.
+  it('origine non autorizzata → messaggio con hint del worker', { timeout: 40000 }, async () => {
     // Mock del Worker AI che risponde 403 come quello reale (body con hint)
     window.fetch = vi.fn().mockResolvedValue({
       ok: false,
@@ -36,7 +41,9 @@ describe('403 del Worker AI: il toast mostra la causa (hint)', () => {
     expect(db._get('ai_results', 'c1')).toBeFalsy();
   });
 
-  it('accesso riservato ai docenti → messaggio senza hint (caso role)', async () => {
+  // Stesso budget del test precedente: anche questo aspetta davvero i 5,2s del
+  // throttle, quindi è lento per progetto e non per caso.
+  it('accesso riservato ai docenti → messaggio senza hint (caso role)', { timeout: 40000 }, async () => {
     // Rate-limit client-side (AI_THROTTLE_MS, condiviso tra test dello stesso
     // file via _lastAiCall del modulo): attesa oltre i 5s prima della 2ª chiamata
     await new Promise((r) => setTimeout(r, 5200));

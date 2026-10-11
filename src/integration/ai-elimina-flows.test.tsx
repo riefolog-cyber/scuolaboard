@@ -9,7 +9,16 @@ beforeEach(setupTestEnv);
 afterEach(teardownTestEnv);
 
 describe('Eliminazione analisi AI (prof)', () => {
-  it('rimuove aiAnalisi dalla card e cancella il doc ai_results', async () => {
+  // Budget esplicito e PIU' ALTO del default (15s), come i due test di auth col
+  // backoff. Motivo: questo e' il PRIMO test del file e paga il caricamento
+  // pigro di CardDetail con la coverage attiva: 16s misurati, contro i 0,7-2,8s
+  // dei test successivi che trovano il modulo gia' in cache. Sotto il runner
+  // della CI, che e' piu' lento del locale, il default di 15s lo faceva
+  // fallire (misurato: questo e' il test che ha fatto rosso la CI).
+  //
+  // Non e' un test lento per caso: il lavoro c'e' tutto, e' l'import pigro.
+  // Alzare il default globale nasconderebbe i test davvero lenti.
+  it('rimuove aiAnalisi dalla card e cancella il doc ai_results', { timeout: 40000 }, async () => {
     const seed = {
       users: { prof1: PROF_DOC },
       cards: {
