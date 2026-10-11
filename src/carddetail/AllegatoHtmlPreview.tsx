@@ -27,23 +27,26 @@
 // si potesse uscire prima di aver finito. Sono due richieste che hanno limiti
 // DIVERSI, ed è importante dirli perché la differenza è fra comodità e sicurezza:
 //
-//  · lo SCHERMO INTERO si ottiene e regge: si chiama `requestFullscreen()` sul
-//    contenitore che AVVOLGE l'iframe, dall'esterno. Non serve toccare la sandbox
-//    e non si aggiunge `allowfullscreen`: l'invito è del genitore, non del file.
-//  · NON USCIRE non è garantibile. ESC esce dal fullscreen, si chiude la scheda,
-//    si prega il browser, si torna indietro. Nessuna app web può impedirlo. Qui
-//    si nasconde il pulsante «×» e si avvisa: è comfort, non un vincolo.
-//  · «non ripeterlo» vale solo DENTRO l'app: si registra che quello studente ha
-//    completato l'allegato e non glielo riproponiamo. Fuori dall'app il file resta
-//    scaricabile e apribile: è un file, non c'è modo di metterlo sottochiave.
+//  · lo SCHERMO INTERO è un OVERLAY NOSTRO, non il fullscreen del browser. Motivo:
+//    con `requestFullscreen()` ESC esce sempre (è il tasto che il browser si
+//    riserva, nessuna API lo trattiene) e la funzione non esiste su iPhone
+//    Safari. L'overlay copre la pagina e funziona su ogni motore;
+//  · NON USCIRE NON È UN VINCOLO. ESC chiede una conferma finché il quiz non è
+//    consegnato: si esce per decisione, non premendo un tasto per errore. Sopra
+//    l'overlay restano la X del browser, il tasto indietro del telefono, il
+//    ricaricamento dal menu e la chiusura della scheda: li gestisce il browser e
+//    non c'è modo di intercettarli. Promettere "non si può uscire" sarebbe falso;
+//  · «non ripeterlo» vale dentro l'app: si registra che lo studente ha finito e
+//    non glielo riproponiamo. Fuori dall'app il file resta scaricabile: è un file.
 //
 // La consegna la segnala il FILE con `postMessage({sb:'allegato-completato'})`,
 // l'unico canale che ha a disposizione: è a origine opaca, quindi non può
-// scrivere su Firestore né essere autenticato (un allievo può inviare quel
+// scrivere su Firestore né essere autenticato (uno studente può inviare quel
 // messaggio a mano). Per questo la registrazione è "lo studente dice di aver
 // finito" e NON un voto: serve solo a non riproporgli l'allegato.
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { allegatoNome, htmlSrcDoc, urlAllegatoSicuro } from '../allegati.ts';
 import { isMessaggioAllegatoCompletato } from '../allegato-consegna.ts';
 
@@ -72,37 +75,36 @@ function AllegatoHtmlPreview({ al, indice, onChiudi, onCompletato }: any) {
   // ── ESC ────────────────────────────────────────────────────────────────
   // Prima usavamo `requestFullscreen()`, che è sbagliato per due motivi:
   //
-  //  1. NON ESISTE su iPhone Safari. Il pulsante non faceva nulla, in
+  //  1. su iPhone Safari NON ESISTE: il pulsante non faceva nulla, in
   //     silenzio, proprio sugli studenti che lo useranno di più;
   //  2. ESC esce SEMPRE dal fullscreen del browser e nessuna API lo impedisce.
   //
-  // Ora il "pieno schermo" è un overlay nostro: copre la viewport (quindi
-  // sembra identico, e funziona su ogni motore) ed ESC è un tasto come
-  // un altro, quindi lo possiamo intercettare.
+  // Con l'overlay nostro ESC è un tasto come un altro, quindi lo intercettiamo.
   //
-  // NON lo blocchiamo secco: se il file è rotto e non consegna mai, lo
-  // studente resterebbe intrappolato in una pagina da cui non può uscire.
-  // ESC chiede una conferma: esce chi vuole uscire, ma non per errore con un
-  // dito. È la differenza fra «non esce per caso» e «non può uscire», e la
-  // seconda è una gabbia, non un quiz.
+  // NON lo blocchiamo secco: se il file è rotto e non consegna mai, lo studente
+  // resterebbe intrappolato in una pagina da cui non può uscire. ESC chiede una
+  // conferma: esce chi vuole uscire, ma non per errore con un dito. È la
+  // differenza fra «non esce per caso» e «non può uscire», e la seconda è una
+  // gabbia, non un quiz.
   useEffect(function () {
     function suTasto(e: any) {
       if (e.key !== 'Escape') return;
       if (!pienoSchermo) return;
-      e.preventDefault(); // senza questo il browser/overlay chiuderebbe da solo
-      if (completato) {
-        // Consegna fatta: ESC esce del tutto (chiude anche la preview), perché
-        // "uscire dalla pagina" è quello che il docente chiedeva. Tornare
-        // soltanto alla card lasciando l'anteprima aperta sarebbe un'uscita a
-        // metà, e l'ESC sembrerebbe non fare niente.
-        esci();
-      } else {
-        setChiediConferma(true);
-      }
+      // FASE DI CATTURA (`true`): gira PRIMA di tutti gli ascoltatori in
+      // bubbling. Serve davvero, non per robustezza: `AppProvider` ha un
+      // gestore ESC globale che chiude la card, registrato al mount quindi
+      // prima del nostro, e in bubbling chiudeva l'intera anteprima senza
+      // passare dalla conferma — cioè ESC usciva comunque, che era
+      // esattamente il difetto da eliminare. Qui l'overlay incrocia il
+      // tasto, lo trattiene e ferma gli altri ascoltatori.
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      if (completato) esci();
+      else setChiediConferma(true);
     }
-    document.addEventListener('keydown', suTasto);
+    document.addEventListener('keydown', suTasto, true);
     return function () {
-      document.removeEventListener('keydown', suTasto);
+      document.removeEventListener('keydown', suTasto, true);
     };
   }, [pienoSchermo, completato]);
 
@@ -112,41 +114,10 @@ function AllegatoHtmlPreview({ al, indice, onChiudi, onCompletato }: any) {
     onChiudi();
   }
 
-  // ── I LIMITI, dichiarati ───────────────────────────────────────────────
-  // Sopra l'overlay non si può chiudere: restano la X del browser, il tasto
-  // indietro del telefono, il ricaricamento dal menu e la chiusura della
-  // scheda. Sono gestiti dal BROWSER e non c'è modo di intercettarli. Nessuna
-  // app web può impedirli, quindi promettere "non si può uscire" sarebbe falso.
-  // Quello che facciamo è: non si esce per un tasto premuto per errore.
-
-  return (
-    <div
-      data-testid="anteprima-html"
-      style={{
-        marginTop: 8,
-        marginBottom: 10,
-        border: '1px solid rgba(96,165,250,.35)',
-        borderRadius: 12,
-        overflow: 'hidden',
-        background: 'rgba(255,255,255,.03)',
-        // L'overlay: posizione fissa sopra tutto, z-index altissimo, fondo
-        // opaco. È questo che sostituisce il fullscreen del browser — quindi
-        // funziona su iPhone, dove `requestFullscreen` non esiste.
-        ...(pienoSchermo
-          ? {
-              position: 'fixed',
-              inset: 0,
-              zIndex: 2147483000,
-              margin: 0,
-              borderRadius: 0,
-              border: 'none',
-              background: '#fff',
-              display: 'flex',
-              flexDirection: 'column',
-            }
-          : {}),
-      }}
-    >
+  // Il contenuto è identico in anteprima e a schermo intero: cambia solo il
+  // contenitore che lo ospita.
+  var contenuto = (
+    <>
       <div
         style={{
           display: 'flex',
@@ -154,6 +125,8 @@ function AllegatoHtmlPreview({ al, indice, onChiudi, onCompletato }: any) {
           gap: 8,
           padding: '8px 10px',
           borderBottom: '1px solid rgba(255,255,255,.08)',
+          flexShrink: 0,
+          background: '#161a28',
         }}
       >
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -191,7 +164,9 @@ function AllegatoHtmlPreview({ al, indice, onChiudi, onCompletato }: any) {
             ⬇ Scarica
           </a>
         ) : (
-          <span style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', whiteSpace: 'nowrap' }}>🔒 non scaricabile</span>
+          <span style={{ fontSize: 11, color: 'rgba(255,255,255,.4)', whiteSpace: 'nowrap' }}>
+            🔒 non scaricabile
+          </span>
         )}
         <button
           aria-label={pienoSchermo ? 'Esci da schermo intero' : 'Apri a schermo intero'}
@@ -242,6 +217,7 @@ function AllegatoHtmlPreview({ al, indice, onChiudi, onCompletato }: any) {
           </button>
         )}
       </div>
+
       {pienoSchermo ? (
         <div
           data-testid="anteprima-fullscreen-avviso"
@@ -252,6 +228,7 @@ function AllegatoHtmlPreview({ al, indice, onChiudi, onCompletato }: any) {
             background: 'rgba(245,158,11,.12)',
             borderBottom: '1px solid rgba(245,158,11,.28)',
             lineHeight: 1.5,
+            flexShrink: 0,
           }}
         >
           {completato
@@ -259,6 +236,34 @@ function AllegatoHtmlPreview({ al, indice, onChiudi, onCompletato }: any) {
             : 'A schermo intero. Esc chiederà conferma prima di farti uscire, finché il quiz non è consegnato.'}
         </div>
       ) : null}
+
+      <iframe
+        title={'Anteprima di ' + nome}
+        // allow-scripts serve (i file allegati sono app web: senza script restano
+        // vuoti). NON aggiungere allow-same-origin: darebbe al file la nostra origine
+        // e con il DOM dell'app, la sessione Firebase di chi guarda. Vedi l'intestazione.
+        sandbox="allow-scripts"
+        srcDoc={htmlSrcDoc(al)}
+        referrerPolicy="no-referrer"
+        // Altezza maggiorata e proporzionale: i file allegati sono pagine lunghe
+        // (il quiz di esempio ha 12 domande) e 320px fissi rendevano l'anteprima
+        // inutilizzabile su telefono, costringendo a scorrere dentro un riquadro
+        // strettissimo. 62vh con min/max: comodo su desktop, leggibile su mobile.
+        style={{
+          width: '100%',
+          height: '62vh',
+          minHeight: 360,
+          maxHeight: 620,
+          // Nell'overlay l'iframe prende tutto lo spazio che resta sotto la
+          // barra: con l'altezza fissa sopra resterebbe una striscia in cima a
+          // una pagina nera, cioè sembrerebbe un caricamento rotto.
+          ...(pienoSchermo ? { height: 'auto', flex: '1 1 auto', minHeight: 0, maxHeight: 'none' } : {}),
+          border: 'none',
+          background: '#fff',
+          display: 'block',
+        }}
+      />
+
       {chiediConferma ? (
         <div
           data-testid="anteprima-conferma-uscita"
@@ -331,33 +336,51 @@ function AllegatoHtmlPreview({ al, indice, onChiudi, onCompletato }: any) {
           </div>
         </div>
       ) : null}
-      <iframe
-        title={'Anteprima di ' + nome}
-        // allow-scripts serve (i file allegati sono app web: senza script restano
-        // vuoti). NON aggiungere allow-same-origin: darebbe al file la nostra origine
-        // e con il DOM dell'app, la sessione Firebase di chi guarda. Vedi l'intestazione.
-        sandbox="allow-scripts"
-        srcDoc={htmlSrcDoc(al)}
-        referrerPolicy="no-referrer"
-        // Altezza maggiorata e proporzionale: i file allegati sono pagine lunghe
-        // (il quiz di esempio ha 12 domande) e 320px fissi rendevano l'anteprima
-        // inutilizzabile su telefono, costringendo a scorrere dentro un riquadro
-        // strettissimo. 62vh con min/max: comodo su desktop, leggibile su mobile.
+    </>
+  );
+
+  // ── Schermo intero: montato con un PORTAL su document.body ───────────────
+  // Non basta `position: fixed` qui dentro: questa preview vive dentro la
+  // modale della card, e `.modal-inner` ha `max-width: 560px` più una
+  // `animation: slideup` che muove `transform`. Un antenato con `transform`
+  // (anche quello di un'animazione) diventa il riferimento di `position: fixed`
+  // dei suoi figli: l'overlay restava largo quanto la modale e sembrava una
+  // anteprima da cellulare, nonostante `inset: 0`.
+  //
+  // Il portal monta l'overlay direttamente su `document.body`, fuori da quella
+  // catena: copre davvero tutta la finestra, su un portatile quanto schermo.
+  if (pienoSchermo && typeof document !== 'undefined') {
+    return createPortal(
+      <div
+        data-testid="anteprima-html"
         style={{
-          width: '100%',
-          height: '62vh',
-          minHeight: 360,
-          maxHeight: 620,
-          // Nell'overlay l'iframe prende tutto lo spazio che resta sopra la
-          // barra: con l'altezza fissa sotto resterebbe una striscia in cima a
-          // una pagina nera, cioè sembrerebbe un caricamento rotto invece che
-          // "a tutto schermo".
-          ...(pienoSchermo ? { height: '100%', flex: 1, minHeight: 0, maxHeight: 'none' } : {}),
-          border: 'none',
+          position: 'fixed',
+          inset: 0,
+          zIndex: 2147483000,
           background: '#fff',
-          display: 'block',
+          display: 'flex',
+          flexDirection: 'column',
         }}
-      />
+      >
+        {contenuto}
+      </div>,
+      document.body
+    );
+  }
+
+  return (
+    <div
+      data-testid="anteprima-html"
+      style={{
+        marginTop: 8,
+        marginBottom: 10,
+        border: '1px solid rgba(96,165,250,.35)',
+        borderRadius: 12,
+        overflow: 'hidden',
+        background: 'rgba(255,255,255,.03)',
+      }}
+    >
+      {contenuto}
     </div>
   );
 }

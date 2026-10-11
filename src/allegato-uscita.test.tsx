@@ -54,15 +54,36 @@ describe('allegato: il pieno schermo è un overlay, non il fullscreen del browse
 
   it('il pulsante apre un riquadro a tutta la pagina (overlay)', () => {
     renderizza();
-    const scatola = screen.getByTestId('anteprima-html');
-    // Fuori dal fullscreen non è ancora un overlay.
-    expect(scatola.style.position).not.toBe('fixed');
+    // Fuori dal pieno schermo non è ancora un overlay.
+    expect(screen.getByTestId('anteprima-html').style.position).not.toBe('fixed');
 
     fireEvent.click(screen.getByLabelText('Apri a schermo intero'));
-    // Ora sì: fixed su tutta la viewport, con z-index altissimo.
+
+    // Col portal il nodo è UN ALTRO (vive su document.body), quindi va
+    // riletto dopo il clic: tenere il riferimento di prima testerebbe il
+    // riquadro vecchio, che è esattamente quello che non si vede più.
+    const scatola = screen.getByTestId('anteprima-html');
     expect(scatola.style.position).toBe('fixed');
     expect(scatola.style.inset).toBe('0px');
     expect(Number(scatola.style.zIndex)).toBeGreaterThan(2000000000);
+  });
+
+  it('l\'overlay è figlio di document.body, NON della modale della card', () => {
+    // Il difetto vero: questa preview vive dentro `.modal-inner`, che ha
+    // `max-width: 560px` e una `animation: slideup` che muove `transform`.
+    // Un antenato con `transform` diventa il riferimento di `position: fixed`:
+    // l'overlay restava largo quanto la modale, cioè "come se fossi sul
+    // cellulare", nonostante `inset: 0`. Il portal lo tira fuori da lì.
+    render(<div className="modal-inner" style={{ maxWidth: 560, transform: 'translateY(0px)' }}>
+      <AllegatoHtmlPreview al={ALLEGATO} indice={0} onChiudi={() => {}} onCompletato={() => {}} />
+    </div>);
+
+    fireEvent.click(screen.getByLabelText('Apri a schermo intero'));
+
+    const scatola = screen.getByTestId('anteprima-html');
+    expect(scatola.parentElement).toBe(document.body);
+    // E non è più dentro la modale: la catena di antenati è interrotta.
+    expect(scatola.closest('.modal-inner')).toBeNull();
   });
 
   it('il riquadro copre davvero tutta la viewport, non una striscia', () => {
@@ -73,6 +94,9 @@ describe('allegato: il pieno schermo è un overlay, non il fullscreen del browse
     const scatola = screen.getByTestId('anteprima-html');
     expect(scatola.style.display).toBe('flex');
     expect(scatola.style.flexDirection).toBe('column');
+    // E l'iframe dentro prende lo spazio che resta, invece di 62vh fissi.
+    const frame = document.querySelector('iframe') as HTMLElement;
+    expect(frame.style.maxHeight).toBe('none');
   });
 });
 
