@@ -43,15 +43,16 @@
 // messaggio a mano). Per questo la registrazione è "lo studente dice di aver
 // finito" e NON un voto: serve solo a non riproporgli l'allegato.
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { allegatoNome, htmlSrcDoc, urlAllegatoSicuro } from '../allegati.ts';
 import { isMessaggioAllegatoCompletato } from '../allegato-consegna.ts';
 
 function AllegatoHtmlPreview({ al, indice, onChiudi, onCompletato }: any) {
   var nome = allegatoNome(al, indice);
   var scaricabile = urlAllegatoSicuro(al.url);
-  var scatola = useRef<any>(null);
   var [pienoSchermo, setPienoSchermo] = useState(false);
+  var [completato, setCompletato] = useState(false);
+  var [chiediConferma, setChiediConferma] = useState(false);
 
   // Il file consegna il quiz con un postMessage. Non è autenticabile (origine
   // opaca) ma è l'unico modo che ha di dirlo, e serve a una cosa sola: sapere
@@ -59,6 +60,7 @@ function AllegatoHtmlPreview({ al, indice, onChiudi, onCompletato }: any) {
   useEffect(function () {
     function suMessaggio(e: any) {
       if (!isMessaggioAllegatoCompletato(e && e.data)) return;
+      setCompletato(true);
       if (onCompletato) onCompletato();
     }
     window.addEventListener('message', suMessaggio);
@@ -67,44 +69,58 @@ function AllegatoHtmlPreview({ al, indice, onChiudi, onCompletato }: any) {
     };
   }, [onCompletato]);
 
-  function entraPienoSchermo() {
-    var el = scatola.current;
-    if (!el) return;
-    try {
-      var p = el.requestFullscreen ? el.requestFullscreen() : null;
-      // Safari su iPhone non ha requestFullscreen sugli elementi: il fallback
-      // qui non è lo stesso effetto, ma il pulsante non deve morire in silenzio.
-      if (p && typeof p.catch === 'function')
-        p.catch(function () {
-          /* il browser ha rifiutato (per permessi o gesture): resta l'anteprima normale */
-        });
-    } catch (e) {
-      /* idem: nessun.fullscreen in questo motore */
-    }
-  }
-
-  function esciDaSchermoIntero() {
-    try {
-      if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen();
-    } catch (e) {}
-  }
-
-  // ESC e il gesto del browser possono uscire dal fullscreen senza passare dai
-  // nostri pulsanti: senza questo ascolto la barra resterebbe "a schermo intero"
-  // mentre non lo è più.
+  // ── ESC ────────────────────────────────────────────────────────────────
+  // Prima usavamo `requestFullscreen()`, che è sbagliato per due motivi:
+  //
+  //  1. NON ESISTE su iPhone Safari. Il pulsante non faceva nulla, in
+  //     silenzio, proprio sugli studenti che lo useranno di più;
+  //  2. ESC esce SEMPRE dal fullscreen del browser e nessuna API lo impedisce.
+  //
+  // Ora il "pieno schermo" è un overlay nostro: copre la viewport (quindi
+  // sembra identico, e funziona su ogni motore) ed ESC è un tasto come
+  // un altro, quindi lo possiamo intercettare.
+  //
+  // NON lo blocchiamo secco: se il file è rotto e non consegna mai, lo
+  // studente resterebbe intrappolato in una pagina da cui non può uscire.
+  // ESC chiede una conferma: esce chi vuole uscire, ma non per errore con un
+  // dito. È la differenza fra «non esce per caso» e «non può uscire», e la
+  // seconda è una gabbia, non un quiz.
   useEffect(function () {
-    function suCambio() {
-      setPienoSchermo(document.fullscreenElement === scatola.current);
+    function suTasto(e: any) {
+      if (e.key !== 'Escape') return;
+      if (!pienoSchermo) return;
+      e.preventDefault(); // senza questo il browser/overlay chiuderebbe da solo
+      if (completato) {
+        // Consegna fatta: ESC esce del tutto (chiude anche la preview), perché
+        // "uscire dalla pagina" è quello che il docente chiedeva. Tornare
+        // soltanto alla card lasciando l'anteprima aperta sarebbe un'uscita a
+        // metà, e l'ESC sembrerebbe non fare niente.
+        esci();
+      } else {
+        setChiediConferma(true);
+      }
     }
-    document.addEventListener('fullscreenchange', suCambio);
+    document.addEventListener('keydown', suTasto);
     return function () {
-      document.removeEventListener('fullscreenchange', suCambio);
+      document.removeEventListener('keydown', suTasto);
     };
-  }, []);
+  }, [pienoSchermo, completato]);
+
+  function esci() {
+    setPienoSchermo(false);
+    setChiediConferma(false);
+    onChiudi();
+  }
+
+  // ── I LIMITI, dichiarati ───────────────────────────────────────────────
+  // Sopra l'overlay non si può chiudere: restano la X del browser, il tasto
+  // indietro del telefono, il ricaricamento dal menu e la chiusura della
+  // scheda. Sono gestiti dal BROWSER e non c'è modo di intercettarli. Nessuna
+  // app web può impedirli, quindi promettere "non si può uscire" sarebbe falso.
+  // Quello che facciamo è: non si esce per un tasto premuto per errore.
 
   return (
     <div
-      ref={scatola}
       data-testid="anteprima-html"
       style={{
         marginTop: 8,
@@ -113,10 +129,22 @@ function AllegatoHtmlPreview({ al, indice, onChiudi, onCompletato }: any) {
         borderRadius: 12,
         overflow: 'hidden',
         background: 'rgba(255,255,255,.03)',
-        // A schermo intero il riquadro deve POTER crescere: con l'altezza fissa
-        // (62vh sotto) il file resterebbe in una striscia in cima a uno schermo
-        // nero, cioè sembrerebbe rotto invece che a tutto schermo.
-        ...(pienoSchermo ? { height: '100vh', maxHeight: 'none', margin: 0, borderRadius: 0, border: 'none' } : {}),
+        // L'overlay: posizione fissa sopra tutto, z-index altissimo, fondo
+        // opaco. È questo che sostituisce il fullscreen del browser — quindi
+        // funziona su iPhone, dove `requestFullscreen` non esiste.
+        ...(pienoSchermo
+          ? {
+              position: 'fixed',
+              inset: 0,
+              zIndex: 2147483000,
+              margin: 0,
+              borderRadius: 0,
+              border: 'none',
+              background: '#fff',
+              display: 'flex',
+              flexDirection: 'column',
+            }
+          : {}),
       }}
     >
       <div
@@ -167,10 +195,16 @@ function AllegatoHtmlPreview({ al, indice, onChiudi, onCompletato }: any) {
         )}
         <button
           aria-label={pienoSchermo ? 'Esci da schermo intero' : 'Apri a schermo intero'}
-          title={pienoSchermo ? 'Esci da schermo intero (Esc)' : 'Apri a schermo intero'}
+          title={pienoSchermo ? 'Esci da schermo intero' : 'Apri a schermo intero'}
           onClick={function () {
-            if (pienoSchermo) esciDaSchermoIntero();
-            else entraPienoSchermo();
+            if (pienoSchermo) {
+              // Stessa regola di ESC: se il quiz non è finito, non si esce
+              // con un tocco. Il pulsante è lì, ma passa dalla conferma.
+              if (completato) esci();
+              else setChiediConferma(true);
+            } else {
+              setPienoSchermo(true);
+            }
           }}
           style={{
             background: pienoSchermo ? 'rgba(96,165,250,.22)' : 'rgba(255,255,255,.06)',
@@ -220,7 +254,81 @@ function AllegatoHtmlPreview({ al, indice, onChiudi, onCompletato }: any) {
             lineHeight: 1.5,
           }}
         >
-          A schermo intero. Per tornare alla bacheca usa il pulsante ⤡ in alto a destra, o il tasto Esc.
+          {completato
+            ? 'Quiz consegnato. Puoi tornare alla bacheca quando vuoi, con il tasto Esc o con il pulsante in alto a destra.'
+            : 'A schermo intero. Esc chiederà conferma prima di farti uscire, finché il quiz non è consegnato.'}
+        </div>
+      ) : null}
+      {chiediConferma ? (
+        <div
+          data-testid="anteprima-conferma-uscita"
+          role="dialog"
+          aria-label="Conferma uscita"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 2147483100,
+            background: 'rgba(6,8,15,.72)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 20,
+          }}
+        >
+          <div
+            style={{
+              background: '#161a28',
+              border: '1px solid rgba(255,255,255,.14)',
+              borderRadius: 14,
+              padding: '22px 22px 18px',
+              maxWidth: 380,
+              boxShadow: '0 24px 60px -20px rgba(0,0,0,.75)',
+            }}
+          >
+            <div style={{ fontSize: 15.5, fontWeight: 700, color: '#f1f5f9', marginBottom: 8 }}>
+              Uscire senza consegnare?
+            </div>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,.7)', lineHeight: 1.6, marginBottom: 18 }}>
+              L'allegato non ha comunicato la fine del quiz. Se esci ora, non lo vedrai più in questa card.
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button
+                onClick={function () {
+                  setChiediConferma(false);
+                }}
+                style={{
+                  font: 'inherit',
+                  fontSize: 13,
+                  padding: '9px 15px',
+                  borderRadius: 9,
+                  border: '1px solid rgba(255,255,255,.16)',
+                  background: 'transparent',
+                  color: '#e2e8f0',
+                  cursor: 'pointer',
+                }}
+              >
+                Resta nel quiz
+              </button>
+              <button
+                onClick={function () {
+                  esci();
+                }}
+                style={{
+                  font: 'inherit',
+                  fontSize: 13,
+                  fontWeight: 650,
+                  padding: '9px 15px',
+                  borderRadius: 9,
+                  border: 'none',
+                  background: '#f87171',
+                  color: '#1a0b0b',
+                  cursor: 'pointer',
+                }}
+              >
+                Esci comunque
+              </button>
+            </div>
+          </div>
         </div>
       ) : null}
       <iframe
@@ -240,10 +348,11 @@ function AllegatoHtmlPreview({ al, indice, onChiudi, onCompletato }: any) {
           height: '62vh',
           minHeight: 360,
           maxHeight: 620,
-          // A schermo intero l'iframe prende tutta l'altezza disponibile: con
-          // l'altezza fissa sopra resterebbe una striscia in cima a una pagina
-          // nera, cioè sembrerebbe un caricamento rotto invece che "a tutto schermo".
-          ...(pienoSchermo ? { height: 'calc(100vh - 92px)', minHeight: 0, maxHeight: 'none' } : {}),
+          // Nell'overlay l'iframe prende tutto lo spazio che resta sopra la
+          // barra: con l'altezza fissa sotto resterebbe una striscia in cima a
+          // una pagina nera, cioè sembrerebbe un caricamento rotto invece che
+          // "a tutto schermo".
+          ...(pienoSchermo ? { height: '100%', flex: 1, minHeight: 0, maxHeight: 'none' } : {}),
           border: 'none',
           background: '#fff',
           display: 'block',
