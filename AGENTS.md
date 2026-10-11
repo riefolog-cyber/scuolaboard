@@ -45,6 +45,7 @@ Regola pratica:
 ## Regole non negoziabili
 
 1. **`docs/` non va mai committata a mano.** Il job `deploy-docs` della CI rigenera e pusha `docs/` a ogni push su `main` che supera i controlli (commit `build(docs): rigenerazione automatica da CI [skip ci]`). Se `git status` la mostra modificata in locale: `git checkout -- docs/`.
+   - **Da quel commit nasce un push respinto quasi a ogni volta**: la CI pusha `docs/` mentre il commit locale è ancora in attesa, e `git push` risponde *rejected (fetch first)*. Non è un conflitto: il commit della CI tocca solo `docs/`, il tuo solo `src/`. La procedura è `git pull && git push` (in questo repository `pull.rebase=true`, quindi il pull fa il rebase da solo ed è un fast-forward pulito). **Non** usare `--force`: se i due commit toccassero gli stessi file il rebase si fermerebbe e te lo direbbe, mentre forzare nasconderebbe proprio il caso da vedere.
 2. **"Ripubblicare le regole Firestore"**: ogni modifica a `rules firestore.txt` richiede pubblicazione manuale in Firebase Console → Firestore → Rules. Un cambio alle rules senza pubblicazione è un cambio incompleto: segnalalo sempre all'utente.
 3. **Privacy (GDPR/AI Act)** — dati di studenti minorenni:
    - I nomi reali non devono mai raggiungere l'AI: la pseudonimizzazione (`Studente 1`, …) avviene client-side e le funzioni protette sono `riassuntiCommentiRun`, `runCardAI`, `runCardQ`. Non aggiungere nuovi invii con nomi.

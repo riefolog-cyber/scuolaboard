@@ -1,9 +1,11 @@
 # COSE IN SOSPESO
 
-Aggiornato al **11/10/2026**. C'è **una cosa che blocca** (le Rules delle
-consegne allegati) e **una da verificare a mano** (Safari).
+Aggiornato al **11/10/2026**. **Una sola cosa da fare, tua**: pubblicare le
+Rules di `allegati_consegne` in Firebase Console. Il controllo Safari che era in
+lista è stato eseguito ed è verde.
 Stato del repository: `main` in sync con `origin/main`, working tree pulito,
-**987 test verdi (exit 0)**, `tsc --noEmit` pulito, eslint senza warning.
+**987 test verdi (exit 0)** + **8 E2E su WebKit verdi**, `tsc --noEmit` pulito,
+eslint senza warning.
 
 Questo file elenca ciò che è **noto e non fatto**. Non è un piano di lavoro: è
 l'elenco delle cose che si sanno e che si è deciso di non fare subito, con la
@@ -45,24 +47,27 @@ verdi con le Rules in produzione diverse da quelle del repository.
 
 ## 2. Deciso di non fare ora (con la ragione)
 
-### 🔶 Da verificare a mano: i colori con `var()` negli attributi SVG (WebKit)
+### ✅ I colori con `var()` negli attributi SVG — verificato su WebKit (11/10/2026)
 
 I colori inline sono passati da valori scritti a mano a `var(--token, valore)`
 in modo che il tema chiaro li governi. In **tema scuro** il risultato è
 identico per costruzione (il fallback è il valore di prima) e
 `token-coerenti.test.ts` lo verifica su ogni occorrenza.
 
-Il caso aperto è lo **scheletro di caricamento** (`CardGrid.tsx`): lì i colori
+Il caso aperto era lo **scheletro di caricamento** (`CardGrid.tsx`): lì i colori
 non sono in uno stile ma in attributi di presentazione SVG (`fill="…"`), dove
 `var()` *dovrebbe* funzionare perché la specifica li tratta come dichiarazioni
-CSS. **Verificato a mano su Chromium** (rendering identico). **Non verificato
-su WebKit**, che è il motore degli iPhone: la guardia è
-`e2e/colori-webkit.spec.js`, che la CI esegue (installa chromium + webkit), ma in
-locale serve `npx playwright install webkit`.
+CSS.
 
-Da fare: aprire l'app su Safari (o un iPhone) e guardare che lo scheletro di
-caricamento conservi i colori. Se WebKit ignorasse `var()` lì, il difetto è
-giusto quello che la guardia cerca e va corretto in quel componente.
+**Chiuso**: verificato a mano su Chromium e poi sul motore di Safari, con
+`npx playwright install webkit` e poi `npx playwright test --project=webkit`
+(8 test verdi, guardia `e2e/colori-webkit.spec.js` inclusa). Su WebKit
+`fill="rgba(var(--c-primary-rgb),.5)"` rende come il valore scritto a mano e il
+fallback funziona: nessun difetto.
+
+Nota per il futuro: WebKit ora è installato **in locale**, quindi le guardie
+webkit si eseguono senza setup. Prima non lo era, ed era una voce aperta da due
+sessioni.
 
 ### ~~P2 — `noUncheckedIndexedAccess` + tipo `Card`~~ → **fatto l'11/10/2026**
 
