@@ -1,4 +1,5 @@
 import { senzaAnnuncio } from './avvisi-classe.ts';
+import type { Card, CardImmagine, CardLink, QuizDomanda } from './card-tipo.ts';
 
 // app-provider-helpers.ts · ScuolaBoard · Fase 7: helper PURI estratti da
 // AppProvider. Nessuna dipendenza da stato React: ricevono tutto come
@@ -102,7 +103,7 @@ export function buildEditCard(
   opzioni: any[] | null,
   quizDomande: any[] | null
 ): any {
-  var c: any = Object.assign({}, editMode, {
+  var c: Card = Object.assign({}, editMode, {
     tipo: form.tipo,
     titolo: form.titolo.trim(),
     testo: form.testo.trim(),
@@ -146,11 +147,11 @@ export function buildNewCard(opts: {
   annoScolastico: string;
   ordine: number;
   opzioni: any[] | null;
-  quizDomande: any[] | null;
-  links: any[];
-  immagini: any[];
-}): any {
-  var newCard: any = {
+  quizDomande: QuizDomanda[] | null;
+  links: CardLink[];
+  immagini: CardImmagine[];
+}): Card {
+  var newCard: Card = {
     id: Date.now(),
     tipo: opts.form.tipo,
     titolo: opts.form.titolo.trim(),
@@ -220,8 +221,8 @@ export function buildEditForm(card: any, normalizeLinks: (_c: any) => any[]): an
 }
 
 // Copia per DUPLICA (stesso anno, classe target, voti azzerati)
-export function buildDuplicaCopia(src: any, cl: string, newId: string, ordine: number): any {
-  var copia: any = Object.assign({}, src, {
+export function buildDuplicaCopia(src: Card, cl: string, newId: string, ordine: number): Card {
+  var copia: Card = Object.assign({}, src, {
     id: newId,
     classi: [cl],
     ordine: ordine,
@@ -247,8 +248,8 @@ export function buildDuplicaCopia(src: any, cl: string, newId: string, ordine: n
 }
 
 // Copia per COPIA IN ALTRO ANNO (reset voti/reazioni, nascosta, proposta rimossa)
-export function buildCopiaAnno(src: any, newId: string, ordine: number, annoTarget: string): any {
-  var copia: any = Object.assign({}, src, {
+export function buildCopiaAnno(src: Card, newId: string, ordine: number, annoTarget: string): Card {
+  var copia: Card = Object.assign({}, src, {
     id: newId,
     ordine: ordine,
     commenti: [],

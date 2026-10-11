@@ -224,7 +224,13 @@ describe('marcatura ai sui quiz: sopravvive a filtro, copia e duplicato', () => 
       links: [],
       immagini: [],
     });
-    expect(card.quizDomande[0].ai).toBe(true);
+    // Il tipo `Card` dichiara `quizDomande` opzionale (la creazione non lo
+    // scrive sempre: solo se il docente ha compilato le domande), quindi il
+    // test non può presupporre che ci sia. Il `?? []` rende esplicito cosa
+    // verifica: se le domande non arrivassero, `domande[0].ai` sarebbe
+    // undefined e l'asserzione fallirebbe — non passerebbe per caso.
+    const domande = card.quizDomande ?? [];
+    expect(domande[0].ai).toBe(true);
   });
 });
 

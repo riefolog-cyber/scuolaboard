@@ -1,9 +1,8 @@
 # COSE IN SOSPESO
 
-Aggiornato al **11/10/2026**, dopo il commit `a628ef1`.
-Stato del repository al momento della stesura: `main` in sync con `origin/main`,
-working tree pulito, **932 test verdi (exit 0)**, `tsc --noEmit` pulito, eslint
-senza warning.
+Aggiornato al **11/10/2026**, dopo il commit del tipo `Card` (`src/card-tipo.ts`).
+Stato del repository: `main` in sync con `origin/main`, working tree pulito,
+**941 test verdi (exit 0)**, `tsc --noEmit` pulito, eslint senza warning.
 
 Questo file elenca ciò che è **noto e non fatto**. Non è un piano di lavoro: è
 l'elenco delle cose che si sanno e che si è deciso di non fare subito, con la
@@ -39,15 +38,18 @@ dimenticare: un cambio alle rules senza pubblicazione è un cambio incompleto.
 
 ## 2. Deciso di non fare ora (con la ragione)
 
-### P2 — `noUncheckedIndexedAccess` + tipo `Card`
+### ~~P2 — `noUncheckedIndexedAccess` + tipo `Card`~~ → **fatto l'11/10/2026**
 
-Non fatto. Motivo: 1256 occorrenze di `any` nel codice di produzione, e il flag
-toccherebbe 36 accessi per indice. È lavoro da fare **per gruppi**, non in un colpo
-solo, e il valore vero sta nel **tipo `Card`** (trasformerebbe ~42 letture `any`
-in un contratto verificato da `tsc`).
+Il tipo `Card` esiste (`src/card-tipo.ts`) ed è applicato dove rende valore
+immediatamente verificabile: `card-classi.ts` (tutte le funzioni) e i costruttori
+puri di `app-provider-helpers.ts` (`buildNewCard`, `buildEditCard`,
+`buildDuplicaCopia`, `buildCopiaAnno`). `src/card-tipo.test.ts` impedisce che il
+tipo e le Rules divergano.
 
-Quando farlo: **solo se stai già toccando quelle zone per un altro motivo**, non
-come campagna. `tsconfig.json` oggi ha solo `"strict": true`.
+**Non è fatto, e non è previsto**: `noUncheckedIndexedAccess` (toccherebbe 36
+accessi per indice) e la migrazione del resto dell'app da `any` a `Card` (il `db`
+arriva da `window.db`: è un rifacimento da fare per gruppi, non in un colpo). Il
+tipo è il **contratto dichiarato**, non un codice migrato.
 
 ### P3 — `limit()` sulle query Firestore
 

@@ -1,9 +1,18 @@
+import type { Card } from './card-tipo.ts';
+
 // card-classi.ts · ScuolaBoard · CHI VEDE UNA CARD, IN UN SOLO POSTO.
 //
 // Prima la visibilità per classe era calcolata inline in almeno cinque file
 // (cards.ts ×2, CercaModal, ai-services, notifiche-service) e ognuno decideva
 // per conto suo. Questo modulo è l'unico criterio: se un punto dell'app deve
 // chiedersi "questa card la vede lo studente di 3A?", chiama `visibileAClasse`.
+//
+// ── I parametri sono `Card`, non `any` ────────────────────────────────────
+// È il posto dove il documento card è davvero GUARDATO, quindi è il primo
+// punto in cui il tipo `Card` (src/card-tipo.ts) fa guadagnare qualcosa: se
+// domani qualcuno rinomina `classiEscluse` nelle rules ma non qui, `tsc` lo
+// segnala. Il resto dell'app continua a passare `any` (db arriva da
+// window.db): non è un rifacimento, è il contratto fissato dove serve.
 //
 // ── Perché esiste `classiEscluse` ───────────────────────────────────────────
 // Una card "per TUTTE le classi" ha `classi: ['TUTTE']`: TUTTE è un
@@ -28,7 +37,7 @@
 
 // Classi della card: default TUTTE quando il campo manca (le card legacy non
 // hanno `classi`), mai `undefined` — i chiamanti ci fanno `.indexOf`.
-export function classiDi(card: any): string[] {
+export function classiDi(card: Card): string[] {
   var cc = card && card.classi;
   return Array.isArray(cc) ? cc : ['TUTTE'];
 }
@@ -36,7 +45,7 @@ export function classiDi(card: any): string[] {
 // Esclusioni già presenti sul documento: default lista vuota. Tolgo i valori
 // non-stringa perché un array sporco (null, numeri) fa fallire il confronto
 // senza generare errori, e la lista finirebbe in Firestore.
-export function escluseDi(card: any): string[] {
+export function escluseDi(card: Card): string[] {
   var ex = card && card.classiEscluse;
   if (!Array.isArray(ex)) return [];
   return ex.filter(function (x: any) {
@@ -44,7 +53,7 @@ export function escluseDi(card: any): string[] {
   });
 }
 
-export function esclusa(card: any, classe: string | null): boolean {
+export function esclusa(card: Card, classe: string | null): boolean {
   if (!classe) return false;
   return escluseDi(card).indexOf(classe) >= 0;
 }
@@ -59,7 +68,7 @@ export function esclusa(card: any, classe: string | null): boolean {
 //     "nessuna classe-studente");
 //  3. TUTTE → tutti, incluso chi non ha ancora scelto la classe;
 //  4. elenco esplicito → solo le classi indicate.
-export function visibileAClasse(card: any, classe: string | null): boolean {
+export function visibileAClasse(card: Card, classe: string | null): boolean {
   if (esclusa(card, classe)) return false;
   var cc = classiDi(card);
   if (cc.length === 0) return false;
@@ -73,7 +82,7 @@ export function visibileAClasse(card: any, classe: string | null): boolean {
 // poter tornare indietro). Serve al filtro della bacheca: senza, una card
 // esclusa dalla 3A sparirebbe dalla griglia del prof e non si potrebbe più
 // rimetterla.
-export function visibileAlProf(card: any, filtroClasse: string): boolean {
+export function visibileAlProf(card: Card, filtroClasse: string): boolean {
   var cc = classiDi(card);
   if (filtroClasse === 'tutte') return true;
   if (filtroClasse === '_solo') return cc.length === 0;
@@ -88,7 +97,7 @@ export function visibileAlProf(card: any, filtroClasse: string): boolean {
 
 // Aggiunge una classe alle esclusioni, senza mutare l'input e senza duplicati.
 // Usata dal gesto "elimina solo da questa classe".
-export function conEsclusione(card: any, classe: string): string[] {
+export function conEsclusione(card: Card, classe: string): string[] {
   if (!classe) return escluseDi(card);
   var ex = escluseDi(card);
   if (ex.indexOf(classe) >= 0) return ex;
@@ -100,7 +109,7 @@ export function conEsclusione(card: any, classe: string): string[] {
 // pulsante sarebbe una scelta falsa. Con TUTTE o con più classi in elenco il
 // gesto è reale: senza questo controllo il docente cliccherebbe "solo da 3A" su
 // una card che non vedrebbe in nessun'altra classe, e resterebbe con un doppione.
-export function eliminabileSoloDaClasse(card: any, classe: string): boolean {
+export function eliminabileSoloDaClasse(card: Card, classe: string): boolean {
   if (!classe || classe === 'tutte' || classe === '_solo') return false;
   if (esclusa(card, classe)) return false;
   var cc = classiDi(card);
@@ -111,6 +120,6 @@ export function eliminabileSoloDaClasse(card: any, classe: string): boolean {
 }
 
 // Etichetta per la conferma: "solo 3A" o "3A, 2B".
-export function classiLabel(card: any): string {
+export function classiLabel(card: Card): string {
   return classiDi(card).join(', ');
 }

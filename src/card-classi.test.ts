@@ -28,7 +28,12 @@ describe('card-classi: lettura dei campi', () => {
   });
 
   it('classi non è un array → TUTTE, non undefined', () => {
-    expect(classiDi({ classi: null })).toEqual(['TUTTE']);
+    // Il cast serve per DIRE che è voluto: il tipo `Card` vieta `null`, ma
+    // Firestore può restituire un campo sporco e la difesa qui dentro
+    // esiste per quello. Senza il cast il test non compilerebbe e la
+    // difesa sembrerebbe superflua; con il cast la prova resta onesta.
+    const sporca = { classi: null } as unknown as Parameters<typeof classiDi>[0];
+    expect(classiDi(sporca)).toEqual(['TUTTE']);
   });
 
   it('classiEscluse assente → lista vuota', () => {
@@ -36,7 +41,12 @@ describe('card-classi: lettura dei campi', () => {
   });
 
   it('classiEscluse con valori non-stringa viene ripulita', () => {
-    expect(escluseDi({ classiEscluse: ['3A', null, 7, ''] })).toEqual(['3A']);
+    // Come sopra: il tipo vieta i non-stringa, il codice li ripulisce
+    // perché un array sporco non deve far fallire il confronto in silenzio.
+    const sporca = { classiEscluse: ['3A', null, 7, ''] } as unknown as Parameters<
+      typeof escluseDi
+    >[0];
+    expect(escluseDi(sporca)).toEqual(['3A']);
   });
 
   it('esclusa() risponde vero solo per la classe indicata', () => {
