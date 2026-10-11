@@ -348,14 +348,14 @@ export function renderLinks(card: any, setShowCard: any) {
 // ── Componente valutazione AI aperta (riusato da prof e studente) ──
 export function ValutazioneApertaAI(s: any, risposta: any, di: number, d: any, isProf: boolean) {
   if (!s) return null;
-  var colore = s.voto >= 0.75 ? '#4ade80' : s.voto >= 0.5 ? '#fbbf24' : '#f87171';
+  var colore = s.voto >= 0.75 ? 'var(--c-success, #4ade80)' : s.voto >= 0.5 ? 'var(--c-warn, #fbbf24)' : 'var(--c-danger, #f87171)';
   var etichetta = s.voto >= 0.75 ? 'Ottima risposta' : s.voto >= 0.5 ? 'Risposta parziale' : 'Da rivedere';
   var icona = s.voto >= 0.75 ? '✅' : s.voto >= 0.5 ? '⚠️' : '❌';
   return (
     <div
       style={{
-        background: 'rgba(99,102,241,.07)',
-        border: '1px solid rgba(99,102,241,.2)',
+        background: 'rgba(var(--c-primary-rgb),.07)',
+        border: '1px solid rgba(var(--c-primary-rgb),.2)',
         borderRadius: 10,
         padding: '12px 14px',
         marginBottom: 8,
@@ -403,7 +403,7 @@ export function ValutazioneApertaAI(s: any, risposta: any, di: number, d: any, i
             style={{
               fontSize: 11,
               fontWeight: 800,
-              color: '#4ade80',
+              color: 'var(--c-success, #4ade80)',
               letterSpacing: 0.5,
               marginBottom: 4,
               display: 'flex',
@@ -436,7 +436,7 @@ export function ValutazioneApertaAI(s: any, risposta: any, di: number, d: any, i
             style={{
               fontSize: 11,
               fontWeight: 800,
-              color: '#f87171',
+              color: 'var(--c-danger, #f87171)',
               letterSpacing: 0.5,
               marginBottom: 4,
               display: 'flex',
@@ -469,7 +469,7 @@ export function ValutazioneApertaAI(s: any, risposta: any, di: number, d: any, i
             style={{
               fontSize: 11,
               fontWeight: 800,
-              color: '#fbbf24',
+              color: 'var(--c-warn, #fbbf24)',
               letterSpacing: 0.5,
               marginBottom: 4,
               display: 'flex',
@@ -548,7 +548,7 @@ export var ErrorBoundary = (function () {
             style={{
               marginTop: 8,
               padding: '10px 24px',
-              background: '#6366f1',
+              background: 'var(--c-primary, #6366f1)',
               border: 'none',
               borderRadius: 10,
               color: 'white',

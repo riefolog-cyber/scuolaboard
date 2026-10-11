@@ -79,7 +79,7 @@ function SommarioModal__({ $ }: any) {
               padding: '4px 10px',
               cursor: loading ? 'not-allowed' : 'pointer',
               fontSize: 11,
-              color: '#4ade80',
+              color: 'var(--c-success, #4ade80)',
               fontWeight: 700,
             }}
           >
@@ -127,7 +127,7 @@ function SommarioModal__({ $ }: any) {
                       borderRadius: 8,
                       padding: '6px 12px',
                       fontSize: 12,
-                      color: '#4ade80',
+                      color: 'var(--c-success, #4ade80)',
                       fontWeight: 700,
                       cursor: 'pointer',
                     }}

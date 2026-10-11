@@ -202,7 +202,7 @@ function CardDetail__({ $: props$ }: any) {
                 className="badge-chip"
                 style={{
                   background: 'rgba(239,68,68,.2)',
-                  color: '#f87171',
+                  color: 'var(--c-danger, #f87171)',
                   padding: '2px 6px',
                 }}
               >
@@ -434,7 +434,7 @@ function CardDetail__({ $: props$ }: any) {
                     borderRadius: 20,
                     padding: '3px 10px',
                     fontSize: 11,
-                    color: expired ? '#f87171' : '#fbbf24',
+                    color: expired ? 'var(--c-danger, #f87171)' : 'var(--c-warn, #fbbf24)',
                     fontWeight: 700,
                     marginBottom: 12,
                   }}
@@ -501,7 +501,7 @@ function CardDetail__({ $: props$ }: any) {
                       <div
                         style={{
                           height: 8,
-                          background: hasVoted ? 'linear-gradient(90deg,#6366f1,#a855f7)' : '#6366f1',
+                          background: hasVoted ? 'linear-gradient(90deg,var(--c-primary, #6366f1),#a855f7)' : 'var(--c-primary, #6366f1)',
                           borderRadius: 4,
                           width: pct + '%',
                           transition: 'width .3s',
@@ -515,8 +515,8 @@ function CardDetail__({ $: props$ }: any) {
                         }}
                         style={{
                           marginTop: 4,
-                          background: 'rgba(99,102,241,.2)',
-                          border: '1px solid rgba(99,102,241,.4)',
+                          background: 'rgba(var(--c-primary-rgb),.2)',
+                          border: '1px solid rgba(var(--c-primary-rgb),.4)',
                           borderRadius: 8,
                           padding: '3px 10px',
                           cursor: 'pointer',
@@ -549,8 +549,8 @@ function CardDetail__({ $: props$ }: any) {
               }}
               className="cd-pill"
               style={{
-                background: liked ? 'rgba(99,102,241,.3)' : 'rgba(255,255,255,.08)',
-                border: '1px solid ' + (liked ? 'rgba(99,102,241,.5)' : 'rgba(255,255,255,.1)'),
+                background: liked ? 'rgba(var(--c-primary-rgb),.3)' : 'rgba(255,255,255,.08)',
+                border: '1px solid ' + (liked ? 'rgba(var(--c-primary-rgb),.5)' : 'rgba(255,255,255,.1)'),
                 padding: '4px 10px',
                 fontSize: 12,
                 color: liked ? '#a5b4fc' : 'rgba(255,255,255,.65)',
@@ -570,7 +570,7 @@ function CardDetail__({ $: props$ }: any) {
                 style={{
                   background: 'rgba(245,158,11,.15)',
                   border: '1px solid rgba(245,158,11,.3)',
-                  color: '#fbbf24',
+                  color: 'var(--c-warn, #fbbf24)',
                 }}
               >
                 ⏰ Timer
@@ -590,8 +590,8 @@ function CardDetail__({ $: props$ }: any) {
                   aria-label={'Reagisci ' + emoji}
                   className="cd-pill"
                   style={{
-                    background: hasMe ? 'rgba(99,102,241,.25)' : 'rgba(255,255,255,.06)',
-                    border: '1px solid ' + (hasMe ? 'rgba(99,102,241,.4)' : 'rgba(255,255,255,.1)'),
+                    background: hasMe ? 'rgba(var(--c-primary-rgb),.25)' : 'rgba(255,255,255,.06)',
+                    border: '1px solid ' + (hasMe ? 'rgba(var(--c-primary-rgb),.4)' : 'rgba(255,255,255,.1)'),
                     padding: '4px 8px',
                     fontSize: 12,
                     color: hasMe ? '#a5b4fc' : 'rgba(255,255,255,.65)',
@@ -633,7 +633,7 @@ function CardDetail__({ $: props$ }: any) {
                 style={{
                   background: 'rgba(239,68,68,.15)',
                   border: '1px solid rgba(239,68,68,.3)',
-                  color: '#f87171',
+                  color: 'var(--c-danger, #f87171)',
                 }}
               >
                 🗑️ Elimina
@@ -653,8 +653,8 @@ function CardDetail__({ $: props$ }: any) {
               }}
               className="cd-pill"
               style={{
-                background: 'rgba(99,102,241,.12)',
-                border: '1px solid rgba(99,102,241,.3)',
+                background: 'rgba(var(--c-primary-rgb),.12)',
+                border: '1px solid rgba(var(--c-primary-rgb),.3)',
                 color: '#a5b4fc',
                 marginBottom: 8,
               }}
@@ -665,8 +665,8 @@ function CardDetail__({ $: props$ }: any) {
 {$.isProf && c.tipo === 'sondaggio' && $.sondaggioAiResult[c.id] && (
             <div
               style={{
-                background: 'rgba(99,102,241,.08)',
-                border: '1px solid rgba(99,102,241,.2)',
+                background: 'rgba(var(--c-primary-rgb),.08)',
+                border: '1px solid rgba(var(--c-primary-rgb),.2)',
                 borderRadius: 8,
                 padding: '8px 12px',
                 marginBottom: 12,

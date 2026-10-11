@@ -52,7 +52,7 @@ function ClasseModal(props: any) {
         <div
           style={{
             background: '#1c1a2e',
-            border: '1px solid rgba(99,102,241,.3)',
+            border: '1px solid rgba(var(--c-primary-rgb),.3)',
             borderRadius: 20,
             padding: 28,
             maxWidth: 440,
@@ -144,7 +144,7 @@ function ClasseModal(props: any) {
                 background:
                   isDisabled || !props.classeInput || listaVuota
                     ? 'rgba(255,255,255,.06)'
-                    : 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+                    : 'linear-gradient(135deg,var(--c-primary, #6366f1),#8b5cf6)',
                 color: isDisabled || !props.classeInput || listaVuota ? 'rgba(255,255,255,.40)' : '#fff',
                 border: 'none',
                 borderRadius: 12,

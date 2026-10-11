@@ -52,7 +52,7 @@ export function hilite(text: string, terms: string[], h: any): any[] | string {
         'mark',
         {
           key: out.length,
-          style: { background: 'rgba(99,102,241,.4)', color: '#fff', borderRadius: 3, padding: '0 2px' },
+          style: { background: 'rgba(var(--c-primary-rgb),.4)', color: '#fff', borderRadius: 3, padding: '0 2px' },
         },
         t.slice(s, e)
       )

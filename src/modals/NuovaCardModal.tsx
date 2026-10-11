@@ -94,8 +94,8 @@ function NuovaCardModal(props: any) {
                 display: 'flex',
                 alignItems: 'center',
                 gap: 6,
-                background: isLight ? 'rgba(79,70,229,.08)' : 'rgba(99,102,241,.15)',
-                border: isLight ? '1px solid rgba(79,70,229,.2)' : '1px solid rgba(99,102,241,.35)',
+                background: isLight ? 'rgba(79,70,229,.08)' : 'rgba(var(--c-primary-rgb),.15)',
+                border: isLight ? '1px solid rgba(79,70,229,.2)' : '1px solid rgba(var(--c-primary-rgb),.35)',
                 borderRadius: 9,
                 padding: '4px 8px',
                 fontSize: 11,
@@ -151,9 +151,9 @@ function NuovaCardModal(props: any) {
                       flex: '1 1 auto',
                       minWidth: 70,
                       padding: '8px 4px',
-                      border: '1px solid ' + (sel ? '#6366f1' : 'rgba(255,255,255,.1)'),
+                      border: '1px solid ' + (sel ? 'var(--c-primary, #6366f1)' : 'rgba(255,255,255,.1)'),
                       borderRadius: 10,
-                      background: sel ? 'rgba(99,102,241,.25)' : 'rgba(255,255,255,.04)',
+                      background: sel ? 'rgba(var(--c-primary-rgb),.25)' : 'rgba(255,255,255,.04)',
                       cursor: 'pointer',
                       fontWeight: 700,
                       fontSize: 11,
@@ -277,7 +277,7 @@ function NuovaCardModal(props: any) {
                   style={{
                     marginTop: 6,
                     fontSize: 11,
-                    color: '#f87171',
+                    color: 'var(--c-danger, #f87171)',
                     background: 'rgba(239,68,68,.1)',
                     padding: '4px 8px',
                     borderRadius: 6,
@@ -357,8 +357,8 @@ function NuovaCardModal(props: any) {
                         });
                       }}
                       style={{
-                        background: 'rgba(99,102,241,.2)',
-                        border: '1px solid rgba(99,102,241,.4)',
+                        background: 'rgba(var(--c-primary-rgb),.2)',
+                        border: '1px solid rgba(var(--c-primary-rgb),.4)',
                         borderRadius: 7,
                         padding: '3px 10px',
                         cursor: 'pointer',
@@ -455,7 +455,7 @@ function NuovaCardModal(props: any) {
                     (form.immagini || []).forEach(function (x: any) {
                       if (x.url) kb += Math.round((x.url.length * 0.75) / 1024);
                     });
-                    var color = kb > 750 ? '#f87171' : kb > 500 ? '#fbbf24' : 'rgba(255,255,255,.40)';
+                    var color = kb > 750 ? 'var(--c-danger, #f87171)' : kb > 500 ? 'var(--c-warn, #fbbf24)' : 'rgba(255,255,255,.40)';
                     var warn = kb > 750 ? ' ⚠️ vicino al limite card' : kb > 500 ? ' — qualità ridotta' : '';
                     return kb > 0 ? (
                       <span style={{ fontSize: 11, color: color, fontWeight: 700 }}>{kb + ' KB' + warn}</span>
@@ -692,7 +692,7 @@ function NuovaCardModal(props: any) {
                 width: '100%',
                 padding: 13,
                 marginTop: 4,
-                background: form.titolo.trim() ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : 'rgba(255,255,255,.06)',
+                background: form.titolo.trim() ? 'linear-gradient(135deg,var(--c-primary, #6366f1),#8b5cf6)' : 'rgba(255,255,255,.06)',
                 color: form.titolo.trim() ? '#fff' : 'rgba(255,255,255,.2)',
                 border: 'none',
                 borderRadius: 12,

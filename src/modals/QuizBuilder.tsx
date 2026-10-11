@@ -94,8 +94,8 @@ function QuizBuilder(props: any) {
                     setShowAiQuizGen(true);
                   }}
                   style={{
-                    background: 'linear-gradient(135deg,rgba(99,102,241,.3),rgba(139,92,246,.25))',
-                    border: '1px solid rgba(99,102,241,.5)',
+                    background: 'linear-gradient(135deg,rgba(var(--c-primary-rgb),.3),rgba(139,92,246,.25))',
+                    border: '1px solid rgba(var(--c-primary-rgb),.5)',
                     borderRadius: 7,
                     padding: '4px 11px',
                     cursor: 'pointer',
@@ -170,8 +170,8 @@ function QuizBuilder(props: any) {
 <div
               key={i}
               style={{
-                background: d.ai === true ? 'rgba(99,102,241,.09)' : 'rgba(236,72,153,.07)',
-                border: '1px solid ' + (d.ai === true ? 'rgba(99,102,241,.3)' : 'rgba(236,72,153,.2)'),
+                background: d.ai === true ? 'rgba(var(--c-primary-rgb),.09)' : 'rgba(236,72,153,.07)',
+                border: '1px solid ' + (d.ai === true ? 'rgba(var(--c-primary-rgb),.3)' : 'rgba(236,72,153,.2)'),
                 borderRadius: 10,
                 padding: '10px 12px',
                 marginBottom: 8,
@@ -352,7 +352,7 @@ function QuizBuilder(props: any) {
                         border: '2px solid ' + (d.corretta === vf ? '#22c55e' : 'rgba(255,255,255,.15)'),
                         borderRadius: 8,
                         background: d.corretta === vf ? 'rgba(34,197,94,.15)' : 'transparent',
-                        color: d.corretta === vf ? '#4ade80' : 'rgba(255,255,255,.65)',
+                        color: d.corretta === vf ? 'var(--c-success, #4ade80)' : 'rgba(255,255,255,.65)',
                         cursor: 'pointer',
                         fontWeight: 700,
                         fontSize: 12,

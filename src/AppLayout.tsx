@@ -56,8 +56,8 @@ function AppLayout(props: any) {
             style={{
               width: 52,
               height: 52,
-              border: '3px solid rgba(99,102,241,.2)',
-              borderTop: '3px solid #6366f1',
+              border: '3px solid rgba(var(--c-primary-rgb),.2)',
+              borderTop: '3px solid var(--c-primary, #6366f1)',
               borderRight: '3px solid #a855f7',
               borderRadius: '50%',
               animation: 'spin .9s linear infinite',
@@ -88,7 +88,7 @@ function AppLayout(props: any) {
     >
       {
         <div
-          style={{ height: 3, background: 'linear-gradient(90deg,#6366f1,#8b5cf6,#a855f7,#ec4899)', flexShrink: 0 }}
+          style={{ height: 3, background: 'linear-gradient(90deg,var(--c-primary, #6366f1),#8b5cf6,#a855f7,#ec4899)', flexShrink: 0 }}
         />
       }
       {<Header $={$} />}
@@ -105,7 +105,7 @@ function AppLayout(props: any) {
                 padding: '6px 14px',
                 background: isLight
                   ? 'linear-gradient(90deg,rgba(79,70,229,.05) 0%,#f8fafc 40%,rgba(34,197,94,.06) 100%)'
-                  : 'linear-gradient(90deg,rgba(99,102,241,.06) 0%,rgba(255,255,255,.03) 40%,rgba(34,197,94,.05) 100%)',
+                  : 'linear-gradient(90deg,rgba(var(--c-primary-rgb),.06) 0%,rgba(255,255,255,.03) 40%,rgba(34,197,94,.05) 100%)',
                 borderBottom: isLight ? '1px solid rgba(15,23,42,.08)' : '1px solid rgba(255,255,255,.07)',
                 flexWrap: 'wrap',
                 // Fascia UNICA (contatori + privacy) agganciata in alto mentre si
@@ -153,7 +153,7 @@ function AppLayout(props: any) {
                 <span
                   style={{
                     background: 'rgba(239,68,68,.2)',
-                    color: '#f87171',
+                    color: 'var(--c-danger, #f87171)',
                     borderRadius: 20,
                     padding: '2px 8px',
                     fontSize: 11,
@@ -176,7 +176,7 @@ function AppLayout(props: any) {
                     alignItems: 'center',
                     gap: 6,
                     background: 'rgba(245,158,11,.18)',
-                    color: isLight ? '#92400e' : '#fbbf24',
+                    color: isLight ? '#92400e' : 'var(--c-warn, #fbbf24)',
                     borderRadius: 20,
                     padding: '2px 4px 2px 9px',
                     fontSize: 11,
@@ -229,8 +229,8 @@ function AppLayout(props: any) {
                   maxWidth: '100%',
                   flexShrink: 1,
                   background: isLight
-                    ? 'linear-gradient(135deg,rgba(99,102,241,.18) 0%,rgba(168,85,247,.16) 100%)'
-                    : 'linear-gradient(135deg,rgba(99,102,241,.32) 0%,rgba(168,85,247,.24) 100%)',
+                    ? 'linear-gradient(135deg,rgba(var(--c-primary-rgb),.18) 0%,rgba(168,85,247,.16) 100%)'
+                    : 'linear-gradient(135deg,rgba(var(--c-primary-rgb),.32) 0%,rgba(168,85,247,.24) 100%)',
                   border: '1px solid ' + (isLight ? 'rgba(79,70,229,.40)' : 'rgba(139,92,246,.60)'),
                   borderRadius: 999,
                   padding: '3px 12px 3px 5px',
@@ -241,8 +241,8 @@ function AppLayout(props: any) {
                   letterSpacing: 0.2,
                   fontFamily: 'inherit',
                   boxShadow: isLight
-                    ? '0 0 0 3px rgba(99,102,241,.10), 0 3px 16px rgba(99,102,241,.28)'
-                    : '0 0 0 3px rgba(99,102,241,.12), 0 3px 20px rgba(139,92,246,.45)',
+                    ? '0 0 0 3px rgba(var(--c-primary-rgb),.10), 0 3px 16px rgba(var(--c-primary-rgb),.28)'
+                    : '0 0 0 3px rgba(var(--c-primary-rgb),.12), 0 3px 20px rgba(139,92,246,.45)',
                 }}
               >
                 <span
@@ -255,8 +255,8 @@ function AppLayout(props: any) {
                     height: 24,
                     borderRadius: '50%',
                     flexShrink: 0,
-                    background: 'linear-gradient(135deg,#6366f1 0%,#8b5cf6 60%,#a855f7 100%)',
-                    boxShadow: '0 2px 8px rgba(99,102,241,.55)',
+                    background: 'linear-gradient(135deg,var(--c-primary, #6366f1) 0%,#8b5cf6 60%,#a855f7 100%)',
+                    boxShadow: '0 2px 8px rgba(var(--c-primary-rgb),.55)',
                     animation: 'guida-seal-glow 3s ease-in-out infinite',
                   }}
                 >
@@ -330,7 +330,7 @@ function AppLayout(props: any) {
                     height: 24,
                     borderRadius: '50%',
                     flexShrink: 0,
-                    background: 'linear-gradient(135deg,#10b981 0%,#22c55e 60%,#4ade80 100%)',
+                    background: 'linear-gradient(135deg,#10b981 0%,#22c55e 60%,var(--c-success, #4ade80) 100%)',
                     boxShadow: '0 2px 8px rgba(16,185,129,.55)',
                     animation: 'privacy-seal-glow 2.4s ease-in-out infinite',
                   }}
@@ -428,7 +428,7 @@ function AppLayout(props: any) {
                           }}
                           style={{
                             background: 'rgba(255,255,255,.08)',
-                            border: '1px solid rgba(99,102,241,.4)',
+                            border: '1px solid rgba(var(--c-primary-rgb),.4)',
                             borderRadius: 10,
                             padding: '9px 14px',
                             fontSize: 13,
@@ -462,11 +462,11 @@ function AppLayout(props: any) {
                           className="btn btn-primary"
                           style={{
                             padding: '9px 22px',
-                            background: $.aiRunning ? 'rgba(99,102,241,.2)' : 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+                            background: $.aiRunning ? 'rgba(var(--c-primary-rgb),.2)' : 'linear-gradient(135deg,var(--c-primary, #6366f1),#8b5cf6)',
                             fontWeight: 800,
                             cursor: $.aiRunning ? 'not-allowed' : 'pointer',
                             opacity: $.aiRunning ? 0.6 : 1,
-                            boxShadow: $.aiRunning ? 'none' : '0 4px 16px rgba(99,102,241,.35)',
+                            boxShadow: $.aiRunning ? 'none' : '0 4px 16px rgba(var(--c-primary-rgb),.35)',
                           }}
                         >
                           {$.aiRunning ? '⏳ Analisi in corso…' : '🚀 Avvia analisi AI'}
@@ -484,7 +484,7 @@ function AppLayout(props: any) {
                     borderRadius: 12,
                     padding: '12px 16px',
                     marginBottom: 16,
-                    color: '#f87171',
+                    color: 'var(--c-danger, #f87171)',
                     fontSize: 13,
                     fontWeight: 600,
                   }}
@@ -501,8 +501,8 @@ function AppLayout(props: any) {
                     return (
                       <div
                         style={{
-                          background: 'rgba(99,102,241,.06)',
-                          border: '1px solid rgba(99,102,241,.2)',
+                          background: 'rgba(var(--c-primary-rgb),.06)',
+                          border: '1px solid rgba(var(--c-primary-rgb),.2)',
                           borderRadius: 16,
                           padding: '20px 24px',
                         }}
@@ -538,7 +538,7 @@ function AppLayout(props: any) {
                                 style={{
                                   fontSize: 15,
                                   fontWeight: 800,
-                                  color: '#4ade80',
+                                  color: 'var(--c-success, #4ade80)',
                                   marginBottom: 6,
                                   display: 'flex',
                                   alignItems: 'center',
@@ -562,7 +562,7 @@ function AppLayout(props: any) {
                                 style={{
                                   fontSize: 15,
                                   fontWeight: 800,
-                                  color: '#fbbf24',
+                                  color: 'var(--c-warn, #fbbf24)',
                                   marginBottom: 8,
                                   display: 'flex',
                                   alignItems: 'center',
@@ -588,7 +588,7 @@ function AppLayout(props: any) {
                                   {
                                     <span
                                       style={{
-                                        color: '#fbbf24',
+                                        color: 'var(--c-warn, #fbbf24)',
                                         fontWeight: 800,
                                         flexShrink: 0,
                                       }}
@@ -653,7 +653,7 @@ function AppLayout(props: any) {
                           style={{
                             marginTop: 14,
                             paddingTop: 10,
-                            borderTop: '1px solid rgba(99,102,241,.15)',
+                            borderTop: '1px solid rgba(var(--c-primary-rgb),.15)',
                             display: 'flex',
                             alignItems: 'center',
                             gap: 5,
@@ -676,8 +676,8 @@ function AppLayout(props: any) {
                       <div
                         key={cl}
                         style={{
-                          background: 'rgba(99,102,241,.06)',
-                          border: '1px solid rgba(99,102,241,.2)',
+                          background: 'rgba(var(--c-primary-rgb),.06)',
+                          border: '1px solid rgba(var(--c-primary-rgb),.2)',
                           borderRadius: 16,
                           padding: '16px 20px',
                           marginBottom: 14,
@@ -691,7 +691,7 @@ function AppLayout(props: any) {
                               gap: 10,
                               marginBottom: 12,
                               paddingBottom: 10,
-                              borderBottom: '1px solid rgba(99,102,241,.15)',
+                              borderBottom: '1px solid rgba(var(--c-primary-rgb),.15)',
                             }}
                           >
                             {
@@ -739,7 +739,7 @@ function AppLayout(props: any) {
                           style={{
                             marginTop: 10,
                             paddingTop: 8,
-                            borderTop: '1px solid rgba(99,102,241,.15)',
+                            borderTop: '1px solid rgba(var(--c-primary-rgb),.15)',
                             display: 'flex',
                             alignItems: 'center',
                             gap: 5,

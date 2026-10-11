@@ -10,7 +10,7 @@ function Header__({ $ }: any) {
       style={{
         background: isLight ? 'rgba(255,255,255,.92)' : 'rgba(15,20,40,.85)',
         backdropFilter: 'blur(16px)',
-        borderBottom: isLight ? '1px solid rgba(15,23,42,.08)' : '1px solid rgba(99,102,241,.18)',
+        borderBottom: isLight ? '1px solid rgba(15,23,42,.08)' : '1px solid rgba(var(--c-primary-rgb),.18)',
         padding: '8px 14px',
         display: 'flex',
         alignItems: 'center',
@@ -34,7 +34,7 @@ function Header__({ $ }: any) {
               style={{
                 fontWeight: 900,
                 fontSize: 16,
-                background: 'linear-gradient(135deg,#6366f1,#a855f7)',
+                background: 'linear-gradient(135deg,var(--c-primary, #6366f1),#a855f7)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 letterSpacing: 2,
@@ -49,8 +49,8 @@ function Header__({ $ }: any) {
         <span
           className="header-chip"
           style={{
-            background: $.isProf ? 'rgba(99,102,241,.2)' : 'rgba(34,197,94,.15)',
-            color: $.isProf ? '#a5b4fc' : '#4ade80',
+            background: $.isProf ? 'rgba(var(--c-primary-rgb),.2)' : 'rgba(34,197,94,.15)',
+            color: $.isProf ? '#a5b4fc' : 'var(--c-success, #4ade80)',
           }}
         >
           {$.user.photoURL && (
@@ -81,7 +81,7 @@ function Header__({ $ }: any) {
           className="header-chip"
           style={{
             background: 'rgba(239,68,68,.2)',
-            color: '#f87171',
+            color: 'var(--c-danger, #f87171)',
             border: '1px solid rgba(239,68,68,.3)',
             cursor: 'pointer',
           }}
@@ -149,8 +149,8 @@ function Header__({ $ }: any) {
                 });
               }}
               style={{
-                background: 'rgba(99,102,241,.2)',
-                border: '1px solid rgba(99,102,241,.45)',
+                background: 'rgba(var(--c-primary-rgb),.2)',
+                border: '1px solid rgba(var(--c-primary-rgb),.45)',
                 borderRadius: 20,
                 padding: '3px 13px',
                 cursor: 'pointer',
@@ -173,7 +173,7 @@ function Header__({ $ }: any) {
                 top: 'calc(100% + 8px)',
                 left: 0,
                 background: 'rgba(13,13,30,.98)',
-                border: '1px solid rgba(99,102,241,.4)',
+                border: '1px solid rgba(var(--c-primary-rgb),.4)',
                 borderRadius: 14,
                 padding: '8px 6px',
                 zIndex: 300,
@@ -213,7 +213,7 @@ function Header__({ $ }: any) {
                       gap: 8,
                       width: '100%',
                       textAlign: 'left',
-                      background: sel ? 'rgba(99,102,241,.25)' : 'transparent',
+                      background: sel ? 'rgba(var(--c-primary-rgb),.25)' : 'transparent',
                       border: 'none',
                       borderRadius: 9,
                       padding: '7px 12px',
@@ -282,7 +282,7 @@ function Header__({ $ }: any) {
               ($.nonLette || 0) > 0
                 ? isLight
                   ? 'rgba(79,70,229,.12)'
-                  : 'rgba(99,102,241,.25)'
+                  : 'rgba(var(--c-primary-rgb),.25)'
                 : isLight
                   ? 'rgba(15,23,42,.06)'
                   : 'rgba(255,255,255,.06)',
@@ -291,7 +291,7 @@ function Header__({ $ }: any) {
               (($.nonLette || 0) > 0
                 ? isLight
                   ? 'rgba(79,70,229,.22)'
-                  : 'rgba(99,102,241,.45)'
+                  : 'rgba(var(--c-primary-rgb),.45)'
                 : isLight
                   ? 'rgba(15,23,42,.10)'
                   : 'rgba(255,255,255,.1)'),
@@ -342,7 +342,7 @@ function Header__({ $ }: any) {
               maxHeight: 380,
               overflow: 'auto',
               background: isLight ? '#ffffff' : 'rgba(13,13,30,.98)',
-              border: isLight ? '1px solid rgba(15,23,42,.12)' : '1px solid rgba(99,102,241,.35)',
+              border: isLight ? '1px solid rgba(15,23,42,.12)' : '1px solid rgba(var(--c-primary-rgb),.35)',
               borderRadius: 14,
               boxShadow: isLight ? '0 12px 32px rgba(15,23,42,.12)' : '0 12px 40px rgba(0,0,0,.6)',
               zIndex: 400,
@@ -385,7 +385,7 @@ function Header__({ $ }: any) {
                     borderRadius: 6,
                     padding: '3px 8px',
                     fontSize: 11,
-                    color: '#f87171',
+                    color: 'var(--c-danger, #f87171)',
                     cursor: 'pointer',
                     fontWeight: 700,
                   }}
@@ -436,10 +436,10 @@ function Header__({ $ }: any) {
                       padding: '8px 8px',
                       borderRadius: 8,
                       cursor: 'pointer',
-                      background: n.letta ? 'transparent' : isLight ? 'rgba(79,70,229,.08)' : 'rgba(99,102,241,.10)',
+                      background: n.letta ? 'transparent' : isLight ? 'rgba(79,70,229,.08)' : 'rgba(var(--c-primary-rgb),.10)',
                       border:
                         '1px solid ' +
-                        (n.letta ? 'transparent' : isLight ? 'rgba(79,70,229,.14)' : 'rgba(99,102,241,.18)'),
+                        (n.letta ? 'transparent' : isLight ? 'rgba(79,70,229,.14)' : 'rgba(var(--c-primary-rgb),.18)'),
                       marginBottom: 4,
                       alignItems: 'flex-start',
                     }}
@@ -480,7 +480,7 @@ function Header__({ $ }: any) {
                           width: 7,
                           height: 7,
                           borderRadius: '50%',
-                          background: '#6366f1',
+                          background: 'var(--c-primary, #6366f1)',
                           flexShrink: 0,
                           marginTop: 6,
                         }}
@@ -500,8 +500,8 @@ function Header__({ $ }: any) {
             $.setShowCerca(true);
           }}
           style={{
-            background: isLight ? 'rgba(79,70,229,.08)' : 'rgba(99,102,241,.12)',
-            border: isLight ? '1px solid rgba(79,70,229,.20)' : '1px solid rgba(99,102,241,.35)',
+            background: isLight ? 'rgba(79,70,229,.08)' : 'rgba(var(--c-primary-rgb),.12)',
+            border: isLight ? '1px solid rgba(79,70,229,.20)' : '1px solid rgba(var(--c-primary-rgb),.35)',
             borderRadius: 8,
             padding: '5px 9px',
             cursor: 'pointer',
@@ -525,7 +525,7 @@ function Header__({ $ }: any) {
             padding: '5px 9px',
             cursor: 'pointer',
             fontSize: 14,
-            color: isLight ? '#92400e' : '#fbbf24',
+            color: isLight ? '#92400e' : 'var(--c-warn, #fbbf24)',
           }}
         >
           ⚠️
@@ -545,7 +545,7 @@ function Header__({ $ }: any) {
             padding: '5px 9px',
             cursor: 'pointer',
             fontSize: 14,
-            color: '#4ade80',
+            color: 'var(--c-success, #4ade80)',
           }}
         >
           🖨️
@@ -621,7 +621,7 @@ function Header__({ $ }: any) {
                   padding: '4px 11px',
                   borderRadius: 7,
                   border: 'none',
-                  background: $.view === t.k ? 'rgba(99,102,241,.4)' : 'transparent',
+                  background: $.view === t.k ? 'rgba(var(--c-primary-rgb),.4)' : 'transparent',
                   color: $.view === t.k ? '#fff' : 'rgba(255,255,255,.58)',
                   fontWeight: 700,
                   cursor: 'pointer',
@@ -640,8 +640,8 @@ function Header__({ $ }: any) {
             $.setShowProfilo(true);
           }}
           style={{
-            background: 'rgba(99,102,241,.15)',
-            border: '1px solid rgba(99,102,241,.3)',
+            background: 'rgba(var(--c-primary-rgb),.15)',
+            border: '1px solid rgba(var(--c-primary-rgb),.3)',
             borderRadius: 8,
             padding: '4px 9px',
             cursor: 'pointer',

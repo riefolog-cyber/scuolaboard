@@ -26,7 +26,7 @@ function LoginScreen__({ $ }: any) {
             width: 500,
             height: 500,
             borderRadius: '50%',
-            background: 'radial-gradient(circle,rgba(99,102,241,.18) 0%,transparent 70%)',
+            background: 'radial-gradient(circle,rgba(var(--c-primary-rgb),.18) 0%,transparent 70%)',
             pointerEvents: 'none',
           }}
         />
@@ -78,7 +78,7 @@ function LoginScreen__({ $ }: any) {
           {
             <div style={{ marginBottom: 24 }}>
               {
-                <div style={{ fontSize: 52, marginBottom: 12, filter: 'drop-shadow(0 0 20px rgba(99,102,241,.5))' }}>
+                <div style={{ fontSize: 52, marginBottom: 12, filter: 'drop-shadow(0 0 20px rgba(var(--c-primary-rgb),.5))' }}>
                   🎓
                 </div>
               }
@@ -92,7 +92,7 @@ function LoginScreen__({ $ }: any) {
                       style={{
                         fontWeight: 900,
                         fontSize: 28,
-                        background: 'linear-gradient(135deg,#6366f1,#a855f7)',
+                        background: 'linear-gradient(135deg,var(--c-primary, #6366f1),#a855f7)',
                         WebkitBackgroundClip: 'text',
                         WebkitTextFillColor: 'transparent',
                         letterSpacing: 2,
@@ -117,8 +117,8 @@ function LoginScreen__({ $ }: any) {
                   <span
                     key={i}
                     style={{
-                      background: 'rgba(99,102,241,.12)',
-                      border: '1px solid rgba(99,102,241,.2)',
+                      background: 'rgba(var(--c-primary-rgb),.12)',
+                      border: '1px solid rgba(var(--c-primary-rgb),.2)',
                       borderRadius: 20,
                       padding: '3px 10px',
                       fontSize: 11,
@@ -186,8 +186,8 @@ function LoginScreen__({ $ }: any) {
             <div
               style={{
                 marginTop: 16,
-                background: 'rgba(99,102,241,.08)',
-                border: '1px solid rgba(99,102,241,.18)',
+                background: 'rgba(var(--c-primary-rgb),.08)',
+                border: '1px solid rgba(var(--c-primary-rgb),.18)',
                 borderRadius: 14,
                 padding: '12px 14px',
                 textAlign: 'left',

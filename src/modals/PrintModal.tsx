@@ -219,14 +219,14 @@ function PrintModal(props: any) {
           className="print-hide"
           style={{
             padding: '10px 22px',
-            background: 'linear-gradient(135deg,#6366f1,#a855f7)',
+            background: 'linear-gradient(135deg,var(--c-primary, #6366f1),#a855f7)',
             border: 'none',
             borderRadius: 11,
             cursor: 'pointer',
             fontSize: 13,
             fontWeight: 800,
             color: '#fff',
-            boxShadow: '0 4px 16px rgba(99,102,241,.35)',
+            boxShadow: '0 4px 16px rgba(var(--c-primary-rgb),.35)',
           }}
         >
           🖨️ Stampa / Salva PDF

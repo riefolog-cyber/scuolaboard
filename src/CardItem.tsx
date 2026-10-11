@@ -53,14 +53,14 @@ function CardItem__({ $, c, idx }: any) {
     });
   }
   if (nascosta && $.isProf) {
-    statoBadges.push({ key: 'nasc', label: 'NASCOSTA', bg: 'rgba(239,68,68,.2)', fg: '#f87171' });
+    statoBadges.push({ key: 'nasc', label: 'NASCOSTA', bg: 'rgba(239,68,68,.2)', fg: 'var(--c-danger, #f87171)' });
   }
   if (nuova) {
     statoBadges.push({
       key: 'nuovo',
       label: 'NUOVO',
       bg: 'rgba(34,197,94,.25)',
-      fg: '#4ade80',
+      fg: 'var(--c-success, #4ade80)',
       bd: 'rgba(34,197,94,.4)',
     });
   }
@@ -243,7 +243,7 @@ function CardItem__({ $, c, idx }: any) {
                           }
                           style={{
                             background: 'rgba(245,158,11,.22)',
-                            color: '#fbbf24',
+                            color: 'var(--c-warn, #fbbf24)',
                             padding: '2px 6px',
                             fontWeight: 800,
                             border: '1px solid rgba(245,158,11,.45)',
@@ -315,7 +315,7 @@ function CardItem__({ $, c, idx }: any) {
                           className="badge-chip card-badge-extra"
                           style={{
                             background: 'rgba(239,68,68,.2)',
-                            color: '#f87171',
+                            color: 'var(--c-danger, #f87171)',
                           }}
                         >
                           Solo prof
@@ -397,8 +397,8 @@ function CardItem__({ $, c, idx }: any) {
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: 4,
-                    background: 'rgba(99,102,241,.15)',
-                    border: '1px solid rgba(99,102,241,.3)',
+                    background: 'rgba(var(--c-primary-rgb),.15)',
+                    border: '1px solid rgba(var(--c-primary-rgb),.3)',
                     borderRadius: 20,
                     padding: '2px 8px',
                     fontSize: 11,
@@ -433,7 +433,7 @@ function CardItem__({ $, c, idx }: any) {
                           }
                           {
                             <div style={{ height: 3, background: 'rgba(255,255,255,.1)', borderRadius: 3 }}>
-                              {<div style={{ height: 3, background: '#6366f1', borderRadius: 3, width: pct + '%' }} />}
+                              {<div style={{ height: 3, background: 'var(--c-primary, #6366f1)', borderRadius: 3, width: pct + '%' }} />}
                             </div>
                           }
                         </div>
@@ -484,8 +484,8 @@ function CardItem__({ $, c, idx }: any) {
                   }}
                   style={{
                     order: 1,
-                    background: liked ? 'rgba(99,102,241,.3)' : 'rgba(255,255,255,.08)',
-                    border: '1px solid ' + (liked ? 'rgba(99,102,241,.5)' : 'rgba(255,255,255,.1)'),
+                    background: liked ? 'rgba(var(--c-primary-rgb),.3)' : 'rgba(255,255,255,.08)',
+                    border: '1px solid ' + (liked ? 'rgba(var(--c-primary-rgb),.5)' : 'rgba(255,255,255,.1)'),
                     padding: '3px 8px',
                     fontSize: 12,
                     color: liked ? '#a5b4fc' : 'rgba(255,255,255,.65)',
@@ -503,7 +503,7 @@ function CardItem__({ $, c, idx }: any) {
                     left: '50%',
                     transform: 'translateX(-50%)',
                     background: 'rgba(15,20,40,.97)',
-                    border: '1px solid rgba(99,102,241,.4)',
+                    border: '1px solid rgba(var(--c-primary-rgb),.4)',
                     borderRadius: 10,
                     padding: '8px 12px',
                     zIndex: 200,
@@ -546,7 +546,7 @@ function CardItem__({ $, c, idx }: any) {
                               width: 6,
                               height: 6,
                               borderRadius: '50%',
-                              background: '#6366f1',
+                              background: 'var(--c-primary, #6366f1)',
                               display: 'inline-block',
                               flexShrink: 0,
                             }}
@@ -567,7 +567,7 @@ function CardItem__({ $, c, idx }: any) {
                         height: 0,
                         borderLeft: '6px solid transparent',
                         borderRight: '6px solid transparent',
-                        borderTop: '6px solid rgba(99,102,241,.4)',
+                        borderTop: '6px solid rgba(var(--c-primary-rgb),.4)',
                       }}
                     />
                   }
@@ -612,8 +612,8 @@ function CardItem__({ $, c, idx }: any) {
                     aria-label={'Reagisci con ' + emoji}
                     className="pill-btn"
                     style={{
-                      background: hasMe ? 'rgba(99,102,241,.25)' : 'rgba(255,255,255,.06)',
-                      border: '1px solid ' + (hasMe ? 'rgba(99,102,241,.4)' : 'rgba(255,255,255,.1)'),
+                      background: hasMe ? 'rgba(var(--c-primary-rgb),.25)' : 'rgba(255,255,255,.06)',
+                      border: '1px solid ' + (hasMe ? 'rgba(var(--c-primary-rgb),.4)' : 'rgba(255,255,255,.1)'),
                       padding: '3px 7px',
                       fontSize: 12,
                       color: hasMe ? '#a5b4fc' : 'rgba(255,255,255,.65)',
@@ -643,8 +643,8 @@ function CardItem__({ $, c, idx }: any) {
               }}
               style={{
                 order: 2,
-                background: 'rgba(99,102,241,.15)',
-                border: '1px solid rgba(99,102,241,.3)',
+                background: 'rgba(var(--c-primary-rgb),.15)',
+                border: '1px solid rgba(var(--c-primary-rgb),.3)',
                 padding: '3px 10px',
                 fontSize: 12,
                 color: '#a5b4fc',
@@ -657,7 +657,7 @@ function CardItem__({ $, c, idx }: any) {
                 <span
                   style={{
                     fontSize: 11,
-                    background: 'rgba(99,102,241,.3)',
+                    background: 'rgba(var(--c-primary-rgb),.3)',
                     borderRadius: 10,
                     padding: '0 5px',
                     marginLeft: 2,
@@ -680,7 +680,7 @@ function CardItem__({ $, c, idx }: any) {
                 order: 10,
                 background: 'rgba(34,197,94,.12)',
                 border: '1px solid rgba(34,197,94,.3)',
-                color: '#4ade80',
+                color: 'var(--c-success, #4ade80)',
                 fontWeight: 700,
               }}
             >
@@ -701,7 +701,7 @@ function CardItem__({ $, c, idx }: any) {
                   '1px solid ' +
                   ($.preferiti.indexOf(String(c.id)) >= 0 ? 'rgba(245,158,11,.5)' : 'rgba(255,255,255,.1)'),
                 fontSize: 13,
-                color: $.preferiti.indexOf(String(c.id)) >= 0 ? '#fbbf24' : 'rgba(255,255,255,.45)',
+                color: $.preferiti.indexOf(String(c.id)) >= 0 ? 'var(--c-warn, #fbbf24)' : 'rgba(255,255,255,.45)',
               }}
             >
               {$.preferiti.indexOf(String(c.id)) >= 0 ? '★' : '☆'}
@@ -723,8 +723,8 @@ function CardItem__({ $, c, idx }: any) {
               }}
               style={{
                 order: 4,
-                background: azioniOpen ? 'rgba(99,102,241,.28)' : 'rgba(255,255,255,.06)',
-                border: '1px solid ' + (azioniOpen ? 'rgba(99,102,241,.45)' : 'rgba(255,255,255,.12)'),
+                background: azioniOpen ? 'rgba(var(--c-primary-rgb),.28)' : 'rgba(255,255,255,.06)',
+                border: '1px solid ' + (azioniOpen ? 'rgba(var(--c-primary-rgb),.45)' : 'rgba(255,255,255,.12)'),
                 color: azioniOpen ? '#c7d2fe' : 'rgba(255,255,255,.62)',
                 fontWeight: 800,
               }}
@@ -800,7 +800,7 @@ function CardItem__({ $, c, idx }: any) {
                 order: 13,
                 background: 'rgba(245,158,11,.15)',
                 border: '1px solid rgba(245,158,11,.3)',
-                color: '#fbbf24',
+                color: 'var(--c-warn, #fbbf24)',
                 fontWeight: 700,
               }}
             >
@@ -845,7 +845,7 @@ function CardItem__({ $, c, idx }: any) {
                 order: 15,
                 background: 'rgba(239,68,68,.15)',
                 border: '1px solid rgba(239,68,68,.3)',
-                color: '#f87171',
+                color: 'var(--c-danger, #f87171)',
                 fontWeight: 700,
               }}
             >

@@ -93,12 +93,12 @@ function CardGrid__({ $ }: any) {
                 width={64}
                 height={52}
                 rx={8}
-                stroke="rgba(99,102,241,.8)"
+                stroke="rgba(var(--c-primary-rgb),.8)"
                 strokeWidth={2}
-                fill="rgba(99,102,241,.06)"
+                fill="rgba(var(--c-primary-rgb),.06)"
               />
             }
-            {<rect x={18} y={24} width={30} height={3} rx={2} fill="rgba(99,102,241,.5)" />}
+            {<rect x={18} y={24} width={30} height={3} rx={2} fill="rgba(var(--c-primary-rgb),.5)" />}
             {<rect x={18} y={32} width={44} height={3} rx={2} fill="rgba(255,255,255,.45)" />}
             {<rect x={18} y={40} width={36} height={3} rx={2} fill="rgba(255,255,255,.15)" />}
             {
@@ -106,12 +106,12 @@ function CardGrid__({ $ }: any) {
                 cx={60}
                 cy={52}
                 r={10}
-                fill="rgba(99,102,241,.15)"
-                stroke="rgba(99,102,241,.4)"
+                fill="rgba(var(--c-primary-rgb),.15)"
+                stroke="rgba(var(--c-primary-rgb),.4)"
                 strokeWidth={1.5}
               />
             }
-            {<path d="M56 52h8M60 48v8" stroke="rgba(99,102,241,.6)" strokeWidth={2} strokeLinecap="round" />}
+            {<path d="M56 52h8M60 48v8" stroke="rgba(var(--c-primary-rgb),.6)" strokeWidth={2} strokeLinecap="round" />}
           </svg>
         }
         {

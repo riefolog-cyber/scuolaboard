@@ -14,7 +14,7 @@ import React from 'react';
 const STILE_WRAP = {
   marginTop: 10,
   paddingTop: 8,
-  borderTop: '1px solid rgba(99,102,241,.15)',
+  borderTop: '1px solid rgba(var(--c-primary-rgb),.15)',
   display: 'flex',
   alignItems: 'center',
   gap: 5,

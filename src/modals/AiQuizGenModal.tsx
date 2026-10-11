@@ -40,7 +40,7 @@ function AiQuizGenModal(props: any) {
             maxWidth: 580,
             maxHeight: '92vh',
             overflowY: 'auto',
-            border: '1px solid rgba(99,102,241,.3)',
+            border: '1px solid rgba(var(--c-primary-rgb),.3)',
             borderBottom: 'none',
           }}
           onClick={function (e: any) {
@@ -66,7 +66,7 @@ function AiQuizGenModal(props: any) {
                     width: 38,
                     height: 38,
                     borderRadius: 10,
-                    background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+                    background: 'linear-gradient(135deg,var(--c-primary, #6366f1),#8b5cf6)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -158,9 +158,9 @@ function AiQuizGenModal(props: any) {
                                 }}
                                 style={{
                                   padding: '7px 8px',
-                                  border: '1px solid ' + (sel ? '#6366f1' : 'rgba(255,255,255,.1)'),
+                                  border: '1px solid ' + (sel ? 'var(--c-primary, #6366f1)' : 'rgba(255,255,255,.1)'),
                                   borderRadius: 8,
-                                  background: sel ? 'rgba(99,102,241,.25)' : 'rgba(255,255,255,.04)',
+                                  background: sel ? 'rgba(var(--c-primary-rgb),.25)' : 'rgba(255,255,255,.04)',
                                   color: sel ? '#c4b5fd' : 'rgba(255,255,255,.65)',
                                   fontSize: 11,
                                   fontWeight: sel ? 800 : 500,
@@ -222,7 +222,7 @@ function AiQuizGenModal(props: any) {
                     border: '1px solid rgba(239,68,68,.3)',
                     borderRadius: 8,
                     padding: '8px 12px',
-                    color: '#f87171',
+                    color: 'var(--c-danger, #f87171)',
                     fontSize: 12,
                     marginBottom: 10,
                   }}
@@ -262,7 +262,7 @@ function AiQuizGenModal(props: any) {
                         background:
                           aqg.loading || !aqg.testo.trim()
                             ? 'rgba(255,255,255,.08)'
-                            : 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+                            : 'linear-gradient(135deg,var(--c-primary, #6366f1),#8b5cf6)',
                         color: aqg.loading || !aqg.testo.trim() ? 'rgba(255,255,255,.40)' : '#fff',
                         border: 'none',
                         borderRadius: 11,
@@ -300,7 +300,7 @@ function AiQuizGenModal(props: any) {
                     padding: '8px 12px',
                     marginBottom: 14,
                     fontSize: 12,
-                    color: '#4ade80',
+                    color: 'var(--c-success, #4ade80)',
                     display: 'flex',
                     alignItems: 'center',
                     gap: 6,
@@ -312,14 +312,14 @@ function AiQuizGenModal(props: any) {
               }
               {aqg.anteprima.map(function (d: any, i: number) {
                 var isRegen = aqg.regenIdx === i;
-                var tipoBadgeBg = d.tipo === 'multipla' ? '#6366f1' : d.tipo === 'verofalso' ? '#22c55e' : '#f59e0b';
+                var tipoBadgeBg = d.tipo === 'multipla' ? 'var(--c-primary, #6366f1)' : d.tipo === 'verofalso' ? '#22c55e' : '#f59e0b';
                 var tipoLabel = d.tipo === 'multipla' ? 'Multipla' : d.tipo === 'verofalso' ? 'Vero/Falso' : 'Aperta';
                 return (
                   <div
                     key={i}
                     style={{
                       background: 'rgba(255,255,255,.04)',
-                      border: '1px solid rgba(99,102,241,.2)',
+                      border: '1px solid rgba(var(--c-primary-rgb),.2)',
                       borderRadius: 11,
                       padding: '11px 13px',
                       marginBottom: 8,
@@ -331,7 +331,7 @@ function AiQuizGenModal(props: any) {
                         {
                           <span
                             style={{
-                              background: '#6366f1',
+                              background: 'var(--c-primary, #6366f1)',
                               color: '#fff',
                               borderRadius: '50%',
                               width: 20,
@@ -371,8 +371,8 @@ function AiQuizGenModal(props: any) {
                             disabled={isRegen || aqg.regenIdx !== null}
                             title="Rigenera questa domanda"
                             style={{
-                              background: 'rgba(99,102,241,.15)',
-                              border: '1px solid rgba(99,102,241,.3)',
+                              background: 'rgba(var(--c-primary-rgb),.15)',
+                              border: '1px solid rgba(var(--c-primary-rgb),.3)',
                               borderRadius: 7,
                               padding: '3px 8px',
                               cursor: isRegen || aqg.regenIdx !== null ? 'not-allowed' : 'pointer',
@@ -429,12 +429,12 @@ function AiQuizGenModal(props: any) {
                                 />
                               }
                               {
-                                <span style={{ fontSize: 12, color: isCorr ? '#4ade80' : 'rgba(255,255,255,.65)' }}>
+                                <span style={{ fontSize: 12, color: isCorr ? 'var(--c-success, #4ade80)' : 'rgba(255,255,255,.65)' }}>
                                   {op}
                                 </span>
                               }
                               {isCorr && (
-                                <span style={{ marginLeft: 'auto', fontSize: 11, color: '#4ade80', fontWeight: 700 }}>
+                                <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--c-success, #4ade80)', fontWeight: 700 }}>
                                   ✓ corretta
                                 </span>
                               )}
@@ -456,7 +456,7 @@ function AiQuizGenModal(props: any) {
                                 borderRadius: 8,
                                 border: '1px solid ' + (isCorr ? 'rgba(34,197,94,.4)' : 'rgba(255,255,255,.1)'),
                                 background: isCorr ? 'rgba(34,197,94,.1)' : 'rgba(255,255,255,.03)',
-                                color: isCorr ? '#4ade80' : 'rgba(255,255,255,.58)',
+                                color: isCorr ? 'var(--c-success, #4ade80)' : 'rgba(255,255,255,.58)',
                                 fontSize: 12,
                                 fontWeight: isCorr ? 800 : 400,
                                 textAlign: 'center',

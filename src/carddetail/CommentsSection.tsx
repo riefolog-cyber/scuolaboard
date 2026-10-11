@@ -21,15 +21,15 @@ function CommentsSection({ $, c }: any) {
         ? 'rgba(79,70,229,.06)'
         : '#f8fafc'
       : isReply
-        ? 'rgba(99,102,241,.05)'
+        ? 'rgba(var(--c-primary-rgb),.05)'
         : 'rgba(255,255,255,.03)';
-    var bubbleBorder = isReply ? 'rgba(99,102,241,.15)' : 'rgba(255,255,255,.06)';
+    var bubbleBorder = isReply ? 'rgba(var(--c-primary-rgb),.15)' : 'rgba(255,255,255,.06)';
     return (
       <div
         key={itemKey}
         style={{
           marginLeft: isReply ? 12 : 0,
-          borderLeft: isReply ? '2px solid rgba(99,102,241,.18)' : 'none',
+          borderLeft: isReply ? '2px solid rgba(var(--c-primary-rgb),.18)' : 'none',
           paddingLeft: isReply ? 10 : 0,
           marginTop: isReply ? 6 : 0,
         }}
@@ -51,7 +51,7 @@ function CommentsSection({ $, c }: any) {
             }}
           >
             <span style={{ fontWeight: 700, fontSize: isReply ? 11 : 12, color: '#a5b4fc' }}>
-              {isReply && <span style={{ color: 'rgba(99,102,241,.55)', marginRight: 4 }}>↳</span>}
+              {isReply && <span style={{ color: 'rgba(var(--c-primary-rgb),.55)', marginRight: 4 }}>↳</span>}
               {item.autore || 'Anonimo'}
               {item.modificato ? ' ✎' : ''}
             </span>
@@ -150,7 +150,7 @@ function CommentsSection({ $, c }: any) {
                   maxHeight: 200,
                   padding: '12px 14px',
                   background: 'rgba(255,255,255,.09)',
-                  border: '1.5px solid rgba(99,102,241,.5)',
+                  border: '1.5px solid rgba(var(--c-primary-rgb),.5)',
                   borderRadius: 12,
                   fontSize: 14,
                   lineHeight: 1.6,
@@ -173,7 +173,7 @@ function CommentsSection({ $, c }: any) {
                     padding: '6px 10px',
                     background:
                       $.editingCm.testo && $.editingCm.testo.trim()
-                        ? 'linear-gradient(135deg,#6366f1,#a855f7)'
+                        ? 'linear-gradient(135deg,var(--c-primary, #6366f1),#a855f7)'
                         : 'rgba(255,255,255,.08)',
                     border: 'none',
                     borderRadius: 8,
@@ -221,10 +221,10 @@ function CommentsSection({ $, c }: any) {
             <div
               style={{
                 marginTop: 6,
-                background: 'rgba(99,102,241,.07)',
+                background: 'rgba(var(--c-primary-rgb),.07)',
                 borderRadius: 8,
                 padding: 8,
-                border: '1px solid rgba(99,102,241,.18)',
+                border: '1px solid rgba(var(--c-primary-rgb),.18)',
               }}
             >
               <div style={{ fontSize: 11, color: '#a5b4fc', marginBottom: 4, fontWeight: 700 }}>
@@ -250,7 +250,7 @@ function CommentsSection({ $, c }: any) {
                   maxHeight: 180,
                   padding: '12px 14px',
                   background: 'rgba(255,255,255,.09)',
-                  border: '1.5px solid rgba(99,102,241,.28)',
+                  border: '1.5px solid rgba(var(--c-primary-rgb),.28)',
                   borderRadius: 12,
                   fontSize: 14,
                   lineHeight: 1.6,
@@ -273,7 +273,7 @@ function CommentsSection({ $, c }: any) {
                     padding: '6px 10px',
                     background:
                       $.replyTesto && $.replyTesto.trim()
-                        ? 'linear-gradient(135deg,#6366f1,#a855f7)'
+                        ? 'linear-gradient(135deg,var(--c-primary, #6366f1),#a855f7)'
                         : 'rgba(255,255,255,.08)',
                     border: 'none',
                     borderRadius: 8,
@@ -358,7 +358,7 @@ function CommentsSection({ $, c }: any) {
               padding: '3px 9px',
               cursor: 'pointer',
               fontSize: 11,
-              color: '#4ade80',
+              color: 'var(--c-success, #4ade80)',
               fontWeight: 700,
             }}
           >
@@ -409,7 +409,7 @@ function CommentsSection({ $, c }: any) {
             maxHeight: 220,
             padding: '14px 16px',
             background: 'rgba(255,255,255,.09)',
-            border: '1.5px solid rgba(99,102,241,.35)',
+            border: '1.5px solid rgba(var(--c-primary-rgb),.35)',
             borderRadius: 14,
             fontSize: 15,
             lineHeight: 1.6,
@@ -430,7 +430,7 @@ function CommentsSection({ $, c }: any) {
             minWidth: 80,
             alignSelf: 'flex-end',
             background:
-              $.nc.testo && $.nc.testo.trim() ? 'linear-gradient(135deg,#6366f1,#a855f7)' : 'rgba(255,255,255,.08)',
+              $.nc.testo && $.nc.testo.trim() ? 'linear-gradient(135deg,var(--c-primary, #6366f1),#a855f7)' : 'rgba(255,255,255,.08)',
             border: 'none',
             borderRadius: 14,
             color: '#fff',

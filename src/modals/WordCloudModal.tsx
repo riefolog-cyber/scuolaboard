@@ -10,9 +10,9 @@ function WordCloudModal(props: any) {
     '#a5b4fc',
     '#c084fc',
     '#67e8f9',
-    '#4ade80',
-    '#fbbf24',
-    '#f87171',
+    'var(--c-success, #4ade80)',
+    'var(--c-warn, #fbbf24)',
+    'var(--c-danger, #f87171)',
     '#fb923c',
     '#e879f9',
     '#34d399',
@@ -45,7 +45,7 @@ function WordCloudModal(props: any) {
           }}
           style={{
             background: 'rgba(15,20,40,.97)',
-            border: '1px solid rgba(99,102,241,.3)',
+            border: '1px solid rgba(var(--c-primary-rgb),.3)',
             borderRadius: 20,
             padding: 24,
             maxWidth: 660,
@@ -104,8 +104,8 @@ function WordCloudModal(props: any) {
                   style={{
                     padding: '3px 10px',
                     borderRadius: 20,
-                    border: '1px solid ' + (wcTarget === 'tutte' ? '#6366f1' : 'rgba(255,255,255,.15)'),
-                    background: wcTarget === 'tutte' ? 'rgba(99,102,241,.25)' : 'transparent',
+                    border: '1px solid ' + (wcTarget === 'tutte' ? 'var(--c-primary, #6366f1)' : 'rgba(255,255,255,.15)'),
+                    background: wcTarget === 'tutte' ? 'rgba(var(--c-primary-rgb),.25)' : 'transparent',
                     color: wcTarget === 'tutte' ? '#a5b4fc' : 'rgba(255,255,255,.55)',
                     fontSize: 11,
                     fontWeight: 700,
@@ -125,8 +125,8 @@ function WordCloudModal(props: any) {
                     style={{
                       padding: '3px 10px',
                       borderRadius: 20,
-                      border: '1px solid ' + (wcTarget === 'classe_' + cl ? '#6366f1' : 'rgba(255,255,255,.1)'),
-                      background: wcTarget === 'classe_' + cl ? 'rgba(99,102,241,.25)' : 'transparent',
+                      border: '1px solid ' + (wcTarget === 'classe_' + cl ? 'var(--c-primary, #6366f1)' : 'rgba(255,255,255,.1)'),
+                      background: wcTarget === 'classe_' + cl ? 'rgba(var(--c-primary-rgb),.25)' : 'transparent',
                       color: wcTarget === 'classe_' + cl ? '#a5b4fc' : 'rgba(255,255,255,.45)',
                       fontSize: 11,
                       fontWeight: 600,

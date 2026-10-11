@@ -157,8 +157,8 @@ function StudentiPanel(props: any) {
                         {
                           <span
                             style={{
-                              background: cl === 'Senza classe' ? 'rgba(239,68,68,.25)' : 'rgba(99,102,241,.25)',
-                              color: cl === 'Senza classe' ? '#f87171' : '#a5b4fc',
+                              background: cl === 'Senza classe' ? 'rgba(239,68,68,.25)' : 'rgba(var(--c-primary-rgb),.25)',
+                              color: cl === 'Senza classe' ? 'var(--c-danger, #f87171)' : '#a5b4fc',
                               borderRadius: 8,
                               padding: '4px 12px',
                               fontSize: 13,
@@ -196,7 +196,7 @@ function StudentiPanel(props: any) {
                                     width: 28,
                                     height: 28,
                                     borderRadius: '50%',
-                                    background: '#6366f1',
+                                    background: 'var(--c-primary, #6366f1)',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',

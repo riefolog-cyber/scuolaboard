@@ -16,7 +16,7 @@ function AIPanel({ $, c }: any) {
         <div
           className="ai-panel open"
           style={{
-            borderTop: '1px solid rgba(99,102,241,.25)',
+            borderTop: '1px solid rgba(var(--c-primary-rgb),.25)',
             background: 'rgba(30,30,60,.7)',
             padding: '10px 14px',
             marginBottom: 14,
@@ -45,7 +45,7 @@ function AIPanel({ $, c }: any) {
                         <span
                           style={{
                             background: 'rgba(245,158,11,.2)',
-                            color: '#fbbf24',
+                            color: 'var(--c-warn, #fbbf24)',
                             borderRadius: 20,
                             padding: '1px 7px',
                             fontSize: 11,
@@ -66,12 +66,12 @@ function AIPanel({ $, c }: any) {
                     }}
                     style={{
                       background: 'none',
-                      border: '1px solid rgba(99,102,241,.3)',
+                      border: '1px solid rgba(var(--c-primary-rgb),.3)',
                       borderRadius: 6,
                       padding: '1px 8px',
                       cursor: 'pointer',
                       fontSize: 11,
-                      color: 'rgba(99,102,241,.7)',
+                      color: 'rgba(var(--c-primary-rgb),.7)',
                       fontWeight: 700,
                     }}
                   >
@@ -91,7 +91,7 @@ function AIPanel({ $, c }: any) {
                       padding: '1px 8px',
                       cursor: 'pointer',
                       fontSize: 11,
-                      color: '#f87171',
+                      color: 'var(--c-danger, #f87171)',
                       fontWeight: 700,
                     }}
                   >
@@ -125,7 +125,7 @@ function AIPanel({ $, c }: any) {
                     marginBottom: 8,
                   }}
                 >
-                  <div style={{ fontSize: 11, fontWeight: 800, color: '#4ade80', letterSpacing: 1, marginBottom: 3 }}>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--c-success, #4ade80)', letterSpacing: 1, marginBottom: 3 }}>
                     💡 SPUNTO DIDATTICO
                   </div>
                   <div style={{ fontSize: 11, color: 'rgba(255,255,255,.8)', lineHeight: 1.6, fontStyle: 'italic' }}>
@@ -144,7 +144,7 @@ function AIPanel({ $, c }: any) {
                       <div key={i} style={{ display: 'flex', gap: 6, marginBottom: 5, alignItems: 'flex-start' }}>
                         <span
                           style={{
-                            background: '#6366f1',
+                            background: 'var(--c-primary, #6366f1)',
                             color: '#fff',
                             borderRadius: '50%',
                             width: 18,
@@ -196,7 +196,7 @@ function AIPanel({ $, c }: any) {
                     marginBottom: 8,
                   }}
                 >
-                  <div style={{ fontSize: 11, fontWeight: 800, color: '#4ade80', letterSpacing: 1, marginBottom: 3 }}>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--c-success, #4ade80)', letterSpacing: 1, marginBottom: 3 }}>
                     💡 SPUNTO DIDATTICO
                   </div>
                   <div style={{ fontSize: 11, color: 'rgba(255,255,255,.8)', lineHeight: 1.6, fontStyle: 'italic' }}>
@@ -214,7 +214,7 @@ function AIPanel({ $, c }: any) {
                       <div key={i} style={{ display: 'flex', gap: 6, marginBottom: 5, alignItems: 'flex-start' }}>
                         <span
                           style={{
-                            background: '#6366f1',
+                            background: 'var(--c-primary, #6366f1)',
                             color: '#fff',
                             borderRadius: '50%',
                             width: 18,
@@ -252,8 +252,8 @@ function AIPanel({ $, c }: any) {
               }
             }}
             style={{
-              background: cOpen ? 'rgba(99,102,241,.45)' : cRes ? 'rgba(99,102,241,.22)' : 'rgba(99,102,241,.12)',
-              border: '1px solid rgba(99,102,241,' + (cOpen ? '.6' : cRes ? '.45' : '.3') + ')',
+              background: cOpen ? 'rgba(var(--c-primary-rgb),.45)' : cRes ? 'rgba(var(--c-primary-rgb),.22)' : 'rgba(var(--c-primary-rgb),.12)',
+              border: '1px solid rgba(var(--c-primary-rgb),' + (cOpen ? '.6' : cRes ? '.45' : '.3') + ')',
               borderRadius: 20,
               padding: '4px 12px',
               cursor: 'pointer',
@@ -275,8 +275,8 @@ function AIPanel({ $, c }: any) {
               $.setCardAiOpen(cOpen ? 'closed_' + String(c.id) : String(c.id));
             }}
             style={{
-              background: cOpen ? 'rgba(99,102,241,.35)' : 'rgba(99,102,241,.12)',
-              border: '1px solid rgba(99,102,241,.35)',
+              background: cOpen ? 'rgba(var(--c-primary-rgb),.35)' : 'rgba(var(--c-primary-rgb),.12)',
+              border: '1px solid rgba(var(--c-primary-rgb),.35)',
               borderRadius: 20,
               padding: '4px 12px',
               cursor: 'pointer',

@@ -26,7 +26,7 @@ function FilterBar__({ $: props$ }: any) {
           {$.filterClasse !== 'tutte' && (
             <span
               style={{
-                background: '#6366f1',
+                background: 'var(--c-primary, #6366f1)',
                 color: '#fff',
                 borderRadius: 20,
                 padding: '1px 8px',
@@ -140,7 +140,7 @@ function FilterBar__({ $: props$ }: any) {
                         style={{
                           width: 70,
                           padding: '2px 6px',
-                          border: '1px solid #6366f1',
+                          border: '1px solid var(--c-primary, #6366f1)',
                           borderRadius: 6,
                           fontSize: 12,
                           background: 'rgba(255,255,255,.1)',
@@ -156,8 +156,8 @@ function FilterBar__({ $: props$ }: any) {
                           $.eseguiRinomina();
                         }}
                         style={{
-                          background: 'rgba(99,102,241,.25)',
-                          border: '1px solid rgba(99,102,241,.5)',
+                          background: 'rgba(var(--c-primary-rgb),.25)',
+                          border: '1px solid rgba(var(--c-primary-rgb),.5)',
                           borderRadius: 6,
                           color: '#c4b5fd',
                           cursor: 'pointer',
@@ -277,7 +277,7 @@ function FilterBar__({ $: props$ }: any) {
                   style={{
                     width: 120,
                     padding: '3px 8px',
-                    border: '1px solid #6366f1',
+                    border: '1px solid var(--c-primary, #6366f1)',
                     borderRadius: 8,
                     fontSize: 12,
                     background: 'rgba(255,255,255,.1)',
@@ -290,7 +290,7 @@ function FilterBar__({ $: props$ }: any) {
                   aria-label="Conferma nuova classe"
                   onClick={$.addClasseCustom}
                   style={{
-                    background: '#6366f1',
+                    background: 'var(--c-primary, #6366f1)',
                     color: '#fff',
                     border: 'none',
                     borderRadius: 8,
@@ -336,8 +336,8 @@ function FilterBar__({ $: props$ }: any) {
                 gap: 4,
                 padding: '3px 10px',
                 borderRadius: 20,
-                border: '1px dashed rgba(99,102,241,.5)',
-                background: 'rgba(99,102,241,.08)',
+                border: '1px dashed rgba(var(--c-primary-rgb),.5)',
+                background: 'rgba(var(--c-primary-rgb),.08)',
                 color: '#a5b4fc',
                 fontSize: 12,
                 fontWeight: 700,

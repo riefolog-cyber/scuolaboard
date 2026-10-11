@@ -31,6 +31,25 @@ verdi con le Rules in produzione diverse da quelle del repository.
 
 ## 2. Deciso di non fare ora (con la ragione)
 
+### 🔶 Da verificare a mano: i colori con `var()` negli attributi SVG (WebKit)
+
+I colori inline sono passati da valori scritti a mano a `var(--token, valore)`
+in modo che il tema chiaro li governi. In **tema scuro** il risultato è
+identico per costruzione (il fallback è il valore di prima) e
+`token-coerenti.test.ts` lo verifica su ogni occorrenza.
+
+Il caso aperto è lo **scheletro di caricamento** (`CardGrid.tsx`): lì i colori
+non sono in uno stile ma in attributi di presentazione SVG (`fill="…"`), dove
+`var()` *dovrebbe* funzionare perché la specifica li tratta come dichiarazioni
+CSS. **Verificato a mano su Chromium** (rendering identico). **Non verificato
+su WebKit**, che è il motore degli iPhone: la guardia è
+`e2e/colori-webkit.spec.js`, che la CI esegue (installa chromium + webkit), ma in
+locale serve `npx playwright install webkit`.
+
+Da fare: aprire l'app su Safari (o un iPhone) e guardare che lo scheletro di
+caricamento conservi i colori. Se WebKit ignorasse `var()` lì, il difetto è
+giusto quello che la guardia cerca e va corretto in quel componente.
+
 ### ~~P2 — `noUncheckedIndexedAccess` + tipo `Card`~~ → **fatto l'11/10/2026**
 
 Il tipo `Card` esiste (`src/card-tipo.ts`) ed è applicato dove rende valore

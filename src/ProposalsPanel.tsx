@@ -83,7 +83,7 @@ function ProposalsPanel__({ $ }: any) {
             }}
           >
             {
-              <div style={{ fontWeight: 700, color: '#f87171', fontSize: 11, marginBottom: 7, letterSpacing: 1 }}>
+              <div style={{ fontWeight: 700, color: 'var(--c-danger, #f87171)', fontSize: 11, marginBottom: 7, letterSpacing: 1 }}>
                 ❌ PROPOSTE RIFIUTATE
               </div>
             }
@@ -134,7 +134,7 @@ function ProposalsPanel__({ $ }: any) {
                                 }}
                                 style={{
                                   background: 'rgba(239,68,68,.2)',
-                                  color: '#f87171',
+                                  color: 'var(--c-danger, #f87171)',
                                   border: 'none',
                                   borderRadius: 7,
                                   padding: '3px 9px',
@@ -226,7 +226,7 @@ function ProposalsPanel__({ $ }: any) {
                     }}
                     style={{
                       background: 'rgba(34,197,94,.2)',
-                      color: '#4ade80',
+                      color: 'var(--c-success, #4ade80)',
                       border: '1px solid rgba(34,197,94,.3)',
                       borderRadius: 7,
                       padding: '3px 10px',
@@ -247,7 +247,7 @@ function ProposalsPanel__({ $ }: any) {
                     }}
                     style={{
                       background: 'rgba(239,68,68,.15)',
-                      color: '#f87171',
+                      color: 'var(--c-danger, #f87171)',
                       border: 'none',
                       borderRadius: 7,
                       padding: '3px 8px',
@@ -280,7 +280,7 @@ function ProposalsPanel__({ $ }: any) {
               }}
             >
               {
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#fbbf24', marginBottom: 7, letterSpacing: 1 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--c-warn, #fbbf24)', marginBottom: 7, letterSpacing: 1 }}>
                   ★ I TUOI PREFERITI
                 </div>
               }
@@ -300,7 +300,7 @@ function ProposalsPanel__({ $ }: any) {
                           padding: '4px 12px',
                           cursor: 'pointer',
                           fontSize: 12,
-                          color: '#fbbf24',
+                          color: 'var(--c-warn, #fbbf24)',
                           fontWeight: 700,
                           maxWidth: 200,
                           overflow: 'hidden',
@@ -321,8 +321,8 @@ function ProposalsPanel__({ $ }: any) {
         <div
           style={{
             margin: '8px 14px 0',
-            background: 'linear-gradient(135deg,rgba(99,102,241,.25),rgba(139,92,246,.2))',
-            border: '1px solid rgba(99,102,241,.4)',
+            background: 'linear-gradient(135deg,rgba(var(--c-primary-rgb),.25),rgba(139,92,246,.2))',
+            border: '1px solid rgba(var(--c-primary-rgb),.4)',
             borderRadius: 12,
             padding: '10px 14px',
             display: 'flex',

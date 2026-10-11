@@ -22,7 +22,7 @@ function AllegatiPanel(props: any) {
   allegati.forEach(function (a: any) {
     kb += Math.round((a.size || 0) / 1024);
   });
-  var colore = kb > 500 ? '#f87171' : kb > 200 ? '#fbbf24' : 'rgba(255,255,255,.40)';
+  var colore = kb > 500 ? 'var(--c-danger, #f87171)' : kb > 200 ? 'var(--c-warn, #fbbf24)' : 'rgba(255,255,255,.40)';
   var avviso =
     kb > 500 ? ' ⚠️ attento al limite (' + MAX_ALLEGATO_KB + 'KB/file)' : kb > 200 ? ' — attento alle dimensioni' : '';
 
@@ -98,7 +98,7 @@ function AllegatiPanel(props: any) {
                   }}
                   style={{
                     background: 'rgba(239,68,68,.2)',
-                    color: '#f87171',
+                    color: 'var(--c-danger, #f87171)',
                     border: 'none',
                     borderRadius: 6,
                     width: 24,

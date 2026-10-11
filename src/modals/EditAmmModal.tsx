@@ -37,7 +37,7 @@ function EditAmmModal(props: any) {
           }}
         >
           {
-            <h3 style={{ margin: '0 0 4px', color: '#fbbf24', fontSize: 15, fontWeight: 800 }}>
+            <h3 style={{ margin: '0 0 4px', color: 'var(--c-warn, #fbbf24)', fontSize: 15, fontWeight: 800 }}>
               ✏️ Modifica ammonizione
             </h3>
           }

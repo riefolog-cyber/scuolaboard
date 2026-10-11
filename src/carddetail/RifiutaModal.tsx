@@ -19,7 +19,7 @@ function RifiutaModal({ $, c }: any) {
         }}
       >
         <div style={{ fontSize: 36, textAlign: 'center', marginBottom: 8 }}>❌</div>
-        <h3 style={{ margin: '0 0 4px', color: '#f87171', fontSize: 15, fontWeight: 800, textAlign: 'center' }}>
+        <h3 style={{ margin: '0 0 4px', color: 'var(--c-danger, #f87171)', fontSize: 15, fontWeight: 800, textAlign: 'center' }}>
           Rifiuta proposta
         </h3>
         <p
@@ -91,7 +91,7 @@ function RifiutaModal({ $, c }: any) {
             style={{
               flex: 2,
               padding: 11,
-              background: 'linear-gradient(135deg,#ef4444,#f87171)',
+              background: 'linear-gradient(135deg,#ef4444,var(--c-danger, #f87171))',
               color: '#fff',
               border: 'none',
               borderRadius: 11,

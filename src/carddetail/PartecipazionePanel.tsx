@@ -53,12 +53,12 @@ function PartecipazionePanel({ $, c }: any) {
             <div style={{ fontSize: 11, color: 'rgba(255,255,255,.52)' }}>Partecipanti</div>
           </div>
           <div style={{ flex: 1, minWidth: 70, textAlign: 'center' }}>
-            <div style={{ fontSize: 18, fontWeight: 800, color: '#4ade80' }}>{(c.commenti || []).length}</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--c-success, #4ade80)' }}>{(c.commenti || []).length}</div>
             <div style={{ fontSize: 11, color: 'rgba(255,255,255,.52)' }}>Commenti</div>
           </div>
           {c.opzioni && (
             <div style={{ flex: 1, minWidth: 70, textAlign: 'center' }}>
-              <div style={{ fontSize: 18, fontWeight: 800, color: '#fbbf24' }}>{votanti.length}</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--c-warn, #fbbf24)' }}>{votanti.length}</div>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,.52)' }}>Votanti</div>
             </div>
           )}

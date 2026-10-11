@@ -45,7 +45,7 @@ function AmmModal(props: any) {
             <h3
               style={{
                 margin: '0 0 4px',
-                color: isLight ? '#92400e' : '#fbbf24',
+                color: isLight ? '#92400e' : 'var(--c-warn, #fbbf24)',
                 fontSize: 16,
                 fontWeight: 800,
                 textAlign: 'center',
@@ -87,7 +87,7 @@ function AmmModal(props: any) {
                     border: '1px solid rgba(245,158,11,.25)',
                     borderRadius: 8,
                     padding: '8px 12px',
-                    color: '#fbbf24',
+                    color: 'var(--c-warn, #fbbf24)',
                     fontWeight: 700,
                     fontSize: 13,
                   }}

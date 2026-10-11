@@ -29,7 +29,7 @@ function AIOverlay__({ $ }: any) {
             alignItems: 'center',
             gap: 12,
             boxShadow: '0 24px 70px rgba(0,0,0,.6)',
-            border: '1px solid rgba(99,102,241,.35)',
+            border: '1px solid rgba(var(--c-primary-rgb),.35)',
           }}
         >
           {
@@ -37,8 +37,8 @@ function AIOverlay__({ $ }: any) {
               style={{
                 width: 42,
                 height: 42,
-                border: '3px solid rgba(99,102,241,.2)',
-                borderTop: '3px solid #6366f1',
+                border: '3px solid rgba(var(--c-primary-rgb),.2)',
+                borderTop: '3px solid var(--c-primary, #6366f1)',
                 borderRight: '3px solid #a855f7',
                 borderRadius: '50%',
                 animation: 'spin .9s linear infinite',

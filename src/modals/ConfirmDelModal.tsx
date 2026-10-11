@@ -81,7 +81,7 @@ function ConfirmDelModal(props: any) {
           }}
         >
           {
-            <h3 style={{ margin: '0 0 4px', color: '#f87171', fontSize: 15, fontWeight: 800, textAlign: 'center' }}>
+            <h3 style={{ margin: '0 0 4px', color: 'var(--c-danger, #f87171)', fontSize: 15, fontWeight: 800, textAlign: 'center' }}>
               {modalTitle}
             </h3>
           }
@@ -126,7 +126,7 @@ function ConfirmDelModal(props: any) {
                   style={{
                     flex: 2,
                     padding: 11,
-                    background: 'linear-gradient(135deg,#ef4444,#f87171)',
+                    background: 'linear-gradient(135deg,#ef4444,var(--c-danger, #f87171))',
                     color: '#fff',
                     border: 'none',
                     borderRadius: 11,
@@ -151,9 +151,9 @@ function ConfirmDelModal(props: any) {
                   marginTop: 10,
                   width: '100%',
                   padding: 11,
-                  background: 'rgba(99,102,241,.18)',
+                  background: 'rgba(var(--c-primary-rgb),.18)',
                   color: '#c4b5fd',
-                  border: '1px solid rgba(99,102,241,.45)',
+                  border: '1px solid rgba(var(--c-primary-rgb),.45)',
                   borderRadius: 11,
                   fontSize: 13,
                   fontWeight: 800,

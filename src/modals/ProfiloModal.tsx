@@ -80,7 +80,7 @@ function ProfiloModal(props: any) {
                     width: 60,
                     height: 60,
                     borderRadius: '50%',
-                    border: '3px solid rgba(99,102,241,.5)',
+                    border: '3px solid rgba(var(--c-primary-rgb),.5)',
                     marginBottom: 10,
                     display: 'block',
                     margin: '0 auto 10px',
@@ -110,9 +110,9 @@ function ProfiloModal(props: any) {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
               {[
                 { v: c(meiCommenti), l: 'Commenti scritti', i: '💬', c: '#a5b4fc' },
-                { v: c(meiLike), l: 'Like dati', i: '👍', c: '#6366f1' },
+                { v: c(meiLike), l: 'Like dati', i: '👍', c: 'var(--c-primary, #6366f1)' },
                 { v: c(meiVoti), l: 'Sondaggi votati', i: '🗳️', c: '#22c55e' },
-                { v: c(meiPref), l: 'Preferiti', i: '★', c: '#fbbf24' },
+                { v: c(meiPref), l: 'Preferiti', i: '★', c: 'var(--c-warn, #fbbf24)' },
               ].map(function (s: any) {
                 return (
                   <div
@@ -139,8 +139,8 @@ function ProfiloModal(props: any) {
           {meiCommenti > 0 && (
             <div
               style={{
-                background: 'rgba(99,102,241,.1)',
-                border: '1px solid rgba(99,102,241,.2)',
+                background: 'rgba(var(--c-primary-rgb),.1)',
+                border: '1px solid rgba(var(--c-primary-rgb),.2)',
                 borderRadius: 10,
                 padding: '10px 14px',
                 marginBottom: 14,
@@ -160,7 +160,7 @@ function ProfiloModal(props: any) {
               style={{
                 width: '100%',
                 padding: 11,
-                background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+                background: 'linear-gradient(135deg,var(--c-primary, #6366f1),#8b5cf6)',
                 color: '#fff',
                 border: 'none',
                 borderRadius: 11,

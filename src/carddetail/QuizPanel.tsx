@@ -93,7 +93,7 @@ function QuizPanel({ $, c }: any) {
                           padding: '3px 8px',
                           cursor: 'pointer',
                           fontSize: 11,
-                          color: '#f87171',
+                          color: 'var(--c-danger, #f87171)',
                           fontWeight: 700,
                         }}
                         title="Cancella tutte le risposte al quiz"
@@ -114,11 +114,11 @@ function QuizPanel({ $, c }: any) {
                             ? 'rgba(34,197,94,.15)'
                             : $.qLoading
                               ? 'rgba(255,255,255,.06)'
-                              : 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+                              : 'linear-gradient(135deg,var(--c-primary, #6366f1),#8b5cf6)',
                           border: 'none',
                           borderRadius: 8,
                           cursor: $.qLoading || (tutteValutate && !errorCount) ? 'not-allowed' : 'pointer',
-                          color: tutteValutate ? '#4ade80' : '#fff',
+                          color: tutteValutate ? 'var(--c-success, #4ade80)' : '#fff',
                           fontWeight: 700,
                           display: 'flex',
                           alignItems: 'center',
@@ -142,7 +142,7 @@ function QuizPanel({ $, c }: any) {
                     {errorCount > 0 && (
                       // Dillo esplicitamente: prima un fallimento era invisibile e il
                       // punteggio restava quello senza quelle risposte.
-                      <div style={{ fontSize: 10, color: '#fbbf24', marginTop: 6, lineHeight: 1.5 }}>
+                      <div style={{ fontSize: 10, color: 'var(--c-warn, #fbbf24)', marginTop: 6, lineHeight: 1.5 }}>
                         ⚠️ {errorCount} valutazioni non sono riuscite (throttle o rete): non entrano nel
                         punteggio finché non le rilanci. Il voto dell'IA è un riscontro, non un voto.
                       </div>
@@ -163,10 +163,10 @@ function QuizPanel({ $, c }: any) {
                     .map(function (r: any, ri: number) {
                       var colore =
                         ((r.punteggio || {}).pct || 0) >= 75
-                          ? '#4ade80'
+                          ? 'var(--c-success, #4ade80)'
                           : ((r.punteggio || {}).pct || 0) >= 50
-                            ? '#fbbf24'
-                            : '#f87171';
+                            ? 'var(--c-warn, #fbbf24)'
+                            : 'var(--c-danger, #f87171)';
                       return (
                         <div
                           key={ri}
@@ -191,12 +191,12 @@ function QuizPanel({ $, c }: any) {
                                 {((r.punteggio || {}).score || 0) + ' / ' + ((r.punteggio || {}).totale || 0) + ' pt'}
                               </div>
                               {haAperte && !r.aiValutato && (
-                                <div style={{ fontSize: 11, color: '#fbbf24', fontWeight: 700, marginTop: 2 }}>
+                                <div style={{ fontSize: 11, color: 'var(--c-warn, #fbbf24)', fontWeight: 700, marginTop: 2 }}>
                                   ⏳ attende valutazione AI
                                 </div>
                               )}
                               {haAperte && r.aiValutato && (
-                                <div style={{ fontSize: 11, color: '#4ade80', fontWeight: 700, marginTop: 2 }}>
+                                <div style={{ fontSize: 11, color: 'var(--c-success, #4ade80)', fontWeight: 700, marginTop: 2 }}>
                                   ✓ valutato con AI
                                 </div>
                               )}
@@ -230,7 +230,7 @@ function QuizPanel({ $, c }: any) {
                                       borderRadius: 6,
                                       padding: '3px 8px',
                                       fontSize: 11,
-                                      color: corretta ? '#4ade80' : '#f87171',
+                                      color: corretta ? 'var(--c-success, #4ade80)' : 'var(--c-danger, #f87171)',
                                       display: 'flex',
                                       alignItems: 'center',
                                       gap: 4,
@@ -369,7 +369,7 @@ function QuizPanel({ $, c }: any) {
                                       borderRadius: 6,
                                       padding: '2px 7px',
                                       fontSize: 11,
-                                      color: isCorretta ? '#4ade80' : 'rgba(255,255,255,.6)',
+                                      color: isCorretta ? 'var(--c-success, #4ade80)' : 'rgba(255,255,255,.6)',
                                       fontWeight: isCorretta ? 700 : 500,
                                     }}
                                   >
@@ -425,7 +425,7 @@ function QuizPanel({ $, c }: any) {
                       padding: '10px 14px',
                     }}
                   >
-                    <div style={{ fontWeight: 800, color: '#4ade80', marginBottom: 6, fontSize: 12 }}>
+                    <div style={{ fontWeight: 800, color: 'var(--c-success, #4ade80)', marginBottom: 6, fontSize: 12 }}>
                       ✅ Quiz completato
                     </div>
                     <div style={{ fontSize: 12, color: 'rgba(255,255,255,.7)' }}>
@@ -505,7 +505,7 @@ function QuizPanel({ $, c }: any) {
                                 // è il docente.
                                 <Fragment key={di}>{$.ValutazioneApertaAI(s, risp, di, d, !!$.isProf)}</Fragment>
                               ) : (
-                                <div style={{ fontSize: 11, color: '#fbbf24', fontWeight: 700 }}>
+                                <div style={{ fontSize: 11, color: 'var(--c-warn, #fbbf24)', fontWeight: 700 }}>
                                   ⏳ attende la valutazione del prof
                                 </div>
                               )}
@@ -539,7 +539,7 @@ function QuizPanel({ $, c }: any) {
                               <div style={{ fontSize: 11, color: 'rgba(255,255,255,.55)', marginTop: 2 }}>
                                 La tua risposta: <strong style={{ color: 'rgba(255,255,255,.8)' }}>{rispTxt}</strong>
                                 {!corretta && d.corretta != null && d.corretta !== '' && (
-                                  <span style={{ color: '#4ade80' }}>
+                                  <span style={{ color: 'var(--c-success, #4ade80)' }}>
                                     {' — corretta: ' +
                                       (d.opzioni && d.opzioni[d.corretta] ? d.opzioni[d.corretta] : d.corretta)}
                                   </span>
@@ -591,8 +591,8 @@ function QuizPanel({ $, c }: any) {
                                 padding: '7px 12px',
                                 marginBottom: 4,
                                 borderRadius: 8,
-                                border: '1px solid ' + (sel ? '#6366f1' : 'rgba(255,255,255,.1)'),
-                                background: sel ? 'rgba(99,102,241,.25)' : 'rgba(255,255,255,.03)',
+                                border: '1px solid ' + (sel ? 'var(--c-primary, #6366f1)' : 'rgba(255,255,255,.1)'),
+                                background: sel ? 'rgba(var(--c-primary-rgb),.25)' : 'rgba(255,255,255,.03)',
                                 color: sel ? '#e0e7ff' : 'rgba(255,255,255,.65)',
                                 cursor: 'pointer',
                                 fontSize: 12,
@@ -656,7 +656,7 @@ function QuizPanel({ $, c }: any) {
                             width: '100%',
                             padding: 10,
                             marginTop: 4,
-                            background: complete ? 'linear-gradient(135deg,#6366f1,#a855f7)' : 'rgba(255,255,255,.08)',
+                            background: complete ? 'linear-gradient(135deg,var(--c-primary, #6366f1),#a855f7)' : 'rgba(255,255,255,.08)',
                             border: 'none',
                             borderRadius: 10,
                             color: '#fff',

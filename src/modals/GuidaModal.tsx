@@ -17,7 +17,7 @@ function urlDiagramma() {
 var PUNTI = [
   {
     emoji: '📌',
-    colore: '#6366f1',
+    colore: 'var(--c-primary, #6366f1)',
     titolo: 'Una bacheca, tanti tipi di contenuto',
     testo:
       'Ogni avviso, lezione, quiz o sondaggio è una "card". Il docente le pubblica per una o più classi e tutti le vedono sulla stessa lavagna digitale.',
@@ -51,7 +51,7 @@ function GuidaModal(props: any) {
 
   var overlayBg = isLight ? 'rgba(15,23,42,.45)' : 'rgba(0,0,0,.92)';
   var cardBg = isLight ? '#ffffff' : '#1c1a2e';
-  var cardBorder = isLight ? '1px solid rgba(15,23,42,.10)' : '1px solid rgba(99,102,241,.3)';
+  var cardBorder = isLight ? '1px solid rgba(15,23,42,.10)' : '1px solid rgba(var(--c-primary-rgb),.3)';
   var titleColor = isLight ? '#0f172a' : '#f1f5f9';
   var subColor = isLight ? '#64748b' : 'rgba(255,255,255,.5)';
   var infoBg = isLight ? '#f8fafc' : 'rgba(255,255,255,.04)';
@@ -148,8 +148,8 @@ function GuidaModal(props: any) {
                 fontWeight: 700,
                 color: isLight ? '#4338ca' : '#a5b4fc',
                 textDecoration: 'none',
-                background: isLight ? 'rgba(79,70,229,.08)' : 'rgba(99,102,241,.14)',
-                border: '1px solid ' + (isLight ? 'rgba(79,70,229,.2)' : 'rgba(99,102,241,.3)'),
+                background: isLight ? 'rgba(79,70,229,.08)' : 'rgba(var(--c-primary-rgb),.14)',
+                border: '1px solid ' + (isLight ? 'rgba(79,70,229,.2)' : 'rgba(var(--c-primary-rgb),.3)'),
                 borderRadius: 999,
                 padding: '5px 12px',
               }}
@@ -184,7 +184,7 @@ function GuidaModal(props: any) {
             width: '100%',
             marginTop: 16,
             padding: 12,
-            background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+            background: 'linear-gradient(135deg,var(--c-primary, #6366f1),#8b5cf6)',
             color: '#fff',
             border: 'none',
             borderRadius: 12,

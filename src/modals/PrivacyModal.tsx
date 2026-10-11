@@ -12,7 +12,7 @@ function PrivacyModal(props: any) {
   // Stili theme-aware
   var overlayBg = isLight ? 'rgba(15,23,42,.45)' : 'rgba(0,0,0,.92)';
   var cardBg = isLight ? '#ffffff' : '#1c1a2e';
-  var cardBorder = isLight ? '1px solid rgba(15,23,42,.10)' : '1px solid rgba(99,102,241,.3)';
+  var cardBorder = isLight ? '1px solid rgba(15,23,42,.10)' : '1px solid rgba(var(--c-primary-rgb),.3)';
   var cardShadow = isLight ? '0 20px 60px rgba(15,23,42,.15)' : 'none';
   var titleColor = isLight ? '#0f172a' : '#f1f5f9';
   var subColor = isLight ? '#64748b' : 'rgba(255,255,255,.45)';
@@ -20,8 +20,8 @@ function PrivacyModal(props: any) {
   var infoBorder = isLight ? '1px solid rgba(15,23,42,.08)' : '1px solid rgba(255,255,255,.08)';
   var infoTextColor = isLight ? '#334155' : 'rgba(255,255,255,.7)';
   var stepTitleColor = isLight ? '#4338ca' : '#c7d2fe';
-  var notaBg = isLight ? 'rgba(79,70,229,.06)' : 'rgba(99,102,241,.08)';
-  var notaBorder = isLight ? '1px solid rgba(79,70,229,.12)' : '1px solid rgba(99,102,241,.15)';
+  var notaBg = isLight ? 'rgba(79,70,229,.06)' : 'rgba(var(--c-primary-rgb),.08)';
+  var notaBorder = isLight ? '1px solid rgba(79,70,229,.12)' : '1px solid rgba(var(--c-primary-rgb),.15)';
   var notaColor = isLight ? '#475569' : 'rgba(255,255,255,.45)';
 
   // Modal "Prima di iniziare" — prima accettazione
@@ -81,7 +81,7 @@ function PrivacyModal(props: any) {
                 style={{
                   width: '100%',
                   padding: 13,
-                  background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+                  background: 'linear-gradient(135deg,var(--c-primary, #6366f1),#8b5cf6)',
                   color: '#fff',
                   border: 'none',
                   borderRadius: 12,
@@ -147,7 +147,7 @@ function PrivacyModal(props: any) {
           <div style={infoStepStyle}>
             <span
               style={{
-                background: '#6366f1',
+                background: 'var(--c-primary, #6366f1)',
                 color: '#fff',
                 borderRadius: 8,
                 padding: '2px 8px',
@@ -263,7 +263,7 @@ function PrivacyModal(props: any) {
             width: '100%',
             marginTop: 16,
             padding: 12,
-            background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+            background: 'linear-gradient(135deg,var(--c-primary, #6366f1),#8b5cf6)',
             color: '#fff',
             border: 'none',
             borderRadius: 12,

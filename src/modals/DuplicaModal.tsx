@@ -79,7 +79,7 @@ function DuplicaModal(props: any) {
                       borderRadius: 20,
                       border: '1px solid ' + (sel ? '#f59e0b' : 'rgba(255,255,255,.15)'),
                       background: sel ? 'rgba(245,158,11,.25)' : 'rgba(255,255,255,.05)',
-                      color: sel ? '#fbbf24' : 'rgba(255,255,255,.6)',
+                      color: sel ? 'var(--c-warn, #fbbf24)' : 'rgba(255,255,255,.6)',
                       fontSize: 12,
                       fontWeight: 700,
                       cursor: 'pointer',

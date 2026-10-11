@@ -92,7 +92,7 @@ export function timeAgo(d: string | number | Date) {
   return fmt(d);
 }
 export function badgeBg(t: string) {
-  return t === 'domanda' ? '#6366f1' : t === 'sondaggio' ? '#22c55e' : t === 'quiz' ? '#a855f7' : '#94a3b8';
+  return t === 'domanda' ? 'var(--c-primary, #6366f1)' : t === 'sondaggio' ? '#22c55e' : t === 'quiz' ? '#a855f7' : '#94a3b8';
 }
 export function tipoIcon(t: string) {
   // Nota → 📄 (era 📌): la graffetta del pin è il badge delle card FISSATE in

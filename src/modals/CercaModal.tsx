@@ -300,7 +300,7 @@ function CercaModal(props: any) {
         <div
           style={{
             background: isLight ? '#ffffff' : 'rgba(15,23,42,.98)',
-            border: isLight ? '1px solid rgba(15,23,42,.12)' : '1px solid rgba(99,102,241,.35)',
+            border: isLight ? '1px solid rgba(15,23,42,.12)' : '1px solid rgba(var(--c-primary-rgb),.35)',
             borderRadius: 18,
             width: '100%',
             maxWidth: 580,
@@ -340,7 +340,7 @@ function CercaModal(props: any) {
                       style={{
                         fontSize: 10,
                         fontWeight: 800,
-                        background: isLight ? 'rgba(79,70,229,.08)' : 'rgba(99,102,241,.2)',
+                        background: isLight ? 'rgba(79,70,229,.08)' : 'rgba(var(--c-primary-rgb),.2)',
                         color: isLight ? '#4f46e5' : '#a5b4fc',
                         borderRadius: 20,
                         padding: '2px 8px',
@@ -391,7 +391,7 @@ function CercaModal(props: any) {
                             background: !tuttiAnni
                               ? isLight
                                 ? 'rgba(79,70,229,.12)'
-                                : 'rgba(99,102,241,.3)'
+                                : 'rgba(var(--c-primary-rgb),.3)'
                               : isLight
                                 ? 'rgba(15,23,42,.05)'
                                 : 'rgba(255,255,255,.05)',
@@ -400,7 +400,7 @@ function CercaModal(props: any) {
                               (!tuttiAnni
                                 ? isLight
                                   ? 'rgba(79,70,229,.22)'
-                                  : 'rgba(99,102,241,.55)'
+                                  : 'rgba(var(--c-primary-rgb),.55)'
                                 : isLight
                                   ? 'rgba(15,23,42,.10)'
                                   : 'rgba(255,255,255,.12)'),
@@ -432,7 +432,7 @@ function CercaModal(props: any) {
                             top: 'calc(100% + 6px)',
                             left: 0,
                             background: isLight ? '#ffffff' : 'rgba(13,13,30,.98)',
-                            border: isLight ? '1px solid rgba(15,23,42,.12)' : '1px solid rgba(99,102,241,.4)',
+                            border: isLight ? '1px solid rgba(15,23,42,.12)' : '1px solid rgba(var(--c-primary-rgb),.4)',
                             borderRadius: 14,
                             padding: '8px 6px',
                             zIndex: 600,
@@ -469,7 +469,7 @@ function CercaModal(props: any) {
                                   gap: 8,
                                   width: '100%',
                                   textAlign: 'left',
-                                  background: sel ? 'rgba(99,102,241,.25)' : 'transparent',
+                                  background: sel ? 'rgba(var(--c-primary-rgb),.25)' : 'transparent',
                                   border: 'none',
                                   borderRadius: 9,
                                   padding: '7px 12px',
@@ -513,7 +513,7 @@ function CercaModal(props: any) {
                         background: tuttiAnni
                           ? isLight
                             ? 'rgba(79,70,229,.12)'
-                            : 'rgba(99,102,241,.3)'
+                            : 'rgba(var(--c-primary-rgb),.3)'
                           : isLight
                             ? 'rgba(15,23,42,.05)'
                             : 'rgba(255,255,255,.05)',
@@ -522,7 +522,7 @@ function CercaModal(props: any) {
                           (tuttiAnni
                             ? isLight
                               ? 'rgba(79,70,229,.22)'
-                              : 'rgba(99,102,241,.55)'
+                              : 'rgba(var(--c-primary-rgb),.55)'
                             : isLight
                               ? 'rgba(15,23,42,.10)'
                               : 'rgba(255,255,255,.12)'),
@@ -552,7 +552,7 @@ function CercaModal(props: any) {
                     alignItems: 'center',
                     gap: 8,
                     background: isLight ? '#f8fafc' : 'rgba(255,255,255,.06)',
-                    border: isLight ? '1px solid rgba(15,23,42,.12)' : '1px solid rgba(99,102,241,.4)',
+                    border: isLight ? '1px solid rgba(15,23,42,.12)' : '1px solid rgba(var(--c-primary-rgb),.4)',
                     borderRadius: 12,
                     padding: '4px 10px',
                   }}
@@ -610,7 +610,7 @@ function CercaModal(props: any) {
                 </div>
               )}
               {needsAll && allYearsErr && (
-                <div style={{ fontSize: 11, color: '#fbbf24', marginTop: 6, lineHeight: 1.5 }}>
+                <div style={{ fontSize: 11, color: 'var(--c-warn, #fbbf24)', marginTop: 6, lineHeight: 1.5 }}>
                   ⚠️ Impossibile caricare gli anni passati: sto cercando solo nell'anno corrente.
                 </div>
               )}
@@ -705,7 +705,7 @@ function CercaModal(props: any) {
                           <span
                             className="badge-chip"
                             style={{
-                              background: props.badgeBg ? props.badgeBg(c.tipo) : '#6366f1',
+                              background: props.badgeBg ? props.badgeBg(c.tipo) : 'var(--c-primary, #6366f1)',
                               color: '#fff',
                               padding: '2px 8px',
                               fontSize: 10,
@@ -721,7 +721,7 @@ function CercaModal(props: any) {
                             className="badge-chip"
                             style={{
                               background: 'rgba(239,68,68,.2)',
-                              color: '#f87171',
+                              color: 'var(--c-danger, #f87171)',
                               padding: '2px 7px',
                               fontSize: 10,
                               fontWeight: 800,
@@ -766,10 +766,10 @@ function CercaModal(props: any) {
                           </span>
                         )}
                         {nascosta && (
-                          <span style={{ fontSize: 10, fontWeight: 800, color: '#f87171' }}>🚫 nascosta</span>
+                          <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--c-danger, #f87171)' }}>🚫 nascosta</span>
                         )}
                         {c.proposta === true && (
-                          <span style={{ fontSize: 10, fontWeight: 800, color: '#fbbf24' }}>⏳ proposta</span>
+                          <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--c-warn, #fbbf24)' }}>⏳ proposta</span>
                         )}
                         {(c.commenti || []).length > 0 && (
                           <span style={{ fontSize: 10, color: 'rgba(255,255,255,.4)' }}>

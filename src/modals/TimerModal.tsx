@@ -75,7 +75,7 @@ function TimerModal(props: any) {
                     flex: 1,
                     padding: 11,
                     background: 'rgba(239,68,68,.15)',
-                    color: '#f87171',
+                    color: 'var(--c-danger, #f87171)',
                     border: '1px solid rgba(239,68,68,.3)',
                     borderRadius: 11,
                     fontSize: 13,

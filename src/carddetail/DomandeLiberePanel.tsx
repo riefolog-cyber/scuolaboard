@@ -16,8 +16,8 @@ function DomandeLiberePanel({ $, c }: any) {
         <div
           style={{
             marginBottom: 14,
-            background: 'rgba(99,102,241,.06)',
-            border: '1px solid rgba(99,102,241,.2)',
+            background: 'rgba(var(--c-primary-rgb),.06)',
+            border: '1px solid rgba(var(--c-primary-rgb),.2)',
             borderRadius: 10,
             padding: 12,
           }}
@@ -30,8 +30,8 @@ function DomandeLiberePanel({ $, c }: any) {
               <div
                 key={dq.id}
                 style={{
-                  background: 'rgba(99,102,241,.08)',
-                  border: '1px solid rgba(99,102,241,.15)',
+                  background: 'rgba(var(--c-primary-rgb),.08)',
+                  border: '1px solid rgba(var(--c-primary-rgb),.15)',
                   borderRadius: 8,
                   padding: '8px 12px',
                   marginBottom: 6,
@@ -54,8 +54,8 @@ function DomandeLiberePanel({ $, c }: any) {
         <div
           style={{
             marginBottom: 14,
-            background: 'rgba(99,102,241,.06)',
-            border: '1px solid rgba(99,102,241,.2)',
+            background: 'rgba(var(--c-primary-rgb),.06)',
+            border: '1px solid rgba(var(--c-primary-rgb),.2)',
             borderRadius: 10,
             padding: 12,
           }}
@@ -88,7 +88,7 @@ function DomandeLiberePanel({ $, c }: any) {
               disabled={$.cardQLoad || !$.cardQ.trim()}
               style={{
                 padding: '6px 14px',
-                background: 'linear-gradient(135deg,#6366f1,#a855f7)',
+                background: 'linear-gradient(135deg,var(--c-primary, #6366f1),#a855f7)',
                 border: 'none',
                 borderRadius: 8,
                 color: '#fff',
@@ -121,7 +121,7 @@ function DomandeLiberePanel({ $, c }: any) {
               Chiudi
             </button>
           </div>
-          {$.cardQErr && <div style={{ color: '#f87171', fontSize: 11, marginTop: 6 }}>{$.cardQErr}</div>}
+          {$.cardQErr && <div style={{ color: 'var(--c-danger, #f87171)', fontSize: 11, marginTop: 6 }}>{$.cardQErr}</div>}
           {(function () {
             // Guardia: $.aiMap può essere undefined (refresha con undefined in
             // passato) → senza guardia la CardDetail crasha con
@@ -155,7 +155,7 @@ function DomandeLiberePanel({ $, c }: any) {
                       padding: '1px 8px',
                       cursor: 'pointer',
                       fontSize: 11,
-                      color: '#f87171',
+                      color: 'var(--c-danger, #f87171)',
                       fontWeight: 700,
                     }}
                   >
@@ -168,8 +168,8 @@ function DomandeLiberePanel({ $, c }: any) {
                     <div
                       key={dq.id}
                       style={{
-                        background: 'rgba(99,102,241,.08)',
-                        border: '1px solid rgba(99,102,241,.15)',
+                        background: 'rgba(var(--c-primary-rgb),.08)',
+                        border: '1px solid rgba(var(--c-primary-rgb),.15)',
                         borderRadius: 8,
                         padding: '8px 12px',
                         marginBottom: 6,
@@ -191,7 +191,7 @@ function DomandeLiberePanel({ $, c }: any) {
                               padding: '1px 8px',
                               cursor: 'pointer',
                               fontSize: 11,
-                              color: '#4ade80',
+                              color: 'var(--c-success, #4ade80)',
                               fontWeight: 700,
                             }}
                           >
@@ -205,7 +205,7 @@ function DomandeLiberePanel({ $, c }: any) {
                             title="Pubblica questa risposta agli studenti (sola lettura)"
                             style={{
                               background: 'none',
-                              border: '1px solid rgba(99,102,241,.4)',
+                              border: '1px solid rgba(var(--c-primary-rgb),.4)',
                               borderRadius: 6,
                               padding: '1px 8px',
                               cursor: 'pointer',
@@ -236,8 +236,8 @@ function DomandeLiberePanel({ $, c }: any) {
             });
           }}
           style={{
-            background: 'rgba(99,102,241,.1)',
-            border: '1px solid rgba(99,102,241,.25)',
+            background: 'rgba(var(--c-primary-rgb),.1)',
+            border: '1px solid rgba(var(--c-primary-rgb),.25)',
             borderRadius: 20,
             padding: '4px 10px',
             cursor: 'pointer',

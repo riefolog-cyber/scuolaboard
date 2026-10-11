@@ -89,7 +89,7 @@ export default function Countdown({ scadenza }: any) {
         borderRadius: 20,
         padding: '2px 8px',
         fontSize: 11,
-        color: fmt.expired || urgente ? '#f87171' : entro24h ? '#fbbf24' : 'rgba(255,255,255,.62)',
+        color: fmt.expired || urgente ? 'var(--c-danger, #f87171)' : entro24h ? 'var(--c-warn, #fbbf24)' : 'rgba(255,255,255,.62)',
         fontWeight: 700,
         marginTop: 4,
       }}

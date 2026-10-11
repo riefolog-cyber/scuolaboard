@@ -24,7 +24,7 @@ function QRModal(props: any) {
         <div
           style={{
             background: '#1c1a2e',
-            border: '1px solid rgba(99,102,241,.3)',
+            border: '1px solid rgba(var(--c-primary-rgb),.3)',
             borderRadius: 20,
             padding: 28,
             maxWidth: 380,
@@ -63,7 +63,7 @@ function QRModal(props: any) {
               style={{
                 marginTop: 20,
                 padding: '10px 24px',
-                background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+                background: 'linear-gradient(135deg,var(--c-primary, #6366f1),#8b5cf6)',
                 color: '#fff',
                 border: 'none',
                 borderRadius: 11,
