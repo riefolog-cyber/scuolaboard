@@ -1,6 +1,7 @@
 # COSE IN SOSPESO
 
-Aggiornato al **11/10/2026**, dopo il commit del tipo `Card` (`src/card-tipo.ts`).
+Aggiornato al **11/10/2026**: le Rules Firestore (campo `classiEscluse`) sono
+state pubblicate in Firebase Console. **Non c'è più nulla che blocchi.**
 Stato del repository: `main` in sync con `origin/main`, working tree pulito,
 **941 test verdi (exit 0)**, `tsc --noEmit` pulito, eslint senza warning.
 
@@ -10,29 +11,21 @@ ragione accanto. Se una voce non è più valida va cancellata, non spostata.
 
 ---
 
-## 1. In attesa di una tua conferma (l'unica cosa che blocca davvero)
+## 1. Nessuna attesa: non c'è più nulla che blocchi
 
-### 🔴 Regole Firestore — `classiEscluse` va pubblicata a mano
+### ✅ Regole Firestore — `classiEscluse` pubblicata (11/10/2026)
 
-La regola che vieta allo studente di scrivere `classiEscluse` è **nel file**
-(`rules firestore.txt:153`), dentro il blocco `create` della collection `cards`:
+La regola che vieta allo studente di scrivere `classiEscluse` è in
+`rules firestore.txt:153` (blocco `create` della collection `cards`) ed è stata
+**pubblicata in Firebase Console** → Firestore → Rules.
 
-```
-&& !request.resource.data.keys().hasAny([... 'classiEscluse'])
-```
+Una proposta dello studente non può più portarsi dietro esclusioni di classe:
+il buco che la regola chiude è chiuso.
 
-ma **non è stata pubblicata in Firebase Console** → Firestore → Rules.
-
-Finché non la pubblichi, in produzione uno studente potrebbe inviare una proposta
-con `classiEscluse` e nascondere la card ad altre classi: è esattamente la
-banda che la regola chiude. Il resto del comportamento (l'eliminazione per
-singola classe) funziona comunque, perché lì il campo lo scrive solo il docente.
-
-**Come fare:** Firebase Console → Firestore → Rules → incolla il contenuto di
-`rules firestore.txt` → Publish.
-
-⚠️ È l'unica azione di questo elenco che **non** si può né delegare né
-dimenticare: un cambio alle rules senza pubblicazione è un cambio incompleto.
+**Da ricordare ogni volta** (non è una voce di questo elenco, è il fatto
+operativo che l'ha generata): un cambio a `rules firestore.txt` **non vale**
+finché non lo pubblichi a mano. Il file, la CI e i test possono essere tutti
+verdi con le Rules in produzione diverse da quelle del repository.
 
 ---
 
@@ -92,8 +85,9 @@ bloccare la build.
 
 ## 4. Cose che NON saprei fare senza di te
 
-- **Ripubblicare le rules** (punto 1): serve l'accesso alla Console.
-- **Decidere se P2 vale il costo**: è una decisione di progetto, non tecnica.
+- **Ripubblicare le rules**: serve l'accesso alla Console. L'ultima volta è
+  stata fatta (11/10/2026, `classiEscluse`); la prossima sarà ogni volta che si
+  tocca `rules firestore.txt`.
 - **Il bundle da 1083 KB** (vendor-firebase 606 KB): si può valutare un import
   selettivo di Firebase, ma è un intervento che tocca l'inizializzazione
   dell'app — da fare con calma, non di corsa.
