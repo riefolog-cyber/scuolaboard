@@ -14,6 +14,7 @@ import DomandeLiberePanel from './carddetail/DomandeLiberePanel.tsx';
 import CommentsSection from './carddetail/CommentsSection.tsx';
 import RifiutaModal from './carddetail/RifiutaModal.tsx';
 import AllegatoHtmlPreview from './carddetail/AllegatoHtmlPreview.tsx';
+import { chiaveAllegato, registraConsegna } from './allegato-consegna-servizio.ts';
 
 function CardDetail__({ $: props$ }: any) {
   // Merge del FormContext (split di UIContext): i pannelli (commenti, quiz,
@@ -379,6 +380,13 @@ function CardDetail__({ $: props$ }: any) {
                   indice={htmlPreview.i}
                   onChiudi={function () {
                     setHtmlPreview(null);
+                  }}
+                  onCompletato={function () {
+                    // L'allegato dichiara di essere finito. Lo registriamo per non
+                    // riproporglielo: NON è un voto (vedi allegato-consegna.ts).
+                    var u = $.user && $.user.uid;
+                    if (!u) return;
+                    registraConsegna(u, chiaveAllegato(c.id, htmlPreview.i));
                   }}
                 />
               )}

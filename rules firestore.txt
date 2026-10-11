@@ -330,6 +330,31 @@ service cloud.firestore {
       allow delete: if isAuth() && request.auth.uid == uid;
     }
 
+    // ── CONSEGNE ALLEGATI ──
+    // "Lo studente ha finito l'allegato HTML di questa card": serve a NON
+    // riproporglielo, non è un voto. Il file allegato gira a origine opaca e non
+    // può scrivere qui: la registrazione la fa il suo browser, e il messaggio che
+    // l'allegato manda col postMessage è falsificabile a mano. Perciò questo doc
+    // non contiene nulla di valutabile: nessun punteggio, nessuna risposta.
+    //
+    // Un doc per studente: l'id è l'uid, quindi lo studente non può scrivere la
+    // consegna di un compagno né crearne una seconda per lo stesso (la create è
+    // negata se il doc esiste già: per l'allegato si aggiorna, non si ricrea).
+    match /allegati_consegne/{uid} {
+      // Lettura solo del proprio: contiene dati suoi, non li si legge a vicenda.
+      allow read: if isAuth() && request.auth.uid == uid;
+      // Solo il proprio doc, e solo con i campi previsti: niente punteggio, niente
+      // risposte, niente ruolo. Lo studente non può scrivere il doc di un altro.
+      allow create: if isAuth() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['consegne', 'aggiornato'])
+        && request.resource.data.consegne is map;
+      // Aggiornare il proprio elenco di allegati completati.
+      allow update: if isAuth() && request.auth.uid == uid
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['consegne', 'aggiornato']);
+      allow delete: if isAuth() && request.auth.uid == uid;
+    }
+
     // ── AI RESULTS ──
     // Cache di valutazioni AI per il docente. Era allow read: isAuth() ma contiene analisi
     // di testi/carte che potrebbero essere sensibili. Ora solo prof.
