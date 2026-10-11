@@ -13,22 +13,15 @@ ragione accanto. Se una voce non è più valida va cancellata, non spostata.
 
 ---
 
-## 1. In attesa di una tua conferma
+## 1. Non c'è più nulla che blocca
 
-### 🔴 Regole Firestore — `allegati_consegne` va pubblicata a mano
+### ✅ Regole Firestore — llegati_consegne pubblicata (11/10/2026)
 
-Con gli allegati HTML è arrivata una raccolta nuova (`allegati_consegne/{uid}`:
-il registro degli allegati che lo studente ha finito). La sua regola è in
-`rules firestore.txt` ma **non è pubblicata in Firebase Console**.
+La raccolta degli allegati completati ha la sua regola in ules firestore.txt ed
+è stata **pubblicata** in Firebase Console → Firestore → Rules. La consegna
+dell'allegato viene registrata e allo studente non viene più riproposto.
 
-**Come fare:** Firebase Console → Firestore → Rules → incolla il contenuto di
-`rules firestore.txt` → Publish.
-
-**Cosa succede se non la pubblichi:** niente che si veda. Lo schermo intero
-funziona lo stesso, l'allegato si apre e si chiude. Semplicemente la consegna
-**non viene registrata**, quindi l'allegato verrà riproposto come prima. Nessun
-errore, nessun crash: è il modo peggiore di fallire, e per questo sta in rosso.
-
+### ✅ Regole Firestore — classiEscluse pubblicata (11/10/2026)
 ### ✅ Regole Firestore — `classiEscluse` pubblicata (11/10/2026)
 
 La regola che vieta allo studente di scrivere `classiEscluse` è in
