@@ -17,11 +17,11 @@ ragione accanto. Se una voce non è più valida va cancellata, non spostata.
 
 ### ✅ Regole Firestore — llegati_consegne pubblicata (11/10/2026)
 
-La raccolta degli allegati completati ha la sua regola in ules firestore.txt ed
+La raccolta degli allegati completati ha la sua regola in 
+ules firestore.txt ed
 è stata **pubblicata** in Firebase Console → Firestore → Rules. La consegna
 dell'allegato viene registrata e allo studente non viene più riproposto.
 
-### ✅ Regole Firestore — classiEscluse pubblicata (11/10/2026)
 ### ✅ Regole Firestore — `classiEscluse` pubblicata (11/10/2026)
 
 La regola che vieta allo studente di scrivere `classiEscluse` è in
