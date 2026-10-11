@@ -12,7 +12,6 @@
 
 import { describe, it, expect } from 'vitest';
 import { regoleSenzaCommenti } from './rules-utils.ts';
-import { corpoFunzione } from './rules-utils.ts';
 import { MESSAGGIO_CONSEGNA } from './allegato-consegna.ts';
 
 const RULES: string = (await import('../rules firestore.txt?raw')).default;
@@ -90,6 +89,3 @@ describe('allegato: il marcatore del messaggio è unico', () => {
   });
 });
 
-// `corpoFunzione` è l'helper che legge il corpo di una funzione nelle Rules:
-// lo richiamo per essere sicuri che esista ancora (è l'unico parser dei Rules).
-void corpoFunzione;

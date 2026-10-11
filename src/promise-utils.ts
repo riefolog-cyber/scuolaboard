@@ -62,7 +62,7 @@ export const PROMESSE_SICURE = ['annunciaClasse', 'notifyClasse', 'notifyUser', 
  * codice è cambiato, la riga non c'è più) fallisce come obsoleta.
  * Così le esclusioni restano poche e vere invece di accumularsi.
  */
-export type Esclusione = { file: string; contiene: string; motivo: string };
+type Esclusione = { file: string; contiene: string; motivo: string };
 
 export const ESCLUSIONI: Esclusione[] = [
   {
@@ -233,7 +233,7 @@ export function sanitizza(src: string): string {
   return fuori;
 }
 
-export type Scoperta = {
+type Scoperta = {
   /** 1-based, come l'editor. */
   riga: number;
   /** La riga che contiene la `.then(`. */

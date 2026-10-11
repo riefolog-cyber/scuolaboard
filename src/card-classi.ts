@@ -119,7 +119,3 @@ export function eliminabileSoloDaClasse(card: Card, classe: string): boolean {
   return cc.indexOf(classe) >= 0;
 }
 
-// Etichetta per la conferma: "solo 3A" o "3A, 2B".
-export function classiLabel(card: Card): string {
-  return classiDi(card).join(', ');
-}

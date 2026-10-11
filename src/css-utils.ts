@@ -31,7 +31,7 @@ export function senzaCommenti(css: string): string {
 }
 
 /** I selettori che definiscono variabili globali. */
-export const SELETTORI_ROOT = [':root'];
+const SELETTORI_ROOT = [':root'];
 
 /** Il selettore che attiva il tema chiaro (applicato da `utils/theme.ts`). */
 export const SELETTORE_TEMA_CHIARO = 'html[data-theme="light"]';

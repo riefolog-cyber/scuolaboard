@@ -1,5 +1,5 @@
 // CardDetail.jsx · ScuolaBoard
-import { useContext, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { normalizeLinks } from './app-utils.tsx';
 import { sbSafeUrl } from './utils/format.ts';
 import { allegatoIcona, allegatoNome, isHtmlAllegato, urlAllegatoSicuro } from './allegati.ts';
@@ -14,7 +14,7 @@ import DomandeLiberePanel from './carddetail/DomandeLiberePanel.tsx';
 import CommentsSection from './carddetail/CommentsSection.tsx';
 import RifiutaModal from './carddetail/RifiutaModal.tsx';
 import AllegatoHtmlPreview from './carddetail/AllegatoHtmlPreview.tsx';
-import { chiaveAllegato, registraConsegna } from './allegato-consegna-servizio.ts';
+import { chiaveAllegato, giaCompletato, leggiConsegne, registraConsegna } from './allegato-consegna-servizio.ts';
 
 function CardDetail__({ $: props$ }: any) {
   // Merge del FormContext (split di UIContext): i pannelli (commenti, quiz,
@@ -27,6 +27,36 @@ function CardDetail__({ $: props$ }: any) {
   // Allegato HTML in anteprima: stato locale del pannello (non nel FormContext),
   // perché non deve sopravvivire alla chiusura della card.
   var [htmlPreview, setHtmlPreview] = useState<any>(null);
+  // Le consegne di questo studente sugli allegati già finiti. Servono solo per
+  // decidere che cosa è ancora riapribile, quindi si leggono una volta sola
+  // all'apertura della card e non seguono i cambi di card.
+  var [consegne, setConsegne] = useState<Record<string, string>>({});
+
+  // Carica le consegne ALL'APERTURA della card. Non si rilegge a ogni render:
+  // dentro la card si registrano solo allegati di questa stessa card, quindi
+  // rileggere non cambierebbe niente e farebbe una lettura per ogni render.
+  useEffect(function () {
+    var u = $.user && $.user.uid;
+    if (!u) return;
+    var visto = false;
+    //  + "leggiConsegne" + @ non rigetta mai (ha un try/catch dentro e restituisce
+    //  + "{}" + @ in ogni caso di errore). Il  + ".catch" + @ qui sotto non serve per
+    // sicurezza: serve perché se quella funzione cambiasse, questa catena
+    // resterebbe scoperta. Il presidio promise-catch.test.ts la segnala come
+    // tale, e ha ragione: finora non lo sapeva nessuno.
+    leggiConsegne(u)
+      .then(function (r) {
+        if (visto) return;
+        setConsegne(r);
+      })
+      .catch(function () {
+        // Senza consegne lette l'allegato resta riapribile: e' il default
+        // sensato (nel dubbio si lascia fare, non si blocca lo studente).
+      });
+    return function () {
+      visto = true;
+    };
+  }, [$.user && $.user.uid]);
   if (!c) return null;
   var isLight = !!$.isLight;
   var totV = c.opzioni
@@ -346,7 +376,27 @@ function CardDetail__({ $: props$ }: any) {
                 }
                 // HTML: nessun link verso la data URL (i browser bloccano la navigazione
                 // top-level verso data:), quindi pulsante di anteprima sabbiata + download.
-                if (isHtmlAllegato(al)) {
+if (isHtmlAllegato(al)) {
+                  // Già consegnato da questo studente: la riga resta visibile (il
+                  // docente ha pubblicato quell'allegato, nasconderlo sarebbe una
+                  // sorpresa) ma non si riapre. È il "non poterlo ripetere" che vale
+                  // DENTRO l'app: fuori il file resta scaricabile e apribile, perché
+                  // è un file e non c'è modo di metterlo sotto chiave.
+                  if (giaCompletato(consegne, chiaveAllegato(c.id, i))) {
+                    return (
+                      <div
+                        key={i}
+                        data-testid="allegato-gia-completato"
+                        title="Già completato: non si riapre"
+                        style={Object.assign({}, stileFile, {
+                          color: 'rgba(255,255,255,.38)',
+                          borderColor: 'rgba(255,255,255,.05)',
+                        })}
+                      >
+                        {allegatoIcona(al)} {nome} <span style={{ color: '#34d399' }}>✓ completato</span>
+                      </div>
+                    );
+                  }
                   return (
                     <div key={i} data-testid="riga-allegato-html" style={{ display: 'flex', gap: 4 }}>
                       <button
@@ -386,7 +436,14 @@ function CardDetail__({ $: props$ }: any) {
                     // riproporglielo: NON è un voto (vedi allegato-consegna.ts).
                     var u = $.user && $.user.uid;
                     if (!u) return;
-                    registraConsegna(u, chiaveAllegato(c.id, htmlPreview.i));
+                    var chiave = chiaveAllegato(c.id, htmlPreview.i);
+                    registraConsegna(u, chiave);
+                    // Aggiorna anche in memoria: senza, la riga resterebbe riapribile
+                    // finché non si ricarica la pagina, e sembrerebbe che il
+                    // "non ripeterlo" non funzioni.
+                    setConsegne(function (precedente) {
+                      return Object.assign({}, precedente, { [chiave]: new Date().toISOString() });
+                    });
                   }}
                 />
               )}
