@@ -13,8 +13,11 @@ import {
   htmlSrcDoc,
   isHtmlAllegato,
   mimeConsentito,
+  ospitiDiRisorse,
   ospitiEsterniHtml,
+  risorseEsterneHtml,
   urlAllegatoSicuro,
+  verificaRisorseEsterne,
 } from './allegati.ts';
 
 function dataUrl(testo: string) {
@@ -106,6 +109,78 @@ describe('allegati — ospitiEsterniHtml (avviso CDN in preview)', () => {
     expect(ospitiEsterniHtml('')).toEqual([]);
     expect(ospitiEsterniHtml(null)).toEqual([]);
     expect(ospitiEsterniHtml(undefined)).toEqual([]);
+  });
+});
+
+describe('allegati — risorseEsterneHtml (URL interi per il probe)', () => {
+  it('trova gli URL di script e stylesheet in ordine, senza duplicati', () => {
+    var html =
+      '<script src="https://cdn.jsdelivr.net/a.js"></script>' +
+      '<script src="https://cdn.jsdelivr.net/b.js"></script>' +
+      '<link href="https://fonts.googleapis.com/css2?x=1" rel="stylesheet">' +
+      '<script src="//cdn2.it/c.js"></script>' +
+      '<link rel="preconnect" href="https://fonts.googleapis.com">' +
+      '<script>var x = 1;</script>';
+    expect(risorseEsterneHtml(html)).toEqual([
+      'https://cdn.jsdelivr.net/a.js',
+      'https://cdn.jsdelivr.net/b.js',
+      'https://fonts.googleapis.com/css2?x=1',
+      'https://cdn2.it/c.js',
+    ]);
+  });
+
+  it('ospitiDiRisorse ne fa gli host unici', () => {
+    expect(ospitiDiRisorse(['https://a.it/1.js', 'https://a.it/2.js', 'https://b.it/x.css'])).toEqual([
+      'a.it',
+      'b.it',
+    ]);
+    expect(ospitiDiRisorse([])).toEqual([]);
+    expect(ospitiDiRisorse(null)).toEqual([]);
+  });
+});
+
+describe('allegati — verificaRisorseEsterne (la rete blocca davvero?)', () => {
+  it('tutto raggiungibile → lista vuota', async () => {
+    var visti: string[] = [];
+    var ko = await verificaRisorseEsterne(['https://a.it/1.js', 'https://b.it/2.js'], function (u: string) {
+      visti.push(u);
+      return Promise.resolve({});
+    });
+    expect(ko).toEqual([]);
+    expect(visti).toEqual(['https://a.it/1.js', 'https://b.it/2.js']);
+  });
+
+  it('rifiuto o lancio → URL in lista', async () => {
+    var ko = await verificaRisorseEsterne(
+      ['https://ok.it/a.js', 'https://ko.it/b.js', 'https://boom.it/c.js'],
+      function (u: string) {
+        if (u.indexOf('boom') >= 0) throw new Error('sincrono');
+        if (u.indexOf('ko.it') >= 0) return Promise.reject(new Error('bloccato'));
+        return Promise.resolve({});
+      }
+    );
+    expect(ko).toEqual(['https://ko.it/b.js', 'https://boom.it/c.js']);
+  });
+
+  it('chi non risponde entro il budget finisce in lista (offline)', async () => {
+    var ko = await verificaRisorseEsterne(
+      ['https://lento.it/a.js'],
+      function () {
+        return new Promise(function () {});
+      },
+      20
+    );
+    expect(ko).toEqual(['https://lento.it/a.js']);
+  });
+
+  it('senza fetch non si misura: nessun falso allarme', async () => {
+    var vera = (globalThis as any).fetch;
+    (globalThis as any).fetch = undefined;
+    try {
+      expect(await verificaRisorseEsterne(['https://a.it/1.js'])).toEqual([]);
+    } finally {
+      (globalThis as any).fetch = vera;
+    }
   });
 });
 

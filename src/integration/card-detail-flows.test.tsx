@@ -152,73 +152,123 @@ describe('CardDetail — stato APERTO', () => {
     await waitFor(() => expect(document.querySelector('[data-testid="anteprima-html"]')).toBeNull());
   });
 
-  it('allegato HTML con librerie online: avviso CDN in preview, file autonomo senza', async () => {
-    // Caso reale: dashboard con Chart.js da CDN. Se la rete blocca la CDN, lo script
-    // inline muore alla prima chiamata e la preview resta spoglia ("tutto bianco con
-    // testo"): senza avviso sembra un difetto nostro, con l'avviso si sa che fare.
-    var conCdn = '<script src="https://cdn.jsdelivr.net/npm/chart.js"></script><h1>Dashboard</h1>';
-    const seed = {
-      users: { prof1: PROF_DOC },
-      cards: {
-        c1: mkCard('c1', {
-          titolo: 'Card con dashboard',
-          allegati: [
-            { id: 'a1', name: 'dash.html', type: 'text/html', size: 90, url: 'data:text/html;base64,' + btoa(conCdn) },
-            {
-              id: 'a2',
-              name: 'semplice.html',
-              type: 'text/html',
-              size: 40,
-              url: 'data:text/html;base64,' + btoa('<h1>Solo testo</h1>'),
-            },
-          ],
-        }),
-      },
-    };
-    await renderApp({ seed, user: PROF });
+  it('allegato HTML con librerie online: se la rete le blocca, avviso con gli host; file autonomo senza', async () => {
+    // Caso reale: dashboard con Chart.js da CDN, vista a casa e spoglia a scuola
+    // dallo stesso browser. La preview MISURA (fetch no-cors sugli URL del file):
+    // qui la fetch rifiuta, quindi l'avviso compare con gli host bloccati.
+    // Si simula sempre: la rete vera nei test sarebbe flake per ambiente.
+    vi.stubGlobal('fetch', function () {
+      return Promise.reject(new Error('bloccato'));
+    });
+    try {
+      var conCdn = '<script src="https://cdn.jsdelivr.net/npm/chart.js"></script><h1>Dashboard</h1>';
+      const seed = {
+        users: { prof1: PROF_DOC },
+        cards: {
+          c1: mkCard('c1', {
+            titolo: 'Card con dashboard',
+            allegati: [
+              { id: 'a1', name: 'dash.html', type: 'text/html', size: 90, url: 'data:text/html;base64,' + btoa(conCdn) },
+              {
+                id: 'a2',
+                name: 'semplice.html',
+                type: 'text/html',
+                size: 40,
+                url: 'data:text/html;base64,' + btoa('<h1>Solo testo</h1>'),
+              },
+            ],
+          }),
+        },
+      };
+      await renderApp({ seed, user: PROF });
 
-    const detail = await openCard('Card con dashboard');
-    fireEvent.click(await detail.findByRole('button', { name: '🌐 dash.html' }, {}));
-    const avviso = await detail.findByTestId('avviso-cdn', {});
-    expect(avviso.textContent).toContain('cdn.jsdelivr.net');
-    expect(avviso.textContent).toContain('Scarica');
-    fireEvent.click(screen.getByRole('button', { name: 'Chiudi anteprima' }));
-    await waitFor(() => expect(document.querySelector('[data-testid="anteprima-html"]')).toBeNull());
+      const detail = await openCard('Card con dashboard');
+      fireEvent.click(await detail.findByRole('button', { name: '🌐 dash.html' }, {}));
+      const avviso = await detail.findByTestId('avviso-cdn', {});
+      expect(avviso.textContent).toContain('cdn.jsdelivr.net');
+      expect(avviso.textContent).toContain('Scarica');
+      fireEvent.click(screen.getByRole('button', { name: 'Chiudi anteprima' }));
+      await waitFor(() => expect(document.querySelector('[data-testid="anteprima-html"]')).toBeNull());
 
-    // Il file autonomo non dipende dalla rete: nessun avviso.
-    fireEvent.click(await detail.findByRole('button', { name: '🌐 semplice.html' }, {}));
-    await detail.findByRole('button', { name: 'Chiudi anteprima' }, {});
-    expect(document.querySelector('[data-testid="avviso-cdn"]')).toBeNull();
+      // Il file autonomo non dipende dalla rete: nessun avviso.
+      fireEvent.click(await detail.findByRole('button', { name: '🌐 semplice.html' }, {}));
+      await detail.findByRole('button', { name: 'Chiudi anteprima' }, {});
+      expect(document.querySelector('[data-testid="avviso-cdn"]')).toBeNull();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('allegato HTML con librerie online: se la rete le raggiunge, nessun avviso', async () => {
+    // Stesso file, fetch che risponde: la misura dice "tutto arriva" e la preview
+    // resta pulita, senza falsi allarmi a chi ha la rete a posto.
+    var chiamate = 0;
+    vi.stubGlobal('fetch', function () {
+      chiamate++;
+      return Promise.resolve({});
+    });
+    try {
+      var conCdn = '<script src="https://cdn.jsdelivr.net/npm/chart.js"></script><h1>Dashboard</h1>';
+      const seed = {
+        users: { prof1: PROF_DOC },
+        cards: {
+          c1: mkCard('c1', {
+            titolo: 'Card con dashboard ok',
+            allegati: [
+              { id: 'a1', name: 'dash.html', type: 'text/html', size: 90, url: 'data:text/html;base64,' + btoa(conCdn) },
+            ],
+          }),
+        },
+      };
+      await renderApp({ seed, user: PROF });
+
+      const detail = await openCard('Card con dashboard ok');
+      fireEvent.click(await detail.findByRole('button', { name: '🌐 dash.html' }, {}));
+      await detail.findByRole('button', { name: 'Chiudi anteprima' }, {});
+      // La misura è partita davvero e non ha trovato blocchi: nessun avviso.
+      await waitFor(() => expect(chiamate).toBeGreaterThan(0));
+      expect(detail.queryByTestId('avviso-cdn')).toBeNull();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('allegato HTML con librerie online: avviso CDN visibile anche dentro l overlay a schermo intero', async () => {
     // Il contenuto è identico in anteprima e nell'overlay (stesso `contenuto`):
     // l'avviso deve esserci in entrambi, altrimenti a schermo intero la pagina
     // spoglia torna muta. L'overlay in sé è coperto da allegato-uscita.test.tsx.
-    var conCdn = '<script src="https://cdn.jsdelivr.net/npm/chart.js"></script><h1>Dashboard</h1>';
-    const seed = {
-      users: { prof1: PROF_DOC },
-      cards: {
-        c1: mkCard('c1', {
-          titolo: 'Card con dashboard overlay',
-          allegati: [
-            { id: 'a1', name: 'dash.html', type: 'text/html', size: 90, url: 'data:text/html;base64,' + btoa(conCdn) },
-          ],
-        }),
-      },
-    };
-    await renderApp({ seed, user: PROF });
-
-    const detail = await openCard('Card con dashboard overlay');
-    fireEvent.click(await detail.findByRole('button', { name: '🌐 dash.html' }, {}));
-    await detail.findByTestId('avviso-cdn', {});
-    fireEvent.click(await detail.findByRole('button', { name: 'Apri a schermo intero' }, {}));
-    const overlay = await waitFor(() => {
-      const el = document.querySelector('[data-testid="anteprima-html"] [data-testid="avviso-cdn"]');
-      if (!el) throw new Error('avviso non in overlay');
-      return el;
+    // Anche qui fetch simulata che rifiuta: niente rete vera nei test.
+    vi.stubGlobal('fetch', function () {
+      return Promise.reject(new Error('bloccato'));
     });
-    expect(overlay.textContent).toContain('cdn.jsdelivr.net');
+    try {
+      var conCdn = '<script src="https://cdn.jsdelivr.net/npm/chart.js"></script><h1>Dashboard</h1>';
+      const seed = {
+        users: { prof1: PROF_DOC },
+        cards: {
+          c1: mkCard('c1', {
+            titolo: 'Card con dashboard overlay',
+            allegati: [
+              { id: 'a1', name: 'dash.html', type: 'text/html', size: 90, url: 'data:text/html;base64,' + btoa(conCdn) },
+            ],
+          }),
+        },
+      };
+      await renderApp({ seed, user: PROF });
+
+      const detail = await openCard('Card con dashboard overlay');
+      fireEvent.click(await detail.findByRole('button', { name: '🌐 dash.html' }, {}));
+      await detail.findByTestId('avviso-cdn', {});
+      fireEvent.click(await detail.findByRole('button', { name: 'Apri a schermo intero' }, {}));
+      const overlay = await waitFor(() => {
+        const el = document.querySelector('[data-testid="anteprima-html"] [data-testid="avviso-cdn"]');
+        if (!el) throw new Error('avviso non in overlay');
+        return el;
+      });
+      expect(overlay.textContent).toContain('cdn.jsdelivr.net');
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('allegato con url javascript: (campo falsificabile a mano) → riga INERTE, non un link', async () => {

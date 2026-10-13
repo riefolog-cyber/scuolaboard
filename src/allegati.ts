@@ -171,22 +171,14 @@ export function htmlSrcDoc(al: any): string {
 }
 
 /**
- * Host delle librerie online caricate dal file (script + fogli di stile http/https).
- *
- * Un HTML che disegna grafici con Chart.js o si veste con Tailwind via CDN dentro la
- * preview sabbiata dipende dalla rete: se la CDN non risponde (filtro della rete
- * scolastica, ad-block, offline) lo script esterno non gira e — siccome lo script
- * inline di solito chiama la libreria come prima cosa — muore TUTTO il JavaScript
- * del file: niente grafici, niente stili, solo testo. È il caso reale della dashboard
- * con Chart.js: verificato in Chrome che in sandbox le CDN caricano e i grafici si
- * disegnano, quindi pagina spoglia = rete che blocca, non preview rotta.
- * La sandbox NON si allarga per questo (vedi AllegatoHtmlPreview): si avvisa.
+ * URL completi delle librerie online caricate dal file (script + fogli di stile
+ * http/https, senza duplicati, in ordine di apparizione).
  *
  * I <link> contano solo se sono stylesheet (un preconnect o un dns-prefetch che
- * manca non rompe la pagina); data: e URL relativi mai. Ritorna host unici.
+ * manca non rompe la pagina); data: e URL relativi mai.
  */
-export function ospitiEsterniHtml(htmlTesto: any): string[] {
-  var visti: string[] = [];
+export function risorseEsterneHtml(htmlTesto: any): string[] {
+  var viste: string[] = [];
   // Si matcha il TAG intero (fino a `>`): il `rel="stylesheet"` di un <link> sta
   // spesso DOPO l'href, e cercarlo solo nel pezzo fino all'URL lo perderebbe.
   String(htmlTesto || '').replace(/<(script|link)\b[^>]*?>/gi, function (tagIntero: string, tag: string): string {
@@ -194,14 +186,89 @@ export function ospitiEsterniHtml(htmlTesto: any): string[] {
       var u = /(?:src|href)\s*=\s*["']((?:https?:)?\/\/[^"'<>\s]+)["']/i.exec(tagIntero);
       if (!u) return tagIntero;
       var assoluto = u[1].indexOf('//') === 0 ? 'https:' + u[1] : u[1];
-      try {
-        var host = new URL(assoluto).hostname;
-        if (host && visti.indexOf(host) < 0) visti.push(host);
-      } catch (e) {}
+      if (viste.indexOf(assoluto) < 0) viste.push(assoluto);
       return tagIntero;
     }
   );
+  return viste;
+}
+
+/** Host unici degli URL dati (per l'avviso: l'URL intero è rumore per chi legge). */
+export function ospitiDiRisorse(urls: any): string[] {
+  var visti: string[] = [];
+  (urls || []).forEach(function (u: any) {
+    try {
+      var host = new URL(String(u)).hostname;
+      if (host && visti.indexOf(host) < 0) visti.push(host);
+    } catch (e) {}
+  });
   return visti;
+}
+
+/**
+ * Host delle librerie online caricate dal file (da risorseEsterneHtml).
+ */
+export function ospitiEsterniHtml(htmlTesto: any): string[] {
+  return ospitiDiRisorse(risorseEsterneHtml(htmlTesto));
+}
+
+/**
+ * Quali URL NON si caricano da questa rete (fetch no-cors con timeout).
+ *
+ * A cosa serve: un HTML che disegna grafici con Chart.js dentro la preview
+ * sabbiata dipende dalla rete. Se una CDN non risponde (filtro scolastico,
+ * ad-block, offline) lo script esterno non gira e — siccome lo script inline
+ * chiama la libreria come prima cosa — muore TUTTO il JavaScript del file:
+ * niente grafici, niente stili, solo testo (caso reale della dashboard, vista
+ * a casa e spoglia a scuola dallo stesso browser). La sandbox NON si allarga
+ * per questo: si misura dalla pagina (gli stessi URL del file) e si avvisa
+ * solo se falliscono davvero, non in base alla rete di chi sviluppa.
+ *
+ * `fetchFn` iniettabile per i test (in produzione è la fetch del browser).
+ * Non rifiuta mai: gli URL che non rispondono finiscono nella lista.
+ */
+export function verificaRisorseEsterne(urls: any, fetchFn?: any, attesaMs?: number): Promise<string[]> {
+  var fetcher = fetchFn || (typeof fetch !== 'undefined' ? fetch : null);
+  // Senza fetch non si può misurare: nessun falso allarme.
+  if (!fetcher) return Promise.resolve([]);
+  var ms = attesaMs || 6000;
+  return Promise.all(
+    (urls || []).map(function (u: any) {
+      var url = String(u);
+      return new Promise<string | null>(function (resolve) {
+        var timer: any = null;
+        function chiudi(esito: string | null) {
+          if (timer) clearTimeout(timer);
+          resolve(esito);
+        }
+        try {
+          var ctrl: any = typeof AbortController !== 'undefined' ? new AbortController() : null;
+          timer = setTimeout(function () {
+            try {
+              if (ctrl) ctrl.abort();
+            } catch (e) {}
+            chiudi(url);
+          }, ms);
+          // no-cors: basta sapere se la rete risponde (risposta opaca), senza
+          // leggere nulla. Il rifiuto (filtro, offline, ad-block) è il segnale.
+          fetcher(url, { mode: 'no-cors', signal: ctrl ? ctrl.signal : undefined }).then(
+            function () {
+              chiudi(null);
+            },
+            function () {
+              chiudi(url);
+            }
+          );
+        } catch (e) {
+          chiudi(url);
+        }
+      });
+    })
+  ).then(function (esiti) {
+    return esiti.filter(function (x) {
+      return x !== null;
+    }) as string[];
+  });
 }
 
 /** Icona nella lista allegati. */

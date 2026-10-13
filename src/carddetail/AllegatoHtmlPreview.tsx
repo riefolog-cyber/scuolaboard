@@ -47,7 +47,7 @@
 
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { allegatoNome, htmlSrcDoc, ospitiEsterniHtml, urlAllegatoSicuro } from '../allegati.ts';
+import { allegatoNome, htmlSrcDoc, ospitiDiRisorse, risorseEsterneHtml, urlAllegatoSicuro, verificaRisorseEsterne } from '../allegati.ts';
 import { isMessaggioAllegatoCompletato } from '../allegato-consegna.ts';
 
 function AllegatoHtmlPreview({ al, indice, onChiudi, onCompletato }: any) {
@@ -55,12 +55,39 @@ function AllegatoHtmlPreview({ al, indice, onChiudi, onCompletato }: any) {
   var scaricabile = urlAllegatoSicuro(al.url);
   // Si decodifica una volta sola: serve sia all'iframe sia al controllo CDN qui sotto.
   var doc = htmlSrcDoc(al);
-  // Se il file carica librerie online e la rete le blocca (filtro scolastico,
-  // ad-block, offline), la pagina resta spoglia — lo script inline muore alla prima
-  // chiamata alla libreria — e senza avviso sembra "tutto bianco con testo".
-  // La sandbox NON si allarga per questo (vedi intestazione): si avvisa e si indica
-  // la via d'uscita (download + apertura nel browser).
-  var ospiti = ospitiEsterniHtml(doc);
+  // Avviso CDN SOLO se le librerie non si caricano davvero: lo si misura dalla
+  // pagina (fetch no-cors verso gli stessi URL del file), non si indovina dalla
+  // rete di chi sviluppa. `null` = verifica in corso: niente avviso finché non
+  // si sa, così a casa (dove tutto arriva) non compare nessun falso allarme.
+  var [bloccati, setBloccati] = useState<string[] | null>(function () {
+    return risorseEsterneHtml(doc).length ? null : [];
+  });
+  useEffect(
+    function () {
+      var urls = risorseEsterneHtml(doc);
+      if (!urls.length) {
+        setBloccati([]);
+        return;
+      }
+      // L'allegato aperto può cambiare senza rimontare il componente: si riparte
+      // da "non so" invece di mostrare l'esito del file precedente.
+      setBloccati(null);
+      var annullato = false;
+      verificaRisorseEsterne(urls).then(
+        function (ko) {
+          if (!annullato) setBloccati(ko);
+        },
+        function () {
+          if (!annullato) setBloccati([]);
+        }
+      );
+      return function () {
+        annullato = true;
+      };
+    },
+    [doc]
+  );
+  var ospiti = ospitiDiRisorse(bloccati || []);
   var [pienoSchermo, setPienoSchermo] = useState(false);
   var [completato, setCompletato] = useState(false);
   var [chiediConferma, setChiediConferma] = useState(false);
@@ -258,8 +285,8 @@ function AllegatoHtmlPreview({ al, indice, onChiudi, onCompletato }: any) {
             flexShrink: 0,
           }}
         >
-          🌐 Questo file carica librerie online da {ospiti.join(', ')}. Se grafici o stili non compaiono, la rete le
-          sta bloccando: premi ⬇ Scarica e apri il file nel browser.
+          🌐 Questo file carica librerie online da {ospiti.join(', ')}, ma da questa rete non si caricano: premi ⬇ Scarica
+          e apri il file nel browser dove queste librerie arrivano.
         </div>
       ) : null}
 
