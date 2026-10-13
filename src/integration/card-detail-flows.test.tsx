@@ -178,16 +178,16 @@ describe('CardDetail — stato APERTO', () => {
     await renderApp({ seed, user: PROF });
 
     const detail = await openCard('Card con dashboard');
-    fireEvent.click(await detail.findByRole('button', { name: '🌐 dash.html' }, {}, { timeout: 4000 }));
-    const avviso = await detail.findByTestId('avviso-cdn', {}, { timeout: 4000 });
+    fireEvent.click(await detail.findByRole('button', { name: '🌐 dash.html' }, {}));
+    const avviso = await detail.findByTestId('avviso-cdn', {});
     expect(avviso.textContent).toContain('cdn.jsdelivr.net');
     expect(avviso.textContent).toContain('Scarica');
     fireEvent.click(screen.getByRole('button', { name: 'Chiudi anteprima' }));
     await waitFor(() => expect(document.querySelector('[data-testid="anteprima-html"]')).toBeNull());
 
     // Il file autonomo non dipende dalla rete: nessun avviso.
-    fireEvent.click(await detail.findByRole('button', { name: '🌐 semplice.html' }, {}, { timeout: 4000 }));
-    await detail.findByRole('button', { name: 'Chiudi anteprima' }, {}, { timeout: 4000 });
+    fireEvent.click(await detail.findByRole('button', { name: '🌐 semplice.html' }, {}));
+    await detail.findByRole('button', { name: 'Chiudi anteprima' }, {});
     expect(document.querySelector('[data-testid="avviso-cdn"]')).toBeNull();
   });
 
@@ -210,9 +210,9 @@ describe('CardDetail — stato APERTO', () => {
     await renderApp({ seed, user: PROF });
 
     const detail = await openCard('Card con dashboard overlay');
-    fireEvent.click(await detail.findByRole('button', { name: '🌐 dash.html' }, {}, { timeout: 4000 }));
-    await detail.findByTestId('avviso-cdn', {}, { timeout: 4000 });
-    fireEvent.click(await detail.findByRole('button', { name: 'Apri a schermo intero' }, {}, { timeout: 4000 }));
+    fireEvent.click(await detail.findByRole('button', { name: '🌐 dash.html' }, {}));
+    await detail.findByTestId('avviso-cdn', {});
+    fireEvent.click(await detail.findByRole('button', { name: 'Apri a schermo intero' }, {}));
     const overlay = await waitFor(() => {
       const el = document.querySelector('[data-testid="anteprima-html"] [data-testid="avviso-cdn"]');
       if (!el) throw new Error('avviso non in overlay');
