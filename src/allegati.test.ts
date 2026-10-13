@@ -13,6 +13,7 @@ import {
   htmlSrcDoc,
   isHtmlAllegato,
   mimeConsentito,
+  ospitiEsterniHtml,
   urlAllegatoSicuro,
 } from './allegati.ts';
 
@@ -70,6 +71,41 @@ describe('allegati — htmlSrcDoc', () => {
   it('allegato non data URL → passa l URL grezzo (l iframe lo carica, comunque sabbiato)', () => {
     expect(htmlSrcDoc({ url: 'https://x.it/pagina' })).toBe('https://x.it/pagina');
     expect(htmlSrcDoc({})).toBe('');
+  });
+});
+
+describe('allegati — ospitiEsterniHtml (avviso CDN in preview)', () => {
+  it('trova gli host di script e stylesheet (il caso della dashboard con Chart.js)', () => {
+    var html =
+      '<script src="https://cdn.tailwindcss.com"></script>' +
+      '<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>' +
+      '<script src="https://unpkg.com/lucide@latest"></script>' +
+      '<link href="https://fonts.googleapis.com/css2?family=Inter" rel="stylesheet">';
+    expect(ospitiEsterniHtml(html)).toEqual([
+      'cdn.tailwindcss.com',
+      'cdn.jsdelivr.net',
+      'unpkg.com',
+      'fonts.googleapis.com',
+    ]);
+  });
+
+  it('ignora preconnect/dns-prefetch, data:, relativi e duplicati', () => {
+    var html =
+      '<link rel="preconnect" href="https://fonts.googleapis.com">' +
+      '<link rel="dns-prefetch" href="https://x.it">' +
+      '<script src="data:text/javascript,1"></script>' +
+      '<script src="/locale.js"></script>' +
+      '<script src="https://cdn.jsdelivr.net/a.js"></script>' +
+      '<SCRIPT SRC="https://cdn.jsdelivr.net/b.js"></SCRIPT>' +
+      '<script src="//cdn2.it/c.js"></script>';
+    expect(ospitiEsterniHtml(html)).toEqual(['cdn.jsdelivr.net', 'cdn2.it']);
+  });
+
+  it('file autonomo o vuoto → nessun avviso', () => {
+    expect(ospitiEsterniHtml('<h1>Solo testo</h1><script>document.title=1</script>')).toEqual([]);
+    expect(ospitiEsterniHtml('')).toEqual([]);
+    expect(ospitiEsterniHtml(null)).toEqual([]);
+    expect(ospitiEsterniHtml(undefined)).toEqual([]);
   });
 });
 

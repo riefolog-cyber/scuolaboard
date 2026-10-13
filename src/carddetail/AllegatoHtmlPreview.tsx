@@ -47,12 +47,20 @@
 
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { allegatoNome, htmlSrcDoc, urlAllegatoSicuro } from '../allegati.ts';
+import { allegatoNome, htmlSrcDoc, ospitiEsterniHtml, urlAllegatoSicuro } from '../allegati.ts';
 import { isMessaggioAllegatoCompletato } from '../allegato-consegna.ts';
 
 function AllegatoHtmlPreview({ al, indice, onChiudi, onCompletato }: any) {
   var nome = allegatoNome(al, indice);
   var scaricabile = urlAllegatoSicuro(al.url);
+  // Si decodifica una volta sola: serve sia all'iframe sia al controllo CDN qui sotto.
+  var doc = htmlSrcDoc(al);
+  // Se il file carica librerie online e la rete le blocca (filtro scolastico,
+  // ad-block, offline), la pagina resta spoglia — lo script inline muore alla prima
+  // chiamata alla libreria — e senza avviso sembra "tutto bianco con testo".
+  // La sandbox NON si allarga per questo (vedi intestazione): si avvisa e si indica
+  // la via d'uscita (download + apertura nel browser).
+  var ospiti = ospitiEsterniHtml(doc);
   var [pienoSchermo, setPienoSchermo] = useState(false);
   var [completato, setCompletato] = useState(false);
   var [chiediConferma, setChiediConferma] = useState(false);
@@ -237,13 +245,31 @@ function AllegatoHtmlPreview({ al, indice, onChiudi, onCompletato }: any) {
         </div>
       ) : null}
 
+      {ospiti.length ? (
+        <div
+          data-testid="avviso-cdn"
+          style={{
+            padding: '7px 10px',
+            fontSize: 11,
+            lineHeight: 1.5,
+            color: 'rgba(255,255,255,.78)',
+            background: 'rgba(245,158,11,.12)',
+            borderBottom: '1px solid rgba(255,255,255,.08)',
+            flexShrink: 0,
+          }}
+        >
+          🌐 Questo file carica librerie online da {ospiti.join(', ')}. Se grafici o stili non compaiono, la rete le
+          sta bloccando: premi ⬇ Scarica e apri il file nel browser.
+        </div>
+      ) : null}
+
       <iframe
         title={'Anteprima di ' + nome}
         // allow-scripts serve (i file allegati sono app web: senza script restano
         // vuoti). NON aggiungere allow-same-origin: darebbe al file la nostra origine
         // e con il DOM dell'app, la sessione Firebase di chi guarda. Vedi l'intestazione.
         sandbox="allow-scripts"
-        srcDoc={htmlSrcDoc(al)}
+        srcDoc={doc}
         referrerPolicy="no-referrer"
         // Altezza maggiorata e proporzionale: i file allegati sono pagine lunghe
         // (il quiz di esempio ha 12 domande) e 320px fissi rendevano l'anteprima

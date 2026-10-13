@@ -170,6 +170,40 @@ export function htmlSrcDoc(al: any): string {
   }
 }
 
+/**
+ * Host delle librerie online caricate dal file (script + fogli di stile http/https).
+ *
+ * Un HTML che disegna grafici con Chart.js o si veste con Tailwind via CDN dentro la
+ * preview sabbiata dipende dalla rete: se la CDN non risponde (filtro della rete
+ * scolastica, ad-block, offline) lo script esterno non gira e — siccome lo script
+ * inline di solito chiama la libreria come prima cosa — muore TUTTO il JavaScript
+ * del file: niente grafici, niente stili, solo testo. È il caso reale della dashboard
+ * con Chart.js: verificato in Chrome che in sandbox le CDN caricano e i grafici si
+ * disegnano, quindi pagina spoglia = rete che blocca, non preview rotta.
+ * La sandbox NON si allarga per questo (vedi AllegatoHtmlPreview): si avvisa.
+ *
+ * I <link> contano solo se sono stylesheet (un preconnect o un dns-prefetch che
+ * manca non rompe la pagina); data: e URL relativi mai. Ritorna host unici.
+ */
+export function ospitiEsterniHtml(htmlTesto: any): string[] {
+  var visti: string[] = [];
+  // Si matcha il TAG intero (fino a `>`): il `rel="stylesheet"` di un <link> sta
+  // spesso DOPO l'href, e cercarlo solo nel pezzo fino all'URL lo perderebbe.
+  String(htmlTesto || '').replace(/<(script|link)\b[^>]*?>/gi, function (tagIntero: string, tag: string): string {
+      if (String(tag).toLowerCase() === 'link' && !/rel\s*=\s*["']?stylesheet/i.test(tagIntero)) return tagIntero;
+      var u = /(?:src|href)\s*=\s*["']((?:https?:)?\/\/[^"'<>\s]+)["']/i.exec(tagIntero);
+      if (!u) return tagIntero;
+      var assoluto = u[1].indexOf('//') === 0 ? 'https:' + u[1] : u[1];
+      try {
+        var host = new URL(assoluto).hostname;
+        if (host && visti.indexOf(host) < 0) visti.push(host);
+      } catch (e) {}
+      return tagIntero;
+    }
+  );
+  return visti;
+}
+
 /** Icona nella lista allegati. */
 export function allegatoIcona(al: any): string {
   var t = String((al && al.type) || '');
