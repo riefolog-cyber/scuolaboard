@@ -3,6 +3,12 @@
 // da AppProvider al momento della creazione.
 import { classeCorrenteOf, ANNO_LEGACY } from './app-provider-helpers.ts';
 import {
+  classeContestoCommenti,
+  classePerNuovaRisposta,
+  classePerNuovoCommento,
+  trovaCommento,
+} from './commenti-classe.ts';
+import {
   MAX_ALLEGATO_KB,
   eContenutoPericoloso,
   estensioneConsentita,
@@ -451,6 +457,13 @@ export function createAppHandlers(ctx: any) {
       // momento della chiamata). Escapare qui corromperebbe il testo con
       // backslash davanti ad apostrofi/virgolette in tutta la UI.
       var cmIdNew = Date.now();
+      // Commenti indipendenti per classe (vedi src/commenti-classe.ts): il
+      // commento nasce nella classe di chi scrive (studente: la sua classe;
+      // prof: la classe filtrata, oppure globale se guarda 'tutte'). I ctx dei
+      // test vecchi non hanno questi campi → contesto null → commento legacy,
+      // visibile a tutti come prima.
+      var contestoCom = classeContestoCommenti(ctx);
+      var classeCom = classePerNuovoCommento(contestoCom);
       var nextCard = Object.assign({}, card, {
         commenti: (card.commenti || []).concat([
           {
@@ -459,6 +472,7 @@ export function createAppHandlers(ctx: any) {
             testo: getNc().testo.trim(),
             data: new Date().toISOString(),
             risposte: [],
+            classe: classeCom,
           },
         ]),
       });
@@ -498,7 +512,12 @@ export function createAppHandlers(ctx: any) {
             // non ricevevano niente (dedupe in lettura, useNotifiche).
             if (SBn.notifyClasse) {
               SBn.notifyClasse({
-                classi: card.classi || ['TUTTE'],
+                // Fan-out SOLO alla classe del commento: le altre classi che
+                // vedono la stessa card hanno una discussione indipendente e
+                // non devono ricevere l'avviso. Senza contesto (commento
+                // globale del docente, o ctx legacy dei test) si avvisa come
+                // prima tutta la card.
+                classi: contestoCom ? [contestoCom] : card.classi || ['TUTTE'],
                 annoScolastico: card.annoScolastico,
                 cardId: card.id,
                 cmId: cmIdNew,
@@ -538,12 +557,17 @@ export function createAppHandlers(ctx: any) {
       if (!card) return;
       // Testo salvato RAW: l'escaping per l'AI avviene solo in ai-services al
       // momento di costruire il prompt (vedi addCom).
+      // La risposta eredita la classe del padre (vedi commenti-classe.ts): il
+      // thread resta unito anche se il docente risponde con un altro filtro.
+      var contestoRep = classeContestoCommenti(ctx);
+      var padreRep = trovaCommento(card.commenti, cmId);
       var nuova = {
         id: Date.now(),
         autore: getMyName()(user),
         testo: getReplyTesto().trim(),
         data: new Date().toISOString(),
         risposte: [],
+        classe: classePerNuovaRisposta(padreRep, contestoRep),
       };
       function ins(lista: any) {
         return lista.map(function (item: any) {
@@ -645,12 +669,17 @@ export function createAppHandlers(ctx: any) {
                 })
                 .catch(function () {});
             }
-            // anche fan-out alla classe della card (per compagni). tipo 'risposta'
+            // anche fan-out alla classe del THREAD (per compagni). tipo 'risposta'
             // + cmId della RISPOSTA: come in addCom, ogni intervento è un avviso
-            // distinto, non una riedizione di nuova_card_<cardId>.
+            // distinto, non una riedizione di nuova_card_<cardId>. La classe è
+            // quella del padre (o del contesto): le altre classi della stessa
+            // card hanno una discussione indipendente e non vanno avvisate.
             if (SBn2.notifyClasse)
               SBn2.notifyClasse({
-                classi: card.classi || ['TUTTE'],
+                classi:
+                  (nuova && (nuova as any).classe) || contestoRep
+                    ? [((nuova as any).classe || contestoRep) as string]
+                    : card.classi || ['TUTTE'],
                 annoScolastico: card.annoScolastico,
                 cardId: card.id,
                 cmId: nuova.id,

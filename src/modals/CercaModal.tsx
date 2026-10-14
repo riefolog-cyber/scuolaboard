@@ -7,6 +7,7 @@
 import { useState, useEffect, useMemo, createElement } from 'react';
 import { norm, hilite } from '../utils/search.ts';
 import { visibileAClasse } from '../card-classi.ts';
+import { commentiVisibili } from '../commenti-classe.ts';
 
 function CercaModal(props: any) {
   if (!props.showCerca) return null;
@@ -168,6 +169,16 @@ function CercaModal(props: any) {
     return visibileAClasse(c, stClasse);
   }
 
+  // I commenti sono indipendenti per classe (vedi src/commenti-classe.ts): in
+  // vista studente la ricerca fruga SOLO nei commenti della sua classe + i
+  // legacy senza classe. Senza questo, uno studente trovava col cerca il testo
+  // dei commenti di un'altra classe (stesso difetto dei commenti condivisi).
+  // Il docente cerca in tutto.
+  function commentiCercabili(c: any) {
+    if (!isStudentView) return c.commenti || [];
+    return commentiVisibili(c.commenti, stClasse || null, false);
+  }
+
   // Base della ricerca: tutti gli anni, un anno specifico (diverso da quello in
   // bacheca → filtrato dal dataset di tutti gli anni), oppure l'anno attivo già
   // in memoria (cards). Nella vista studente si filtra per visibilità classe.
@@ -199,7 +210,7 @@ function CercaModal(props: any) {
       return base
         .filter(function (c: any) {
           var hay = norm(c.titolo + ' ' + (c.testo || ''));
-          (c.commenti || []).forEach(function (cm: any) {
+          commentiCercabili(c).forEach(function (cm: any) {
             hay += ' ' + norm(cm.testo || '');
           });
           (c.quizDomande || []).forEach(function (d: any) {
@@ -230,7 +241,7 @@ function CercaModal(props: any) {
   function matchedSnippet(c: any, terms: string[]) {
     var candidates: string[] = [];
     if (c.testo) candidates.push(c.testo);
-    (c.commenti || []).forEach(function (cm: any) {
+    commentiCercabili(c).forEach(function (cm: any) {
       if (cm.testo) candidates.push('💬 ' + cm.testo);
     });
     (c.quizDomande || []).forEach(function (d: any) {
@@ -771,9 +782,9 @@ function CercaModal(props: any) {
                         {c.proposta === true && (
                           <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--c-warn, #fbbf24)' }}>⏳ proposta</span>
                         )}
-                        {(c.commenti || []).length > 0 && (
+                        {commentiCercabili(c).length > 0 && (
                           <span style={{ fontSize: 10, color: 'rgba(255,255,255,.4)' }}>
-                            💬 {(c.commenti || []).length}
+                            💬 {commentiCercabili(c).length}
                           </span>
                         )}
                       </div>

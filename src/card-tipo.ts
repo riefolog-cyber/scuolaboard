@@ -73,6 +73,10 @@ export type CardCommento = {
   /** Emoji → nomi di chi ha reagito. */
   reazioni?: Record<string, string[]>;
   modificato?: boolean;
+  /** Classe in cui è nato il commento (null/assente = legacy, visibile a
+   *  tutti). I commenti sono indipendenti per classe: la stessa card mostra
+   *  discussioni diverse in classi diverse (vedi src/commenti-classe.ts). */
+  classe?: string | null;
 };
 
 /** Chi non ha ricevuto l'avviso di classe. CONTIENE NOMI DI STUDENTI:

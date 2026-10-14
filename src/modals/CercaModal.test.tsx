@@ -262,4 +262,43 @@ describe('CercaModal', () => {
     expect(screen.getByRole('button', { name: /Scegli anno scolastico/ })).toHaveTextContent('2025/2026');
     expect(screen.getByText('📅 2025/2026')).toBeTruthy();
   });
+
+  it('studente: la ricerca non fruga nei commenti delle altre classi', () => {
+    // Card TUTTE con due commenti di classi diverse: lo studente 3AO trova solo
+    // col testo del commento della SUA classe, mai con quello della 3AI.
+    var cardCondivisa = {
+      id: 'c5',
+      tipo: 'nota',
+      titolo: 'Nobel per la pace',
+      testo: 'Discussione aperta',
+      classi: ['TUTTE'],
+      commenti: [
+        { id: 'm1', autore: 'A', testo: 'parola zebrino solo 3AI', classe: '3AI' },
+        { id: 'm2', autore: 'B', testo: 'parola girasole solo 3AO', classe: '3AO' },
+      ],
+      ordine: 5,
+      annoScolastico: '2026/2027',
+    };
+    renderModal({ isProf: false, classeCorrente: '3AO', cards: cards.concat([cardCondivisa]) });
+    fireEvent.input(screen.getByLabelText('Cerca card'), { target: { value: 'zebrino' } });
+    expect(screen.queryByRole('button', { name: /Nobel per la pace/ })).toBeNull();
+    fireEvent.input(screen.getByLabelText('Cerca card'), { target: { value: 'girasole' } });
+    expect(screen.getByRole('button', { name: /Nobel per la pace/ })).toBeTruthy();
+  });
+
+  it('prof: la ricerca vede i commenti di tutte le classi', () => {
+    var cardCondivisa = {
+      id: 'c5',
+      tipo: 'nota',
+      titolo: 'Nobel per la pace',
+      testo: 'Discussione aperta',
+      classi: ['TUTTE'],
+      commenti: [{ id: 'm1', autore: 'A', testo: 'parola zebrino solo 3AI', classe: '3AI' }],
+      ordine: 5,
+      annoScolastico: '2026/2027',
+    };
+    renderModal({ cards: cards.concat([cardCondivisa]) });
+    fireEvent.input(screen.getByLabelText('Cerca card'), { target: { value: 'zebrino' } });
+    expect(screen.getByRole('button', { name: /Nobel per la pace/ })).toBeTruthy();
+  });
 });

@@ -356,6 +356,14 @@ function AppProvider({ children }: any) {
     rinominaConferma: rinominaConferma,
     isProf: isProf,
     annoScolastico: annoScolastico,
+    // Contesto per i commenti per-classe (vedi src/commenti-classe.ts): gli
+    // handler addCom/addReply leggono questi via ctx per marcare ogni nuovo
+    // commento con la classe di chi scrive. Lettura via ref (come gli altri
+    // campi) così gli handler restano memoizzati su [].
+    classeCorrente: classeCorrente,
+    simulaSt: simulaSt,
+    filterClasse: cardsHook.filterClasse,
+    previewClasse: cardsHook.previewClasse,
     applyOptimistic: cardsHook.applyOptimistic,
     fbClassiSave: fbClassiSave,
     fbNascosteSave: fbNascosteSave,
@@ -434,6 +442,18 @@ function AppProvider({ children }: any) {
         },
         get isProf() {
           return liveRef.current.isProf;
+        },
+        get simulaSt() {
+          return liveRef.current.simulaSt;
+        },
+        get classeCorrente() {
+          return liveRef.current.classeCorrente;
+        },
+        get filterClasse() {
+          return liveRef.current.filterClasse;
+        },
+        get previewClasse() {
+          return liveRef.current.previewClasse;
         },
         get annoScolastico() {
           return liveRef.current.annoScolastico;

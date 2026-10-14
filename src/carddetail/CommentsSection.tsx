@@ -1,7 +1,16 @@
 // CommentsSection.tsx · ScuolaBoard · pannello estratto da CardDetail
+import { classeContestoCommenti, commentiVisibili, mostraTuttiCommenti } from '../commenti-classe.ts';
 
 function CommentsSection({ $, c }: any) {
   var isLight = !!$.isLight;
+  // I commenti sono indipendenti per classe: la stessa card mostra discussioni
+  // diverse in classi diverse. Il contesto è la classe di chi guarda (studente:
+  // la sua; prof: il filtro bacheca; simulaSt: l'anteprima). Il docente senza
+  // filtro vede tutto con l'etichetta della classe; gli altri vedono solo la
+  // propria classe + i commenti legacy senza classe (visibili a tutti).
+  var contesto = classeContestoCommenti($);
+  var tutti = mostraTuttiCommenti($);
+  var visibili = commentiVisibili(c.commenti, contesto, tutti);
   // Rendering ricorsivo di un commento e delle sue risposte (thread nidificato).
   // parentId = id dell'item GENITORE (usato da executeDelReply per cancellare
   // una risposta dalla lista del genitore, a qualsiasi profondità).
@@ -54,6 +63,23 @@ function CommentsSection({ $, c }: any) {
               {isReply && <span style={{ color: 'rgba(var(--c-primary-rgb),.55)', marginRight: 4 }}>↳</span>}
               {item.autore || 'Anonimo'}
               {item.modificato ? ' ✎' : ''}
+              {tutti && item.classe && (
+                <span
+                  title={'Classe ' + item.classe}
+                  style={{
+                    marginLeft: 6,
+                    fontSize: 10,
+                    fontWeight: 800,
+                    background: 'rgba(251,146,60,.18)',
+                    border: '1px solid rgba(251,146,60,.35)',
+                    color: '#fdba74',
+                    borderRadius: 6,
+                    padding: '0 5px',
+                  }}
+                >
+                  {item.classe}
+                </span>
+              )}
             </span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ fontSize: 10, color: 'rgba(255,255,255,.35)' }}>{$.timeAgo(item.data)}</span>
@@ -342,9 +368,9 @@ function CommentsSection({ $, c }: any) {
     <div style={{ borderTop: '1px solid rgba(255,255,255,.08)', padding: '14px 18px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <span style={{ fontWeight: 800, fontSize: 13, color: 'rgba(255,255,255,.8)' }}>
-          💬 Commenti ({(c.commenti || []).length})
+          💬 Commenti ({visibili.length})
         </span>
-        {$.isProf && !$.simulaSt && (c.commenti || []).length >= 2 && (
+        {$.isProf && !$.simulaSt && visibili.length >= 2 && (
           <button
             onClick={function (e: any) {
               e.stopPropagation();
@@ -367,17 +393,25 @@ function CommentsSection({ $, c }: any) {
         )}
       </div>
 
+      {/* Ogni classe ha la sua discussione: chi guarda filtrato vede solo la
+          propria, il docente su 'tutte' le vede tutte con l'etichetta. */}
+      {!tutti && contesto && (
+        <div style={{ fontSize: 11, color: 'rgba(255,255,255,.45)', marginBottom: 10 }}>
+          Solo i commenti della {contesto} · le altre classi hanno una discussione separata
+        </div>
+      )}
+
       {/* Comment list (thread nidificati) */}
-      {c.commenti && c.commenti.length > 0 && (
+      {visibili.length > 0 && (
         <div style={{ marginBottom: 14 }}>
-          {c.commenti.map(function (cm: any, i: any) {
+          {visibili.map(function (cm: any, i: any) {
             return renderItem(cm, 0, cm.id, i);
           })}
         </div>
       )}
-      {(!c.commenti || c.commenti.length === 0) && (
+      {visibili.length === 0 && (
         <div style={{ textAlign: 'center', padding: 16, color: 'rgba(255,255,255,.35)', fontSize: 12 }}>
-          Nessun commento. Scrivi il primo!
+          {!tutti && contesto ? 'Nessun commento della ' + contesto + '. Scrivi il primo!' : 'Nessun commento. Scrivi il primo!'}
         </div>
       )}
 

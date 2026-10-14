@@ -1,11 +1,29 @@
 import { memo, useState } from 'react';
 import { normalizeLinks } from './app-utils.tsx';
 import { avvisoInSospeso, dettaglioMancanti, etichettaAvviso } from './avvisi-classe.ts';
+import { classeContestoCommenti, commentiVisibili, mostraTuttiCommenti } from './commenti-classe.ts';
 import Countdown from './Countdown.tsx';
 // CardItem.jsx · ScuolaBoard
 
 function CardItem__({ $, c, idx }: any) {
   var isLight = !!$.isLight;
+  // Conteggio commenti per-classe: lo studente (e il prof filtrato) vede il
+  // numero della SUA discussione, non il totale delle altre classi. Il docente
+  // su 'tutte' vede il totale. Le letture di $.classeCorrente/$.filterClasse/
+  // $.previewClasse sono volutamente esplicite: il test carditem-memo-campi le
+  // pretende nell'elenco confrontato (regola 9).
+  var contestoPerCommenti = {
+    isProf: $.isProf,
+    simulaSt: $.simulaSt,
+    classeCorrente: $.classeCorrente,
+    previewClasse: $.previewClasse,
+    filterClasse: $.filterClasse,
+  };
+  var nCommentiVisibili = commentiVisibili(
+    c.commenti,
+    classeContestoCommenti(contestoPerCommenti),
+    mostraTuttiCommenti(contestoPerCommenti)
+  ).length;
   var totV = c.opzioni
     ? c.opzioni.reduce(function (a: any, o: any) {
         return a + (o.voti || []).length;
@@ -663,12 +681,12 @@ function CardItem__({ $, c, idx }: any) {
                     marginLeft: 2,
                   }}
                 >
-                  {(c.commenti || []).length || '0'}
+                  {nCommentiVisibili || '0'}
                 </span>
               }
             </button>
           }
-          {azioniOpen && $.isProf && !$.simulaSt && (c.commenti || []).length >= 3 && (
+          {azioniOpen && $.isProf && !$.simulaSt && nCommentiVisibili >= 3 && (
             <button
               className="pill-btn"
               onClick={function (e: any) {
@@ -894,6 +912,9 @@ export var CAMPI_CARD_ITEM: string[] = [
   'preferiti', // stato ★
   'aiMap', // "Analisi disponibile" / riassunti
   'sommarioResult', // visibilità del bottone "Riassumi" (prof)
+  'classeCorrente', // conteggio commenti per-classe (studente)
+  'filterClasse', // conteggio commenti per-classe (prof filtrato)
+  'previewClasse', // conteggio commenti per-classe (simulaSt)
 ];
 
 /**

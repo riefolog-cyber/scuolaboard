@@ -1,10 +1,17 @@
 // PartecipazionePanel.tsx · ScuolaBoard · pannello estratto da CardDetail
+import { classeContestoCommenti, commentiVisibili, mostraTuttiCommenti } from '../commenti-classe.ts';
 
 function PartecipazionePanel({ $, c }: any) {
   return (function () {
+    // I commenti sono indipendenti per classe: conteggi e nomi dei commentatori
+    // seguono ciò che chi guarda vede davvero (studente/prof filtrato: solo la
+    // propria classe + legacy; docente su 'tutte': tutto). I nomi restano comunque
+    // visibili solo al docente (sotto). Voti e like restano totali: sono strutture
+    // condivise, isolarli richiede un altro formato (non in questo cambio).
+    var commentiV = commentiVisibili(c.commenti, classeContestoCommenti($), mostraTuttiCommenti($));
     var commentatori = [
       ...new Set(
-        (c.commenti || []).flatMap(function (cm: any) {
+        commentiV.flatMap(function (cm: any) {
           return [cm.autore].concat(
             (cm.risposte || []).map(function (r: any) {
               return r.autore;
@@ -53,7 +60,7 @@ function PartecipazionePanel({ $, c }: any) {
             <div style={{ fontSize: 11, color: 'rgba(255,255,255,.52)' }}>Partecipanti</div>
           </div>
           <div style={{ flex: 1, minWidth: 70, textAlign: 'center' }}>
-            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--c-success, #4ade80)' }}>{(c.commenti || []).length}</div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--c-success, #4ade80)' }}>{commentiV.length}</div>
             <div style={{ fontSize: 11, color: 'rgba(255,255,255,.52)' }}>Commenti</div>
           </div>
           {c.opzioni && (
