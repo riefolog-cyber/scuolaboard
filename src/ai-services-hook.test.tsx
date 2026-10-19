@@ -313,3 +313,30 @@ describe('useAI — sommario e sondaggio', () => {
     await waitFor(() => expect(apiRef.sondaggioAiResult['c1']).toContain('analisi'));
   });
 });
+
+// Il mascheramento delle PII strutturate sta in chiamaAI, l'unico punto che fa
+// fetch verso il Worker: se qualcuno lo sposta o lo toglie, questo test cade.
+// Copre anche i flussi che NON passano da pseudonimizeComments (es. la
+// valutazione delle risposte aperte), che è il motivo per cui non sta nei
+// singoli call-site.
+describe('useAI — PII strutturate (choke point chiamaAI)', () => {
+  it('il prompt inviato contiene segnaposto, non email/CF; la risposta torna con i valori veri', async () => {
+    mockText('Il riassunto cita [EMAIL_1] e [CF_1]');
+    apiRef.riassuntiCommentiRun({
+      id: 'c1',
+      commenti: [
+        { id: 'cm1', autore: 'Luca', testo: 'scrivetemi a mario.rossi@example.it' },
+        { id: 'cm2', autore: 'Anna', testo: 'il mio CF è RSSMRA85H12F205Y' },
+      ],
+    });
+    await waitFor(() => expect(apiRef.sommarioResult['c1']).toContain('mario.rossi@example.it'));
+    // Al docente i valori veri tornano, al modello no.
+    expect(apiRef.sommarioResult['c1']).toContain('RSSMRA85H12F205Y');
+
+    const inviato = JSON.parse(window.fetch.mock.calls[0][1].body).content;
+    expect(inviato).toContain('[EMAIL_1]');
+    expect(inviato).toContain('[CF_1]');
+    expect(inviato).not.toContain('mario.rossi@example.it');
+    expect(inviato).not.toContain('RSSMRA85H12F205Y');
+  });
+});

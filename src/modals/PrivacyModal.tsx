@@ -160,8 +160,9 @@ function PrivacyModal(props: any) {
             <span style={{ fontWeight: 700, color: stepTitleColor }}>Anonimizzazione automatica</span>
           </div>
           <p style={{ ...infoTextStyle, color: infoTextColor }}>
-            Prima di inviare i commenti all'IA, i nomi degli studenti vengono automaticamente sostituiti con
-            identificativi fittizi (Studente 1, Studente 2…). L'IA esterna non sa mai chi ha scritto cosa.
+            Prima di inviare i contenuti all'IA, i nomi degli studenti vengono automaticamente sostituiti con
+            identificativi fittizi (Studente 1, Studente 2…); anche email, codici fiscali, IBAN e numeri di telefono
+            diventano segnaposto. L'IA esterna non sa mai chi ha scritto cosa.
           </p>
         </div>
 

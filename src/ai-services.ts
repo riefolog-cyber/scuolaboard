@@ -1,5 +1,6 @@
 // ai-services.ts  ·  ScuolaBoard  ·  AI Groq via Cloudflare Worker (pattern UMD)
 import { pseudonimizeComments, restoreNames, cleanAiMarkdown, cleanJsonStrings } from './utils/ai-text.ts';
+import { mascheraPII, ripristinaPII } from './utils/pii.ts';
 
 var db: any = window.SB && SB.db;
 var CFG = window.SB_CONFIG || { AI_CACHE_TTL_MS: 15 * 60 * 1000 };
@@ -83,9 +84,17 @@ async function chiamaAI(type: any, content: any, options: any) {
   // Legge il ruolo dell'utente per consentire al worker di autorizzare solo i professori
   var userRole = (window.SB && window.SB.user && window.SB.user.role) || 'studente';
 
+  // Privacy (GDPR, regola 3 di AGENTS.md): email, CF, IBAN e telefoni non
+  // devono lasciare il browser. Il mascheramento vive QUI, nell'unico punto che
+  // fa fetch verso il Worker, così copre anche le chiamate che non passano da
+  // pseudonimizeComments (es. la valutazione delle risposte aperte) e ogni
+  // flusso futuro. escapeForPrompt non basta: neutralizza la prompt injection,
+  // non toglie i dati personali.
+  var pii = mascheraPII(safeContent);
+
   var body = JSON.stringify({
     type: type,
-    content: safeContent,
+    content: pii.txt,
     options: options,
     role: userRole,
   });
@@ -171,6 +180,17 @@ async function chiamaAI(type: any, content: any, options: any) {
 
   if (data.diagnostics && (SB_DEBUG_AI || (typeof window !== 'undefined' && (window as any).SB_DEBUG))) {
     console.warn('[ScuolaBoard] AI diagnostics:', data.diagnostics);
+  }
+
+  // Ripristino: il modello ha visto solo i segnaposto, i valori veri tornano
+  // al docente qui. Va fatto PRIMA di cleanAiMarkdown / JSON.parse (in
+  // callGroqText/callGroqJSON), perché la pulizia markdown rimuove `_` e `*`.
+  if (pii.mappa && Object.keys(pii.mappa).length) {
+    if (typeof data.data === 'string') {
+      data.data = ripristinaPII(data.data, pii.mappa);
+    } else if (data.data && typeof data.data.content === 'string') {
+      data.data.content = ripristinaPII(data.data.content, pii.mappa);
+    }
   }
 
   return data.data;

@@ -49,6 +49,8 @@ Regola pratica:
 2. **"Ripubblicare le regole Firestore"**: ogni modifica a `rules firestore.txt` richiede pubblicazione manuale in Firebase Console → Firestore → Rules. Un cambio alle rules senza pubblicazione è un cambio incompleto: segnalalo sempre all'utente.
 3. **Privacy (GDPR/AI Act)** — dati di studenti minorenni:
    - I nomi reali non devono mai raggiungere l'AI: la pseudonimizzazione (`Studente 1`, …) avviene client-side e le funzioni protette sono `riassuntiCommentiRun`, `runCardAI`, `runCardQ`. Non aggiungere nuovi invii con nomi.
+   - **PII strutturate (email, CF, IBAN, telefoni)**: vivono in `src/utils/pii.ts` e l'unico aggancio è `chiamaAI` (`src/ai-services.ts`), l'unico `fetch` verso il Worker. Non spostare il mascheramento nei call-site: lì copre anche i flussi che non passano da `pseudonimizeComments` (es. `valutaAperteProfAI`) e ogni chiamata futura. Il ripristino va fatto **prima** di `cleanAiMarkdown`/`JSON.parse`. I nomi citati dentro i testi sono coperti da `pseudonimizeComments` (due passate: prima tutti gli autori noti, poi la riscrittura, risposte annidate comprese); i nomi di studenti che non hanno mai commentato restano scoperti (servirebbe il roster).
+   - `src/utils/ai-text.test.ts` e `src/utils/pii.test.ts` congelano questi comportamenti: se un test cade, la promessa della PrivacyModal non è più vera.
    - Non loggare né mettere in chiaro nomi reali, email o dati di studenti in console, commit, issue o file di test.
    - Ogni contenuto generato dall'IA deve mostrare il badge `🤖 Supporto IA – revisionato dal docente`.
    - L'IA non assegna voti: i quiz restano bozze da approvare (`aiConfirmaQuiz`).

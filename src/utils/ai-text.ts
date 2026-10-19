@@ -3,55 +3,169 @@
 // - pseudonimizeComments: pseudonimizzazione GDPR (Art. 4 par. 5) — i nomi
 //   reali degli studenti vengono sostituiti con "Studente N" PRIMA di inviare
 //   i commenti a Groq; la mappa consente di ripristinare i nomi alla ricezione.
+//   La sostituzione copre anche i nomi CITATI dentro il testo di un altro
+//   intervento (prima si raccolgono tutti gli autori, poi si riscrive ogni
+//   testo) e le risposte annidate.
 // - restoreNames: ripristina i nomi reali nella risposta dell'IA.
 // - cleanAiMarkdown / cleanJsonStrings: pulizia del testo AI da markdown.
+
+// Autori il cui "nome" NON è un nome di persona: restano com'erano.
+// 'Prof' è l'alias che SB.myName() assegna ai docenti (nessun nome reale del
+// prof raggiunge l'AI) e non va MAI mascherato dentro i testi: la parola
+// "Prof" compare nelle istruzioni e nel parlato quotidiano, e sostituirla
+// renderebbe i prompt incomprensibili al modello.
+var AUTORI_NON_NOMI = ['Prof', 'Anonimo', '?', ''];
+
+// Sotto i 3 caratteri il token è troppo ambiguo ("De", "Di", "La").
+var MIN_LUNGHEZZA_TOKEN = 3;
+
+function chiaveAutore(autore: unknown): string {
+  var a = String(autore == null ? '' : autore).trim();
+  return a || 'Anonimo';
+}
+
+function haProprieta(obj: Record<string, string>, chiave: string): boolean {
+  return Object.prototype.hasOwnProperty.call(obj, chiave);
+}
+
+// Risposte di un commento: il modello dati le tiene ANNIDATE
+// (card.commenti[i].risposte, vedi addReply in app-handlers.ts). Il terzo
+// parametro di pseudonimizeComments esisteva già ma nessun chiamante lo
+// passava, quindi le risposte non arrivavano proprio all'AI: ora si leggono da
+// qui, con il parametro come fallback per i chiamanti legacy.
+function risposteDiCommento(c: any, i: number, rispostePerCommento?: any): any[] {
+  if (c && Array.isArray(c.risposte) && c.risposte.length) return c.risposte;
+  var legacy = rispostePerCommento && rispostePerCommento[i];
+  return Array.isArray(legacy) ? legacy : [];
+}
+
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Sostituisce `nome` con `alias` solo quando è una parola intera.
+ * Perché non `\b`: è ASCII, e su un nome che finisce con una lettera accentata
+ * ("Niccolò") il confine finale non esiste → il nome resterebbe in chiaro.
+ * `\p{L}` con il flag `u` copre gli accenti; la classe negativa evita di
+ * mascherare "Luca" dentro "Lucano".
+ */
+function sostituisciParola(testo: string, nome: string, alias: string, caseInsensitive: boolean): string {
+  if (!testo || !nome) return testo;
+  var re: RegExp;
+  try {
+    re = new RegExp(
+      '(^|[^\\p{L}\\p{N}_])(' + escapeRegex(nome) + ')(?![\\p{L}\\p{N}_])',
+      caseInsensitive ? 'giu' : 'gu'
+    );
+  } catch (e) {
+    // Motori senza \p{...}: fallback ASCII. Meglio un nome non mascherato che
+    // un'eccezione dentro un flusso AI.
+    re = new RegExp('(^|[^A-Za-z0-9_])(' + escapeRegex(nome) + ')(?![A-Za-z0-9_])', caseInsensitive ? 'gi' : 'g');
+  }
+  return testo.replace(re, function (_m: string, pre: string) {
+    return pre + alias;
+  });
+}
+
+/**
+ * Riscrive un testo sostituendo ogni nome noto con il suo alias.
+ * Prima i nomi completi (dal più lungo, così "Mario Rossi" vince su "Mario"),
+ * poi i singoli token. Il match sul nome completo è case-insensitive (una
+ * firma "mario rossi" è inequivocabile); quello sul singolo token è
+ * case-sensitive, così l'aggettivo "chiara" non diventa "Studente 3".
+ */
+function mascheraNomi(
+  testo: string,
+  elenco: string[],
+  alias: Record<string, string>,
+  tokenAlias: Record<string, string>
+): string {
+  var out = testo;
+  var completi = elenco.slice().sort(function (a, b) {
+    return b.length - a.length;
+  });
+  for (var i = 0; i < completi.length; i++) {
+    var nomeCompleto = completi[i];
+    var multiParola = nomeCompleto.indexOf(' ') !== -1;
+    out = sostituisciParola(out, nomeCompleto, alias[nomeCompleto], multiParola);
+  }
+  var tokens = Object.keys(tokenAlias).sort(function (a, b) {
+    return b.length - a.length;
+  });
+  for (var j = 0; j < tokens.length; j++) {
+    out = sostituisciParola(out, tokens[j], tokenAlias[tokens[j]], false);
+  }
+  return out;
+}
 
 export function pseudonimizeComments(
   commenti: Array<{ autore: string; testo: string; [k: string]: any }>,
   escapeForPrompt: (_s: string) => string,
   rispostePerCommento?: Record<number, Array<{ autore: string; testo: string }>>
 ): { txt: string; mappaNomi: Record<string, string> } {
+  var lista: any[] = Array.isArray(commenti) ? commenti : [];
   var mappaNomi: Record<string, string> = {};
+  var alias: Record<string, string> = {};
   var elenco: string[] = [];
-  var txt = commenti
-    .map(function (c: any) {
-      var autore = c.autore || 'Anonimo';
-      var idx = elenco.indexOf(autore);
-      if (idx === -1) {
-        elenco.push(autore);
-        idx = elenco.length; // 1-based
-      } else {
-        idx = idx + 1;
-      }
-      var alias = 'Studente ' + idx;
-      mappaNomi[alias] = autore;
-      var riga = alias + ': ' + escapeForPrompt(c.testo || '');
-      // Aggiungi le risposte (thread) se presenti
-      if (rispostePerCommento) {
-        var risposte = rispostePerCommento[commenti.indexOf(c)];
-        if (risposte && risposte.length) {
-          riga +=
-            '\n' +
-            risposte
-              .map(function (r: any) {
-                var rAutore = r.autore || 'Anonimo';
-                var rIdx = elenco.indexOf(rAutore);
-                if (rIdx === -1) {
-                  elenco.push(rAutore);
-                  rIdx = elenco.length;
-                } else {
-                  rIdx = rIdx + 1;
-                }
-                var rAlias = 'Studente ' + rIdx;
-                mappaNomi[rAlias] = rAutore;
-                return '  ↳ ' + rAlias + ': ' + escapeForPrompt(r.testo || '');
-              })
-              .join('\n');
-        }
+
+  function aliasDi(autore: any): string {
+    var a = chiaveAutore(autore);
+    if (haProprieta(alias, a)) return alias[a];
+    if (AUTORI_NON_NOMI.indexOf(a) !== -1) {
+      alias[a] = a;
+      return a;
+    }
+    elenco.push(a);
+    var nome = 'Studente ' + elenco.length;
+    alias[a] = nome;
+    mappaNomi[nome] = a;
+    return nome;
+  }
+
+  // Prima passata: TUTTI gli autori (commenti + risposte), così un nome citato
+  // in un commento scritto prima che il suo autore compaia viene comunque
+  // mascherato.
+  lista.forEach(function (c: any, i: number) {
+    aliasDi(c && c.autore);
+    risposteDiCommento(c, i, rispostePerCommento).forEach(function (r: any) {
+      aliasDi(r && r.autore);
+    });
+  });
+
+  // Token (nome o cognome da soli) → alias. In caso di omonimia vince il primo
+  // autore comparso: l'ambiguità è intrinseca, ma la scelta è deterministica.
+  var tokenAlias: Record<string, string> = {};
+  elenco.forEach(function (nome: string) {
+    nome.split(/\s+/).forEach(function (token: string) {
+      if (token.length < MIN_LUNGHEZZA_TOKEN) return;
+      if (AUTORI_NON_NOMI.indexOf(token) !== -1) return;
+      if (haProprieta(tokenAlias, token)) return;
+      tokenAlias[token] = alias[nome];
+    });
+  });
+
+  function testoMascherato(t: any): string {
+    return escapeForPrompt(mascheraNomi(String(t == null ? '' : t), elenco, alias, tokenAlias));
+  }
+
+  var txt = lista
+    .map(function (c: any, i: number) {
+      var riga = aliasDi(c && c.autore) + ': ' + testoMascherato(c && c.testo);
+      var risposte = risposteDiCommento(c, i, rispostePerCommento);
+      if (risposte.length) {
+        riga +=
+          '\n' +
+          risposte
+            .map(function (r: any) {
+              return '  ↳ ' + aliasDi(r && r.autore) + ': ' + testoMascherato(r && r.testo);
+            })
+            .join('\n');
       }
       return riga;
     })
     .join('\n');
+
   return { txt: txt, mappaNomi: mappaNomi };
 }
 
