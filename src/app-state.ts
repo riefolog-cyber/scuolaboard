@@ -13,7 +13,7 @@
     IMG_COVER_SIZE: 1920, // lato lungo max (px) dopo la compressione
     IMG_QUALITY: 0.85, // qualità iniziale (poi adattiva: scende finché entra nel target)
     IMG_QUALITY_MIN: 0.55, // floor qualità durante la ricerca adattiva
-    IMG_TARGET_KB: 250, // target di ripiego se il budget card non è calcolabile
+    IMG_TARGET_KB: 250, // target di ripiego (KB di documento/base64) se il budget card non è calcolabile
     IMG_MAX_SINGLE_KB: 700, // cap per immagine singola (rispetta il guard ~900KB della card)
     QUIZ_EVAL_CHUNK: 4,
     UNDO_TIMEOUT_MS: 5000,

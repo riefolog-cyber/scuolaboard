@@ -4,6 +4,7 @@
 // va importato esplicitamente.
 import filterBtn from './filterBtn.ts';
 import { S as SGlobal } from '../app-utils.tsx';
+import { imgUsageKB } from '../app-provider-helpers.ts';
 import AllegatiPanel from './AllegatiPanel.tsx';
 import QuizBuilder from './QuizBuilder.tsx';
 import OpzioniSondaggio from './OpzioniSondaggio.tsx';
@@ -450,11 +451,9 @@ function NuovaCardModal(props: any) {
                 >
                   {<label className="u-label">🖼️ IMMAGINI</label>}
                   {(function () {
-                    var kb = 0;
-                    if (form.copertina) kb += Math.round((form.copertina.length * 0.75) / 1024);
-                    (form.immagini || []).forEach(function (x: any) {
-                      if (x.url) kb += Math.round((x.url.length * 0.75) / 1024);
-                    });
+                    // KB del DOCUMENTO (base64), non del file: è la stessa unità del
+                    // guard ~900KB, così il numero mostrato corrisponde al limite.
+                    var kb = Math.round(imgUsageKB(form.copertina, form.immagini));
                     var color = kb > 750 ? 'var(--c-danger, #f87171)' : kb > 500 ? 'var(--c-warn, #fbbf24)' : 'rgba(255,255,255,.40)';
                     var warn = kb > 750 ? ' ⚠️ vicino al limite card' : kb > 500 ? ' — qualità ridotta' : '';
                     return kb > 0 ? (

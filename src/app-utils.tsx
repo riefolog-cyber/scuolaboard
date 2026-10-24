@@ -143,7 +143,10 @@ export function compressImage(file: File, maxW: number, maxH: number, quality?: 
           return cur.toDataURL('image/jpeg', q);
         }
         function kbOf(b64: string) {
-          return Math.round((b64.length * 0.75) / 1024);
+          // KB **di documento**: la data URL è ciò che finisce in Firestore, quindi
+          // 1 carattere = 1 byte. Con ×0.75 (byte del file) il target era un quarto
+          // più grande di quello che il documento poteva contenere.
+          return Math.round(b64.length / 1024);
         }
         // Ricerca adattiva della qualità: parte da qStart e scende finché il
         // risultato entra nel target (mai sotto qMin). Massimizza la qualità per

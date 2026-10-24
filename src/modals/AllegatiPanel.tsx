@@ -11,6 +11,7 @@
 // L'`accept` del picker e il tetto per file vengono da src/allegati.ts (fonte unica
 // con la validazione di handleAllegatiUpload): non riscriverli qui.
 import { ACCETTA_ALLEGATI, MAX_ALLEGATO_KB, allegatoIcona } from '../allegati.ts';
+import { urlKB } from '../app-provider-helpers.ts';
 
 function AllegatiPanel(props: any) {
   var form = props.form,
@@ -20,7 +21,10 @@ function AllegatiPanel(props: any) {
   var allegati = form.allegati || [];
   var kb = 0;
   allegati.forEach(function (a: any) {
-    kb += Math.round((a.size || 0) / 1024);
+    // KB del documento (base64), non del file: è quello che consuma il budget
+    // ~900KB della card, quindi il numero qui deve parlare la stessa lingua del
+    // messaggio "Card troppo grande".
+    kb += Math.round(urlKB(a.url));
   });
   var colore = kb > 500 ? 'var(--c-danger, #f87171)' : kb > 200 ? 'var(--c-warn, #fbbf24)' : 'rgba(255,255,255,.40)';
   var avviso =

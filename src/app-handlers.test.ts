@@ -775,6 +775,25 @@ describe('handleAllegatiUpload (allowlist MIME e sicurezza)', () => {
     expect(ctx.setForm).not.toHaveBeenCalled();
   });
 
+  // Il budget si misura in BYTE DEL DOCUMENTO (base64), non in byte del file:
+  // 700KB di copertina + un PDF da 175KB sono 933KB nel documento e verrebbero
+  // comunque rifiutati da guardSize al salvataggio. Con la vecchia stima (×0.75)
+  // risultavano 700KB e l'upload passava, per fallire molto più tardi.
+  it('conta i byte base64 reali: copertina 700KB + PDF 175KB → bloccato subito', async () => {
+    const ctx = allegatiCtx();
+    const handlers = createAppHandlers({});
+    const currentForm = { copertina: 'a'.repeat(700 * 1024) };
+    handlers.handleAllegatiUpload(
+      fakeEvent([fileOf('dispensa.pdf', 'application/pdf', 175 * 1024)]),
+      currentForm,
+      ctx.setForm,
+      ctx.setAllegatiUploading,
+      ctx.showToast
+    );
+    await vi.waitFor(() => expect(ctx.showToast).toHaveBeenCalledWith(expect.stringMatching(/limite Firestore/), 'err'), { timeout: 3000 });
+    expect(ctx.setForm).not.toHaveBeenCalled();
+  });
+
   it('handleRimuoviAllegato: toglie l allegato dall elenco', () => {
     const setForm = vi.fn();
     const handlers = createAppHandlers({});

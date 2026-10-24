@@ -1,7 +1,7 @@
 // app-handlers.ts  ·  ScuolaBoard  ·  Action handlers factory (pattern UMD)
 // Il ctx è tipizzato strutturalmente: i campi opzionali sono quelli forniti
 // da AppProvider al momento della creazione.
-import { classeCorrenteOf, ANNO_LEGACY } from './app-provider-helpers.ts';
+import { classeCorrenteOf, ANNO_LEGACY, CARD_SIZE_LIMIT, IMG_TEXT_OVERHEAD_KB, urlKB } from './app-provider-helpers.ts';
 import {
   classeContestoCommenti,
   classePerNuovaRisposta,
@@ -819,18 +819,17 @@ export function createAppHandlers(ctx: any) {
       // Budget Firestore (~900KB): gli allegati sono base64 DENTRO il doc card.
       // Stima l'occupazione corrente (copertina + immagini + allegati) per dare
       // feedback immediato, invece di bloccare solo al salvataggio finale (guardSize).
-      var CARD_BUDGET_KB = 900;
-      function kbOf(b64: any) {
-        return (String(b64 || '').length * 0.75) / 1024;
-      }
-      var usedKB = 10; // overhead testo/nomi campi
+      // L'unità è quella del DOCUMENTO (urlKB: 1 carattere base64 = 1 byte): con i
+      // byte del file (×0.75) la stima era un quarto più ottimistica del vero.
+      var CARD_BUDGET_KB = CARD_SIZE_LIMIT / 1024;
+      var usedKB = IMG_TEXT_OVERHEAD_KB; // overhead testo/nomi campi
       if (currentForm) {
-        if (currentForm.copertina) usedKB += kbOf(currentForm.copertina);
+        if (currentForm.copertina) usedKB += urlKB(currentForm.copertina);
         (currentForm.immagini || []).forEach(function (x: any) {
-          if (x && x.url) usedKB += kbOf(x.url);
+          if (x && x.url) usedKB += urlKB(x.url);
         });
         (currentForm.allegati || []).forEach(function (a: any) {
-          if (a && a.url) usedKB += kbOf(a.url);
+          if (a && a.url) usedKB += urlKB(a.url);
         });
       }
       var promises = files.map(function (file) {
@@ -884,7 +883,7 @@ export function createAppHandlers(ctx: any) {
         // Guard dimensione complessiva: se l'aggiunta sfora il budget Firestore
         // blocchiamo qui (feedback immediato) invece di fallire al salvataggio.
         var addKB = valid.reduce(function (acc: number, r: any) {
-          return acc + kbOf(r.url);
+          return acc + urlKB(r.url);
         }, 0);
         if (usedKB + addKB > CARD_BUDGET_KB) {
           showToast(
@@ -906,7 +905,7 @@ export function createAppHandlers(ctx: any) {
         e.target.value = '';
       })
         // Se la callback qui sopra lancia (es. un allegato malformato su cui
-        // kbOf/url esplode), senza questo `.catch` `setAllegatiUploading(false)`
+        // urlKB/url esplode), senza questo `.catch` `setAllegatiUploading(false)`
         // non viene MAI chiamato: lo spinner del pannello allegati resta appeso
         // per sempre e l'unica via d'uscita è ricaricare la pagina. In più la
         // promise derivata resterebbe rifiutata senza gestore (unhandled

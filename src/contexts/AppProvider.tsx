@@ -68,6 +68,8 @@ import {
   rimuoviDomandaPubblicata,
   notifyProposalAuthor,
   imgUsageKB,
+  allegatiUsageKB,
+  urlKB,
   computeImageTargetKB,
   cardJsonSize,
   CARD_SIZE_LIMIT,
@@ -862,7 +864,10 @@ if (editMode) {
     // card (guard Firestore ~900KB) — qualità alta con 1-2 immagini, card sempre
     // salvabile anche piena. maxSlots = IMG_MAX_COUNT galleria + 1 copertina.
     var maxSlots = (CFG.IMG_MAX_COUNT != null ? CFG.IMG_MAX_COUNT : 5) + 1;
-    var usedKB = imgUsageKB(form.copertina, form.immagini);
+    // Gli ALLEGATI occupano anche loro il documento: contarne lo spazio qui è ciò
+    // che impedisce alla copertina di mangiarsi tutto il budget e di far fallire
+    // il salvataggio ("Card troppo grande") dopo che il docente ha caricato i PDF.
+    var usedKB = imgUsageKB(form.copertina, form.immagini) + allegatiUsageKB(form.allegati);
     var currentSlots = (form.copertina ? 1 : 0) + (form.immagini || []).length;
     var imgMimeOk = function (t: any) {
       return t === 'image/jpeg' || t === 'image/png' || t === 'image/gif' || t === 'image/webp';
@@ -890,7 +895,7 @@ if (editMode) {
           cardLimitKB: CARD_SIZE_LIMIT / 1024,
         });
         var b64 = await window.compressImage(file, maxPx, maxPx, imgQ, targetKB);
-        usedKB += (b64.length * 0.75) / 1024;
+        usedKB += urlKB(b64);
         currentSlots++;
         if (isCover) {
           setForm(function (p: any) {

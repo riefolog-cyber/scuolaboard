@@ -99,6 +99,38 @@ describe('Upload immagini (prof)', () => {
     });
   });
 
+  // Regressione (caso reale): copertina + due PDF da 175KB. La compressione
+  // della copertina calcolava il budget SOLO sulle immagini, quindi si prendeva
+  // lo spazio dei PDF e il salvataggio finiva in "Card troppo grande (961KB)"
+  // dopo che il docente aveva caricato tutto. Il target passato a compressImage
+  // deve scendere quando la card ha già allegati.
+  it('comprime la copertina tenendo conto degli allegati già presenti', async () => {
+    const compressMock = vi.fn().mockResolvedValue('data:image/png;base64,FAKEIMG');
+    await renderApp({ seed: { users: { prof1: PROF_DOC }, cards: {} }, user: PROF });
+    window.compressImage = compressMock;
+
+    fireEvent.click(await screen.findByTitle('Nuova card', {}));
+    fireEvent.input(screen.getByPlaceholderText('Es. Riflessione su…'), {
+      target: { value: 'Card con PDF e copertina' },
+    });
+
+    const inputs = Array.from(document.querySelectorAll('input[type="file"]'));
+    // 300KB di PDF ≈ 400KB nel documento (base64).
+    const allegatiInput = inputs.find((i) => i.accept.indexOf('.pdf') >= 0);
+    const pdf = new File([new Uint8Array(300 * 1024)], 'dispensa.pdf', { type: 'application/pdf' });
+    fireEvent.change(allegatiInput, { target: { files: [pdf] } });
+    await waitFor(() => expect(screen.getByText('dispensa.pdf')).toBeTruthy());
+
+    // Copertina: input senza `multiple` (quello della galleria ce l'ha).
+    const coverInput = inputs.find((i) => i.accept === 'image/*' && !i.multiple);
+    fireEvent.change(coverInput, { target: { files: [new File(['x'], 'copertina.png', { type: 'image/png' })] } });
+    await waitFor(() => expect(compressMock).toHaveBeenCalledTimes(1));
+
+    // Senza allegati il target sarebbe ~297KB ((900-10)/3); con 400KB di PDF
+    // scende sotto i 200KB, così il totale resta salvabile.
+    expect(compressMock.mock.calls[0][4]).toBeLessThan(200);
+  });
+
   // Regressione: in CardDetail la galleria usava `src={img}` con img = oggetto
   // {id,url,didascalia} → renderizzava "[object Object]" e l'immagine (con la
   // sua didascalia) non si vedeva quando la card aveva anche una copertina.

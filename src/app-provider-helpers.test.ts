@@ -9,6 +9,8 @@ import {
   cardJsonSize,
   CARD_SIZE_LIMIT,
   imgUsageKB,
+  allegatiUsageKB,
+  urlKB,
   computeImageTargetKB,
   aggiungiDomandaPubblicata,
   rimuoviDomandaPubblicata,
@@ -69,13 +71,35 @@ describe('cardJsonSize / CARD_SIZE_LIMIT (guard 1MB Firestore)', () => {
   });
 });
 
-describe('imgUsageKB / computeImageTargetKB (budget dinamico immagini)', () => {
-  it('misura copertina + galleria in KB', () => {
-    // fakeImage(200) = 200KB base64 ≈ 150KB reali (0.75) → usa url reali
-    const url = 'A'.repeat(1024 * 1000); // 1000KB di stringa ≈ 750KB
-    expect(imgUsageKB(url, [])).toBeGreaterThan(700);
-    expect(imgUsageKB(null, [{ url: 'A'.repeat(1024 * 400) }])).toBeGreaterThan(280);
+describe('imgUsageKB / allegatiUsageKB / computeImageTargetKB (budget dinamico)', () => {
+  it('misura in KB di DOCUMENTO (caratteri base64), non in byte del file', () => {
+    // Una data URL da 1000 caratteri occupa 1000 byte del documento: con il
+    // vecchio ×0.75 risultava 750KB e il budget sembrava più largo del vero.
+    const url = 'A'.repeat(1024 * 1000);
+    expect(urlKB(url)).toBeCloseTo(1000, 5);
+    expect(imgUsageKB(url, [])).toBeCloseTo(1000, 5);
+    expect(imgUsageKB(null, [{ url: 'A'.repeat(1024 * 400) }])).toBeCloseTo(400, 5);
     expect(imgUsageKB(undefined, [])).toBe(0);
+  });
+
+  it('gli allegati contano nello stesso budget delle immagini', () => {
+    const pdf = { url: 'data:application/pdf;base64,' + 'B'.repeat(1024 * 300) };
+    expect(allegatiUsageKB([pdf, pdf])).toBeGreaterThan(600);
+    expect(allegatiUsageKB([])).toBe(0);
+    expect(allegatiUsageKB(undefined)).toBe(0);
+    // Caso reale: copertina + due PDF → il budget residuo per le immagini si
+    // riduce, altrimenti la copertina si prende lo spazio dei PDF e la card
+    // viene bloccata al salvataggio ("Card troppo grande").
+    const conAllegati = computeImageTargetKB({
+      usedKB: imgUsageKB(fakeImage(50), []) + allegatiUsageKB([pdf, pdf]),
+      currentSlots: 1,
+      maxSlots: 6,
+      cardLimitKB: 900,
+    });
+    const senzaAllegati = computeImageTargetKB({ usedKB: 50, currentSlots: 1, maxSlots: 6, cardLimitKB: 900 });
+    expect(conAllegati).toBeLessThan(senzaAllegati);
+    // e il totale resta dentro il limite del documento
+    expect(50 + allegatiUsageKB([pdf, pdf]) + conAllegati * 3).toBeLessThan(900);
   });
 
   it('card vuota: prima immagine con qualità alta (~890KB/3 riservati)', () => {
