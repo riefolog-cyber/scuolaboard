@@ -53,6 +53,12 @@ function compatQuerySnap(s: any) {
 function wrapRef(ref: any): any {
   return {
     ref, // ref reale per runTransaction/writeBatch
+    // Sottocollezione (cards/{id}/allegati): il compat SDK espone .collection()
+    // su un DocumentReference, questo shim no. Senza questo metodo `collezione()`
+    // in allegati-card-servizio.ts restituisce null e OGNI salvataggio di allegato
+    // fallisce senza toccare Firestore ("Allegati non salvati", produzione
+    // 25/10/2026). I test non lo vedevano perché il fake Firestore lo supporta.
+    collection: (name: string) => compatCollection(ref, name),
     get: async () => compatDocSnap(await getDoc(ref)),
     set: (data: any, opts?: any) => setDoc(ref, data, opts || {}),
     // update() compat: supporta sia {campo: v} sia dot-notation {'a.b': v}.
@@ -85,8 +91,8 @@ function wrapRef(ref: any): any {
 }
 
 // ── Query compat: chainable .where()/.orderBy()/.doc()/.get()/.onSnapshot() ─
-function compatCollection(db: any, name: string) {
-  const base = collection(db, name);
+function compatCollection(parent: any, name: string) {
+  const base = collection(parent, name);
   function make(conds: any[], orders: any[]) {
     let q: any = base;
     for (const c of conds) q = query(q, where(c.field, c.op, c.value));
@@ -96,7 +102,7 @@ function compatCollection(db: any, name: string) {
   function api(conds: any[], orders: any[]) {
     return {
       doc(id: string) {
-        return wrapRef(doc(db, name, id));
+        return wrapRef(doc(base, id));
       },
       where(field: string, op: string, value: any) {
         return api(conds.concat([{ field, op, value }]), orders);

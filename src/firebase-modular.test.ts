@@ -44,6 +44,26 @@ describe('firebase-modular shim (surface compat)', () => {
     expect(typeof filtered.onSnapshot).toBe('function');
   });
 
+  // Regressione (produzione 25/10/2026): il compat SDK espone .collection() su un
+  // DocumentReference, lo shim no. Il contenuto degli allegati vive in
+  // cards/{id}/allegati, quindi senza questo metodo ogni salvataggio di allegato
+  // falliva prima di arrivare a Firestore ("Allegati non salvati"). Il fake dei
+  // test di integrazione lo supportava, quindi nessun test se ne accorgeva.
+  it('un DocumentReference espone .collection() (sottocollezione allegati)', () => {
+    const db = firebase.firestore();
+    const docRef = db.collection('cards').doc('c1');
+    // La collezione top-level deve restare 'cards' (compatCollection ora usa
+    // doc(base, id): sbagliare la base qui sposterebbe TUTTE le card altrove).
+    expect(docRef.ref.path).toBe('cards/c1');
+    expect(typeof docRef.collection).toBe('function');
+    const sub = docRef.collection('allegati');
+    expect(typeof sub.doc).toBe('function');
+    expect(typeof sub.get).toBe('function');
+    expect(typeof sub.where).toBe('function');
+    // Il path deve essere quello vero, non una collezione top-level 'allegati'.
+    expect(sub.doc('f1').ref.path).toBe('cards/c1/allegati/f1');
+  });
+
   it('db espone runTransaction e batch', () => {
     const db = firebase.firestore();
     expect(typeof db.runTransaction).toBe('function');
