@@ -142,6 +142,32 @@ describe('Allegati in sottocollezione', () => {
     });
   });
 
+  it('una scrittura negata spiega il motivo nel toast, non solo "Riprova"', async () => {
+    const seed = {
+      users: { prof1: PROF_DOC },
+      cards: {
+        c1: mkCard('c1', {
+          titolo: 'Card con file bloccato',
+          allegati: [{ url: PDF_URL, nome: 'vecchio.pdf' }],
+        }),
+      },
+    };
+    const { db } = await renderApp({ seed, user: PROF });
+    // Il fake NON applica le Rules: il rifiuto va simulato esplicitamente.
+    db._failWrites('cards/c1/allegati');
+
+    const detail = await openCard('Card con file bloccato');
+    fireEvent.click(await detail.findByRole('button', { name: /Modifica/ }));
+    const titolo = await screen.findByPlaceholderText('Es. Riflessione su…', {});
+    fireEvent.input(titolo, { target: { value: 'Non deve salvare' } });
+    fireEvent.click(screen.getByText('💾 Salva modifiche'));
+
+    // Il motivo è quello tradotto da motivoErrore, non un "Riprova" muto.
+    await screen.findByText(/Allegati non salvati: permesso negato da Firestore/);
+    // La card resta com'era: il lavoro del docente non è stato buttato via.
+    expect(db._get('cards', 'c1').titolo).toBe('Card con file bloccato');
+  });
+
   it('duplicare una card copia i file (la copia è indipendente)', async () => {
     const seed = {
       users: { prof1: PROF_DOC },

@@ -18,6 +18,7 @@ import {
   eliminaAllegati,
   eliminaTuttiAllegati,
   copiaAllegati,
+  motivoErrore,
 } from './allegati-card-servizio.ts';
 
 const PDF_URL = 'data:application/pdf;base64,' + 'A'.repeat(1024);
@@ -95,6 +96,22 @@ describe('salvaAllegati', () => {
     const esito = await salvaAllegati('c1', [pdf('f1')]);
     expect(esito.ok).toBe(false);
     expect(esito.errore).toBeTruthy();
+    // Il motivo arriva al toast: senza, il docente legge solo "Riprova".
+    expect(esito.motivo).toMatch(/permesso negato/);
+  });
+
+  it('client senza sottocollezioni: il motivo lo dice (regressione 25/10/2026)', async () => {
+    // Lo shim compat non esponeva `.collection()` sui DocumentReference: il
+    // salvataggio falliva PRIMA di Firestore, quindi nessuna traccia nelle Rules
+    // né nella rete. Il toast deve distinguerlo da una regola o dalla rete.
+    window.db = {
+      collection: function () {
+        return { doc: function () { return { set: async function () {} }; } };
+      },
+    } as any;
+    const esito = await salvaAllegati('c1', [pdf('f1')]);
+    expect(esito.ok).toBe(false);
+    expect(esito.motivo).toMatch(/sottocollezioni/);
   });
 });
 
@@ -185,5 +202,17 @@ describe('copiaAllegati (duplica / copia in altro anno)', () => {
     const esito = await copiaAllegati('a', 'b', [{ id: 'f1', name: 'a.pdf' }]);
     expect(esito.ok).toBe(false);
     expect(esito.allegati).toEqual([]);
+  });
+});
+
+describe('motivoErrore: la causa nel toast', () => {
+  it('traduce i codici Firestore in una frase breve, senza dettagli tecnici', () => {
+    expect(motivoErrore({ code: 'permission-denied' })).toMatch(/permesso negato/);
+    expect(motivoErrore({ code: 'unavailable' })).toMatch(/rete assente/);
+    expect(motivoErrore({ code: 'resource-exhausted' })).toMatch(/quota/);
+    expect(motivoErrore({ code: 'unauthenticated' })).toMatch(/login/);
+    // Codice sconosciuto: si mostra il codice (serve a chi diagnosta), non un vuoto.
+    expect(motivoErrore({ code: 'boh' })).toBe('errore Firestore (boh)');
+    expect(motivoErrore(null)).toBe('errore sconosciuto');
   });
 });

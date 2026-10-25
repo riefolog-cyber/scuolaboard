@@ -27,19 +27,56 @@ var SOTTOLETTURA = 'allegati';
 // le Rules, quindi la difesa è il test statico che confronta i due file.
 export var CAMPI_ALLEGATO = ['name', 'type', 'size', 'url'];
 
-function collezione(cardId: any) {
+// Restituisce `{ coll, motivo }`: il motivo serve al toast del docente. Prima
+// questa funzione tornava solo null e il chiamante mostrava "Riprova" senza
+// causa: il 25/10/2026 il rifiuto avveniva PRIMA di Firestore (lo shim compat
+// non esponeva `.collection()` sui documenti) e non c'era modo di distinguerlo
+// da una regola Firestore o da una rete assente.
+function collezione(cardId: any): { coll: any; motivo: string } {
   var db = (window as any).db;
-  if (!db || cardId == null || typeof db.collection !== 'function') return null;
+  if (!db || cardId == null || typeof db.collection !== 'function') {
+    return { coll: null, motivo: 'Firestore non disponibile' };
+  }
   // Difensivo: il mock di default di test-setup espone collection().doc() senza
   // `.collection()`. Senza questo controllo un salvataggio di card SENZA allegati
   // esploderebbe su un db che non conosce le sottocollezioni — e nei test
   // unitari il db è proprio quel mock.
   try {
     var ref = db.collection('cards').doc(String(cardId));
-    if (!ref || typeof ref.collection !== 'function') return null;
-    return ref.collection(SOTTOLETTURA);
+    if (!ref || typeof ref.collection !== 'function') {
+      return { coll: null, motivo: 'client Firestore senza supporto alle sottocollezioni (ricarica la pagina)' };
+    }
+    return { coll: ref.collection(SOTTOLETTURA), motivo: '' };
   } catch (e) {
-    return null;
+    return { coll: null, motivo: 'sottocollezione degli allegati non raggiungibile' };
+  }
+}
+
+/**
+ * Traduce l'errore di Firestore in una frase breve e senza dati personali.
+ * `errore.code` è l'unica cosa stabile (i messaggi variano): `permission-denied`
+ * significa regole/ruolo, `unavailable` la rete, `resource-exhausted` lo spazio.
+ * Serve a distinguere la causa nel toast, non a mostrare un errore tecnico.
+ */
+export function motivoErrore(errore: any): string {
+  var code = errore && errore.code ? String(errore.code) : '';
+  switch (code) {
+    case 'permission-denied':
+      return 'permesso negato da Firestore (regole o ruolo)';
+    case 'unauthenticated':
+      return 'sessione scaduta, rifai il login';
+    case 'unavailable':
+    case 'deadline-exceeded':
+      return 'Firestore non raggiungibile (rete assente)';
+    case 'resource-exhausted':
+      return 'quota Firestore esaurita';
+    case 'invalid-argument':
+    case 'failed-precondition':
+      return 'allegato non valido per Firestore';
+    case 'not-found':
+      return 'card non trovata';
+    default:
+      return code ? 'errore Firestore (' + code + ')' : 'errore sconosciuto';
   }
 }
 
@@ -73,18 +110,20 @@ function documento(al: any) {
 export async function salvaAllegati(
   cardId: any,
   allegati: any[] | null | undefined
-): Promise<{ ok: boolean; allegati: any[]; errore?: any }> {
+): Promise<{ ok: boolean; allegati: any[]; errore?: any; motivo?: string }> {
   var lista = allegati || [];
   // Niente da salvare: si esce PRIMA di toccare il db. È il caso di ogni card
   // senza allegati (la maggioranza) e di ogni proposta dello studente: non ha
   // senso chiedere una sottocollezione che non esiste.
   if (!lista.length) return { ok: true, allegati: [] };
-  var coll = collezione(cardId);
+  var trovata = collezione(cardId);
+  var coll = trovata.coll;
   var meta: any[] = [];
   if (!coll) {
     // Senza db non si può distinguere "niente da salvare" da "non salvato":
-    // meglio non far credere al chiamante che sia andata bene.
-    return { ok: false, allegati: lista.map(metadati) };
+    // meglio non far credere al chiamante che sia andata bene. `motivo` è ciò
+    // che il docente legge nel toast (senza, resta un "Riprova" muto).
+    return { ok: false, allegati: lista.map(metadati), motivo: trovata.motivo };
   }
   try {
     for (var i = 0; i < lista.length; i++) {
@@ -101,13 +140,13 @@ export async function salvaAllegati(
   } catch (errore) {
     // Un file scritto prima del fallimento resta: è uno spazio sprecato, non un
     // errore bloccante (la card non viene salvata, quindi non lo mostra).
-    return { ok: false, allegati: meta, errore: errore };
+    return { ok: false, allegati: meta, errore: errore, motivo: motivoErrore(errore) };
   }
 }
 
 /** Contenuto degli allegati di una card. Non lancia: lista vuota se non si legge. */
 export async function caricaAllegati(cardId: any): Promise<any[]> {
-  var coll = collezione(cardId);
+  var coll = collezione(cardId).coll;
   if (!coll) return [];
   try {
     var snap: any = await coll.get();
@@ -127,7 +166,7 @@ export async function caricaAllegati(cardId: any): Promise<any[]> {
  * sprecato, non un motivo per impedire la cancellazione di una card.
  */
 export async function eliminaAllegati(cardId: any, ids: any[] | null | undefined): Promise<void> {
-  var coll = collezione(cardId);
+  var coll = collezione(cardId).coll;
   if (!coll) return;
   var lista = ids || [];
   for (var i = 0; i < lista.length; i++) {
@@ -162,7 +201,7 @@ export async function copiaAllegati(
   cardIdSorgente: any,
   cardIdDestinazione: any,
   allegatiSorgente?: any[] | null
-): Promise<{ ok: boolean; allegati: any[]; errore?: any }> {
+): Promise<{ ok: boolean; allegati: any[]; errore?: any; motivo?: string }> {
   var docs = await caricaAllegati(cardIdSorgente);
   var dichiarati = allegatiSorgente || [];
   if (!docs.length) {
@@ -175,7 +214,8 @@ export async function copiaAllegati(
     if (inline.length) return salvaAllegati(cardIdDestinazione, inline);
     // La card dichiarava allegati ma non ne abbiamo il contenuto (lettura
     // fallita): non possiamo inventarli, quindi la copia va dichiarata parziale.
-    if (dichiarati.length) return { ok: false, allegati: [] };
+    if (dichiarati.length)
+      return { ok: false, allegati: [], motivo: 'contenuto dei file non più disponibile' };
     return { ok: true, allegati: [] };
   }
   return salvaAllegati(cardIdDestinazione, docs);

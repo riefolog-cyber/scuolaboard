@@ -570,7 +570,10 @@ function AppProvider({ children }: any) {
         .then(function (esito: any) {
           var finale = Object.assign({}, copia, { allegati: esito.ok ? esito.allegati : [] });
           if (!esito.ok && (sorgente.allegati || []).length) {
-            showToast('Copia salvata senza allegati: non è stato possibile copiare i file', 'warn');
+            showToast(
+              'Copia salvata senza allegati: ' + (esito.motivo || 'non è stato possibile copiare i file'),
+              'warn'
+            );
           }
           return fbSave(finale);
         })
@@ -593,7 +596,10 @@ function AppProvider({ children }: any) {
       .then(function (esito: any) {
         var finale = Object.assign({}, copia, { allegati: esito.ok ? esito.allegati : [] });
         if (!esito.ok && (sorgente.allegati || []).length) {
-          showToast('Card copiata senza allegati: non è stato possibile copiare i file', 'warn');
+          showToast(
+            'Card copiata senza allegati: ' + (esito.motivo || 'non è stato possibile copiare i file'),
+            'warn'
+          );
         }
         return fbSave(finale).then(function () {
           showToast('Card copiata nell\'anno ' + copiaAnnoTarget, 'ok');
@@ -768,7 +774,12 @@ function AppProvider({ children }: any) {
     function salvaConAllegati(card: any, precedenti: any[] | null) {
       return salvaAllegati(card.id, card.allegati || []).then(function (esito: any) {
         if (!esito.ok) {
-          showToast('Allegati non salvati: la card non è stata salvata. Riprova.', 'err');
+          // Il motivo è la differenza fra un "Riprova" e una diagnosi: client
+          // senza sottocollezioni, regole che negano la scrittura, rete o quota.
+          // Senza, il docente non può sapere se riprovare serve a qualcosa.
+          var motivo = esito.motivo || 'motivo non noto';
+          console.warn('[ScuolaBoard] allegati non salvati:', motivo);
+          showToast('Allegati non salvati: ' + motivo + '. La card non è stata salvata.', 'err');
           return null;
         }
         var finale = Object.assign({}, card, { allegati: esito.allegati });
