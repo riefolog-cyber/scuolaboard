@@ -759,10 +759,14 @@ describe('handleAllegatiUpload (allowlist MIME e sicurezza)', () => {
     expect(ctx.setAllegatiUploading).toHaveBeenLastCalledWith(false);
   });
 
-  it('budget Firestore superato (card già grande) → bloccato con toast err', async () => {
+  it('una copertina grande NON blocca più l upload di un allegato', async () => {
+    // Fino al 24/10/2026 qui si bloccava con "supererebbe il limite Firestore":
+    // il contenuto degli allegati stava DENTRO il documento della card e il budget
+    // era condiviso con copertina e immagini. Ora ogni allegato ha il suo
+    // documento (`cards/{id}/allegati/{fileId}`), quindi il MiB della card non
+    // c'entra più: resta solo il tetto per singolo file (700KB), verificato sopra.
     const ctx = allegatiCtx();
     const handlers = createAppHandlers({});
-    // copertina enorme → usedKB già oltre il budget (900KB)
     const currentForm = { copertina: 'a'.repeat(1500 * 1024) };
     handlers.handleAllegatiUpload(
       fakeEvent([fileOf('piccolo.pdf', 'application/pdf', 5000)]),
@@ -771,27 +775,9 @@ describe('handleAllegatiUpload (allowlist MIME e sicurezza)', () => {
       ctx.setAllegatiUploading,
       ctx.showToast
     );
-    await vi.waitFor(() => expect(ctx.showToast).toHaveBeenCalledWith(expect.stringMatching(/limite Firestore/), 'err'), { timeout: 3000 });
-    expect(ctx.setForm).not.toHaveBeenCalled();
-  });
-
-  // Il budget si misura in BYTE DEL DOCUMENTO (base64), non in byte del file:
-  // 700KB di copertina + un PDF da 175KB sono 933KB nel documento e verrebbero
-  // comunque rifiutati da guardSize al salvataggio. Con la vecchia stima (×0.75)
-  // risultavano 700KB e l'upload passava, per fallire molto più tardi.
-  it('conta i byte base64 reali: copertina 700KB + PDF 175KB → bloccato subito', async () => {
-    const ctx = allegatiCtx();
-    const handlers = createAppHandlers({});
-    const currentForm = { copertina: 'a'.repeat(700 * 1024) };
-    handlers.handleAllegatiUpload(
-      fakeEvent([fileOf('dispensa.pdf', 'application/pdf', 175 * 1024)]),
-      currentForm,
-      ctx.setForm,
-      ctx.setAllegatiUploading,
-      ctx.showToast
-    );
-    await vi.waitFor(() => expect(ctx.showToast).toHaveBeenCalledWith(expect.stringMatching(/limite Firestore/), 'err'), { timeout: 3000 });
-    expect(ctx.setForm).not.toHaveBeenCalled();
+    await vi.waitFor(() => expect(ctx.setForm).toHaveBeenCalledTimes(1), { timeout: 3000 });
+    expect(ctx.setForm.mock.calls[0][0]({ allegati: [] }).allegati).toHaveLength(1);
+    expect(ctx.showToast).not.toHaveBeenCalledWith(expect.stringMatching(/limite Firestore/), 'err');
   });
 
   it('handleRimuoviAllegato: toglie l allegato dall elenco', () => {

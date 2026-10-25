@@ -1,7 +1,10 @@
 # PIANO — allegati delle card in una sottocollezione ("piano 1")
 
-Piano salvato il **24/10/2026** per riprenderlo il giorno dopo. Non è ancora
-iniziato: **nessuna riga di questo piano è stata scritta nel codice.**
+Piano scritto il **24/10/2026** e **implementato il 25/10/2026**. Il codice è in
+`src/allegati-card-servizio.ts`, `src/contexts/AppProvider.tsx` (`addCard`,
+duplica, copia anno, eliminazione) e `src/CardDetail.tsx`; le Rules sono scritte
+in `rules firestore.txt` e **vanno pubblicate a mano** (vedi "Ordine di
+rilascio"). Il documento resta come traccia del perché delle scelte.
 
 ## Perché
 
@@ -60,8 +63,9 @@ Dentro `match /cards/{cardId}` aggiungere `match /allegati/{fileId}`:
   indovinabili. Non copiare `visibile` nel doc allegato (deriva nel tempo).
 - **create/update separati**: su `create` `resource` è `null`, quindi
   `resource.data` farebbe diventare la regola `false` in silenzio (vedi AGENTS.md).
-  Ammettere solo le chiavi previste (es. `nome`, `tipo`, `dimensione`, `url`,
-  `creato`), `url` che inizia per `data:`.
+  Ammettere solo le chiavi previste (`name`, `type`, `size`, `url`) e `url` che
+  inizia per `data:`. I nomi dei campi sono quelli del client (`CAMPI_ALLEGATO`
+  in `src/allegati-card-servizio.ts`): il test statico confronta i due file.
 - **write solo docente**: gli studenti non scrivono allegati (il campo `allegati`
   è già vietato loro nella create della card).
 
@@ -84,6 +88,10 @@ Nuovo `src/allegati-card-servizio.ts`, unico punto che parla con Firestore:
 - `caricaAllegati(cardId)` → elenco `{id, name, type, size, url}`
 - `eliminaAllegato(cardId, fileId)`
 - `eliminaAllegatiDi(cardId)` (Firestore **non** fa cascade)
+
+Implementati come `salvaAllegati`, `caricaAllegati`, `eliminaAllegati(cardId, ids)`
+e `eliminaTuttiAllegati(cardId)`, più `copiaAllegati` (duplica / copia anno) e
+`metadati` (la forma che resta nella card).
 
 Stile del repo: non rifiuta mai verso l'interfaccia, ma **restituisce l'esito**,
 perché qui un fallimento silenzioso significherebbe un file perso.
@@ -118,9 +126,10 @@ Con il piano 1:
 ### 7. `CardDetail`
 
 - Elenco file con nome e icona: arriva subito dalla card.
-- Contenuto: caricamento on-demand, con stati "caricamento / errore / non
-  disponibile". La preview HTML (`AllegatoHtmlPreview`, sandbox **senza**
-  `allow-same-origin`) e il `download` usano lo stesso contenuto recuperato.
+- Contenuto: **tutti i file in una query all'apertura** (decisione presa). Mentre
+  il contenuto non è arrivato la riga mostra ⏳ con il nome, non sparisce. La
+  preview HTML (`AllegatoHtmlPreview`, sandbox **senza** `allow-same-origin`) e il
+  `download` usano lo stesso contenuto recuperato.
 - Le regole di sicurezza sugli URL (`urlAllegatoSicuro`, `sbSafeUrl`) restano
   dove sono: il contenuto arriva da Firestore, non è più "fidato" di prima.
 
@@ -149,26 +158,27 @@ bacheca. Non farlo in automatico all'apertura (una lettura non deve scrivere).
 
 Così non esiste un momento in cui il sito ha il codice nuovo e le regole vecchie.
 
-## Punti aperti (da decidere prima di iniziare)
+## Punti aperti (decisi il 25/10/2026)
 
-1. **Contenuto caricato tutto all'apertura della card** (semplice) oppure **un file
-   alla volta al click** (più leggero, più codice)?
-2. **Duplica / copia in altro anno**: copiare i file (spazio doppio) o condividere
-   i documenti (spazio singolo, ma cancellare una card rompe l'altra)?
-3. **`MAX_ALLEGATO_KB`**: resta 700KB o sale a ~850KB ora che ogni file ha il suo
-   documento da 1 MiB? (Se sale, va aggiornato anche il commento in AGENTS.md.)
-4. **Misura dello spazio**: serve il numero della Console per sapere quanto margine
-   c'è davvero sui 1 GiB (e quanto libererebbe la migrazione).
+1. **Contenuto caricato tutto all'apertura della card** (semplice) → **scelta:
+   tutti all'apertura**, una sola query. `CardDetail` mostra ⏳ sulla riga finché
+   il contenuto non arriva.
+2. **Duplica / copia in altro anno** → **scelta: copiare i file**. La copia è
+   indipendente; se la copia fallisce si salva la card senza allegati e lo si dice.
+3. **`MAX_ALLEGATO_KB`** → **resta 700KB** (nessun cambio di comportamento).
+4. **Misura dello spazio**: ancora da fare in Console (Firestore → Usage →
+   Storage). La migrazione lazy libera spazio solo quando il docente modifica le
+   card vecchie.
 
 ## Come riprendere
 
 ```bash
 git pull
-git log --oneline -3          # deve esserci a582955 (fix budget)
-cat PIANO_ALLEGATI.md         # questo file
+git log --oneline -3
 npm test                      # deve essere verde prima di toccare qualcosa
 ```
 
-La prima azione concreta è il **passo 1** (Rules scritte e riviste, non
-pubblicate) e il **passo 2** (fake Firestore con le sottocollezioni): senza
-questi due il resto non è verificabile.
+Stato al 25/10/2026: passi 1–7 e 9 fatti, **Rules non ancora pubblicate**. Il
+passo 8 (migrazione lazy) è coperto dal flusso di modifica della card: quando il
+docente salva una card vecchia, gli `url` inline finiscono nella sottocollezione e
+la card resta con i soli metadati.

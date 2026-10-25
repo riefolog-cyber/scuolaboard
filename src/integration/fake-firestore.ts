@@ -1,6 +1,7 @@
 // @ts-nocheck — fake Firestore in-memory per i test di integrazione
 // Supporta: collection, doc, where, orderBy, get, onSnapshot, runTransaction,
-// FieldValue.arrayUnion, dot-notation in update() ("classiPerAnno.2026/2027").
+// FieldValue.arrayUnion, dot-notation in update() ("classiPerAnno.2026/2027"),
+// sottocollezioni ("cards/<id>/allegati").
 // Emula il comportamento essenziale del Firestore reale.
 
 function isPlainObject(v) {
@@ -147,6 +148,13 @@ class FakeDocRef {
     constructor(name, id) {
       this.name = name;
       this.id = id;
+    }
+    // Sottocollezioni: `db.collection('cards').doc(id).collection('allegati')`.
+    // Le collection sono già indicizzate per NOME, quindi basta comporre il path
+    // ('cards/<id>/allegati'): where/get/onSnapshot/_all/_failWrites funzionano
+    // senza altre modifiche.
+    collection(sub) {
+      return new FakeQuery(this.name + '/' + this.id + '/' + sub);
     }
     async get() {
       const data = (collections[this.name] || {})[this.id];

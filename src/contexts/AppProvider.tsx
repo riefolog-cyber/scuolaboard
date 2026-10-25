@@ -40,6 +40,13 @@ import {
 } from '../app-utils.tsx';
 import '../notifiche-service.ts';
 import {
+  salvaAllegati,
+  eliminaAllegati,
+  eliminaTuttiAllegati,
+  copiaAllegati,
+  metadati,
+} from '../allegati-card-servizio.ts';
+import {
   annunciInSospeso,
   annunciaClasse,
   avvisiDaRecuperare,
@@ -68,7 +75,6 @@ import {
   rimuoviDomandaPubblicata,
   notifyProposalAuthor,
   imgUsageKB,
-  allegatiUsageKB,
   urlKB,
   computeImageTargetKB,
   cardJsonSize,
@@ -137,7 +143,7 @@ function AppProvider({ children }: any) {
 
   // ── STATI LOCALI RESIDUI ──
   var [form, setForm] = useState(Object.assign({}, FORM0));
-  var [editMode, setEditMode] = useState(null);
+  var [editMode, setEditMode] = useState<any>(null);
   var [nc, setNc] = useState({ testo: '' });
   var [editingCm, setEditingCm] = useState<any>(null);
   var [replyTo, setReplyTo] = useState(null);
@@ -553,9 +559,24 @@ function AppProvider({ children }: any) {
 
   function confermaDuplica() {
     if (!modals.showDuplica || !duplicaClassi.length) return;
+    var sorgente = modals.showDuplica;
     duplicaClassi.forEach(function (cl) {
       var newId = Date.now() + '_' + Math.random().toString(36).slice(2, 7);
-      fbSave(buildDuplicaCopia(modals.showDuplica, cl, newId, cardsHook.nextOrd.current++));
+      var copia = buildDuplicaCopia(sorgente, cl, newId, cardsHook.nextOrd.current++);
+      // I file si COPIANO (decisione presa): la copia è indipendente, cancellare una
+      // card non rompe l'altra. Se la copia fallisce si salva la card senza allegati
+      // e lo si dice, invece di lasciare righe che non si aprono.
+      copiaAllegati(sorgente.id, newId, sorgente.allegati)
+        .then(function (esito: any) {
+          var finale = Object.assign({}, copia, { allegati: esito.ok ? esito.allegati : [] });
+          if (!esito.ok && (sorgente.allegati || []).length) {
+            showToast('Copia salvata senza allegati: non è stato possibile copiare i file', 'warn');
+          }
+          return fbSave(finale);
+        })
+        // fbSave mostra già il toast d'errore: qui la catena va solo marcata come
+        // gestita (una promise rifiutata senza gestore fa uscire vitest con 1).
+        .catch(function () {});
     });
     modals.setShowDuplica(null);
     setDuplicaClassi([]);
@@ -563,15 +584,22 @@ function AppProvider({ children }: any) {
 
   function confermaCopiaAnno() {
     if (!modals.showCopiaAnno || !copiaAnnoTarget) return;
+    var sorgente = modals.showCopiaAnno;
     var newId = Date.now() + '_ca_' + Math.random().toString(36).slice(2, 5);
-    var copia = buildCopiaAnno(modals.showCopiaAnno, newId, cardsHook.nextOrd.current++, copiaAnnoTarget);
-    fbSave(copia)
-      .then(function () {
-        showToast('Card copiata nell\'anno ' + copiaAnnoTarget, 'ok');
+    var copia = buildCopiaAnno(sorgente, newId, cardsHook.nextOrd.current++, copiaAnnoTarget);
+    // Stessa scelta della duplica: i file si copiano, l'anno nuovo non dipende da
+    // quello vecchio (che può essere archiviato o cancellato).
+    copiaAllegati(sorgente.id, newId, sorgente.allegati)
+      .then(function (esito: any) {
+        var finale = Object.assign({}, copia, { allegati: esito.ok ? esito.allegati : [] });
+        if (!esito.ok && (sorgente.allegati || []).length) {
+          showToast('Card copiata senza allegati: non è stato possibile copiare i file', 'warn');
+        }
+        return fbSave(finale).then(function () {
+          showToast('Card copiata nell\'anno ' + copiaAnnoTarget, 'ok');
+        });
       })
-      // Come sotto: fbSave mostra già il toast d'errore, qui basta marcare la
-      // promise come gestita. Senza, una scrittura negata dalle Rules finiva
-      // come unhandled rejection (e faceva fallire la CI).
+      // Come sopra: fbSave mostra già il toast d'errore.
       .catch(function () {});
     modals.setShowCopiaAnno(null);
     setCopiaAnnoTarget('');
@@ -703,10 +731,11 @@ function AppProvider({ children }: any) {
     var links = cleanLinks(form);
     var immagini = cleanImmagini(form);
 
-    // Guard dimensione documento Firestore (1 MiB): immagini/allegati base64
-    // stanno DENTRO il doc card → una card troppo grande fallirebbe il save con
-    // 'Document size limit'. Blocchiamo prima con un toast chiaro; la modale
-    // resta aperta così l'utente può rimuovere immagini/allegati.
+    // Guard dimensione documento Firestore (1 MiB): ORA riguarda solo ciò che
+    // resta nella card (testo + immagini base64). Gli allegati vivono in
+    // `cards/{id}/allegati` (un documento per file), quindi non consumano il MiB
+    // della card: è il motivo per cui una card con copertina e due PDF adesso
+    // si salva. Blocchiamo prima con un toast chiaro; la modale resta aperta.
     function guardSize(card: any): boolean {
       var size = cardJsonSize(card);
       if (size > CARD_SIZE_LIMIT) {
@@ -715,7 +744,7 @@ function AppProvider({ children }: any) {
             Math.round(size / 1024) +
             'KB, max ~' +
             Math.round(CARD_SIZE_LIMIT / 1024) +
-            'KB): riduci immagini o allegati',
+            'KB): riduci le immagini',
           'err'
         );
         return false;
@@ -723,9 +752,54 @@ function AppProvider({ children }: any) {
       return true;
     }
 
-if (editMode) {
+    // La card come sarà DOPO il salvataggio: allegati ridotti ai metadati. Serve
+    // al guard, che deve misurare il documento vero e non il base64 in memoria.
+    function soloMetadati(card: any) {
+      return Object.assign({}, card, {
+        allegati: (card.allegati || []).map(function (al: any) {
+          return metadati(al);
+        }),
+      });
+    }
+
+    // Punto unico del salvataggio: scrive i file nella sottocollezione e poi la
+    // card con i soli metadati. Se i file non si scrivono, la card NON viene
+    // salvata: una card che elenca allegati inesistenti è peggio di un errore.
+    function salvaConAllegati(card: any, precedenti: any[] | null) {
+      return salvaAllegati(card.id, card.allegati || []).then(function (esito: any) {
+        if (!esito.ok) {
+          showToast('Allegati non salvati: la card non è stata salvata. Riprova.', 'err');
+          return null;
+        }
+        var finale = Object.assign({}, card, { allegati: esito.allegati });
+        // Allegati tolti in modifica: i loro documenti vanno cancellati, altrimenti
+        // restano per sempre nella sottocollezione (Firestore non fa cascade).
+        var rimossi = (precedenti || [])
+          .filter(function (al: any) {
+            return (
+              al &&
+              al.id &&
+              !esito.allegati.some(function (n: any) {
+                return String(n.id) === String(al.id);
+              })
+            );
+          })
+          .map(function (al: any) {
+            return al.id;
+          });
+        return fbSave(finale).then(function () {
+          // Best-effort: un allegato rimosso che resta è spazio sprecato, non un
+          // motivo per far fallire il salvataggio della card. Il catch vuoto
+          // marca la promise come gestita (il servizio ha già i suoi try/catch).
+          if (rimossi.length) eliminaAllegati(card.id, rimossi).catch(function () {});
+          return finale;
+        });
+      });
+    }
+
+    if (editMode) {
       var c = buildEditCard(editMode, form, links, immagini, opzioni, quizDomande);
-      if (!guardSize(c)) return;
+      if (!guardSize(soloMetadati(c))) return;
       // Il toast di successo aspetta la PROMESSA. Prima partiva subito e la modale si
       // chiudeva a prescindere dall'esito: con una scrittura negata dalle Rules si
       // leggeva "Card aggiornata ✓" e le modifiche sparivano senza lasciare traccia. È
@@ -733,8 +807,9 @@ if (editMode) {
       // L'errore non lo annunciamo qui: fbSave ha già una rete di sicurezza che mostra
       // il toast su ogni percorso di scrittura, e due messaggi insieme farebbero
       // doppio.
-      fbSave(c)
-        .then(function () {
+      salvaConAllegati(c, editMode.allegati)
+        .then(function (finale: any) {
+          if (!finale) return;
           setEditMode(null);
           modals.setShowModal(false);
           showToast('Card aggiornata ✓', 'ok');
@@ -762,14 +837,15 @@ if (editMode) {
         links: links,
         immagini: immagini,
       });
-      if (!guardSize(newCard)) return;
+      if (!guardSize(soloMetadati(newCard))) return;
       // Punto unico dell'annuncio: la card del docente entra in coda QUI, prima
       // del salvataggio. Il fan-out parte subito dopo (o al recupero, se questo
       // browser si chiude prima). `conAnnuncioInCoda` imposta flag + istante.
       if (isProf) newCard = conAnnuncioInCoda(newCard);
       cardsHook.nextOrd.current++;
-      fbSave(newCard)
-        .then(function () {
+      salvaConAllegati(newCard, null)
+        .then(function (finale: any) {
+          if (!finale) return;
           try {
             // Card pubblicata: la bozza non serve più.
             if (user && user.uid && SB.LS && SB.LS.draft) SB.LS.draft.rm(user.uid);
@@ -778,13 +854,15 @@ if (editMode) {
           // Annuncio alla classe: unico punto in avvisi-classe.ts. Il toast di
           // esito arriva quando il fan-out è concluso (o fallito); se fallisce,
           // il controllore programma da solo i ritentativi.
-          if (isProf) ritentativi.esegui(newCard).then(mostraEsitoAnnuncio);
+          if (isProf) ritentativi.esegui(finale).then(mostraEsitoAnnuncio);
+          // La modale si chiude SOLO a salvataggio riuscito: se gli allegati o la
+          // card non si scrivono, il lavoro del docente resta dov'è.
+          modals.setShowModal(false);
+          setForm(Object.assign({}, FORM0));
+          showToast(isProf ? 'Card pubblicata ✓' : 'Proposta inviata al prof ✓', 'ok');
         })
         .catch(function () {});
-      showToast(isProf ? 'Card pubblicata ✓' : 'Proposta inviata al prof ✓', 'ok');
     }
-    modals.setShowModal(false);
-    setForm(Object.assign({}, FORM0));
   }
 
   function editCard(card: any) {
@@ -864,10 +942,11 @@ if (editMode) {
     // card (guard Firestore ~900KB) — qualità alta con 1-2 immagini, card sempre
     // salvabile anche piena. maxSlots = IMG_MAX_COUNT galleria + 1 copertina.
     var maxSlots = (CFG.IMG_MAX_COUNT != null ? CFG.IMG_MAX_COUNT : 5) + 1;
-    // Gli ALLEGATI occupano anche loro il documento: contarne lo spazio qui è ciò
-    // che impedisce alla copertina di mangiarsi tutto il budget e di far fallire
-    // il salvataggio ("Card troppo grande") dopo che il docente ha caricato i PDF.
-    var usedKB = imgUsageKB(form.copertina, form.immagini) + allegatiUsageKB(form.allegati);
+    // Gli ALLEGATI non entrano più in questo budget: il loro contenuto vive in
+    // `cards/{id}/allegati` (un documento per file), quindi il MiB della card è
+    // tutto per testo e immagini. Fino al 24/10/2026 la copertina doveva
+    // riservare spazio ai PDF ed era la causa del "Card troppo grande".
+    var usedKB = imgUsageKB(form.copertina, form.immagini);
     var currentSlots = (form.copertina ? 1 : 0) + (form.immagini || []).length;
     var imgMimeOk = function (t: any) {
       return t === 'image/jpeg' || t === 'image/png' || t === 'image/gif' || t === 'image/webp';
@@ -1013,6 +1092,10 @@ if (editMode) {
       var timer = setTimeout(function () {
         undoDeleteTimerRef.current = null;
         fbDel(id);
+        // Firestore non fa cascade: senza questa riga i file della card resterebbero
+        // nella sottocollezione per sempre (spazio sprecato, invisibile all'utente).
+        // Non può rifiutare: il servizio ha i try/catch dentro.
+        eliminaTuttiAllegati(id).catch(function () {});
         setUndoDelete(null);
         setToasts(function (p) {
           return p.filter(function (t) {

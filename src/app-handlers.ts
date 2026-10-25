@@ -1,7 +1,7 @@
 // app-handlers.ts  ·  ScuolaBoard  ·  Action handlers factory (pattern UMD)
 // Il ctx è tipizzato strutturalmente: i campi opzionali sono quelli forniti
 // da AppProvider al momento della creazione.
-import { classeCorrenteOf, ANNO_LEGACY, CARD_SIZE_LIMIT, IMG_TEXT_OVERHEAD_KB, urlKB } from './app-provider-helpers.ts';
+import { classeCorrenteOf, ANNO_LEGACY } from './app-provider-helpers.ts';
 import {
   classeContestoCommenti,
   classePerNuovaRisposta,
@@ -807,7 +807,11 @@ export function createAppHandlers(ctx: any) {
       }
       if (ctx.setShowAmm) ctx.setShowAmm(null);
     },
-    handleAllegatiUpload: function (e: any, currentForm: any, setForm: any, setAllegatiUploading: any, showToast: any) {
+    // `_currentForm` non si usa più: gli allegati non consumano il MiB della card
+    // (vivono in cards/{id}/allegati, un documento per file), quindi non c'è più
+    // un budget complessivo da controllare qui. Il parametro resta perché la firma
+    // è condivisa con AppProvider e con i test.
+    handleAllegatiUpload: function (e: any, _currentForm: any, setForm: any, setAllegatiUploading: any, showToast: any) {
       // DOM lib: e.target.files è FileList → cast esplicito per ottenere File[]
       // (con React any-globale, Array.from() su un valore non tipizzato dà unknown[])
       var files = Array.from((e && e.target && e.target.files) || []) as File[];
@@ -815,23 +819,8 @@ export function createAppHandlers(ctx: any) {
       setAllegatiUploading(true);
       // Formati, limiti e blocco SVG vivono in src/allegati.ts (fonte unica: da lì
       // deriva anche l'attributo `accept` del picker, che non può più divergere).
+      // Il tetto per file resta quello: ogni allegato ha il suo documento da 1 MiB.
       var maxSize = MAX_ALLEGATO_KB * 1024;
-      // Budget Firestore (~900KB): gli allegati sono base64 DENTRO il doc card.
-      // Stima l'occupazione corrente (copertina + immagini + allegati) per dare
-      // feedback immediato, invece di bloccare solo al salvataggio finale (guardSize).
-      // L'unità è quella del DOCUMENTO (urlKB: 1 carattere base64 = 1 byte): con i
-      // byte del file (×0.75) la stima era un quarto più ottimistica del vero.
-      var CARD_BUDGET_KB = CARD_SIZE_LIMIT / 1024;
-      var usedKB = IMG_TEXT_OVERHEAD_KB; // overhead testo/nomi campi
-      if (currentForm) {
-        if (currentForm.copertina) usedKB += urlKB(currentForm.copertina);
-        (currentForm.immagini || []).forEach(function (x: any) {
-          if (x && x.url) usedKB += urlKB(x.url);
-        });
-        (currentForm.allegati || []).forEach(function (a: any) {
-          if (a && a.url) usedKB += urlKB(a.url);
-        });
-      }
       var promises = files.map(function (file) {
         var ext = estensioneDi(file.name);
         // Controllo estensione doppia (es. file.pdf.exe)
@@ -880,22 +869,9 @@ export function createAppHandlers(ctx: any) {
         var valid = results.filter(function (r: any) {
           return r !== null;
         });
-        // Guard dimensione complessiva: se l'aggiunta sfora il budget Firestore
-        // blocchiamo qui (feedback immediato) invece di fallire al salvataggio.
-        var addKB = valid.reduce(function (acc: number, r: any) {
-          return acc + urlKB(r.url);
-        }, 0);
-        if (usedKB + addKB > CARD_BUDGET_KB) {
-          showToast(
-            'Allegati troppo grandi: la card supererebbe il limite Firestore (~' +
-              CARD_BUDGET_KB +
-              'KB). Riduci allegati o immagini.',
-            'err'
-          );
-          setAllegatiUploading(false);
-          e.target.value = '';
-          return;
-        }
+        // Nessun budget complessivo da controllare: il contenuto va in un documento
+        // per file (cards/{id}/allegati), non nel documento della card. Resta il
+        // tetto per singolo file, già verificato sopra.
         if (valid.length) {
           setForm(function (p: any) {
             return Object.assign({}, p, { allegati: (p.allegati || []).concat(valid) });
@@ -904,8 +880,8 @@ export function createAppHandlers(ctx: any) {
         setAllegatiUploading(false);
         e.target.value = '';
       })
-        // Se la callback qui sopra lancia (es. un allegato malformato su cui
-        // urlKB/url esplode), senza questo `.catch` `setAllegatiUploading(false)`
+        // Se la callback qui sopra lancia (es. un allegato malformato), senza
+        // questo `.catch` `setAllegatiUploading(false)`
         // non viene MAI chiamato: lo spinner del pannello allegati resta appeso
         // per sempre e l'unica via d'uscita è ricaricare la pagina. In più la
         // promise derivata resterebbe rifiutata senza gestore (unhandled

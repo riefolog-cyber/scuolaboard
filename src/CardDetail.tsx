@@ -3,6 +3,7 @@ import { useContext, useEffect, useState } from 'react';
 import { normalizeLinks } from './app-utils.tsx';
 import { sbSafeUrl } from './utils/format.ts';
 import { allegatoIcona, allegatoNome, isHtmlAllegato, urlAllegatoSicuro } from './allegati.ts';
+import { caricaAllegati } from './allegati-card-servizio.ts';
 import BadgeAi from './BadgeAi.tsx';
 import FormContext from './contexts/FormContext.tsx';
 import { useCountdown, countdownStr } from './Countdown.tsx';
@@ -31,6 +32,54 @@ function CardDetail__({ $: props$ }: any) {
   // decidere che cosa è ancora riapribile, quindi si leggono una volta sola
   // all'apertura della card e non seguono i cambi di card.
   var [consegne, setConsegne] = useState<Record<string, string>>({});
+  // Contenuto degli allegati: la card porta solo i metadati ({id, name, type,
+  // size}), i file stanno in `cards/{id}/allegati`. Si leggono TUTTI all'apertura
+  // (una sola query): nomi e anteprime sono pronti subito e non serve gestire un
+  // caricamento per ogni riga. Le card vecchie hanno ancora `url` inline e non
+  // passano di qui.
+  var [allegatiContenuti, setAllegatiContenuti] = useState<Record<string, any>>({});
+  var allegatiCard = (c && c.allegati) || [];
+  // Firma stabile degli id: `allegati` è un array nuovo a ogni render, quindi non
+  // può stare nelle dipendenze dell'effetto (rileggerebbe Firestore a ogni render).
+  var firmaAllegati = allegatiCard
+    .map(function (al: any) {
+      return String(al && al.id);
+    })
+    .join('|');
+
+  // Carica il contenuto SOLO se qualche allegato non ha già l'url inline.
+  useEffect(
+    function () {
+      var cardId = c && c.id;
+      var senzaUrl = allegatiCard.filter(function (al: any) {
+        return al && !al.url;
+      });
+      if (!cardId || !senzaUrl.length) {
+        // Niente da caricare: si svuota solo se c'era qualcosa (evita un render inutile).
+        setAllegatiContenuti(function (precedente) {
+          return Object.keys(precedente).length ? {} : precedente;
+        });
+        return;
+      }
+      var vivo = true;
+      caricaAllegati(cardId)
+        .then(function (docs) {
+          if (!vivo) return;
+          var mappa: Record<string, any> = {};
+          docs.forEach(function (d: any) {
+            mappa[String(d.id)] = d.url;
+          });
+          setAllegatiContenuti(mappa);
+        })
+        // caricaAllegati non lancia (ha il try/catch dentro): il catch serve a
+        // marcare la catena come gestita, non a gestire un errore previsto.
+        .catch(function () {});
+      return function () {
+        vivo = false;
+      };
+    },
+    [c && c.id, firmaAllegati]
+  );
 
   // Carica le consegne ALL'APERTURA della card. Non si rilegge a ogni render:
   // dentro la card si registrano solo allegati di questa stessa card, quindi
@@ -348,11 +397,14 @@ function CardDetail__({ $: props$ }: any) {
               </div>
               {c.allegati.map(function (al: any, i: any) {
                 var nome = allegatoNome(al, i);
+                // Contenuto: `al.url` c'è nelle card salvate prima (retrocompatibilità),
+                // altrimenti arriva dalla sottocollezione (allegati-card-servizio).
+                var url = al.url || allegatiContenuti[String(al.id)];
                 // Allowlist URL: le Firestore Rules non validano `allegati`, quindi
                 // l'URL è il campo più economico da falsificare ("javascript:...").
                 // Un protocollo non consentito non diventa un link cliccabile: la riga
                 // resta visibile ma inerte, così il docente vede che l'allegato esiste.
-                var urlSicuro = urlAllegatoSicuro(al.url);
+                var urlSicuro = urlAllegatoSicuro(url);
                 var stileFile = {
                   display: 'flex' as const,
                   alignItems: 'center' as const,
@@ -367,6 +419,16 @@ function CardDetail__({ $: props$ }: any) {
                   textDecoration: 'none',
                   border: '1px solid rgba(255,255,255,.06)',
                 };
+                if (!url) {
+                  // Riga senza contenuto: il file non è (ancora) leggibile. Si mostra
+                  // il nome invece di far sparire l'allegato: sparire sarebbe una
+                  // bugia ("non c'è") per un problema di rete.
+                  return (
+                    <div key={i} data-testid="allegato-in-caricamento" style={stileFile} title="Contenuto in caricamento">
+                      {allegatoIcona(al)} {nome} ⏳
+                    </div>
+                  );
+                }
                 if (!urlSicuro) {
                   return (
                     <div key={i} data-testid="allegato-non-cliccabile" title="Allegato non apribile: link non sicuro">
@@ -401,7 +463,9 @@ if (isHtmlAllegato(al)) {
                     <div key={i} data-testid="riga-allegato-html" style={{ display: 'flex', gap: 4 }}>
                       <button
                         onClick={function () {
-                          setHtmlPreview({ al: al, i: i });
+                          // Si passa una copia con l'url risolto: l'anteprima legge
+                          // `al.url`, che nelle card nuove non è nel documento.
+                          setHtmlPreview({ al: Object.assign({}, al, { url: url }), i: i });
                         }}
                         style={Object.assign({}, stileFile, {
                           flex: 1,
@@ -412,14 +476,14 @@ if (isHtmlAllegato(al)) {
                       >
                         {allegatoIcona(al)} {nome}
                       </button>
-                      <a href={al.url} download={nome} title="Scarica" aria-label={'Scarica ' + nome} style={stileFile}>
+                      <a href={url} download={nome} title="Scarica" aria-label={'Scarica ' + nome} style={stileFile}>
                         ⬇
                       </a>
                     </div>
                   );
                 }
                 return (
-                  <a key={i} href={al.url} target="_blank" rel="noopener noreferrer" style={stileFile}>
+                  <a key={i} href={url} target="_blank" rel="noopener noreferrer" style={stileFile}>
                     {allegatoIcona(al)} {nome}
                   </a>
                 );

@@ -1,7 +1,12 @@
 // app-provider-helpers.test.ts — guard dimensione card (limite doc Firestore 1 MiB).
-// Le immagini/allegati base64 stanno DENTRO il documento card: una card troppo
-// grande supererebbe il limite e il salvataggio fallirebbe. Il guard blocca
-// prima con un toast (vedi AppProvider.addCard).
+// Le IMMAGINI base64 stanno DENTRO il documento card: una card troppo grande
+// supererebbe il limite e il salvataggio fallirebbe. Il guard blocca prima con un
+// toast (vedi AppProvider.addCard).
+//
+// Gli ALLEGATI non ci sono più: il loro contenuto vive in
+// `cards/{cardId}/allegati/{fileId}` (un documento per file), quindi non
+// consumano il MiB della card. Il test in fondo al blocco "budget dinamico"
+// fissa proprio questo: il budget immagini NON deve tornare a scontare i PDF.
 import { describe, it, expect } from 'vitest';
 import {
   buildNewCard,
@@ -9,7 +14,6 @@ import {
   cardJsonSize,
   CARD_SIZE_LIMIT,
   imgUsageKB,
-  allegatiUsageKB,
   urlKB,
   computeImageTargetKB,
   aggiungiDomandaPubblicata,
@@ -45,16 +49,19 @@ describe('cardJsonSize / CARD_SIZE_LIMIT (guard 1MB Firestore)', () => {
     expect(size).toBeGreaterThan(1024 * 1024); // oltre 1 MiB reale di Firestore
   });
 
-  it('card con 2 allegati da 700KB: supera il limite', () => {
+  it('card con allegati in forma di METADATI: resta minuscola', () => {
+    // Nel documento della card restano solo {id, name, type, size}: il contenuto
+    // (data URL base64) sta in `cards/{id}/allegati`. È il motivo per cui una
+    // card con copertina e due PDF adesso si salva.
     const card = {
       id: 3,
       titolo: 'Card con allegati',
       allegati: [
-        { name: 'a.pdf', url: fakeImage(700) },
-        { name: 'b.pdf', url: fakeImage(700) },
+        { id: 'a1', name: 'a.pdf', type: 'application/pdf', size: 700 * 1024 },
+        { id: 'a2', name: 'b.pdf', type: 'application/pdf', size: 700 * 1024 },
       ],
     };
-    expect(cardJsonSize(card)).toBeGreaterThan(CARD_SIZE_LIMIT);
+    expect(cardJsonSize(card)).toBeLessThan(1024);
   });
 
   it('card borderline sotto il limite: passa', () => {
@@ -71,7 +78,7 @@ describe('cardJsonSize / CARD_SIZE_LIMIT (guard 1MB Firestore)', () => {
   });
 });
 
-describe('imgUsageKB / allegatiUsageKB / computeImageTargetKB (budget dinamico)', () => {
+describe('imgUsageKB / computeImageTargetKB (budget dinamico delle immagini)', () => {
   it('misura in KB di DOCUMENTO (caratteri base64), non in byte del file', () => {
     // Una data URL da 1000 caratteri occupa 1000 byte del documento: con il
     // vecchio ×0.75 risultava 750KB e il budget sembrava più largo del vero.
@@ -82,24 +89,24 @@ describe('imgUsageKB / allegatiUsageKB / computeImageTargetKB (budget dinamico)'
     expect(imgUsageKB(undefined, [])).toBe(0);
   });
 
-  it('gli allegati contano nello stesso budget delle immagini', () => {
-    const pdf = { url: 'data:application/pdf;base64,' + 'B'.repeat(1024 * 300) };
-    expect(allegatiUsageKB([pdf, pdf])).toBeGreaterThan(600);
-    expect(allegatiUsageKB([])).toBe(0);
-    expect(allegatiUsageKB(undefined)).toBe(0);
-    // Caso reale: copertina + due PDF → il budget residuo per le immagini si
-    // riduce, altrimenti la copertina si prende lo spazio dei PDF e la card
-    // viene bloccata al salvataggio ("Card troppo grande").
-    const conAllegati = computeImageTargetKB({
-      usedKB: imgUsageKB(fakeImage(50), []) + allegatiUsageKB([pdf, pdf]),
+  it('gli allegati NON riducono il budget delle immagini', () => {
+    // Decisione del piano: il contenuto degli allegati sta in
+    // `cards/{id}/allegati` (un documento per file), quindi il MiB della card è
+    // tutto per testo e immagini. Fino al 24/10/2026 la copertina doveva
+    // riservare spazio ai PDF: era la causa del "Card troppo grande" segnalato.
+    const senzaAllegati = computeImageTargetKB({ usedKB: 50, currentSlots: 1, maxSlots: 6, cardLimitKB: 900 });
+    // Il PDF in memoria non ha nessun canale per entrare nel budget: la funzione
+    // accetta solo copertina e immagini. Se un domani qualcuno reintroducesse
+    // `+ allegatiUsageKB(form.allegati)` in AppProvider, il target della copertina
+    // tornerebbe più piccolo — e lo vedrebbe il test di integrazione
+    // (upload-flows: "la copertina non si rimpicciolisce per i PDF").
+    const conPdfInMemoria = computeImageTargetKB({
+      usedKB: imgUsageKB(fakeImage(50), []),
       currentSlots: 1,
       maxSlots: 6,
       cardLimitKB: 900,
     });
-    const senzaAllegati = computeImageTargetKB({ usedKB: 50, currentSlots: 1, maxSlots: 6, cardLimitKB: 900 });
-    expect(conAllegati).toBeLessThan(senzaAllegati);
-    // e il totale resta dentro il limite del documento
-    expect(50 + allegatiUsageKB([pdf, pdf]) + conAllegati * 3).toBeLessThan(900);
+    expect(conPdfInMemoria).toBe(senzaAllegati);
   });
 
   it('card vuota: prima immagine con qualità alta (~890KB/3 riservati)', () => {

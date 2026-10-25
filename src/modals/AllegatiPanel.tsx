@@ -11,7 +11,6 @@
 // L'`accept` del picker e il tetto per file vengono da src/allegati.ts (fonte unica
 // con la validazione di handleAllegatiUpload): non riscriverli qui.
 import { ACCETTA_ALLEGATI, MAX_ALLEGATO_KB, allegatoIcona } from '../allegati.ts';
-import { urlKB } from '../app-provider-helpers.ts';
 
 function AllegatiPanel(props: any) {
   var form = props.form,
@@ -21,21 +20,20 @@ function AllegatiPanel(props: any) {
   var allegati = form.allegati || [];
   var kb = 0;
   allegati.forEach(function (a: any) {
-    // KB del documento (base64), non del file: è quello che consuma il budget
-    // ~900KB della card, quindi il numero qui deve parlare la stessa lingua del
-    // messaggio "Card troppo grande".
-    kb += Math.round(urlKB(a.url));
+    // Dimensione del FILE: gli allegati non consumano più il budget ~900KB della
+    // card (il contenuto sta in `cards/{id}/allegati`, un documento per file),
+    // quindi qui conta solo il tetto per singolo file.
+    kb += Math.round((a.size || 0) / 1024);
   });
-  var colore = kb > 500 ? 'var(--c-danger, #f87171)' : kb > 200 ? 'var(--c-warn, #fbbf24)' : 'rgba(255,255,255,.40)';
-  var avviso =
-    kb > 500 ? ' ⚠️ attento al limite (' + MAX_ALLEGATO_KB + 'KB/file)' : kb > 200 ? ' — attento alle dimensioni' : '';
 
   return (
     <div style={{ marginBottom: 10 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
         <label className="u-label">📎 ALLEGATI</label>
-        <span style={{ fontSize: 11, color: colore, fontWeight: 700 }}>
-          {kb > 0 ? kb + ' KB' + avviso : 'Max ' + MAX_ALLEGATO_KB + 'KB per file'}
+        <span style={{ fontSize: 11, color: 'rgba(255,255,255,.40)', fontWeight: 700 }}>
+          {allegati.length
+            ? allegati.length + ' file · ' + kb + ' KB · max ' + MAX_ALLEGATO_KB + 'KB per file'
+            : 'Max ' + MAX_ALLEGATO_KB + 'KB per file'}
         </span>
       </div>
       <label
@@ -93,7 +91,9 @@ function AllegatiPanel(props: any) {
                   >
                     {a.name || a.nome}
                   </div>
-                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,.45)' }}>{Math.round(a.size / 1024) + ' KB'}</div>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,.45)' }}>
+                    {Math.round((a.size || 0) / 1024) + ' KB'}
+                  </div>
                 </div>
                 <button
                   aria-label={'Rimuovi ' + (a.name || a.nome)}

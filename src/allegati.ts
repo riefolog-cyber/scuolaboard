@@ -1,7 +1,11 @@
 // allegati.ts · ScuolaBoard · tutto ciò che riguarda gli allegati delle card
 //
-// Gli allegati vivono come data URL base64 DENTRO il documento Firestore della card
-// (non c'è Storage): `{ id, name, type, size, url }`. Non esistono tipi TypeScript.
+// Il CONTENUTO dei file (data URL base64) vive in `cards/{cardId}/allegati/{fileId}`,
+// un documento per file (vedi allegati-card-servizio.ts): un documento Firestore è
+// limitato a 1 MiB e copertina + due PDF nel documento della card lo superavano.
+// Il documento della card conserva solo i metadati `{ id, name, type, size }`; le
+// card salvate prima hanno ancora `url` inline e restano leggibili così. Non
+// esiste Firebase Storage (piano gratuito): `firebase.storage()` è uno shim null.
 //
 // Qui vivono le TRE cose che prima erano scollegate e quindi potevano divergere
 // (è il difetto che questo file è nato per chiudere):
@@ -62,7 +66,7 @@ export var TIPI_ALLEGATO_MIME = [
   'text/html',
 ].concat(['jpg', 'jpeg', 'png', 'gif', 'webp'].map(function (e) { return 'image/' + e; }));
 
-/** Tetto per singolo file: gli allegati sono base64 DENTRO il documento card. */
+/** Tetto per singolo file: ogni allegato ha il suo documento da 1 MiB. */
 export var MAX_ALLEGATO_KB = 700;
 
 /**
@@ -100,11 +104,12 @@ export function eContenutoPericoloso(nomeFile: any, mime: any): boolean {
 
 // ── 2. ALLOWLIST DEGLI URL (stored XSS) ────────────────────────────────────
 //
-// È la difesa che conta davvero: le Firestore Rules non validano il contenuto di
-// `allegati`, quindi l'URL è il campo più economico da falsificare (basta la
-// stringa "javascript:..."). Senza questo controllo un <a href={al.url}> diventa
-// codice che gira nel contesto di chi clicca — cioè del docente che apre una
-// proposta, con la sessione Firebase in memoria.
+// È la difesa che conta davvero. Le Firestore Rules pretendono già che `url` sia
+// una data URL, ma non possono guardare DENTRO un base64: il protocollo resta il
+// campo più economico da falsificare (basta la stringa "javascript:...") e il
+// contenuto arriva dal database, quindi è dato non fidato. Senza questo controllo
+// un <a href={url}> diventa codice che gira nel contesto di chi clicca — cioè del
+// docente che apre una proposta, con la sessione Firebase in memoria.
 // Si usa il parser di URL (non una regex): normalizza spazi, tab e \n, così
 // "java\tscript:alert(1)" viene riconosciuto per quello che è.
 var PROTOCOLLI_ALLEGATO = ['http:', 'https:', 'data:'];

@@ -290,24 +290,25 @@ export function cardJsonSize(card: any): number {
   }
 }
 
-// ── Budget immagini/allegati dentro la card (guard Firestore ~900KB) ───────
-// Le immagini (base64) e gli allegati vivono DENTRO il documento card: il totale
-// copertina + galleria + allegati deve restare sotto CARD_SIZE_LIMIT. imgUsageKB /
-// allegatiUsageKB misurano l'occupazione corrente; computeImageTargetKB calcola il
-// target per la prossima immagine in modo che la card resti salvabile, riservando
-// spazio per al più `reservedFuture` slot futuri: 1-2 immagini → qualità alta,
-// card piene → qualità minore ma ok.
+// ── Budget immagini dentro la card (guard Firestore ~900KB) ────────────────
+// Le immagini (base64) vivono DENTRO il documento card: il totale copertina +
+// galleria deve restare sotto CARD_SIZE_LIMIT. imgUsageKB misura l'occupazione
+// corrente; computeImageTargetKB calcola il target per la prossima immagine in
+// modo che la card resti salvabile, riservando spazio per al più `reservedFuture`
+// slot futuri: 1-2 immagini → qualità alta, card piene → qualità minore ma ok.
+//
+// Gli ALLEGATI non stanno più qui: il loro contenuto vive in
+// `cards/{cardId}/allegati/{fileId}` (un documento per file, vedi
+// allegati-card-servizio.ts), quindi non consumano il MiB della card. NON
+// reintrodurre il loro peso in questo budget: era ciò che costringeva la
+// copertina a essere più piccola del necessario.
 //
 // ⚠️ UNITÀ DI MISURA: si contano i BYTE DEL DOCUMENTO, cioè i caratteri della data
 // URL (`url.length`), NON i byte del file originale. Base64 usa 4 caratteri ogni 3
 // byte, quindi misurare il file (×0.75) sottostimava di un quarto lo spazio
 // realmente occupato dal documento: i budget "sommati" potevano sfiorare i 1200KB
-// su un documento che Firestore rifiuta oltre 1MiB. Le due conseguenze viste sul
-// campo: una card con copertina + due PDF passava TUTTI i controlli intermedi e
-// veniva bloccata solo alla fine da guardSize ("Card troppo grande"), a lavoro
-// finito; e una card di sole immagini poteva non essere salvabile affatto.
-// Inoltre handleImgUpload calcolava il budget delle immagini SENZA gli allegati,
-// quindi la copertina veniva compressa come se i PDF non occupassero spazio.
+// su un documento che Firestore rifiuta oltre 1MiB, e una card di sole immagini
+// poteva non essere salvabile affatto.
 export const IMG_TEXT_OVERHEAD_KB = 10;
 
 /** KB occupati nel documento Firestore da una data URL (1 carattere = 1 byte). */
@@ -319,15 +320,6 @@ export function imgUsageKB(coverB64: string | null | undefined, immagini: any[] 
   var kb = coverB64 ? urlKB(coverB64) : 0;
   (immagini || []).forEach(function (x: any) {
     if (x && x.url) kb += urlKB(x.url);
-  });
-  return kb;
-}
-
-/** KB occupati dagli allegati nel documento: stessa unità di imgUsageKB. */
-export function allegatiUsageKB(allegati: any[] | null | undefined): number {
-  var kb = 0;
-  (allegati || []).forEach(function (a: any) {
-    if (a && a.url) kb += urlKB(a.url);
   });
   return kb;
 }

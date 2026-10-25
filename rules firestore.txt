@@ -173,6 +173,40 @@ service cloud.firestore {
       );
 
       allow delete: if isProf();
+
+      // ── ALLEGATI DELLA CARD (sottocollezione) ──
+      // Il CONTENUTO dei file (data URL base64) sta qui, non nel documento della
+      // card: Firestore limita un documento a 1 MiB e una card con copertina + due
+      // PDF lo superava (caso reale: 961KB, salvataggio rifiutato). Con un
+      // documento per file ogni allegato ha il suo MiB e la card resta leggera.
+      // La card conserva solo i metadati {id, name, type, size}.
+      //
+      // Lettura: la stessa visibilità della card. Il get() sul padre costa una
+      // lettura in più, ma è l'unico modo di non lasciare leggibili gli allegati
+      // di una card NASCOSTA: gli id delle card sono timestamp, quindi indovinabili.
+      //
+      // Scrittura: solo il docente. `allegati` è già vietato allo studente nella
+      // create della card; qui si chiude lo stesso buco sul contenuto, e si
+      // pretende già una data URL (l'allowlist del client resta comunque attiva
+      // in lettura: il contenuto è dato non fidato come prima).
+      match /allegati/{fileId} {
+        allow read: if isAuth() && (
+          isProf()
+          || get(/databases/$(database)/documents/cards/$(cardId)).data.visibile == true
+        );
+        // create e update separati: su create `resource` è null, quindi
+        // `resource.data` farebbe scattare l'errore di valutazione e la regola
+        // diventerebbe false in silenzio (vedi AGENTS.md).
+        allow create: if isProf()
+          && request.resource.data.keys().hasOnly(['name', 'type', 'size', 'url'])
+          && request.resource.data.url is string
+          && request.resource.data.url.matches('^data:.*');
+        allow update: if isProf()
+          && request.resource.data.keys().hasOnly(['name', 'type', 'size', 'url'])
+          && request.resource.data.url is string
+          && request.resource.data.url.matches('^data:.*');
+        allow delete: if isProf();
+      }
     }
 
     // ── QUIZ RISPOSTE ──
