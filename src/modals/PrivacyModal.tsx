@@ -1,5 +1,7 @@
 // PrivacyModal.tsx  ·  estratto da Modals.tsx (split Fase 2a)
 // Esteso: mostra procedura privacy completa quando showPrivacyInfo è attivo
+import { salvaConsenso } from '../consensi-servizio.ts';
+
 var SB = window.SB || {};
 
 function PrivacyModal(props: any) {
@@ -76,6 +78,12 @@ function PrivacyModal(props: any) {
                   try {
                     if (props.user && props.user.uid) SB.LS.privacy.set(props.user.uid);
                   } catch (e) {}
+                  // L'accettazione non resta solo in questo browser: la prova
+                  // durevole va in consensi/{uid} (vedi consensi-servizio.ts).
+                  // Non si aspettano né si bloccano le UI: se Firestore rifiuta,
+                  // la modale si chiude lo stesso e la prova tenterà di nuovo al
+                  // prossimo avvio.
+                  if (props.user && props.user.uid) salvaConsenso(props.user.uid).catch(function () {});
                   props.setShowPrivacy(false);
                 }}
                 style={{
@@ -238,6 +246,37 @@ function PrivacyModal(props: any) {
           </p>
         </div>
 
+        {/* Informativa essenziale — art. 13 GDPR.
+            I dati elencati sono quelli che l'app tratta davvero (verificabili nel
+            codice): un elenco generico sarebbe una promessa che non si può
+            mantenere. Per gli estremi del Titolare si rimanda all'Informativa
+            d'Istituto, che è il documento ufficiale. */}
+        <div style={{ ...infoCardStyle, background: infoBg, border: infoBorder }}>
+          <div style={infoStepStyle}>
+            <span
+              style={{
+                background: '#0ea5e9',
+                color: '#fff',
+                borderRadius: 8,
+                padding: '2px 8px',
+                fontSize: 11,
+                fontWeight: 800,
+              }}
+            >
+              i
+            </span>
+            <span style={{ fontWeight: 700, color: stepTitleColor }}>Informativa essenziale (art. 13 GDPR)</span>
+          </div>
+          {INFORMATIVA.map(function (riga: any) {
+            return (
+              <p key={riga.titolo} style={{ ...infoTextStyle, color: infoTextColor, marginBottom: 8 }}>
+                <strong style={{ color: stepTitleColor }}>{riga.titolo}: </strong>
+                {riga.testo}
+              </p>
+            );
+          })}
+        </div>
+
         {/* Nota legale */}
         <div
           style={{
@@ -279,6 +318,42 @@ function PrivacyModal(props: any) {
     </div>
   );
 }
+
+// Informativa essenziale — art. 13 GDPR. Volutamente breve: si legge sul
+// telefono, e un'informativa che nessuno scorre non informa. Ogni voce descrive
+// ciò che l'app fa davvero; le garanzie e gli estremi che qui non possono stare
+// (indirizzo del Titolare, recapiti del DPO, garanzie sui trasferimenti) sono
+// nell'Informativa d'Istituto, che resta il documento ufficiale.
+var INFORMATIVA = [
+  {
+    titolo: 'Titolare',
+    testo: `l'Istituto scolastico. I recapiti e il Responsabile della protezione dei dati (DPO) sono quelli dell'Informativa d'Istituto, di cui questa scheda è una sintesi.`,
+  },
+  {
+    titolo: 'Dati trattati',
+    testo: `nome e email dell'account Google istituzionale, classe, card e commenti, risposte ai quiz con il punteggio, ammonizioni e quali card sono già state viste. Non si chiedono dati sanitari né giudiziari.`,
+  },
+  {
+    titolo: 'Finalità e base giuridica',
+    testo: `svolgimento dell'attività didattica (art. 6.1.e GDPR, compito di interesse pubblico dell'Istituto). Le funzioni di supporto IA non assegnano voti: ogni contenuto è rivisto dal docente.`,
+  },
+  {
+    titolo: 'Destinatari',
+    testo: `Google Firebase (database e hosting), Cloudflare (proxy delle chiamate IA) e Groq (modello linguistico). All'IA arrivano solo testi pseudonimizzati: nomi, email, codici fiscali, IBAN e telefoni diventano segnaposto prima dell'invio.`,
+  },
+  {
+    titolo: "Trasferimenti fuori dall'UE",
+    testo: `possibili per i fornitori elencati sopra; le garanzie applicate (clausole contrattuali standard e accordi sul trattamento) sono descritte nell'Informativa d'Istituto.`,
+  },
+  {
+    titolo: 'Conservazione',
+    testo: `i contenuti restano per l'anno scolastico e negli anni successivi come archivio storico della classe, finché non ne viene chiesta la cancellazione.`,
+  },
+  {
+    titolo: 'Diritti',
+    testo: `accesso, rettifica, cancellazione, limitazione, opposizione e portabilità (artt. 15-21 GDPR). Ci si rivolge al Titolare o al DPO dell'Istituto e, se non si ottiene risposta, al Garante per la protezione dei dati personali.`,
+  },
+];
 
 // Stili condivisi per le card informative
 var infoCardStyle: any = {

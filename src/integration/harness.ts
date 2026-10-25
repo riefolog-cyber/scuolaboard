@@ -107,10 +107,10 @@ function seedUserDoc(db, seed, user) {
   });
 }
 
-export async function bootApp({ seed = {}, user = null } = {}) {
+export async function bootApp({ seed = {}, user = null, skipPrivacy = false } = {}) {
   // Accettazione privacy pre-seeded: la modale privacy (attiva al primo accesso
   // per uid) non deve interferire con i test di integrazione.
-  if (user && user.uid) {
+  if (user && user.uid && !skipPrivacy) {
     try {
       localStorage.setItem('privacy_accepted_' + user.uid, '1');
     } catch (e) {}
@@ -150,8 +150,8 @@ export async function bootApp({ seed = {}, user = null } = {}) {
 }
 
 // ── Render dell'app vera ──────────────────────────────────────────────────
-export async function renderApp({ seed = {}, user = null } = {}) {
-  await bootApp({ seed, user });
+export async function renderApp({ seed = {}, user = null, skipPrivacy = false } = {}) {
+  await bootApp({ seed, user, skipPrivacy });
   const { default: App } = await import('../app.tsx');
   const { render } = await import('@testing-library/react');
   const result = render(React.createElement(App));

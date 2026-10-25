@@ -311,6 +311,37 @@ service cloud.firestore {
       allow read, write: if isAuth() && request.auth.uid == uid;
     }
 
+    // ── CONSENSI PRIVACY ──
+    // Prova che l'utente ha accettato l'informativa (src/consensi-servizio.ts).
+    // Prima viveva SOLO in localStorage: svaniva cambiando browser o svuotando i
+    // dati del sito, e non restava nulla da poter dimostrare. Un documento per
+    // utente, con l'id = uid.
+    // - i campi sono ESATTAMENTE quelli del servizio: un campo in più dentro una
+    //   prova legale è un dato inventato (il confronto è nel test statico
+    //   src/rules-consensi-consistency.test.ts);
+    // - scrive solo il proprietario: nessuno accetta l'informativa per un altro;
+    // - il docente legge tutti (è chi deve poter dimostrare l'avvenuta
+    //   informativa), lo studente solo il proprio;
+    // - delete solo docente: una prova non si autodistrugge dal client.
+    // Su create `resource` è null, quindi i controlli guardano solo
+    // request.resource (vedi la nota su /allegati).
+    match /consensi/{uid} {
+      allow read: if isAuth() && (request.auth.uid == uid || isProf());
+      allow create: if isAuth()
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['versione', 'accettato', 'ts'])
+        && request.resource.data.versione is string
+        && request.resource.data.accettato == true
+        && request.resource.data.ts is number;
+      allow update: if isAuth()
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['versione', 'accettato', 'ts'])
+        && request.resource.data.versione is string
+        && request.resource.data.accettato == true
+        && request.resource.data.ts is number;
+      allow delete: if isProf();
+    }
+
     // ── NOTIFICHE (in-app, solo app aperta) ──
     // Doc per utente: notifiche/{uid} { lista: [...], aggiornato: ISO }
     // Scritture ammesse, e SOLO queste:

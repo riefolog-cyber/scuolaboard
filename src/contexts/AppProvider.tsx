@@ -14,6 +14,7 @@ import useNotifiche from '../hooks/useNotifiche.ts';
 import useTheme from '../hooks/useTheme.ts';
 import useDragDrop from '../hooks/useDragDrop.ts';
 import { useAuth } from '../auth.ts';
+import { leggiConsenso } from '../consensi-servizio.ts';
 import { useCards } from '../cards.ts';
 import { useAI } from '../ai-services.ts';
 import { useModals } from '../modals.ts';
@@ -182,6 +183,10 @@ function AppProvider({ children }: any) {
   var deepLinkDone = useRef(false);
   var alarmFiredRef = useRef(new Set());
   var prevProposteCount = useRef(0);
+  // Esito della lettura del consenso su Firestore, per uid: senza questa memoria
+  // la lettura ripartirebbe a ogni cambio dell'effetto privacy (deps: utente,
+  // anno, aperture delle modali).
+  var consensoFsRef = useRef<any>(null);
 
   // Drag & drop per il riordinamento card (estratto in useDragDrop)
   // Il 3° argomento azzera la memoria delle aperture: dopo un trascinamento
@@ -1566,35 +1571,72 @@ function AppProvider({ children }: any) {
   useEffect(
     function () {
       if (!user) return;
-      var privacyAccettata = !!(window.SB.LS && window.SB.LS.privacy && window.SB.LS.privacy.get(user.uid));
-      if (!privacyAccettata) {
+      // Il narrowing di TS su `user` non sopravvive dentro le closure qui sotto
+      // (dopoPrivacy, chiediPrivacy, .then): si cattura una volta.
+      var u: any = user;
+      var vivo = true;
+
+      // Ciò che segue all'accettazione (popup classe dello studente). È una
+      // funzione perché ora ci si arriva da due strade: subito, se il
+      // localStorage è già valorizzato, oppure dopo la lettura della prova su
+      // Firestore (browser nuovo, dati del sito cancellati).
+      function dopoPrivacy() {
+        if (!vivo) return;
+        if (u.role === 'studente') {
+          if ((u.classiPerAnno || {})[annoScolastico]) {
+            modals.setShowClasseModal(false);
+          } else if (annoScolastico === ANNO_CORRENTE) {
+            modals.setShowClasseModal(true);
+          }
+        }
+      }
+
+      function chiediPrivacy() {
+        if (!vivo) return;
         modals.setShowPrivacy(true);
         // La privacy è obbligatoria e deve stare sopra: mai due modali
         // sovrapposte (Classe coprirebbe Privacy, stesso zIndex).
         modals.setShowClasseModal(false);
+      }
+
+      var privacyAccettata = !!(window.SB.LS && window.SB.LS.privacy && window.SB.LS.privacy.get(u.uid));
+      if (privacyAccettata) {
+        dopoPrivacy();
         return;
       }
-      // Popup classe per studente senza classe (usa classiPerAnno[anno], non il
-      // campo piatto legacy user.classe).
-      // Se la classe per l'anno C'È, chiudi la modale (safety-net: un successo
-      // salvato ma con chiusura persa non deve lasciare la modale appesa).
-      // Se MANCA: obbligatoria SOLO per ANNO_CORRENTE — lì backdrop/Esc/closeAll
-      // non devono poter lasciare la bacheca accessibile senza classe
-      // (showClasseModal in deps come showPrivacy: chiuderla senza scegliere la
-      // riapre, stesso loop voluto del GDPR per la privacy).
-      // Per gli anni NON correnti nessuna apertura automatica: prima sì, e con
-      // la modale non chiudibile — lo studente che cambiava anno dal menu in
-      // header (accessibile anche a lui) restava intrappolato a scegliere la
-      // classe per QUEL anno, scelta che le rules gli vietano poi di correggere
-      // (da rimediare a mano dal docente). Ora la scelta resta possibile, ma
-      // deliberata e annullabile ("Non ora" / click fuori).
-      if (user.role === 'studente') {
-        if ((user.classiPerAnno || {})[annoScolastico]) {
-          modals.setShowClasseModal(false);
-        } else if (annoScolastico === ANNO_CORRENTE) {
-          modals.setShowClasseModal(true);
-        }
+
+      // L'accettazione vive anche in consensi/{uid}: senza leggerla, chi ha
+      // accettato dal telefono se la vedrebbe richiedere qui, e la prova
+      // registrata non servirebbe a nulla. Finché la lettura è in volo non si
+      // mostra niente (nessun lampeggio); se non c'è, o Firestore non risponde,
+      // la modale si apre come prima e resta obbligatoria.
+      var cache = consensoFsRef.current;
+      if (cache && cache.uid === u.uid) {
+        if (cache.trovato) dopoPrivacy();
+        else chiediPrivacy();
+        return;
       }
+      leggiConsenso(u.uid).then(function (trovato: any) {
+        if (!vivo) return;
+        consensoFsRef.current = { uid: u.uid, trovato: !!trovato };
+        if (!trovato) {
+          chiediPrivacy();
+          return;
+        }
+        try {
+          window.SB.LS.privacy.set(u.uid);
+        } catch (e) {}
+        dopoPrivacy();
+      })
+        // leggiConsenso non rigetta mai (degrada a null), ma il catch è qui per una
+        // ragione funzionale, non per zittire il test: se la lettura esplodesse
+        // comunque, l'informativa va mostrata, non saltata.
+        .catch(function () {
+          chiediPrivacy();
+        });
+      return function () {
+        vivo = false;
+      };
     },
     [user, annoScolastico, modals.showPrivacy, modals.showClasseModal]
   );
