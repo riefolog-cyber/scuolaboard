@@ -98,6 +98,8 @@ export function createFakeDb(seed = {}) {
       return new FakeQuery(this.name, this.wheres, { field, dir });
     }
     async get() {
+      const err = fallimentiGet[this.name];
+      if (err) throw err;
       const docs = queryDocs(this.name, this.wheres, this._orderBy);
       return {
         docs: docs.map((d) => ({ id: d.id, exists: true, data: () => d.data })),
@@ -140,6 +142,9 @@ const fallimenti: Record<string, any> = {};
 // Errori di LETTURA iniettabili per collection: simulano la caduta della
 // connessione (la listener onSnapshot riceve l'errore invece dei dati).
 const fallimentiLettura: Record<string, any> = {};
+// Errori sulle GET puntuali: separati dai listener perché i due casi si provano
+// in modo diverso (vedi `_failGets`).
+const fallimentiGet: Record<string, any> = {};
 function fallisce(coll: string): any {
   return fallimenti[coll] || null;
 }
@@ -206,6 +211,7 @@ class FakeDocRef {
       for (const k of Object.keys(docListeners)) delete docListeners[k];
       for (const k of Object.keys(fallimenti)) delete fallimenti[k];
       for (const k of Object.keys(fallimentiLettura)) delete fallimentiLettura[k];
+      for (const k of Object.keys(fallimentiGet)) delete fallimentiGet[k];
       for (const [coll, docs] of Object.entries(seed)) {
         collections[coll] = { ...docs };
       }
@@ -228,6 +234,16 @@ class FakeDocRef {
     },
     _allowReads(coll) {
       delete fallimentiLettura[coll];
+    },
+    // Fa fallire le GET puntuali (`.get()`) su `coll`: diverso da `_failReads`, che
+    // riguarda i listener. Serve ai servizi che leggono una volta sola (es. gli
+    // allegati di una card all'apertura) per provare che un errore di lettura non
+    // cancella un contenuto già mostrato.
+    _failGets(coll, code = 'unavailable') {
+      fallimentiGet[coll] = Object.assign(new Error('get non riuscita: ' + code), { code });
+    },
+    _allowGets(coll) {
+      delete fallimentiGet[coll];
     },
     runTransaction(fn) {
       const tx = {

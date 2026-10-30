@@ -8,7 +8,13 @@
 //      l'uso dell'app, e la lettura non deve fidarsi di un documento malformato.
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createFakeDb } from './integration/fake-firestore.ts';
-import { salvaConsenso, leggiConsenso, CONSENSO_VERSIONE, CAMPI_CONSENSO } from './consensi-servizio.ts';
+import {
+  salvaConsenso,
+  leggiConsenso,
+  leggiConsensoEntro,
+  CONSENSO_VERSIONE,
+  CAMPI_CONSENSO,
+} from './consensi-servizio.ts';
 
 const UID = 'studente-1';
 let db: any;
@@ -103,5 +109,31 @@ describe('leggiConsenso', () => {
   it('senza db torna null', async () => {
     window.db = undefined as any;
     expect(await leggiConsenso(UID)).toBeNull();
+  });
+});
+
+describe('leggiConsensoEntro: il tetto di tempo che non diventa un consenso presunto', () => {
+  it("se il consenso c'è risponde subito (nessuna attesa del tetto)", async () => {
+    db._seed('consensi', { [UID]: { versione: 'informativa-1', accettato: true, ts: 1234 } });
+    expect(await leggiConsensoEntro(UID, 60000)).toEqual({ versione: 'informativa-1', ts: 1234 });
+  });
+
+  it('se Firestore non risponde entro il tetto torna null (la modale si apre, non resta appesa)', async () => {
+    // Caso reale: rete assente all'avvio. Firestore può impiegare molto prima di
+    // rispondere (o di rispondere dalla cache): senza tetto l'informativa non
+    // comparirebbe e la bacheca resterebbe utilizzabile nel frattempo.
+    window.db = {
+      collection: () => ({
+        doc: () => ({
+          get: () => new Promise(() => {}),
+        }),
+      }),
+    } as any;
+    expect(await leggiConsensoEntro(UID, 5)).toBeNull();
+  });
+
+  it('senza db torna null subito', async () => {
+    window.db = undefined as any;
+    expect(await leggiConsensoEntro(UID, 60000)).toBeNull();
   });
 });

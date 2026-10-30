@@ -92,6 +92,56 @@ describe('Allegati in sottocollezione', () => {
     await waitFor(() => expect(link.closest('a').getAttribute('href')).toBe(PDF_URL));
   });
 
+  it('una rilettura fallita NON cancella il contenuto già mostrato', async () => {
+    // Stessa regola dello snapshot in firestore-sync: un errore di rete non è una
+    // cancellazione. `caricaAllegati` degrada a lista vuota e non distingue "non
+    // ci sono file" da "la lettura è fallita", quindi una mappa vuota non deve
+    // sovrascrivere un contenuto che avevamo già letto per la stessa card.
+    // La rilettura si innesca con la card APERTA: l'effetto riparte quando cambia
+    // la firma degli id (`firmaAllegati`), cioè quando arriva un aggiornamento
+    // della card. Chiudendo e riaprendo non si vedrebbe nulla, perché CardDetail
+    // viene smontata (AppLayout la monta solo con `showCard`) e lo stato riparte
+    // da zero: il caso reale è un aggiornamento che arriva mentre la card è aperta.
+    const card = mkCard('c1', {
+      titolo: 'Card con file riletto',
+      allegati: [{ id: 'f1', name: 'dispensa.pdf', type: 'application/pdf', size: 2048 }],
+    });
+    const seed = {
+      users: { prof1: PROF_DOC },
+      cards: { c1: card },
+      'cards/c1/allegati': {
+        f1: { name: 'dispensa.pdf', type: 'application/pdf', size: 2048, url: PDF_URL },
+      },
+    };
+    const { db } = await renderApp({ seed, user: PROF });
+
+    const dettaglio = await openCard('Card con file riletto');
+    const link = await dettaglio.findByText('📄 dispensa.pdf', {});
+    await waitFor(() => expect(link.closest('a').getAttribute('href')).toBe(PDF_URL));
+
+    // La rete cade e nello stesso momento la card cambia (un secondo allegato,
+    // come se il docente l'avesse aggiunto da un'altra scheda): la rilettura
+    // fallisce e torna una lista vuota.
+    db._failGets('cards/c1/allegati');
+    db._seed('cards', {
+      c1: Object.assign({}, card, {
+        allegati: [
+          { id: 'f1', name: 'dispensa.pdf', type: 'application/pdf', size: 2048 },
+          { id: 'f2', name: 'nuovo.pdf', type: 'application/pdf', size: 2048 },
+        ],
+      }),
+    });
+
+    // Il contenuto già letto resta (un errore non è una cancellazione) e il file
+    // nuovo compare come "non disponibile" invece di sparire o restare in ⏳.
+    await waitFor(() => {
+      const a = dettaglio.getByText('📄 dispensa.pdf', {}).closest('a');
+      expect(a.getAttribute('href')).toBe(PDF_URL);
+    });
+    const mancante = await dettaglio.findByTestId('allegato-non-disponibile');
+    expect(mancante.textContent).toContain('nuovo.pdf');
+  });
+
   it('card LEGACY con url inline: si apre come prima e una LETTURA non scrive', async () => {
     const seed = {
       users: { prof1: PROF_DOC },
@@ -166,6 +216,59 @@ describe('Allegati in sottocollezione', () => {
     await screen.findByText(/Allegati non salvati: permesso negato da Firestore/);
     // La card resta com'era: il lavoro del docente non è stato buttato via.
     expect(db._get('cards', 'c1').titolo).toBe('Card con file bloccato');
+  });
+
+  it('allegato dichiarato ma assente dalla sottocollezione: riga «non disponibile», non una ⏳ eterna', async () => {
+    // Succede quando la scrittura dei file è fallita a metà (o il documento è
+    // stato cancellato): la card elenca il file ma il contenuto non c'è. Una ⏳
+    // direbbe "sta arrivando", che è falso; sparire direbbe "non esiste", che è
+    // altrettanto falso. Si mostra la riga con il nome.
+    const seed = {
+      users: { prof1: PROF_DOC },
+      cards: {
+        c1: mkCard('c1', {
+          titolo: 'Card con file perso',
+          allegati: [{ id: 'f1', name: 'perso.pdf', type: 'application/pdf', size: 10 }],
+        }),
+      },
+    };
+    await renderApp({ seed, user: PROF });
+
+    const detail = await openCard('Card con file perso');
+    const riga = await detail.findByTestId('allegato-non-disponibile');
+    expect(riga.textContent).toContain('perso.pdf');
+  });
+
+  it('rimuovere un allegato in modifica cancella il suo documento (non resta orfano)', async () => {
+    const seed = {
+      users: { prof1: PROF_DOC },
+      cards: {
+        c1: mkCard('c1', {
+          titolo: 'Card con due file',
+          allegati: [
+            { id: 'f1', name: 'tieni.pdf', type: 'application/pdf', size: 2048 },
+            { id: 'f2', name: 'togli.pdf', type: 'application/pdf', size: 2048 },
+          ],
+        }),
+      },
+      'cards/c1/allegati': {
+        f1: { name: 'tieni.pdf', type: 'application/pdf', size: 2048, url: PDF_URL },
+        f2: { name: 'togli.pdf', type: 'application/pdf', size: 2048, url: PDF_URL },
+      },
+    };
+    const { db } = await renderApp({ seed, user: PROF });
+
+    const detail = await openCard('Card con due file');
+    fireEvent.click(await detail.findByRole('button', { name: /Modifica/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Rimuovi togli.pdf' }));
+    fireEvent.click(screen.getByText('💾 Salva modifiche'));
+
+    await waitFor(() => {
+      expect(db._get('cards', 'c1').allegati.map((a: any) => a.id)).toEqual(['f1']);
+      // Firestore non fa cascade: il documento tolto va cancellato a mano.
+      const rimasti = db._all('cards/c1/allegati').map(([id]: [string, any]) => id);
+      expect(rimasti).toEqual(['f1']);
+    });
   });
 
   it('duplicare una card copia i file (la copia è indipendente)', async () => {

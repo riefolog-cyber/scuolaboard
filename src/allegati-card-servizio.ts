@@ -118,24 +118,37 @@ export async function salvaAllegati(
   if (!lista.length) return { ok: true, allegati: [] };
   var trovata = collezione(cardId);
   var coll = trovata.coll;
-  var meta: any[] = [];
   if (!coll) {
     // Senza db non si può distinguere "niente da salvare" da "non salvato":
     // meglio non far credere al chiamante che sia andata bene. `motivo` è ciò
     // che il docente legge nel toast (senza, resta un "Riprova" muto).
     return { ok: false, allegati: lista.map(metadati), motivo: trovata.motivo };
   }
+  // Preparazione SINCRONA di id e documento di ogni file, poi una sola tornata di
+  // scritture in parallelo: i documenti sono indipendenti, quindi in serie una card
+  // con 5 PDF pagava cinque volte la latenza della rete. Il documento si costruisce
+  // una volta sola (`documento(al)` veniva chiamato tre volte per allegato).
+  var scritture: Array<{ id: string; doc: any }> = [];
+  var meta: any[] = [];
+  for (var i = 0; i < lista.length; i++) {
+    var al = lista[i] || {};
+    var doc = documento(al);
+    var id = String(al.id != null && al.id !== '' ? al.id : Date.now() + '_' + Math.random().toString(36).slice(2, 8));
+    // Solo chi ha un contenuto viene scritto: le card esistenti passano di qui
+    // con i metadati già letti (senza url) e non vanno riscritte.
+    // Un allegato senza url e senza id non esiste da nessuna parte: si tiene lo
+    // stesso comportamento (metadati, nessuna scrittura) invece di far fallire il
+    // salvataggio di tutta la card; è `CardDetail` a dire "contenuto non
+    // disponibile" quando la riga non si risolve, senza mentire con una ⏳ eterna.
+    if (doc.url) scritture.push({ id: id, doc: doc });
+    meta.push({ id: id, name: doc.name, type: doc.type, size: doc.size });
+  }
   try {
-    for (var i = 0; i < lista.length; i++) {
-      var al = lista[i] || {};
-      var id = String(
-        al.id != null && al.id !== '' ? al.id : Date.now() + '_' + Math.random().toString(36).slice(2, 8)
-      );
-      // Solo chi ha un contenuto viene scritto: le card esistenti passano di qui
-      // con i metadati già letti (senza url) e non vanno riscritte.
-      if (al.url) await coll.doc(id).set(documento(al));
-      meta.push({ id: id, name: documento(al).name, type: documento(al).type, size: documento(al).size });
-    }
+    await Promise.all(
+      scritture.map(function (s) {
+        return coll.doc(s.id).set(s.doc);
+      })
+    );
     return { ok: true, allegati: meta };
   } catch (errore) {
     // Un file scritto prima del fallimento resta: è uno spazio sprecato, non un

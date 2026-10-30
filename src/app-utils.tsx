@@ -4,6 +4,7 @@
 import { Component } from 'react';
 import { CLASSI_DEFAULT, classeColor, sbSafeUrl, safeDocId, normalizeLinks, escapeForPrompt } from './utils/format.ts';
 import BadgeAi from './BadgeAi.tsx';
+import { eliminaTuttiAllegati } from './allegati-card-servizio.ts';
 
 var SB = window.SB || {};
 window.SB = SB;
@@ -95,6 +96,22 @@ export function fbDel(id: any) {
   p.catch(function (e: any) {
     if (SB.showToast) SB.showToast(fbErrTxt(e), 'err');
   });
+  // Firestore non fa cascade: senza questa riga i file della card restano nella
+  // sottocollezione per sempre (spazio sprecato, invisibile all'utente). Sta QUI
+  // e non nel chiamante perché `fbDel` è l'unico punto di cancellazione delle
+  // card: prima la cascata era solo nel flusso "elimina con undo" di AppProvider,
+  // e una card eliminata da un altro percorso (es. rifiuto di una proposta in
+  // ProposalsPanel, o deleteCard di firestore-services) lasciava i file orfani.
+  // Si aspetta l'esito della delete: se è negata, i file non si toccano (una card
+  // che esiste ancora con i suoi allegati cancellati sarebbe peggio di un orfano).
+  // Il secondo argomento di `.then` gestisce la rejection nella STESSA catena:
+  // nessuna promise derivata resta senza gestore (la regola dell'exit code).
+  p.then(
+    function () {
+      eliminaTuttiAllegati(id).catch(function () {});
+    },
+    function () {}
+  );
   return p;
 }
 export function compressImage(file: File, maxW: number, maxH: number, quality?: number, targetKB?: number) {

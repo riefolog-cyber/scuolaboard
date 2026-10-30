@@ -37,8 +37,14 @@ function CardDetail__({ $: props$ }: any) {
   // (una sola query): nomi e anteprime sono pronti subito e non serve gestire un
   // caricamento per ogni riga. Le card vecchie hanno ancora `url` inline e non
   // passano di qui.
-  var [allegatiContenuti, setAllegatiContenuti] = useState<Record<string, any>>({});
+  // `cardId` sta DENTRO lo stato: senza, il contenuto letto per la card
+  // precedente resterebbe nella mappa e una riga della card nuova potrebbe
+  // mostrare il file sbagliato (le dupliche conservano gli stessi id dei file).
+  var [allegatiFile, setAllegatiFile] = useState<any>({ cardId: null, mappa: {} });
   var allegatiCard = (c && c.allegati) || [];
+  // Mappa dei contenuti SOLO se è stata letta per la card aperta adesso: `null`
+  // significa "non lo so ancora", che è diverso da "il file non c'è".
+  var contenutiAllegati = c && String(allegatiFile.cardId) === String(c.id) ? allegatiFile.mappa : null;
   // Firma stabile degli id: `allegati` è un array nuovo a ogni render, quindi non
   // può stare nelle dipendenze dell'effetto (rileggerebbe Firestore a ogni render).
   var firmaAllegati = allegatiCard
@@ -54,13 +60,7 @@ function CardDetail__({ $: props$ }: any) {
       var senzaUrl = allegatiCard.filter(function (al: any) {
         return al && !al.url;
       });
-      if (!cardId || !senzaUrl.length) {
-        // Niente da caricare: si svuota solo se c'era qualcosa (evita un render inutile).
-        setAllegatiContenuti(function (precedente) {
-          return Object.keys(precedente).length ? {} : precedente;
-        });
-        return;
-      }
+      if (!cardId || !senzaUrl.length) return;
       var vivo = true;
       caricaAllegati(cardId)
         .then(function (docs) {
@@ -69,7 +69,24 @@ function CardDetail__({ $: props$ }: any) {
           docs.forEach(function (d: any) {
             mappa[String(d.id)] = d.url;
           });
-          setAllegatiContenuti(mappa);
+          setAllegatiFile(function (precedente: any) {
+            // Un errore di lettura non deve cancellare un contenuto già mostrato
+            // (stessa regola dello snapshot in firestore-sync): `caricaAllegati`
+            // degrada a lista vuota e NON dice se è "nessun file" o "lettura
+            // fallita", quindi se per QUESTA card avevamo già dei contenuti e ora
+            // arriva una mappa vuota, si tiene quella vecchia. Le righe tolte
+            // davvero dalla card spariscono comunque, perché è `allegati` a
+            // cambiarle (e quindi `firmaAllegati`).
+            if (
+              !docs.length &&
+              precedente &&
+              String(precedente.cardId) === String(cardId) &&
+              Object.keys(precedente.mappa || {}).length
+            ) {
+              return precedente;
+            }
+            return { cardId: cardId, mappa: mappa };
+          });
         })
         // caricaAllegati non lancia (ha il try/catch dentro): il catch serve a
         // marcare la catena come gestita, non a gestire un errore previsto.
@@ -399,7 +416,7 @@ function CardDetail__({ $: props$ }: any) {
                 var nome = allegatoNome(al, i);
                 // Contenuto: `al.url` c'è nelle card salvate prima (retrocompatibilità),
                 // altrimenti arriva dalla sottocollezione (allegati-card-servizio).
-                var url = al.url || allegatiContenuti[String(al.id)];
+                var url = al.url || (contenutiAllegati && contenutiAllegati[String(al.id)]);
                 // Allowlist URL: le Firestore Rules non validano `allegati`, quindi
                 // l'URL è il campo più economico da falsificare ("javascript:...").
                 // Un protocollo non consentito non diventa un link cliccabile: la riga
@@ -420,12 +437,21 @@ function CardDetail__({ $: props$ }: any) {
                   border: '1px solid rgba(255,255,255,.06)',
                 };
                 if (!url) {
-                  // Riga senza contenuto: il file non è (ancora) leggibile. Si mostra
-                  // il nome invece di far sparire l'allegato: sparire sarebbe una
-                  // bugia ("non c'è") per un problema di rete.
+                  // Riga senza contenuto: si mostra il nome invece di far sparire
+                  // l'allegato (sparire sarebbe una bugia: il file esiste, non è
+                  // leggibile adesso). Due casi distinti, perché non sono la stessa
+                  // cosa: la query è ancora in volo (⏳, il contenuto arriverà),
+                  // oppure è finita e quel documento non c'è (⚠️, non arriverà mai:
+                  // una ⏳ eterna direbbe il contrario).
+                  var letto = contenutiAllegati !== null;
                   return (
-                    <div key={i} data-testid="allegato-in-caricamento" style={stileFile} title="Contenuto in caricamento">
-                      {allegatoIcona(al)} {nome} ⏳
+                    <div
+                      key={i}
+                      data-testid={letto ? 'allegato-non-disponibile' : 'allegato-in-caricamento'}
+                      style={stileFile}
+                      title={letto ? 'Contenuto del file non disponibile' : 'Contenuto in caricamento'}
+                    >
+                      {allegatoIcona(al)} {nome} {letto ? '⚠️' : '⏳'}
                     </div>
                   );
                 }

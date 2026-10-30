@@ -29,6 +29,14 @@ var COLLEZIONE = 'consensi';
 // serve a sapere, guardando il documento, a cosa l'utente ha detto sì.
 export var CONSENSO_VERSIONE = 'informativa-1';
 
+// Tetto di tempo per la lettura all'avvio (vedi `leggiConsensoEntro`). Quattro
+// secondi: sotto la soglia non cambia nulla, oltre la modale compare comunque.
+// Non è un timeout "tecnico" ma la durata massima in cui l'app resta utilizzabile
+// senza che l'informativa sia stata mostrata: Firestore, con la rete assente, può
+// impiegare molto prima di rispondere (o rispondere dalla cache), e in quella
+// finestra la bacheca è già cliccabile.
+export var CONSENSO_LETTURA_MAX_MS = 4000;
+
 /** Campi del documento: ESATTAMENTE quelli ammessi dalle Rules. */
 export var CAMPI_CONSENSO = ['versione', 'accettato', 'ts'];
 
@@ -81,4 +89,46 @@ export async function leggiConsenso(uid: any): Promise<{ versione: string; ts: n
   } catch (e) {
     return null;
   }
+}
+
+/**
+ * Come `leggiConsenso`, ma con un TETTO DI TEMPO: oltre `ms` restituisce null.
+ *
+ * Serve perché l'esito di questa lettura decide se mostrare l'informativa, e una
+ * lettura lenta non deve diventare un "consenso presunto": con la rete assente
+ * Firestore può metterci molto prima di rispondere (o di rispondere dalla cache),
+ * e in quella finestra la bacheca è già cliccabile senza che la modale sia mai
+ * comparsa. `null` qui significa "non lo so", cioè "chiedi": è la direzione
+ * sicura per il GDPR, l'unica che non trasforma un timeout in un'assenza di
+ * informativa.
+ *
+ * Non lancia: un rifiuto della lettura vale come `null`.
+ */
+export function leggiConsensoEntro(uid: any, ms?: number): Promise<{ versione: string; ts: number } | null> {
+  var limite = ms != null ? ms : CONSENSO_LETTURA_MAX_MS;
+  return new Promise(function (resolve) {
+    var chiuso = false;
+    // Il timer non va mai lasciato in volo: se la lettura vince, viene azzerato.
+    var timer = setTimeout(function () {
+      if (chiuso) return;
+      chiuso = true;
+      resolve(null);
+    }, limite);
+    // `.then` a due argomenti: il rifiuto è gestito nella stessa catena, quindi
+    // non resta nessuna promise derivata senza gestore (regola dell'exit code).
+    leggiConsenso(uid).then(
+      function (trovato) {
+        if (chiuso) return;
+        chiuso = true;
+        clearTimeout(timer);
+        resolve(trovato);
+      },
+      function () {
+        if (chiuso) return;
+        chiuso = true;
+        clearTimeout(timer);
+        resolve(null);
+      }
+    );
+  });
 }

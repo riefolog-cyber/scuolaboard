@@ -85,6 +85,26 @@ describe('salvaAllegati', () => {
     expect(db._all('cards/c1/allegati')).toHaveLength(0);
   });
 
+  it('scrive TUTTI i file (una sola tornata, non una attesa per file)', async () => {
+    // I documenti sono indipendenti: l'ordine dei metadati deve restare quello
+    // della lista, anche se le scritture partono insieme.
+    const lista = [pdf('f1'), pdf('f2', 'b.pdf'), pdf('f3', 'c.pdf'), pdf('f4', 'd.pdf'), pdf('f5', 'e.pdf')];
+    const esito = await salvaAllegati('c1', lista);
+    expect(esito.ok).toBe(true);
+    expect(esito.allegati.map((a: any) => a.id)).toEqual(['f1', 'f2', 'f3', 'f4', 'f5']);
+    expect(db._all('cards/c1/allegati')).toHaveLength(5);
+  });
+
+  it('allegato senza url e senza id: metadati sì, documento no (comportamento voluto)', async () => {
+    // Caso di un documento corrotto: non si fa fallire il salvataggio di tutta la
+    // card, ma non si inventa un id che non esiste da nessuna parte. È CardDetail
+    // a dire "contenuto non disponibile" invece di mostrare una ⏳ eterna.
+    const esito = await salvaAllegati('c1', [{ name: 'rotto.pdf', type: 'application/pdf', size: 1 }]);
+    expect(esito.ok).toBe(true);
+    expect(esito.allegati[0].id).toBeTruthy();
+    expect(db._all('cards/c1/allegati')).toHaveLength(0);
+  });
+
   it('lista vuota: ok senza toccare il db (il caso della maggior parte delle card)', async () => {
     const esito = await salvaAllegati('c1', []);
     expect(esito).toEqual({ ok: true, allegati: [] });

@@ -14,7 +14,7 @@ import useNotifiche from '../hooks/useNotifiche.ts';
 import useTheme from '../hooks/useTheme.ts';
 import useDragDrop from '../hooks/useDragDrop.ts';
 import { useAuth } from '../auth.ts';
-import { leggiConsenso } from '../consensi-servizio.ts';
+import { leggiConsensoEntro } from '../consensi-servizio.ts';
 import { useCards } from '../cards.ts';
 import { useAI } from '../ai-services.ts';
 import { useModals } from '../modals.ts';
@@ -40,13 +40,7 @@ import {
   FORM0,
 } from '../app-utils.tsx';
 import '../notifiche-service.ts';
-import {
-  salvaAllegati,
-  eliminaAllegati,
-  eliminaTuttiAllegati,
-  copiaAllegati,
-  metadati,
-} from '../allegati-card-servizio.ts';
+import { salvaAllegati, eliminaAllegati, copiaAllegati, metadati } from '../allegati-card-servizio.ts';
 import {
   annunciInSospeso,
   annunciaClasse,
@@ -1107,11 +1101,10 @@ function AppProvider({ children }: any) {
       var toastId = Date.now();
       var timer = setTimeout(function () {
         undoDeleteTimerRef.current = null;
+        // La cascata sugli allegati (Firestore non la fa) vive DENTRO fbDel, che è
+        // l'unico punto di cancellazione delle card: così vale anche per i percorsi
+        // che non passano da qui (es. rifiuto di una proposta).
         fbDel(id);
-        // Firestore non fa cascade: senza questa riga i file della card resterebbero
-        // nella sottocollezione per sempre (spazio sprecato, invisibile all'utente).
-        // Non può rifiutare: il servizio ha i try/catch dentro.
-        eliminaTuttiAllegati(id).catch(function () {});
         setUndoDelete(null);
         setToasts(function (p) {
           return p.filter(function (t) {
@@ -1607,22 +1600,24 @@ function AppProvider({ children }: any) {
 
       // L'accettazione vive anche in consensi/{uid}: senza leggerla, chi ha
       // accettato dal telefono se la vedrebbe richiedere qui, e la prova
-      // registrata non servirebbe a nulla. Finché la lettura è in volo non si
-      // mostra niente (nessun lampeggio); se non c'è, o Firestore non risponde,
-      // la modale si apre come prima e resta obbligatoria.
+      // registrata non servirebbe a nulla. La lettura ha un tetto di tempo
+      // (`leggiConsensoEntro`): se Firestore non risponde entro pochi secondi la
+      // modale si apre lo stesso. Prima si aspettava senza limite, e con la rete
+      // assente la bacheca restava cliccabile senza che l'informativa comparisse.
       var cache = consensoFsRef.current;
       if (cache && cache.uid === u.uid) {
-        if (cache.trovato) dopoPrivacy();
-        else chiediPrivacy();
+        dopoPrivacy();
         return;
       }
-      leggiConsenso(u.uid).then(function (trovato: any) {
+      leggiConsensoEntro(u.uid).then(function (trovato: any) {
         if (!vivo) return;
-        consensoFsRef.current = { uid: u.uid, trovato: !!trovato };
         if (!trovato) {
           chiediPrivacy();
           return;
         }
+        // Si memorizza SOLO l'esito positivo: un "non c'è" può dipendere da una
+        // rete lenta, e la prossima apertura merita un altro tentativo.
+        consensoFsRef.current = { uid: u.uid };
         try {
           window.SB.LS.privacy.set(u.uid);
         } catch (e) {}
