@@ -14,9 +14,12 @@ preciso, indicato con il file.
 | Quick win 5 — font Inter variabile | ✅ fatto | `e103075` |
 | Quick win 6 — soglie coverage 78/76/75/65 | ✅ fatto | `e103075` |
 | P1-4 — diagnostica in produzione (errori + tempi di avvio) | ✅ fatto | `12451f4` |
-| P0-1 (parte) — miniatura 320 px della copertina per la griglia | ✅ fatto | `c3ef02e` |
-| P0-1 (resto) — immagini delle card in sottocollezione (come allegati) | ⏳ da fare | — (2–3 gg, richiede pubblicazione rules) |
-| P1-2, P1-3, P1-5, P0-2, P2-*, P3-* | ⏳ da fare | — |
+| P0-1 (parte) — miniatura 320 px della copertina per la griglia | ✅ fatto | `d45bd06` |
+| P1-3 — un solo ticker condiviso per i countdown | ✅ fatto | `82657f8` |
+| P2-1 — helper condiviso `apriCardDetail` per il lazy-load | ✅ fatto | `cf79806` |
+| P0-1 (resto) — immagini delle card in sottocollezione (come allegati) | ⏳ condizionato | — (solo se scatta una delle 3 condizioni del §7) |
+| P0-2 — nomi in `avvisiMancanti` | ❌ won't fix | — (trade-off accettato: i nomi servono al badge e `loadStudenti` non è sempre caricato; già esposti nei commenti) |
+| P1-2, P1-5, P2-3, P2-4, P3-* | ⏳ da fare | — |
 
 Le priorità sono quattro, non cinque:
 
