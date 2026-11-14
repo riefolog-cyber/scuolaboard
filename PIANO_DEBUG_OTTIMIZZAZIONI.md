@@ -17,6 +17,7 @@ preciso, indicato con il file.
 | P0-1 (parte) — miniatura 320 px della copertina per la griglia | ✅ fatto | `d45bd06` |
 | P1-3 — un solo ticker condiviso per i countdown | ✅ fatto | `82657f8` |
 | P2-1 — helper condiviso `apriCardDetail` per il lazy-load | ✅ fatto | `cf79806` |
+| P2-4 — dead-code in CI come report non bloccante | ✅ fatto | `99298f3` |
 | P0-1 (resto) — immagini delle card in sottocollezione (come allegati) | ⏳ condizionato | — (solo se scatta una delle 3 condizioni del §7) |
 | P0-2 — nomi in `avvisiMancanti` | ❌ won't fix | — (trade-off accettato: i nomi servono al badge e `loadStudenti` non è sempre caricato; già esposti nei commenti) |
 | P1-2, P1-5, P2-3, P2-4, P3-* | ⏳ da fare | — |
