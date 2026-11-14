@@ -934,7 +934,7 @@ function AppProvider({ children }: any) {
     if (d && (String(d.titolo || '').trim() || String(d.testo || '').trim())) {
       setForm(draftToForm(d));
       setBozzaAttiva(true);
-      showToast('📋 Bozza ripristinata', 'ok');
+      showToast('📋 Bozza caricata', 'ok');
     } else {
       setForm(Object.assign({}, FORM0));
       setBozzaAttiva(false);

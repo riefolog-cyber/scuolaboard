@@ -108,7 +108,7 @@ function NuovaCardModal(props: any) {
                 marginBottom: 12,
               }}
             >
-              <span>📋 Bozza ripristinata</span>
+              <span>📋 Bozza attiva</span>
               <span style={{ flex: 1 }} />
               <button
                 aria-label="Scarta bozza"
