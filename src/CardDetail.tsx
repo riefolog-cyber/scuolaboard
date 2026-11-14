@@ -41,6 +41,8 @@ function CardDetail__({ $: props$ }: any) {
   // precedente resterebbe nella mappa e una riga della card nuova potrebbe
   // mostrare il file sbagliato (le dupliche conservano gli stessi id dei file).
   var [allegatiFile, setAllegatiFile] = useState<any>({ cardId: null, mappa: {} });
+  // Blur-up leggero della copertina nel dettaglio (immagine piena).
+  var [copertinaLoadedSrc, setCopertinaLoadedSrc] = useState<string | null>(null);
   var allegatiCard = (c && c.allegati) || [];
   // Mappa dei contenuti SOLO se è stata letta per la card aperta adesso: `null`
   // significa "non lo so ancora", che è diverso da "il file non c'è".
@@ -231,23 +233,42 @@ function CardDetail__({ $: props$ }: any) {
         </div>
 
         {/* Cover image */}
-        {c.copertina && (
-          <div
-            style={{ width: '100%', background: '#0f172a', cursor: 'pointer' }}
-            onClick={function (e: any) {
-              e.stopPropagation();
-              $.setLightbox({ url: c.copertina, didascalia: c.titolo });
-            }}
-          >
-            <img
-              src={c.copertina}
-              alt=""
-              loading="lazy"
-              decoding="async"
-              style={{ width: '100%', aspectRatio: '16 / 9', maxHeight: 240, objectFit: 'contain', display: 'block' }}
-            />
-          </div>
-        )}
+        {c.copertina && (function () {
+          var copertinaCaricata = copertinaLoadedSrc === c.copertina;
+          return (
+            <div
+              style={{ width: '100%', background: '#0f172a', cursor: 'pointer', overflow: 'hidden' }}
+              onClick={function (e: any) {
+                e.stopPropagation();
+                $.setLightbox({ url: c.copertina, didascalia: c.titolo });
+              }}
+            >
+              <img
+                src={c.copertina}
+                alt=""
+                loading="lazy"
+                decoding="async"
+                onLoad={function () {
+                  setCopertinaLoadedSrc(c.copertina);
+                }}
+                onError={function () {
+                  setCopertinaLoadedSrc(c.copertina);
+                }}
+                style={{
+                  width: '100%',
+                  aspectRatio: '16 / 9',
+                  maxHeight: 240,
+                  objectFit: 'contain',
+                  display: 'block',
+                  filter: copertinaCaricata ? 'none' : 'blur(12px)',
+                  transform: copertinaCaricata ? 'none' : 'scale(1.04)',
+                  opacity: copertinaCaricata ? 1 : 0.85,
+                  transition: 'filter .35s ease, transform .35s ease, opacity .35s ease',
+                }}
+              />
+            </div>
+          );
+        })()}
 
         {/* Body */}
         <div style={{ padding: '16px 18px 10px' }}>

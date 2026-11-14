@@ -54,6 +54,12 @@ function CardItem__({ $, c, idx }: any) {
   // torna protagonista. Non usiamo l'hover per rivelarle: su tablet e con la
   // tastiera devono restare raggiungibili.
   var [azioniOpen, setAzioniOpen] = useState(false);
+  // Blur-up leggero della copertina: la miniatura (copertinaThumb, già
+  // generata) parte sfocata e si "affila" al caricamento. Niente campo nuovo:
+  // per le card vecchie senza thumb si usa l'originale, con lo stesso effetto.
+  var copertinaSrc = c.copertinaThumb || c.copertina;
+  var [copertinaLoadedSrc, setCopertinaLoadedSrc] = useState<string | null>(null);
+  var copertinaCaricata = copertinaLoadedSrc === copertinaSrc;
 
   // Badge a riposo: TIPO + al massimo UNO stato (priorità: fissata → nascosta →
   // nuova). Gli altri restano nel DOM ma si rivelano al passaggio del mouse
@@ -171,11 +177,27 @@ function CardItem__({ $, c, idx }: any) {
             >
               {
                 <img
-                  src={c.copertinaThumb || c.copertina}
+                  src={copertinaSrc}
                   alt=""
                   loading="lazy"
                   decoding="async"
-                  style={{ width: '100%', aspectRatio: '16 / 9', maxHeight: 200, objectFit: 'contain', display: 'block' }}
+                  onLoad={function () {
+                    setCopertinaLoadedSrc(copertinaSrc);
+                  }}
+                  onError={function () {
+                    setCopertinaLoadedSrc(copertinaSrc);
+                  }}
+                  style={{
+                    width: '100%',
+                    aspectRatio: '16 / 9',
+                    maxHeight: 200,
+                    objectFit: 'contain',
+                    display: 'block',
+                    filter: copertinaCaricata ? 'none' : 'blur(12px)',
+                    transform: copertinaCaricata ? 'none' : 'scale(1.04)',
+                    opacity: copertinaCaricata ? 1 : 0.85,
+                    transition: 'filter .35s ease, transform .35s ease, opacity .35s ease',
+                  }}
                 />
               }
               {c.immagini && c.immagini.length > 0 && (
