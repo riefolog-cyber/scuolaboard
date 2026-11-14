@@ -86,6 +86,30 @@ jobs:
       - name: Esegui E2E
         run: npm run test:e2e
 
+  deadcode:
+    name: Report codice morto (non bloccante)
+    runs-on: ubuntu-latest
+    needs: test
+    # Heuristica, non verdetto: i falsi positivi sono noti (vedi lo script).
+    # Non blocca mai la CI; serve solo a non perdere di vista i residui dei
+    # refactoring. Il report va in artifact per 14 giorni.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.22.1
+          cache: npm
+      - run: npm ci
+      - name: Analisi dead code (sola lettura)
+        run: npm run deadcode > dead-code-report.txt 2>&1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dead-code-report
+          path: dead-code-report.txt
+          retention-days: 14
+
   deploy-docs:
     name: Rigenera e committa docs/ (deploy Pages)
     runs-on: ubuntu-latest
