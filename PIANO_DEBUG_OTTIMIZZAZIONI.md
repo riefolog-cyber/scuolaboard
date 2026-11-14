@@ -6,6 +6,18 @@ alzate). Questo documento dice **cosa resta da fare, in che ordine e come si ver
 Non è una lista di desideri: ogni voce nasce da una misura o da un pezzo di codice
 preciso, indicato con il file.
 
+## Stato di avanzamento
+
+| Voce | Stato | Commit |
+| --- | --- | --- |
+| Quick win 4 — `content-visibility` sulle card | ✅ fatto | `e103075` |
+| Quick win 5 — font Inter variabile | ✅ fatto | `e103075` |
+| Quick win 6 — soglie coverage 78/76/75/65 | ✅ fatto | `e103075` |
+| P1-4 — diagnostica in produzione (errori + tempi di avvio) | ✅ fatto | `12451f4` |
+| P0-1 (parte) — miniatura 320 px della copertina per la griglia | ✅ fatto | `c3ef02e` |
+| P0-1 (resto) — immagini delle card in sottocollezione (come allegati) | ⏳ da fare | — (2–3 gg, richiede pubblicazione rules) |
+| P1-2, P1-3, P1-5, P0-2, P2-*, P3-* | ⏳ da fare | — |
+
 Le priorità sono quattro, non cinque:
 
 | Priorità | Significato | Regola |

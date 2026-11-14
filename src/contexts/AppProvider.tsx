@@ -996,8 +996,19 @@ function AppProvider({ children }: any) {
         usedKB += urlKB(b64);
         currentSlots++;
         if (isCover) {
+          // Miniatura leggera per la griglia: l'originale (fino a 900 KB) resta in
+          // `copertina` e si carica solo aprendo la card; la bacheca usa thumb.
+          var thumbPx = 320;
+          var thumbQ = 0.72;
+          var thumbTargetKB = 18;
+          var thumb = '';
+          try {
+            thumb = await window.compressImage(file, thumbPx, thumbPx, thumbQ, thumbTargetKB);
+          } catch (e) {
+            thumb = b64; // fallback: meglio l'originale che niente
+          }
           setForm(function (p: any) {
-            return Object.assign({}, p, { copertina: b64 });
+            return Object.assign({}, p, { copertina: b64, copertinaThumb: thumb });
           });
         } else {
           setForm(function (p: any) {

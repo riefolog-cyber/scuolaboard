@@ -115,6 +115,7 @@ export function buildEditCard(
     classiEscluse: form.classiEscluse || [],
     immagini: immagini,
     copertina: form.copertina || null,
+    copertinaThumb: form.copertinaThumb || null,
     allegati: form.allegati || [],
   });
   if (opzioni) c.opzioni = opzioni;
@@ -164,6 +165,7 @@ export function buildNewCard(opts: {
     classi: opts.form.classi,
     immagini: opts.immagini,
     copertina: opts.form.copertina || null,
+    copertinaThumb: opts.form.copertinaThumb || null,
     allegati: opts.form.allegati || [],
     annoScolastico: opts.annoScolastico,
   };
@@ -217,6 +219,7 @@ export function buildEditForm(card: any, normalizeLinks: (_c: any) => any[]): an
     immagini: card.immagini || [],
     allegati: card.allegati || [],
     copertina: card.copertina || null,
+    copertinaThumb: card.copertinaThumb || null,
   };
 }
 

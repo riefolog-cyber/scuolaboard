@@ -57,6 +57,10 @@ export var FORM0 = {
   quizTimer: 10,
   immagini: [],
   copertina: null,
+  // Miniatura della copertina per la griglia: piccola (≈320 px) e leggera, così
+  // la bacheca non scarica l'originale (fino a 900 KB) per ogni card. L'originale
+  // resta in `copertina` e si carica solo aprendo la card.
+  copertinaThumb: null,
   allegati: [],
 };
 
