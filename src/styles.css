@@ -12,7 +12,7 @@
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{transition:background-color .25s ease, color .25s ease}
-body{font-family:'Inter','Segoe UI',sans-serif;background:var(--c-bg);transition:background .25s ease, color .25s ease}
+body{font-family:'Inter Variable','Inter','Segoe UI',sans-serif;background:var(--c-bg);transition:background .25s ease, color .25s ease}
 .card-wrap, .modal-inner, .scuola-header{transition:background .25s ease, border-color .25s ease, box-shadow .25s ease, color .25s ease}
 textarea,input,select,button{font-family:inherit}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
@@ -262,6 +262,21 @@ button:focus-visible{
 }
 .card-wrap:active{
   transform:translateY(-1px) scale(1.002);
+}
+/* ── RENDERING ON-DEMAND delle card fuori viewport ── */
+/* Con classi intere la griglia può avere centinaia di card: layout, paint e
+   backdrop-filter di tutte insieme si sentono sui telefoni lenti, anche se
+   l'utente ne vede 6. `content-visibility:auto` salta il lavoro per le card
+   lontane dallo schermo; `contain-intrinsic-size:auto 340px` ricorda l'altezza
+   reale dopo il primo render (340px è solo la stima iniziale) per non far
+   ballare la scrollbar. La card ha già `overflow:hidden`, quindi la paint
+   containment non taglia nulla che non fosse già tagliato; il `@supports`
+   lascia i browser senza supporto esattamente come prima. */
+@supports (content-visibility: auto){
+  .card-wrap{
+    content-visibility:auto;
+    contain-intrinsic-size:auto 340px;
+  }
 }
 /* Badge "extra" (classi, secondo stato): a riposo nascosti, si rivelano col
    passaggio del mouse o col focus da tastiera. Sui touch restano sempre
