@@ -33,8 +33,14 @@ describe('403 del Worker AI: il toast mostra la causa (hint)', () => {
     const { db } = await renderApp({ seed, user: PROF });
     fireEvent.click(await screen.findByText('Card AI', {}));
 
-    // Avvia l'analisi AI: il 403 deve trasformarsi in un messaggio leggibile
-    fireEvent.click(await screen.findByRole('button', { name: /\+ AI/ }));
+    // Avvia l'analisi AI: il 403 deve trasformarsi in un messaggio leggibile.
+    // ⚠️ Timeout ESPLICITO e PIÙ ALTO del default (12s): questo click è anche
+    // la prima attesa che paga il caricamento pigro di CardDetail (stessa
+    // deroga documentata in ai-elimina-flows.test.tsx). Con 8 worker + coverage
+    // l'import da solo supera i 12s e il test falliva qui, non sull'assert:
+    // il budget per-test di 40s sopra non c'entra, scattava il tetto di
+    // testing-library.
+    fireEvent.click(await screen.findByRole('button', { name: /\+ AI/ }, { timeout: 30000 }));
     expect(await screen.findByText(/Origine non autorizzata/, {})).toBeTruthy();
     expect(await screen.findByText(/ALLOWED_ORIGINS/, {})).toBeTruthy();
     // Nessuna analisi salvata (la chiamata è fallita)
