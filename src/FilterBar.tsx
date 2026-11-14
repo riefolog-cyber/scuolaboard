@@ -14,13 +14,13 @@ function FilterBar__({ $: props$ }: any) {
         onClick={function () { $.setFiltroBarOpen(function (v: any) { return !v; }); }}
       >
         <span style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,.55)', letterSpacing: 0.2 }}>
-          {$.filterClasse === 'tutte' ? '🏫 FILTRA PER CLASSE' : 'CLASSE: ' + $.filterClasse}
+          {$.filterClasse === 'tutte' ? '🏫 FILTRA PER CLASSE' : '🏫 CLASSE: ' + $.filterClasse}
         </span>
         {$.filterClasse !== 'tutte' && (
           <span style={{ background: 'var(--c-primary, #6366f1)', color: '#fff', borderRadius: 20, padding: '0 5px', fontSize: 9.5, fontWeight: 800, lineHeight: '16px' }}>{$.filterClasse}</span>
         )}
         {$.filterClasse !== 'tutte' && (
-          <button onClick={function (e: any) { e.stopPropagation(); $.setFilterClasse('tutte'); }} aria-label="Rimuovi filtro classe" title="Mostra tutte" style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,.5)', cursor: 'pointer', fontSize: 11, lineHeight: 1, padding: '0 1px' }}>×</button>
+          <button onClick={function (e: any) { e.stopPropagation(); $.setFilterClasse('tutte'); }} aria-label="×" title="Mostra tutte" style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,.5)', cursor: 'pointer', fontSize: 11, lineHeight: 1, padding: '0 1px' }}>×</button>
         )}
         <span style={{ fontSize: 10, color: 'rgba(255,255,255,.35)', marginLeft: 'auto' }}>{$.filtroBarOpen ? '?' : '?'}</span>
       </div>
