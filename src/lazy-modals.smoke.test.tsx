@@ -28,6 +28,7 @@ const LAZY = [
   ['CercaModal', () => import('./modals/CercaModal.tsx'), { showCerca: false, isProf: true }],
   ['ProfiloModal', () => import('./modals/ProfiloModal.tsx'), { showProfilo: false }],
   ['TimerModal', () => import('./modals/TimerModal.tsx'), { showTimerModal: false, showCard: null }],
+  ['Diagnostica', () => import('./Diagnostica.tsx'), { isLight: false }],
 ] as const;
 
 describe('smoke test componenti lazy-loaded', () => {

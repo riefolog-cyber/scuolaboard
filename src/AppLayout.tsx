@@ -28,6 +28,10 @@ var LazyCardDetail = lazy(function () {
 var LazySommarioModal = lazy(function () {
   return import('./SommarioModal.tsx');
 });
+// Pannello di diagnostica: solo con SB_DEBUG, resta lazy per non pesare sul bundle.
+var LazyDiagnostica = lazy(function () {
+  return import('./Diagnostica.tsx');
+});
 
 function AppLayout(props: any) {
   // Consume all contexts and merge into $ for backward compatibility
@@ -796,6 +800,11 @@ function AppLayout(props: any) {
         </Suspense>
       )}
       {<Toasts $={$} />}
+      {window.SB_DEBUG && (
+        <Suspense fallback={null}>
+          <LazyDiagnostica isLight={$.isLight} />
+        </Suspense>
+      )}
     </div>
   );
 }

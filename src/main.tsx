@@ -1,6 +1,8 @@
 // ScuolaBoard - Vite Entry Point
 /// <reference types="vite/client" />
 import './globals.ts'; // window.firebase (test seam, letto dai moduli legacy all'import)
+import { avviaDiagnostica, segna } from './diagnostica.ts';
+avviaDiagnostica(); // ascoltatori globali (errori + promise non gestite), in memoria
 // Font Inter self-hosted (niente Google Fonts: zero richieste terze parti e
 // offline-friendly). @fontsource-variable include font-display:swap, come prima.
 // ── Un solo file VARIABILE per subset (peso 100–900) invece di 5 pesi statici.
@@ -46,3 +48,7 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
     });
   });
 }
+
+// Tappa "avvio": il grafo di moduli è stato valutato. Serve a misurare il costo
+// dell'import iniziale (font, firebase-init, app-state, ecc.) sul campo.
+segna('avvio');

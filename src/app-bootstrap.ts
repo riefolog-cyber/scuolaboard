@@ -17,6 +17,7 @@ import { createRoot } from 'react-dom/client';
 import { getInitialTheme, applyTheme, type Theme } from './utils/theme.ts';
 import App from './app.tsx';
 import { ErrorBoundary } from './app-utils.tsx';
+import { segna } from './diagnostica.ts';
 
 // ── Tema chiaro/scuro: applica data-theme prima del render ─────────────────
 // Legge la preferenza salvata in localStorage ('sb_theme') o, in mancanza,
@@ -53,4 +54,18 @@ import { ErrorBoundary } from './app-utils.tsx';
     const root = document.getElementById('root');
     if (root) root.textContent = '❌ Errore di avvio: ' + String((e && e.message) || e);
   }
+  // Tappa "primo-paint": doppio rAF approssima il primo paint reale del DOM.
+  // In jsdom requestAnimationFrame esiste ma non avanza i frame: il guard
+  // typeof lo rende un no-op silenzioso nei test.
+  try {
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          try {
+            segna('primo-paint');
+          } catch (e) {}
+        });
+      });
+    }
+  } catch (e) {}
 })();
