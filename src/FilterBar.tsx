@@ -216,6 +216,9 @@ function FilterBar__({ $: props$ }: any) {
                   <button
                     onClick={function (e: any) {
                       e.stopPropagation();
+                      var cardsConClasse = ($.cards || []).filter(function (c: any) {
+                        return Array.isArray(c && c.classi) && c.classi.indexOf(cl) >= 0;
+                      }).length;
                       if (
                         confirm(
                           "Eliminare la classe '" +
@@ -223,7 +226,12 @@ function FilterBar__({ $: props$ }: any) {
                             "'?\n\n" +
                             (isCustom
                               ? "La classe verrà rimossa dall'elenco."
-                              : 'La classe predefinita verrà nascosta. Puoi aggiungerla di nuovo come classe personalizzata.')
+                              : 'La classe predefinita verrà nascosta. Puoi aggiungerla di nuovo come classe personalizzata.') +
+                            (cardsConClasse > 0
+                              ? '\n\n⚠️ ATTENZIONE: questa classe ha ' +
+                                cardsConClasse +
+                                ' card associate. Se la rimuovi, le card restano nel database ma non saranno più visibili nella bacheca (finché non ricrei la classe con lo stesso nome).'
+                              : '')
                         )
                       ) {
                         $.removeClasseCustom(cl);
