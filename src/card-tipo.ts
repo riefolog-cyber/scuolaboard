@@ -146,6 +146,8 @@ export type Card = {
   immagini?: CardImmagine[];
   /** Data URL base64, o `null`. */
   copertina?: string | null;
+  /** Miniatura (≈320 px) della copertina per la griglia. */
+  copertinaThumb?: string | null;
   /** Vietato allo studente dalle rules (non possono guardare dentro un
    *  base64: l'unica difesa possibile è binaria). */
   allegati?: CardAllegato[];

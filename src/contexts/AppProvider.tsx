@@ -14,6 +14,7 @@ import useNotifiche from '../hooks/useNotifiche.ts';
 import useTheme from '../hooks/useTheme.ts';
 import useDragDrop from '../hooks/useDragDrop.ts';
 import { useAuth } from '../auth.ts';
+import { segna } from '../diagnostica.ts';
 import { leggiConsensoEntro } from '../consensi-servizio.ts';
 import { useCards } from '../cards.ts';
 import { useAI } from '../ai-services.ts';
@@ -124,6 +125,14 @@ function AppProvider({ children }: any) {
   useEffect(
     function () {
       if (window.SB) window.SB.user = user;
+      // Tappa diagnostica: primo momento in cui l'utente è davvero loggato.
+      // `segna` è idempotente (vince la prima occorrenza), quindi i re-login
+      // non sovrascrivono la tappa iniziale.
+      if (user) {
+        try {
+          segna('auth');
+        } catch (e) {}
+      }
     },
     [user]
   );
@@ -987,8 +996,19 @@ function AppProvider({ children }: any) {
         usedKB += urlKB(b64);
         currentSlots++;
         if (isCover) {
+          // Miniatura leggera per la griglia: l'originale (fino a 900 KB) resta in
+          // `copertina` e si carica solo aprendo la card; la bacheca usa thumb.
+          var thumbPx = 320;
+          var thumbQ = 0.72;
+          var thumbTargetKB = 18;
+          var thumb = '';
+          try {
+            thumb = await window.compressImage(file, thumbPx, thumbPx, thumbQ, thumbTargetKB);
+          } catch (e) {
+            thumb = b64; // fallback: meglio l'originale che niente
+          }
           setForm(function (p: any) {
-            return Object.assign({}, p, { copertina: b64 });
+            return Object.assign({}, p, { copertina: b64, copertinaThumb: thumb });
           });
         } else {
           setForm(function (p: any) {

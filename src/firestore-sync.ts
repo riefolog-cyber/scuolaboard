@@ -10,6 +10,7 @@
 // modulo (stesso db catturato all'import, chiavi globali, ecc.).
 
 import { safeDocId } from './utils/format.ts';
+import { segna } from './diagnostica.ts';
 
 // Accesso LAZY a window.db: letto al momento della sottoscrizione, non
 // all'import. Se questo modulo viene valutato prima di app-utils/firebase-init
@@ -30,6 +31,7 @@ function getDb(): any {
 // cache combinata dell'istanza che possiede questo store (createCombinedStore).
 function createCardsStore(user: any, anno: string | null, onInvalidate?: () => void) {
   var isProf = !!(user && user.role === 'prof');
+  var primoSnapshotSegnato = false;
 
   // Stato LOCALE all'istanza: due store creati con lo stesso anno/ruolo NON
   // condividono nulla — il destroy() di uno non tocca l'altro.
@@ -70,6 +72,12 @@ function createCardsStore(user: any, anno: string | null, onInvalidate?: () => v
             snapshot = a;
             loaded = true;
             errore = null;
+            if (!primoSnapshotSegnato) {
+              primoSnapshotSegnato = true;
+              try {
+                segna('primo-snapshot');
+              } catch (e) {}
+            }
             invalidate();
             fire();
           },

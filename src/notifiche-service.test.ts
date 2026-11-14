@@ -360,8 +360,9 @@ describe('diagnostica', () => {
 
   // Il rumore per-studente era 34 righe di warning per ogni card pubblicata: chi
   // leggeva la console imparava a ignorarla, e i fallimenti veri erano dentro lo
-  // stesso mucchio. Ora il successo è UNA riga sola e non è un warning.
-  it('fan-out riuscito: una sola riga in console, e non è un warn', async () => {
+  // stesso mucchio. Ora il successo tace in produzione (log solo con SB_DEBUG)
+  // e non è mai un warning.
+  it('fan-out riuscito: log solo con SB_DEBUG, e non è un warn', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const log = vi.spyOn(console, 'log').mockImplementation(() => {});
     setupWindow(fakeDb(STUDENTI, {}));
@@ -371,10 +372,24 @@ describe('diagnostica', () => {
     // Non tutti i studenti del seed sono della classe 3AI: conta quelli avvisati.
     expect(esito.avvisati).toBeGreaterThan(0);
     expect(esito.avvisati).toBe(esito.totale);
+    // Senza SB_DEBUG la console di produzione resta pulita.
     const righe = log.mock.calls.filter((c) => String(c[0]).indexOf('[notifiche] fan-out') >= 0);
-    expect(righe).toHaveLength(1);
-    // La riga riporta il conteggio per card (n/N), che è l'informazione utile.
-    expect(String(righe[0][3])).toBe(esito.avvisati + '/' + esito.totale);
+    expect(righe).toHaveLength(0);
+
+    // Con SB_DEBUG la riga diagnostica torna, con il conteggio per card (n/N).
+    (window as any).SB_DEBUG = true;
+    log.mockClear();
+    const esitoDebug = await notifyClasse({
+      classi: ['3AI'],
+      annoScolastico: '2026/2027',
+      cardId: 'c9',
+      titolo: 'X',
+      msg: 'Y',
+    });
+    const righeDebug = log.mock.calls.filter((c) => String(c[0]).indexOf('[notifiche] fan-out') >= 0);
+    expect(righeDebug).toHaveLength(1);
+    expect(String(righeDebug[0][3])).toBe(esitoDebug.avvisati + '/' + esitoDebug.totale);
+    delete (window as any).SB_DEBUG;
     // Nessun warning di successo: un invio riuscito non è un problema.
     expect(warn.mock.calls.some((c) => String(c[0]).indexOf('push ok') >= 0)).toBe(false);
     warn.mockRestore();

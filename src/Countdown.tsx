@@ -1,15 +1,99 @@
 // Countdown.tsx · ScuolaBoard · countdown "leggero" per le scadenze delle card.
-// Ogni istanza possiede il PROPRIO interval: aggiorna solo se stessa, senza
-// ri-renderizzare l'intera app a ogni tick (prima il tick viveva in cards.ts e
-// forzava il re-render di tutti i consumatori del CardsContext).
+//
+// ── Perché un ticker CONDIVISO ─────────────────────────────────────────────
+// Prima ogni istanza di Countdown possedeva il PROPRIO setInterval (1s sotto
+// le 24h, 60s oltre). Con una bacheca di 30 card in scadenza erano 30 timer
+// che svegliavano 30 componenti ogni secondo, anche a scheda in background —
+// il motivo per cui il tick di 1s non ri-renderizzava più l'intera app, ma il
+// costo per-componente restava. Ora c'è UN solo timer per tutta la pagina: le
+// istanze si iscrivono, ricevono il timestamp corrente a ogni tick, e il
+// timer si spegne quando nessuno ascolta. Il vincolo originale (non
+// ri-renderizzare l'app intera) resta: il tick aggiorna solo i componenti
+// iscritti.
+//
+// ── Ritmo ──────────────────────────────────────────────────────────────────
+// Il ritmo più veloce richiesto da una qualsiasi scadenza attiva: 1s se almeno
+// una è sotto le 24h, 60s se sono tutte più lontane, spento se non ce ne sono.
+// Quando il ritmo cambia (una scadenza entra sotto le 24h, o l'ultima attiva
+// scade) il timer viene riavviato alla nuova cadenza.
 
 import { useState, useEffect } from 'react';
 
-// Hook: ritorna il timestamp corrente, aggiornato dal timer locale.
-// - scadenza null/undefined → nessun timer (valore statico)
-// - già scaduta → nessun timer (mostra "Scaduta")
-// - oltre 24h → tick ogni 60s (il formato "Xg Yh" cambia al più una volta/ora)
-// - sotto le 24h → tick ogni 1s
+// ── Ticker condiviso ───────────────────────────────────────────────────────
+// `scadenzaCount`: quante istanze usano ciascuna scadenza (reference counting,
+// così due card con la stessa scadenza non si spengono a vicenda).
+var scadenzaCount = new Map();
+// `listeners`: callback da notificare a ogni tick (ricevono Date.now()).
+var listeners = new Set();
+var timer: any = null;
+var intervalMs = 0;
+
+function hasActive(): boolean {
+  var now = Date.now();
+  for (var s of scadenzaCount.keys()) {
+    if (Number(s) - now > 0) return true;
+  }
+  return false;
+}
+
+function hasUnder24h(): boolean {
+  var now = Date.now();
+  for (var s of scadenzaCount.keys()) {
+    var r = Number(s) - now;
+    if (r > 0 && r < 86400000) return true;
+  }
+  return false;
+}
+
+function computeInterval(): number {
+  if (!hasActive()) return 0;
+  return hasUnder24h() ? 1000 : 60000;
+}
+
+function restartTimer(ms: number) {
+  if (timer) {
+    clearInterval(timer);
+    timer = null;
+  }
+  intervalMs = ms;
+  if (ms > 0) {
+    timer = setInterval(function () {
+      var now = Date.now();
+      listeners.forEach(function (cb: any) {
+        try {
+          cb(now);
+        } catch (e) {}
+      });
+      // Il ritmo può essere cambiato (es. una scadenza è entrata sotto le 24h):
+      // ricalcolo e, se serve, riavvio.
+      var next = computeInterval();
+      if (next !== intervalMs || (!timer && next > 0)) {
+        restartTimer(next);
+      }
+    }, ms);
+  }
+}
+
+function recompute() {
+  var next = computeInterval();
+  if (next !== intervalMs || (!timer && next > 0)) {
+    restartTimer(next);
+  }
+}
+
+function register(scadenzaMs: number) {
+  scadenzaCount.set(scadenzaMs, (scadenzaCount.get(scadenzaMs) || 0) + 1);
+  recompute();
+}
+
+function unregister(scadenzaMs: number) {
+  var c = (scadenzaCount.get(scadenzaMs) || 0) - 1;
+  if (c <= 0) scadenzaCount.delete(scadenzaMs);
+  else scadenzaCount.set(scadenzaMs, c);
+  recompute();
+}
+
+// ── Hook ───────────────────────────────────────────────────────────────────
 export function useCountdown(scadenza: any): number {
   var [now, setNow] = useState(function () {
     return Date.now();
@@ -17,14 +101,19 @@ export function useCountdown(scadenza: any): number {
   useEffect(
     function () {
       if (!scadenza) return;
-      var ms = new Date(scadenza).getTime() - Date.now();
-      if (ms <= 0) return;
-      var delay = ms > 86400000 ? 60000 : 1000;
-      var t = setInterval(function () {
-        setNow(Date.now());
-      }, delay);
+      var scadMs = new Date(scadenza).getTime();
+      var ms = scadMs - Date.now();
+      if (ms <= 0) return; // già scaduta: nessun timer, stato statico
+      register(scadMs);
+      var cb = function (n: number) {
+        setNow(n);
+      };
+      listeners.add(cb);
+      // Primo valore aggiornato subito, senza aspettare il primo tick.
+      setNow(Date.now());
       return function () {
-        clearInterval(t);
+        listeners.delete(cb);
+        unregister(scadMs);
       };
     },
     [scadenza]
@@ -32,7 +121,7 @@ export function useCountdown(scadenza: any): number {
   return now;
 }
 
-// Formatta il countdown (stessa logica del vecchio inline in CardItem/CardDetail).
+// ── Formattazione (invariata) ──────────────────────────────────────────────
 export function countdownStr(scadenza: any, now: number): { str: string; expired: boolean } {
   var ms = new Date(scadenza).getTime() - now;
   var expired = ms <= 0;
@@ -52,11 +141,6 @@ export function countdownStr(scadenza: any, now: number): { str: string; expired
   return { str: str, expired: expired };
 }
 
-// Badge countdown usato nelle card della griglia (ri-render SOLO di se stesso).
-// Urgenza a tre livelli: scaduta o imminente (< 1h) → rosso (pulsante se già
-// scaduta), sotto le 24h → ambra, oltre → neutro. Prima tutto era ambra tranne
-// "Scaduta": una consegna che scade tra 10 minuti non si distingueva da una che
-// scade tra 3 giorni.
 export default function Countdown({ scadenza }: any) {
   var now = useCountdown(scadenza);
   var fmt = countdownStr(scadenza, now);

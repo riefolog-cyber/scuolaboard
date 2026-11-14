@@ -87,6 +87,16 @@ describe('chiamaAI: rami di errore', () => {
     await expect(window.SB.callGroqText(null, 'prompt')).rejects.toThrow(/non disponibile/);
   });
 
+  it('timeout del Worker -> messaggio dedicato (non un errore di login)', async () => {
+    authMock();
+    // AbortSignal.timeout rifiuta con name 'TimeoutError': il catch di chiamaAI
+    // deve riconoscerlo, altrimenti direbbe "Verifica di essere loggato" e
+    // manderebbe l'utente a cercare il problema sbagliato.
+    const timeoutErr = Object.assign(new Error('The operation timed out'), { name: 'TimeoutError' });
+    window.fetch = vi.fn().mockRejectedValue(timeoutErr);
+    await expect(window.SB.callGroqText(null, 'prompt')).rejects.toThrow(/non ha risposto in tempo/);
+  });
+
   it('risposta non-JSON → errore esplicito con status', async () => {
     authMock();
     window.fetch = vi.fn().mockResolvedValue({

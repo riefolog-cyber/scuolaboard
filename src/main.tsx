@@ -1,32 +1,21 @@
 // ScuolaBoard - Vite Entry Point
 /// <reference types="vite/client" />
 import './globals.ts'; // window.firebase (test seam, letto dai moduli legacy all'import)
+import { avviaDiagnostica, segna } from './diagnostica.ts';
+avviaDiagnostica(); // ascoltatori globali (errori + promise non gestite), in memoria
 // Font Inter self-hosted (niente Google Fonts: zero richieste terze parti e
-// offline-friendly). @fontsource include font-display:swap, come prima.
-// ── Solo i subset latin e latin-ext, e solo i pesi REALMENTE usati.
-// Prima si importava `@fontsource/inter/<peso>.css`, che dichiara TUTTI i subset
-// (latin, latin-ext, cyrillic, cyrillic-ext, greek, greek-ext, vietnamese):
-// 42 @font-face e 84 file di font finivano in docs/ per un'app italiana. Il
-// browser non li scaricava (unicode-range li esclude), quindi il guadagno per
-// l'utente era ~0: era solo peso del repository. Ora si dichiarano i subset che
-// servono e nient'altro.
+// offline-friendly). @fontsource-variable include font-display:swap, come prima.
+// ── Un solo file VARIABILE per subset (peso 100–900) invece di 5 pesi statici.
+// Prima si importavano 10 CSS (400/600/700/800/900 × latin/latin-ext): 20 file
+// woff2+woff in docs/ e ~295 KB di woff2 scaricati. La versione variabile
+// dichiara 7 subset (latin, latin-ext, cyrillic, cyrillic-ext, greek, greek-ext,
+// vietnamese) ma il browser ne scarica solo 2 (~133 KB) grazie a unicode-range;
+// in docs/ finiscono 7 woff2 (~213 KB) invece di 20 file tra woff e woff2.
+// Il peso 500 torna disponibile senza costo: è l'asse variabile continuo.
 // · PERCHÉ si tiene latin-ext: i nomi degli studenti e i testi delle card
 //   arrivano da Firestore e possono contenere caratteri fuori dal latino base
-//   (ł, š, ř, ă…). Toglierlo mostrerebbe quadratini. Costa 0 byte finché quei
-//   caratteri non compaiono (è lo stesso meccanismo unicode-range di prima).
-// · PERCHÉ il peso 500 è stato tolto: `font-weight: 500` non compare da nessuna
-//   parte nel codice (styles.css né inline nei .tsx). 900 invece resta: compare
-//   17 volte come fontWeight inline.
-import '@fontsource/inter/latin-400.css';
-import '@fontsource/inter/latin-ext-400.css';
-import '@fontsource/inter/latin-600.css';
-import '@fontsource/inter/latin-ext-600.css';
-import '@fontsource/inter/latin-700.css';
-import '@fontsource/inter/latin-ext-700.css';
-import '@fontsource/inter/latin-800.css';
-import '@fontsource/inter/latin-ext-800.css';
-import '@fontsource/inter/latin-900.css';
-import '@fontsource/inter/latin-ext-900.css';
+//   (ł, š, ř, ă…). Toglierlo mostrerebbe quadratini.
+import '@fontsource-variable/inter/wght.css';
 import './styles.css'; // Global styles
 
 // Setup dell'ambiente legacy in ordine di dipendenza: alcuni moduli leggono i
@@ -59,3 +48,7 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
     });
   });
 }
+
+// Tappa "avvio": il grafo di moduli è stato valutato. Serve a misurare il costo
+// dell'import iniziale (font, firebase-init, app-state, ecc.) sul campo.
+segna('avvio');

@@ -57,6 +57,23 @@ function cacheInvalidate() {
 
 var _lastAiCall = 0;
 var AI_THROTTLE_MS = 5000; // 5 secondi tra chiamate
+// Timeout della singola richiesta al Worker. Senza, un Worker che non risponde
+// (o una rete che si blocca a metà) lascia il pannello AI in attesa per sempre:
+// nessun errore, solo lo spinner. 45s coprono una generazione lenta e restano
+// sotto il timeout del Worker; allo scadere mostriamo un messaggio azionabile.
+var AI_TIMEOUT_MS = 45000;
+
+// AbortSignal.timeout non esiste in alcune versioni di jsdom/Safari vecchi:
+// se manca restituiamo undefined (fetch senza timeout) invece di far fallire
+// la chiamata con un TypeError.
+function timeoutSignal(ms: number): AbortSignal | undefined {
+  try {
+    if (typeof AbortSignal !== 'undefined' && typeof (AbortSignal as any).timeout === 'function') {
+      return (AbortSignal as any).timeout(ms);
+    }
+  } catch (e) {}
+  return undefined;
+}
 
 /**
  * Unica funzione di comunicazione con l'AI.
@@ -123,6 +140,9 @@ async function chiamaAI(type: any, content: any, options: any) {
         Authorization: 'Bearer ' + idToken,
       },
       body: body,
+      // Il timeout vale per OGNI tentativo (401 compreso): un refresh del token
+      // che si blocca non deve poter appendere la UI all'infinito.
+      signal: timeoutSignal(AI_TIMEOUT_MS),
     });
   }
 
@@ -149,6 +169,14 @@ async function chiamaAI(type: any, content: any, options: any) {
       }
     }
   } catch (e: any) {
+    // Un timeout/abort non è un problema di autenticazione: dire "verifica di
+    // essere loggato" manderebbe l'utente a caccia del problema sbagliato.
+    // AbortSignal.timeout rifiuta con name 'TimeoutError'; un abort manuale con
+    // 'AbortError'. Entrambi significano "il Worker non ha risposto in tempo".
+    if (e && (e.name === 'AbortError' || e.name === 'TimeoutError')) {
+      aiLog('[ScuolaBoard] timeout richiesta AI', e);
+      throw new Error('La richiesta AI non ha risposto in tempo. Controlla la connessione e riprova.');
+    }
     aiLog('[ScuolaBoard] Impossibile autenticare la richiesta AI', e);
     throw new Error('Impossibile autenticare la richiesta. Verifica di essere loggato e riprova.');
   }

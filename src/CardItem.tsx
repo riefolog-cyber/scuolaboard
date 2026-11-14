@@ -171,7 +171,7 @@ function CardItem__({ $, c, idx }: any) {
             >
               {
                 <img
-                  src={c.copertina}
+                  src={c.copertinaThumb || c.copertina}
                   alt=""
                   loading="lazy"
                   decoding="async"

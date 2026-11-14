@@ -203,7 +203,10 @@ async function notifyClasse(opts: {
       // Diagnostica: senza questo, un invio a metà sarebbe indistinguibile da
       // "classe senza studenti" mentre si guarda la console.
       console.warn('[notifiche] fan-out incompleto', opts.cardId, avvisati + '/' + destinatari.length);
-    } else if (destinatari.length) {
+    } else if (destinatari.length && (typeof window !== 'undefined' && (window as any).SB_DEBUG)) {
+      // Solo con SB_DEBUG: era un log di diagnostica sempre attivo e in
+      // produzione sporcava la console a ogni pubblicazione riuscita (senza
+      // alcun valore per l'utente). I warn restano sempre visibili.
       console.log('[notifiche] fan-out', opts.cardId, tipo, avvisati + '/' + destinatari.length);
     }
     return { ok: ok, avvisati: avvisati, totale: destinatari.length, mancanti: mancanti };

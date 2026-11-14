@@ -493,7 +493,7 @@ function NuovaCardModal(props: any) {
                           aria-label="Rimuovi copertina"
                           onClick={function () {
                             setForm(function (p: any) {
-                              return Object.assign({}, p, { copertina: null });
+                              return Object.assign({}, p, { copertina: null, copertinaThumb: null });
                             });
                           }}
                           style={{
