@@ -61,17 +61,18 @@ function LoginScreen__({ $ }: any) {
       }
       {
         <div
+          className="login-card"
           style={{
-            background: 'rgba(255,255,255,.05)',
+            background: 'linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04))',
             backdropFilter: 'blur(24px)',
             WebkitBackdropFilter: 'blur(24px)',
-            border: '1px solid rgba(255,255,255,.12)',
-            borderRadius: 28,
-            padding: '40px 36px',
+            border: '1px solid rgba(255,255,255,.14)',
+            borderRadius: 30,
+            padding: '42px 36px',
             width: '100%',
-            maxWidth: 420,
+            maxWidth: 430,
             textAlign: 'center',
-            boxShadow: '0 32px 80px rgba(0,0,0,.4)',
+            boxShadow: '0 36px 90px rgba(0,0,0,.42), 0 0 0 1px rgba(255,255,255,.04) inset',
             position: 'relative',
           }}
         >
@@ -134,6 +135,7 @@ function LoginScreen__({ $ }: any) {
           }
           {
             <button
+              className="login-google-btn"
               onClick={$.loginGoogle}
               style={{
                 padding: '14px 20px',
@@ -142,15 +144,15 @@ function LoginScreen__({ $ }: any) {
                 borderRadius: 14,
                 cursor: 'pointer',
                 fontSize: 15,
-                fontWeight: 700,
-                color: '#1a1a2e',
+                fontWeight: 800,
+                color: '#0f172a',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 10,
                 width: '100%',
-                boxShadow: '0 4px 20px rgba(0,0,0,.3)',
-                transition: 'transform .15s,box-shadow .15s',
+                boxShadow: '0 10px 28px rgba(0,0,0,.28), 0 0 0 1px rgba(15,23,42,.04) inset',
+                transition: 'transform .16s ease, box-shadow .16s ease, filter .16s ease',
               }}
             >
               {
@@ -158,7 +160,7 @@ function LoginScreen__({ $ }: any) {
                   src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
                   width={20}
                   height={20}
-                  alt="G"
+                  alt=""
                 />
               }
               Accedi con Google
@@ -168,15 +170,16 @@ function LoginScreen__({ $ }: any) {
             <div
               role="alert"
               style={{
-                marginTop: 14,
-                background: 'rgba(239,68,68,.12)',
-                border: '1px solid rgba(239,68,68,.4)',
-                borderRadius: 12,
-                padding: '10px 14px',
-                color: '#fca5a5',
+                marginTop: 16,
+                background: 'rgba(239,68,68,.14)',
+                border: '1px solid rgba(248,113,113,.45)',
+                borderRadius: 14,
+                padding: '12px 14px',
+                color: '#fecaca',
                 fontSize: 13,
                 fontWeight: 600,
-                lineHeight: 1.5,
+                lineHeight: 1.55,
+                textAlign: 'left',
               }}
             >
               {'⚠️ ' + $.authErr}

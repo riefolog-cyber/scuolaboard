@@ -76,11 +76,15 @@ describe('css: il tema chiaro copre tutti i token di colore', () => {
 
   it('ogni token di colore ha un solo proprietario (due definizioni sono una regola che vale per ordine)', () => {
     // Un token definito due volte con valori diversi vale nell'ordine di
-    // lettura del file: fragile e non intuibile.
+    // lettura del file: fragile e non intuibile. Oltre a `:root` (scuro) e al
+    // tema chiaro sono legittime le varianti intenzionali di alto contrasto
+    // (`.high-contrast`), che sovrascrivono il token per quello stato.
     for (const nome of colori) {
       const padroni = new Set(definitaIn(nome, CSS));
-      // `:root` (scuro) e il tema chiaro sono i due proprietari legittimi.
-      expect(padroni.size, `"${nome}" definito in ${padroni.size} posti: ${[...padroni].join(' | ')}`).toBeLessThanOrEqual(2);
+      const anomali = [...padroni].filter(
+        (p) => p !== ':root' && p !== SELETTORE_TEMA_CHIARO && !p.includes('high-contrast')
+      );
+      expect(anomali, `"${nome}" ha proprietari inattesi: ${anomali.join(' | ')} (tutti: ${[...padroni].join(' | ')})`).toEqual([]);
     }
   });
 });

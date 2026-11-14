@@ -398,12 +398,14 @@ function Header__({ $ }: any) {
               <div
                 style={{
                   textAlign: 'center',
-                  padding: 20,
-                  color: isLight ? '#64748b' : 'rgba(255,255,255,.4)',
+                  padding: '18px 14px',
+                  color: isLight ? '#64748b' : 'rgba(255,255,255,.45)',
                   fontSize: 12,
+                  lineHeight: 1.5,
                 }}
               >
-                Nessuna notifica
+                <div style={{ fontWeight: 700, marginBottom: 4, color: isLight ? '#334155' : 'rgba(255,255,255,.7)' }}>Nessuna notifica</div>
+                <div>Quando ci saranno novità su card, commenti o avvisi le vedrai qui.</div>
               </div>
             )}
             {($.notifiche || [])

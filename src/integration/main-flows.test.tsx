@@ -343,7 +343,7 @@ describe('Bozza nuova card (autosave)', () => {
     expect(await screen.findByDisplayValue('Bozza in corso', {})).toBeTruthy();
     expect(screen.getByDisplayValue('contenuto bozza')).toBeTruthy();
     // Chip di bozza attiva + possibilità di scartarla
-    expect(screen.getByText('📋 Bozza ripristinata')).toBeTruthy();
+    expect(screen.getByText('📋 Bozza attiva')).toBeTruthy();
   });
 
   it('scarta bozza: elimina la bozza e azzera il form', async () => {
@@ -357,7 +357,7 @@ describe('Bozza nuova card (autosave)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Scarta bozza' }));
     expect(readDraft()).toBeNull();
     expect(screen.queryByDisplayValue('Bozza vecchia')).toBeNull();
-    expect(screen.queryByText('📋 Bozza ripristinata')).toBeNull();
+    expect(screen.queryByText('📋 Bozza attiva')).toBeNull();
   });
 
   it('dopo aver pubblicato la card la bozza viene eliminata', async () => {

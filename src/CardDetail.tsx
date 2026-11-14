@@ -1,5 +1,5 @@
 // CardDetail.jsx · ScuolaBoard
-import { useContext, useEffect, useState } from 'react';
+import { useContext, useEffect, useRef, useState } from 'react';
 import { normalizeLinks } from './app-utils.tsx';
 import { sbSafeUrl } from './utils/format.ts';
 import { allegatoIcona, allegatoNome, isHtmlAllegato, urlAllegatoSicuro } from './allegati.ts';
@@ -7,6 +7,7 @@ import { caricaAllegati } from './allegati-card-servizio.ts';
 import BadgeAi from './BadgeAi.tsx';
 import FormContext from './contexts/FormContext.tsx';
 import { useCountdown, countdownStr } from './Countdown.tsx';
+import { temaTipo, etichettaTipo } from './card-tipo-tema.ts';
 
 import QuizPanel from './carddetail/QuizPanel.tsx';
 import AIPanel from './carddetail/AIPanel.tsx';
@@ -28,6 +29,8 @@ function CardDetail__({ $: props$ }: any) {
   // Allegato HTML in anteprima: stato locale del pannello (non nel FormContext),
   // perché non deve sopravvivire alla chiusura della card.
   var [htmlPreview, setHtmlPreview] = useState<any>(null);
+  var [activeSection, setActiveSection] = useState('cd-testo');
+  var scrollRef = useRef<any>(null);
   // Le consegne di questo studente sugli allegati già finiti. Servono solo per
   // decidere che cosa è ancora riapribile, quindi si leggono una volta sola
   // all'apertura della card e non seguono i cambi di card.
@@ -127,6 +130,7 @@ function CardDetail__({ $: props$ }: any) {
   }, [$.user && $.user.uid]);
   if (!c) return null;
   var isLight = !!$.isLight;
+  var tema = temaTipo(c.tipo);
   var totV = c.opzioni
     ? c.opzioni.reduce(function (a: any, o: any) {
         return a + (o.voti || []).length;
@@ -166,21 +170,34 @@ function CardDetail__({ $: props$ }: any) {
       }}
     >
       <div
+        ref={scrollRef}
         className="modal-inner"
         role="dialog"
         aria-modal="true"
         aria-label={'Dettaglio card: ' + (c.titolo || '')}
         style={{
-          background: isLight ? '#ffffff' : 'rgba(15,23,42,.96)',
+          background: isLight ? 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)' : 'linear-gradient(180deg, rgba(15,23,42,.98) 0%, rgba(15,23,42,.94) 100%)',
           backdropFilter: 'blur(24px)',
           WebkitBackdropFilter: 'blur(24px)',
           border: isLight ? '1px solid rgba(15,23,42,.10)' : '1px solid rgba(255,255,255,.11)',
-          borderRadius: '20px 20px 0 0',
-          boxShadow: isLight ? '0 -8px 40px rgba(15,23,42,.12)' : '0 -8px 60px rgba(0,0,0,.6)',
+          borderRadius: '22px 22px 0 0',
+          boxShadow: isLight ? '0 -10px 50px rgba(15,23,42,.14)' : '0 -10px 70px rgba(0,0,0,.65)',
           width: '100%',
-          maxWidth: 560,
-          maxHeight: '92vh',
+          maxWidth: 760,
+          maxHeight: '94vh',
           overflow: 'auto',
+        }}
+        onScroll={function () {
+          var root = scrollRef.current;
+          if (!root) return;
+          var ids = ['cd-testo', 'cd-allegati', 'cd-interattivo', 'cd-commenti'];
+          var current = activeSection;
+          var top = root.scrollTop + 120;
+          for (var i = 0; i < ids.length; i++) {
+            var el = root.querySelector('#' + ids[i]);
+            if (el && (el as any).offsetTop <= top) current = ids[i];
+          }
+          if (current !== activeSection) setActiveSection(current);
         }}
         onClick={function (e: any) {
           e.stopPropagation();
@@ -240,7 +257,8 @@ function CardDetail__({ $: props$ }: any) {
           var copertinaCaricata = copertinaLoadedSrc === c.copertina;
           return (
             <div
-              style={{ width: '100%', background: '#0f172a', cursor: 'pointer', overflow: 'hidden' }}
+              className="card-detail-hero"
+              style={{ width: '100%', background: isLight ? '#cbd5e1' : '#0b1220', cursor: 'pointer', overflow: 'hidden', position: 'relative', maxHeight: 340 }}
               onClick={function (e: any) {
                 e.stopPropagation();
                 $.setLightbox({ url: c.copertina, didascalia: c.titolo });
@@ -260,36 +278,40 @@ function CardDetail__({ $: props$ }: any) {
                 style={{
                   width: '100%',
                   aspectRatio: '16 / 9',
-                  maxHeight: 240,
-                  objectFit: 'contain',
+                  maxHeight: 340,
+                  objectFit: 'cover',
                   display: 'block',
-                  filter: copertinaCaricata ? 'none' : 'blur(12px)',
-                  transform: copertinaCaricata ? 'none' : 'scale(1.04)',
-                  opacity: copertinaCaricata ? 1 : 0.85,
-                  transition: 'filter .35s ease, transform .35s ease, opacity .35s ease',
+                  filter: copertinaCaricata ? 'saturate(1.03)' : 'blur(14px) saturate(.9)',
+                  transform: copertinaCaricata ? 'scale(1)' : 'scale(1.05)',
+                  opacity: copertinaCaricata ? 1 : 0.86,
+                  transition: 'filter .4s ease, transform .4s ease, opacity .4s ease',
                 }}
               />
+              <div style={{ position: 'absolute', left: 16, bottom: 14, zIndex: 2, display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderRadius: 999, background: 'rgba(15,23,42,.48)', border: '1px solid rgba(255,255,255,.18)', color: '#fff', backdropFilter: 'blur(8px)', fontWeight: 800, fontSize: 12 }}>
+                <span>{tema.icon}</span><span>{etichettaTipo(c.tipo)}</span>
+              </div>
             </div>
           );
         })()}
 
         {/* Body */}
-        <div style={{ padding: '16px 18px 10px' }}>
+        <div className="card-detail-reading" style={{ padding: '22px 24px 18px' }}>
           {/* Type badge + classi */}
-          <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginBottom: 12 }}>
             <span
               style={{
-                background: $.badgeBg(c.tipo),
+                background: tema.color,
                 color: '#fff',
-                borderRadius: 7,
-                padding: '3px 9px',
+                borderRadius: 9,
+                padding: '5px 11px',
                 fontSize: 11,
                 fontWeight: 800,
-                letterSpacing: 0.5,
-                boxShadow: '0 2px 8px ' + $.badgeBg(c.tipo) + '55',
+                letterSpacing: 0.6,
+                boxShadow: '0 6px 16px ' + tema.glow,
+                border: '1px solid rgba(255,255,255,.14)',
               }}
             >
-              {$.tipoIcon(c.tipo) + ' ' + (c.tipo || '').toUpperCase()}
+              {tema.icon + ' ' + etichettaTipo(c.tipo)}
             </span>
             {$.isProf && cc.indexOf('TUTTE') < 0 && cc.length > 0 && (
               <span
@@ -334,32 +356,39 @@ function CardDetail__({ $: props$ }: any) {
 
           {/* Title */}
           <h2
+            className="card-detail-title"
             style={{
-              margin: '0 0 8px',
-              fontWeight: 800,
-              fontSize: 17,
-              color: isLight ? '#0f172a' : '#f1f5f9',
-              lineHeight: 1.35,
-              letterSpacing: 0.1,
+              margin: '0 0 10px',
+              fontWeight: 900,
+              fontSize: 28,
+              color: isLight ? '#0f172a' : '#f8fafc',
+              lineHeight: 1.18,
+              letterSpacing: 0.02,
             }}
           >
             {c.titolo}
           </h2>
 
           {/* Autor */}
-          <div style={{ fontSize: 11, color: isLight ? '#64748b' : 'rgba(255,255,255,.4)', marginBottom: 10 }}>
-            di <strong style={{ color: isLight ? '#0f172a' : 'rgba(255,255,255,.7)' }}>{c.autore || 'Prof'}</strong> ·{' '}
+          <div style={{ fontSize: 12, color: isLight ? '#64748b' : 'rgba(255,255,255,.48)', marginBottom: 14 }}>
+            di <strong style={{ color: isLight ? '#0f172a' : 'rgba(255,255,255,.78)', fontWeight: 700 }}>{c.autore || 'Prof'}</strong> ·{' '}
             {$.timeAgo(c.data)}
           </div>
+          <nav className="detail-nav" aria-label="Sezioni card">
+            {c.testo ? <button type="button" className={activeSection === 'cd-testo' ? 'active' : ''} onClick={function(){ var r=scrollRef.current; var el=r && r.querySelector('#cd-testo'); if(el) el.scrollIntoView({behavior:'smooth', block:'start'}); }}>Contenuto</button> : null}
+            {c.allegati && c.allegati.length ? <button type="button" className={activeSection === 'cd-allegati' ? 'active' : ''} onClick={function(){ var r=scrollRef.current; var el=r && r.querySelector('#cd-allegati'); if(el) el.scrollIntoView({behavior:'smooth', block:'start'}); }}>Allegati</button> : null}
+            {(c.tipo === 'sondaggio' || c.tipo === 'quiz' || (c.quizDomande && c.quizDomande.length)) ? <button type="button" className={activeSection === 'cd-interattivo' ? 'active' : ''} onClick={function(){ var r=scrollRef.current; var el=r && r.querySelector('#cd-interattivo'); if(el) el.scrollIntoView({behavior:'smooth', block:'start'}); }}>Attività</button> : null}
+            <button type="button" className={activeSection === 'cd-commenti' ? 'active' : ''} onClick={function(){ var r=scrollRef.current; var el=r && r.querySelector('#cd-commenti'); if(el) el.scrollIntoView({behavior:'smooth', block:'start'}); }}>Commenti</button>
+          </nav>
 
           {/* Testo */}
           {c.testo && (
             <div
+              id="cd-testo"
+              className="card-detail-bodytext cd-section"
               style={{
-                fontSize: 13,
-                color: isLight ? '#1e293b' : 'rgba(255,255,255,.78)',
-                lineHeight: 1.7,
-                marginBottom: 14,
+                color: isLight ? '#334155' : 'rgba(255,255,255,.86)',
+                marginBottom: 20,
                 whiteSpace: 'pre-wrap',
               }}
             >
@@ -369,7 +398,7 @@ function CardDetail__({ $: props$ }: any) {
 
           {/* Images gallery */}
           {c.immagini && c.immagini.length > 0 && (
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 18 }}>
               {c.immagini.map(function (img: any, i: any) {
                 // Le immagini galleria sono oggetti { id, url, didascalia } (con
                 // retro-compatibilità per vecchie card con url stringa).
@@ -424,14 +453,14 @@ function CardDetail__({ $: props$ }: any) {
 
           {/* File attachments */}
           {c.allegati && c.allegati.length > 0 && (
-            <div style={{ marginBottom: 14 }}>
+            <div id="cd-allegati" className="cd-section" style={{ marginBottom: 16 }}>
               <div
                 style={{
                   fontSize: 11,
-                  fontWeight: 700,
-                  color: 'rgba(255,255,255,.5)',
-                  marginBottom: 6,
-                  letterSpacing: 1,
+                  fontWeight: 800,
+                  color: isLight ? '#475569' : 'rgba(255,255,255,.62)',
+                  marginBottom: 8,
+                  letterSpacing: 1.2,
                 }}
               >
                 📎 ALLEGATI
@@ -566,7 +595,8 @@ if (isHtmlAllegato(al)) {
 
           {/* Links */}
           {cardLinks.length > 0 && (
-            <div style={{ marginBottom: 14 }}>
+            <div className="cd-section" style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: isLight ? '#475569' : 'rgba(255,255,255,.62)', marginBottom: 8, letterSpacing: 1.2 }}>🔗 LINK</div>
               {cardLinks.map(function (link: any, i: any) {
                 // Allowlist URL: senza questo, `javascript:` finiva in un href e il
                 // click del docente eseguiva codice con la sua sessione aperta. Il
@@ -585,9 +615,10 @@ if (isHtmlAllegato(al)) {
                     style={{
                       display: 'block',
                       color: '#60a5fa',
-                      fontSize: 12,
-                      marginBottom: 3,
+                      fontSize: 13,
+                      marginBottom: 6,
                       wordBreak: 'break-all',
+                      fontWeight: 600,
                     }}
                   >
                     {'🔗 ' + (link.label || link.url)}
@@ -643,16 +674,17 @@ if (isHtmlAllegato(al)) {
               );
             })()}
 
+          <div id="cd-interattivo">
           {/* Sondaggio */}
           {c.tipo === 'sondaggio' && c.opzioni && (
-            <div style={{ marginBottom: 14 }}>
+            <div className="cd-section" style={{ marginBottom: 16 }}>
               <div
                 style={{
                   fontSize: 11,
                   fontWeight: 800,
-                  color: 'rgba(255,255,255,.5)',
-                  letterSpacing: 1,
-                  marginBottom: 8,
+                  color: isLight ? '#475569' : 'rgba(255,255,255,.62)',
+                  letterSpacing: 1.2,
+                  marginBottom: 10,
                 }}
               >
                 🗳️ SONDAGGIO · {totV} voti
@@ -715,6 +747,7 @@ if (isHtmlAllegato(al)) {
 
           {/* Quiz */}
           <QuizPanel $={$} c={c} />
+          </div>
 
           {/* AI Analysis Panel */}
           <AIPanel $={$} c={c} />
@@ -864,9 +897,12 @@ if (isHtmlAllegato(al)) {
         </div>
 
         {/* Comments section */}
-        <CommentsSection $={$} c={c} />
-
-        {/* Rifiuta proposta modal */}
+        <div id="cd-commenti"><CommentsSection $={$} c={c} /></div>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={function () { if (scrollRef.current) scrollRef.current.scrollTo({ top: 0, behavior: "smooth" }); }}>? Torna su</button>
+        </div>
+
+        {/* Rifiuta proposta modal */}
         <RifiutaModal $={$} c={c} />
       </div>
     </div>

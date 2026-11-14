@@ -3,6 +3,8 @@ import { normalizeLinks } from './app-utils.tsx';
 import { avvisoInSospeso, dettaglioMancanti, etichettaAvviso } from './avvisi-classe.ts';
 import { classeContestoCommenti, commentiVisibili, mostraTuttiCommenti } from './commenti-classe.ts';
 import Countdown from './Countdown.tsx';
+import { temaTipo, etichettaTipo } from './card-tipo-tema.ts';
+import { statoScadenza, labelScadenza, coloreScadenza } from './urgenza.ts';
 // CardItem.jsx · ScuolaBoard
 
 function CardItem__({ $, c, idx }: any) {
@@ -47,7 +49,8 @@ function CardItem__({ $, c, idx }: any) {
   var avviso = $.isProf && !$.simulaSt && avvisoInSospeso(c, Date.now());
   var mancantiTxt = avviso ? dettaglioMancanti(c) : '';
   var cc = c.classi || ['TUTTE'];
-  var tipoCol = $.badgeBg(c.tipo);
+  var tema = temaTipo(c.tipo);
+  var tipoCol = tema.color;
 
   // Azioni secondarie (fissa, riassumi, link, duplica, copia anno, elimina,
   // reazioni) dietro il toggle "⋯": la fila di pillole resta corta e il titolo
@@ -118,18 +121,19 @@ function CardItem__({ $, c, idx }: any) {
         $.onDrop(e, c.id);
       }}
       style={(function () {
-        var tipoBorder = nascosta ? 'rgba(255,255,255,.08)' : $.badgeBg(c.tipo);
+        var tipoBorder = nascosta ? 'rgba(255,255,255,.08)' : tipoCol;
         return {
           // Niente margin: la spaziatura tra le card è del gap della griglia
           // (CardGrid: grid row-major) — un margin qui la raddoppierebbe.
-          background: nascosta ? 'rgba(255,255,255,.02)' : 'rgba(255,255,255,.055)',
-          backdropFilter: 'blur(12px)',
-          border: '1px solid ' + (nascosta ? 'rgba(255,255,255,.05)' : 'rgba(255,255,255,.09)'),
-          borderRadius: 18,
+          background: nascosta ? 'rgba(255,255,255,.02)' : (isLight ? 'rgba(255,255,255,.92)' : 'rgba(255,255,255,.055)'),
+          backdropFilter: 'blur(14px)',
+          border: '1px solid ' + (nascosta ? 'rgba(255,255,255,.05)' : (isLight ? 'rgba(15,23,42,.08)' : 'rgba(255,255,255,.10)')),
+          borderRadius: 20,
           overflow: 'hidden',
           opacity: nascosta ? 0.45 : 1,
           transition: 'transform .2s cubic-bezier(.22,1,.36,1),box-shadow .2s,opacity .2s',
           borderTop: '3px solid ' + tipoBorder,
+          boxShadow: nascosta ? 'none' : ('0 10px 26px rgba(0,0,0,.10), 0 0 0 1px ' + (isLight ? 'rgba(15,23,42,.02)' : 'rgba(255,255,255,.02)') + ' inset'),
           // Entrata a cascata: le card compaiono in sequenza (max 300ms) invece
           // di lampeggiare tutte insieme al primo render.
           animationDelay: Math.min(idx || 0, 12) * 25 + 'ms',
@@ -144,74 +148,106 @@ function CardItem__({ $, c, idx }: any) {
           }}
         >
           {
-            // Alone del colore del tipo nell'angolo: prima qui c'era l'emoji
-            // gigante a opacità .06 (praticamente invisibile, quindi solo
-            // rumore nel DOM). Dà carattere senza coprire il testo.
+            // Pattern identitario del tipo: dà carattere senza coprire il testo.
             <div
+              aria-hidden="true"
               style={{
                 position: 'absolute',
-                right: -30,
-                bottom: -30,
-                width: 130,
-                height: 130,
+                right: -20,
+                top: -10,
+                width: 180,
+                height: 180,
                 borderRadius: '50%',
-                background: 'radial-gradient(circle, ' + tipoCol + '2e 0%, transparent 70%)',
+                background: tema.pattern,
                 pointerEvents: 'none',
+                opacity: isLight ? 0.9 : 1,
               }}
             />
           }
           {c.copertina && (
             <div
+              className="card-cover"
               style={{
                 width: '100%',
-                background: '#0f172a',
+                background: isLight ? '#e2e8f0' : '#0b1220',
                 borderRadius: '16px 16px 0 0',
                 overflow: 'hidden',
                 position: 'relative',
                 cursor: 'pointer',
+                aspectRatio: '16 / 9',
+                maxHeight: 210,
               }}
               onClick={function (e: any) {
                 e.stopPropagation();
                 $.setLightbox({ url: c.copertina, didascalia: c.titolo });
               }}
             >
-              {
-                <img
-                  src={copertinaSrc}
-                  alt=""
-                  loading="lazy"
-                  decoding="async"
-                  onLoad={function () {
-                    setCopertinaLoadedSrc(copertinaSrc);
-                  }}
-                  onError={function () {
-                    setCopertinaLoadedSrc(copertinaSrc);
-                  }}
-                  style={{
-                    width: '100%',
-                    aspectRatio: '16 / 9',
-                    maxHeight: 200,
-                    objectFit: 'contain',
-                    display: 'block',
-                    filter: copertinaCaricata ? 'none' : 'blur(12px)',
-                    transform: copertinaCaricata ? 'none' : 'scale(1.04)',
-                    opacity: copertinaCaricata ? 1 : 0.85,
-                    transition: 'filter .35s ease, transform .35s ease, opacity .35s ease',
-                  }}
-                />
-              }
+              <img
+                src={copertinaSrc}
+                alt=""
+                loading="lazy"
+                decoding="async"
+                onLoad={function () {
+                  setCopertinaLoadedSrc(copertinaSrc);
+                }}
+                onError={function () {
+                  setCopertinaLoadedSrc(copertinaSrc);
+                }}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  display: 'block',
+                  filter: copertinaCaricata ? 'saturate(1.02)' : 'blur(14px) saturate(.9)',
+                  transform: copertinaCaricata ? 'scale(1)' : 'scale(1.05)',
+                  opacity: copertinaCaricata ? 1 : 0.85,
+                  transition: 'filter .4s ease, transform .4s ease, opacity .4s ease',
+                }}
+              />
+              <div
+                aria-hidden="true"
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  background: 'linear-gradient(180deg, rgba(2,6,23,.05) 0%, rgba(2,6,23,.18) 45%, rgba(2,6,23,.55) 100%)',
+                  pointerEvents: 'none',
+                }}
+              />
+              <div
+                aria-hidden="true"
+                style={{
+                  position: 'absolute',
+                  left: 10,
+                  bottom: 10,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '4px 9px',
+                  borderRadius: 999,
+                  background: 'rgba(15,23,42,.45)',
+                  border: '1px solid rgba(255,255,255,.18)',
+                  color: '#fff',
+                  fontSize: 11,
+                  fontWeight: 800,
+                  backdropFilter: 'blur(6px)',
+                }}
+              >
+                {tema.icon} {etichettaTipo(c.tipo)}
+              </div>
               {c.immagini && c.immagini.length > 0 && (
                 <span
                   style={{
                     position: 'absolute',
-                    bottom: 5,
-                    right: 7,
-                    background: 'rgba(0,0,0,.6)',
+                    bottom: 10,
+                    right: 10,
+                    background: 'rgba(15,23,42,.55)',
                     color: '#fff',
-                    borderRadius: 20,
-                    padding: '1px 7px',
+                    borderRadius: 999,
+                    padding: '3px 8px',
                     fontSize: 11,
                     fontWeight: 700,
+                    border: '1px solid rgba(255,255,255,.16)',
+                    backdropFilter: 'blur(6px)',
                   }}
                 >
                   {'🖼️ +' + c.immagini.length}
@@ -222,10 +258,9 @@ function CardItem__({ $, c, idx }: any) {
           {
             <div
               style={{
-                padding: '12px 14px 6px',
-                // Identità del tipo: velatura del colore del tipo sull'intestazione.
-                // Serve a riconoscere il tipo a colpo d'occhio (anche proiettata).
-                background: nascosta ? 'transparent' : 'linear-gradient(180deg,' + tipoCol + '1c 0%, transparent 65%)',
+                padding: '14px 15px 8px',
+                // Identità del tipo: velatura/pattern del tipo sull'intestazione.
+                background: nascosta ? 'transparent' : tema.gradient,
               }}
             >
               {
@@ -246,13 +281,14 @@ function CardItem__({ $, c, idx }: any) {
                           style={{
                             background: tipoCol,
                             color: '#fff',
-                            padding: '2px 8px',
+                            padding: '3px 9px',
                             fontWeight: 800,
                             letterSpacing: 0.5,
-                            boxShadow: '0 2px 8px ' + tipoCol + '55',
+                            boxShadow: '0 4px 12px ' + tipoCol + '55',
+                            border: '1px solid rgba(255,255,255,.12)',
                           }}
                         >
-                          {$.tipoIcon(c.tipo) + ' ' + (c.tipo || '').toUpperCase()}
+                          {tema.icon + ' ' + etichettaTipo(c.tipo)}
                         </span>
                       }
                       {statoBadges.map(function (b: any, i: number) {
@@ -383,10 +419,11 @@ function CardItem__({ $, c, idx }: any) {
                 <div
                   style={{
                     fontSize: 11,
-                    color: 'rgba(255,255,255,.45)',
-                    marginBottom: 4,
+                    color: isLight ? '#64748b' : 'rgba(255,255,255,.42)',
+                    marginBottom: 5,
                     cursor: 'grab',
                     userSelect: 'none',
+                    letterSpacing: 0.2,
                   }}
                 >
                   ☰ trascina per riordinare
@@ -396,11 +433,11 @@ function CardItem__({ $, c, idx }: any) {
                 <div
                   style={{
                     fontWeight: 800,
-                    fontSize: 15,
-                    color: nascosta ? (isLight ? '#64748b' : 'rgba(255,255,255,.58)') : isLight ? '#0f172a' : '#f1f5f9',
-                    lineHeight: 1.35,
-                    marginBottom: 5,
-                    letterSpacing: 0.1,
+                    fontSize: 16,
+                    color: nascosta ? (isLight ? '#64748b' : 'rgba(255,255,255,.6)') : isLight ? '#0f172a' : '#f8fafc',
+                    lineHeight: 1.3,
+                    marginBottom: 6,
+                    letterSpacing: 0.05,
                     // Titoli lunghi: max 2 righe, così le righe della griglia
                     // restano uniformi (prima potevano allungarsi a piacere).
                     display: '-webkit-box',
@@ -419,7 +456,7 @@ function CardItem__({ $, c, idx }: any) {
                         height: 8,
                         borderRadius: '50%',
                         background: 'var(--c-success, #4ade80)',
-                        marginRight: 6,
+                        marginRight: 7,
                         verticalAlign: 'middle',
                         boxShadow: '0 0 0 0 rgba(74,222,128,.6)',
                       }}
@@ -431,19 +468,28 @@ function CardItem__({ $, c, idx }: any) {
               {c.testo && (
                 <div
                   style={{
-                    fontSize: 11,
-                    color: isLight ? '#475569' : 'rgba(255,255,255,.58)',
-                    lineHeight: 1.5,
+                    fontSize: 12.5,
+                    color: isLight ? '#334155' : 'rgba(255,255,255,.72)',
+                    lineHeight: 1.55,
                     overflow: 'hidden',
                     display: '-webkit-box',
                     WebkitLineClamp: 2,
                     WebkitBoxOrient: 'vertical',
+                    marginTop: 1,
                   }}
                 >
                   {c.testo}
                 </div>
               )}
-              {c.scadenza && <Countdown scadenza={c.scadenza} />}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                {c.scadenza && <Countdown scadenza={c.scadenza} />}
+                {function () {
+                  var st = statoScadenza(c.scadenza);
+                  if (st === 'none' || st === 'ok') return null;
+                  var col = coloreScadenza(st);
+                  return <span className="urgency-badge" style={{ background: col.bg, color: col.fg, borderColor: col.bd }}>⏰ {labelScadenza(st)}</span>;
+                }()}
+              </div>
               {cardLinks.length > 0 && (
                 <div style={{ marginTop: 5, fontSize: 11, color: '#60a5fa' }}>{'🔗 ' + cardLinks.length + ' link'}</div>
               )}
@@ -519,7 +565,7 @@ function CardItem__({ $, c, idx }: any) {
         </div>
       }
       {
-        <div style={{ padding: '6px 14px 10px', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+        <div style={{ padding: '8px 15px 12px', display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
           {
             <div
               style={{ position: 'relative', display: 'inline-flex' }}

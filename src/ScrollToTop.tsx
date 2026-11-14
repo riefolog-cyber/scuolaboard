@@ -23,6 +23,7 @@ export default function ScrollToTop() {
   return (
     <button
       type="button"
+      className="scroll-top-btn"
       aria-label="Torna in cima"
       onClick={function () {
         var ridotto = false;
@@ -33,19 +34,21 @@ export default function ScrollToTop() {
       }}
       style={{
         position: 'fixed',
-        right: 14,
-        bottom: 76,
+        right: 16,
+        bottom: 98,
         zIndex: 890,
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        border: '1px solid rgba(255, 255, 255, .15)',
-        background: 'rgba(15, 15, 30, .85)',
-        backdropFilter: 'blur(6px)',
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        border: '1px solid rgba(255, 255, 255, .18)',
+        background: 'rgba(15, 23, 42, .78)',
+        backdropFilter: 'blur(10px)',
         color: '#fff',
         fontSize: 18,
+        fontWeight: 800,
         cursor: 'pointer',
-        boxShadow: '0 4px 12px rgba(0, 0, 0, .35)',
+        boxShadow: '0 10px 24px rgba(0, 0, 0, .32)',
+        transition: 'transform .16s ease, box-shadow .16s ease, background .16s ease',
       }}
     >
       ↑

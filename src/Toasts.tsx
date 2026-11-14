@@ -3,31 +3,22 @@
 function Toasts__({ $ }: any) {
   if (!$.toasts || $.toasts.length === 0) return null;
   return (
-    <div className="toast-container">
+    <div className="toast-container" aria-live="polite" aria-atomic="false">
       {$.toasts.map(function (t: any) {
         var icon = t.type === 'ok' ? '✅' : t.type === 'warn' ? '⚠️' : '❌';
+        var msg = String(t.msg || '');
+        var showIcon = msg.indexOf(icon) !== 0;
         return (
           <div
             key={t.id}
             className={'toast ' + t.type}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, pointerEvents: 'auto' }}
+            role={t.type === 'err' ? 'alert' : 'status'}
+            style={{ pointerEvents: 'auto' }}
           >
-            {icon} {t.msg}
+            {showIcon && <span className="toast-icon" aria-hidden="true">{icon}</span>}
+            <span className="toast-msg">{msg}</span>
             {t.undo && (
-              <button
-                onClick={$.undoDeleteCard}
-                style={{
-                  background: 'rgba(255,255,255,.25)',
-                  border: 'none',
-                  borderRadius: 6,
-                  padding: '2px 9px',
-                  cursor: 'pointer',
-                  fontSize: 11,
-                  fontWeight: 800,
-                  color: '#fff',
-                  marginLeft: 4,
-                }}
-              >
+              <button className="toast-action" onClick={$.undoDeleteCard}>
                 ↩ Annulla
               </button>
             )}

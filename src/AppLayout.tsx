@@ -1,7 +1,7 @@
 // AppLayout.tsx — layout principale (classic JSX, $ = fusione dei context)
 // memo: il provider NON cambia le props di AppLayout → un keystroke nel form
 // (FormContext, NON consumato qui) non ri-renderizza l'intero albero.
-import { lazy, Suspense, useContext, memo } from 'react';
+import { lazy, Suspense, useContext, memo, useEffect, useMemo, useState } from 'react';
 import AuthContext from './contexts/AuthContext.tsx';
 import CardsContext from './contexts/CardsContext.tsx';
 import ModalsContext from './contexts/ModalsContext.tsx';
@@ -42,7 +42,103 @@ function AppLayout(props: any) {
   var aiCtx = useContext(AIContext);
   var uiCtx = useContext(UIContext);
 
-  var $ = Object.assign({}, props, authCtx, cardsCtx, modalsCtx, aiCtx, uiCtx);
+  var $base = Object.assign({}, props, authCtx, cardsCtx, modalsCtx, aiCtx, uiCtx);
+  var [bachecaVista, setBachecaVista] = useState(function () {
+    try {
+      var v = typeof window !== 'undefined' ? window.localStorage.getItem('sb_bacheca_vista') : null;
+      return v === 'elenco' || v === 'timeline' ? v : 'griglia';
+    } catch (e) {
+      return 'griglia';
+    }
+  });
+  var [bachecaRaggruppa, setBachecaRaggruppa] = useState(function () {
+    try { return typeof window !== 'undefined' && window.localStorage.getItem('sb_bacheca_raggruppa') === '1'; } catch (e) { return false; }
+  });
+  var [proiezione, setProiezione] = useState(function () {
+    try { return typeof window !== 'undefined' && window.localStorage.getItem('sb_proiezione') === '1'; } catch (e) { return false; }
+  });
+  var [altoContrasto, setAltoContrasto] = useState(function () {
+    try { return typeof window !== 'undefined' && window.localStorage.getItem('sb_contrasto') === '1'; } catch (e) { return false; }
+  });
+  var [accento, setAccento] = useState(function () {
+    try { var v = typeof window !== 'undefined' ? window.localStorage.getItem('sb_accento') : null; return v || 'indigo'; } catch (e) { return 'indigo'; }
+  });
+  var [qfTipo, setQfTipo] = useState('tutti');
+  var [qfStato, setQfStato] = useState('tutti');
+  var [qfExtra, setQfExtra] = useState('tutti');
+  var [showFiltriToolbar, setShowFiltriToolbar] = useState(function () {
+    try { return typeof window !== 'undefined' ? window.localStorage.getItem('sb_toolbar_filtri') !== '0' : true; } catch (e) { return true; }
+  });
+  useEffect(function () { try { if (typeof window !== 'undefined') window.localStorage.setItem('sb_toolbar_filtri', showFiltriToolbar ? '1' : '0'); } catch (e) {} }, [showFiltriToolbar]);
+  var [onboardTip, setOnboardTip] = useState(function () {
+    try { return typeof window !== 'undefined' ? window.localStorage.getItem('sb_onboard_tip') || '1' : '1'; } catch (e) { return '1'; }
+  });
+  useEffect(function () { try { if (typeof window !== 'undefined') window.localStorage.setItem('sb_bacheca_vista', bachecaVista); } catch (e) {} }, [bachecaVista]);
+  useEffect(function () { try { if (typeof window !== 'undefined') window.localStorage.setItem('sb_bacheca_raggruppa', bachecaRaggruppa ? '1' : '0'); } catch (e) {} }, [bachecaRaggruppa]);
+  useEffect(function () { try { if (typeof window !== 'undefined') window.localStorage.setItem('sb_proiezione', proiezione ? '1' : '0'); } catch (e) {} }, [proiezione]);
+  useEffect(function () { try { if (typeof window !== 'undefined') window.localStorage.setItem('sb_contrasto', altoContrasto ? '1' : '0'); } catch (e) {} }, [altoContrasto]);
+  useEffect(function () { try { if (typeof window !== 'undefined') window.localStorage.setItem('sb_accento', accento || 'indigo'); } catch (e) {} }, [accento]);
+  useEffect(function () {
+    try {
+      if (typeof document === 'undefined') return;
+      document.documentElement.classList.toggle('projection', !!proiezione);
+      document.documentElement.classList.toggle('high-contrast', !!altoContrasto);
+      var map: any = { indigo: '99,102,241', violet: '168,85,247', emerald: '16,185,129', sky: '14,165,233', amber: '245,158,11', rose: '244,63,94' };
+      var rgb = map[accento] || map.indigo;
+      document.documentElement.style.setProperty('--c-primary-rgb', rgb);
+      document.documentElement.style.setProperty('--accent', 'rgb(' + rgb + ')');
+    } catch (e) {}
+  }, [proiezione, altoContrasto, accento]);
+  var quickFiltered = useMemo(function () {
+    var cards = ($base.visibleSorted || []) as any[];
+    var seen = $base.seenRef && $base.seenRef.current;
+    var now = Date.now();
+    return cards.filter(function (c) {
+      if (qfTipo !== 'tutti' && String(c.tipo || 'nota') !== qfTipo) return false;
+      if (qfStato === 'nuove' && !(seen && !seen.has(String(c.id)))) return false;
+      if (qfStato === 'fissate' && !c.pinned) return false;
+      if (qfStato === 'scadenza') {
+        var t = c.scadenza ? new Date(c.scadenza).getTime() : NaN;
+        if (isNaN(t) || t < now || t - now > 48 * 60 * 60 * 1000) return false;
+      }
+      if (qfStato === 'avviso' && !($base.isProf && $base.annunciSospesi && $base.annunciSospesi.some(function (x: any) { return String(x.id) === String(c.id); }))) return false;
+      if (qfExtra === 'allegati' && !(c.allegati && c.allegati.length)) return false;
+      if (qfExtra === 'quiz' && !((c.tipo === 'quiz') || (c.quizDomande && c.quizDomande.length))) return false;
+      return true;
+    });
+  }, [$base.visibleSorted, $base.seenRef && $base.seenRef.current, qfTipo, qfStato, qfExtra, $base.isProf, $base.annunciSospesi]);
+  var overview = useMemo(
+    function () {
+      var cards = quickFiltered as any[];
+      var all = ($base.cards || []) as any[];
+      var now = Date.now();
+      var in48h = 48 * 60 * 60 * 1000;
+      var nuove = 0, fissate = 0, inScadenza = 0;
+      var seen = $base.seenRef && $base.seenRef.current;
+      for (var i = 0; i < cards.length; i++) {
+        var c = cards[i];
+        if (c && c.pinned) fissate++;
+        if (seen && !seen.has(String(c.id))) nuove++;
+        if (c && c.scadenza) {
+          var t = new Date(c.scadenza).getTime();
+          if (!isNaN(t) && t >= now && t - now <= in48h) inScadenza++;
+        }
+      }
+      var proposte = Array.isArray($base.proposte) ? $base.proposte.length : 0;
+      var avvisi = Array.isArray($base.annunciSospesi) ? $base.annunciSospesi.length : 0;
+      return { visibili: cards.length, totali: all.length, nuove: nuove, fissate: fissate, inScadenza: inScadenza, proposte: proposte, avvisi: avvisi, filtrati: quickFiltered.length !== (($base.visibleSorted || []) as any[]).length };
+    },
+    [quickFiltered, $base.cards, $base.proposte, $base.annunciSospesi, $base.seenRef && $base.seenRef.current, $base.visibleSorted]
+  );
+  var quickFilterActive = qfTipo !== 'tutti' || qfStato !== 'tutti' || qfExtra !== 'tutti';
+  var $ = Object.assign({}, $base, {
+    bachecaVista: bachecaVista, setBachecaVista: setBachecaVista,
+    bachecaRaggruppa: bachecaRaggruppa, setBachecaRaggruppa: setBachecaRaggruppa,
+    bachecaOverview: overview,
+    visibleSorted: quickFiltered,
+    visibleSortedAll: $base.visibleSorted,
+    quickFilterActive: quickFilterActive,
+  });
   if (typeof $.authLoad === 'undefined') $.authLoad = true;
   if ($.authLoad)
     return (
@@ -108,12 +204,13 @@ function AppLayout(props: any) {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'flex-start',
-                gap: 8,
-                padding: '6px 14px',
+                gap: 6,
+                padding: '4px 10px',
                 background: isLight
-                  ? 'linear-gradient(90deg,rgba(79,70,229,.05) 0%,#f8fafc 40%,rgba(34,197,94,.06) 100%)'
-                  : 'linear-gradient(90deg,rgba(var(--c-primary-rgb),.06) 0%,rgba(255,255,255,.03) 40%,rgba(34,197,94,.05) 100%)',
-                borderBottom: isLight ? '1px solid rgba(15,23,42,.08)' : '1px solid rgba(255,255,255,.07)',
+                  ? 'linear-gradient(90deg,rgba(79,70,229,.08) 0%,rgba(248,250,252,.96) 45%,rgba(34,197,94,.08) 100%)'
+                  : 'linear-gradient(90deg,rgba(var(--c-primary-rgb),.10) 0%,rgba(15,23,42,.72) 45%,rgba(34,197,94,.08) 100%)',
+                borderBottom: isLight ? '1px solid rgba(15,23,42,.10)' : '1px solid rgba(255,255,255,.10)',
+                boxShadow: isLight ? '0 6px 18px rgba(15,23,42,.06)' : '0 8px 22px rgba(0,0,0,.18)',
                 flexWrap: 'wrap',
                 // Fascia UNICA (contatori + privacy) agganciata in alto mentre si
                 // scorre: i numeri della bacheca restano sotto gli occhi e si
@@ -121,7 +218,7 @@ function AppLayout(props: any) {
                 position: 'sticky',
                 top: 0,
                 zIndex: 30,
-                backdropFilter: 'blur(10px)',
+                backdropFilter: 'blur(12px)',
               }}
             >
               {
@@ -133,26 +230,26 @@ function AppLayout(props: any) {
               {
                 <span
                   style={{
-                    fontSize: 11,
+                    fontSize: 10,
                     fontWeight: 800,
-                    letterSpacing: 3,
+                    letterSpacing: 2,
                     color: isLight ? '#475569' : 'rgba(255,255,255,.65)',
                   }}
                 >
                   LIVE
                 </span>
               }
-              {<span style={{ fontSize: 11, color: isLight ? '#94a3b8' : 'rgba(255,255,255,.45)' }}>•</span>}
+              {<span style={{ fontSize: 10, color: isLight ? '#94a3b8' : 'rgba(255,255,255,.4)' }}>•</span>}
               {
-                <span style={{ fontSize: 11, color: isLight ? '#334155' : 'rgba(255,255,255,.58)' }}>
+                <span style={{ fontSize: 10.5, color: isLight ? '#334155' : 'rgba(255,255,255,.56)' }}>
                   {$.cards.filter(function (c: any) {
                     return !c.proposta;
                   }).length + ' card'}
                 </span>
               }
-              {<span style={{ fontSize: 11, color: isLight ? '#94a3b8' : 'rgba(255,255,255,.45)' }}>•</span>}
+              {<span style={{ fontSize: 10, color: isLight ? '#94a3b8' : 'rgba(255,255,255,.4)' }}>•</span>}
               {
-                <span style={{ fontSize: 11, color: isLight ? '#334155' : 'rgba(255,255,255,.58)' }}>
+                <span style={{ fontSize: 10.5, color: isLight ? '#334155' : 'rgba(255,255,255,.56)' }}>
                   {$.totC + ' commenti'}
                 </span>
               }
@@ -161,9 +258,9 @@ function AppLayout(props: any) {
                   style={{
                     background: 'rgba(239,68,68,.2)',
                     color: 'var(--c-danger, #f87171)',
-                    borderRadius: 20,
-                    padding: '2px 8px',
-                    fontSize: 11,
+                    borderRadius: 16,
+                    padding: '1px 6px',
+                    fontSize: 10.5,
                     fontWeight: 800,
                     border: '1px solid rgba(239,68,68,.3)',
                   }}
@@ -185,8 +282,8 @@ function AppLayout(props: any) {
                     background: 'rgba(245,158,11,.18)',
                     color: isLight ? '#92400e' : 'var(--c-warn, #fbbf24)',
                     borderRadius: 20,
-                    padding: '2px 4px 2px 9px',
-                    fontSize: 11,
+                    padding: '1px 3px 1px 7px',
+                    fontSize: 10.5,
                     fontWeight: 800,
                     border: '1px solid rgba(245,158,11,.45)',
                   }}
@@ -204,8 +301,8 @@ function AppLayout(props: any) {
                       background: 'rgba(245,158,11,.35)',
                       color: isLight ? '#78350f' : '#fde68a',
                       borderRadius: 20,
-                      padding: '2px 9px',
-                      fontSize: 10.5,
+                      padding: '1px 7px',
+                      fontSize: 10,
                       fontWeight: 800,
                       cursor: 'pointer',
                       fontFamily: 'inherit',
@@ -231,60 +328,31 @@ function AppLayout(props: any) {
                   marginLeft: 'auto',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: 8,
+                  gap: 4,
                   minWidth: 0,
                   maxWidth: '100%',
                   flexShrink: 1,
                   background: isLight
-                    ? 'linear-gradient(135deg,rgba(var(--c-primary-rgb),.18) 0%,rgba(168,85,247,.16) 100%)'
-                    : 'linear-gradient(135deg,rgba(var(--c-primary-rgb),.32) 0%,rgba(168,85,247,.24) 100%)',
-                  border: '1px solid ' + (isLight ? 'rgba(79,70,229,.40)' : 'rgba(139,92,246,.60)'),
+                    ? 'linear-gradient(135deg,rgba(var(--c-primary-rgb),.14) 0%,rgba(168,85,247,.12) 100%)'
+                    : 'linear-gradient(135deg,rgba(var(--c-primary-rgb),.24) 0%,rgba(168,85,247,.18) 100%)',
+                  border: '1px solid ' + (isLight ? 'rgba(79,70,229,.32)' : 'rgba(139,92,246,.45)'),
                   borderRadius: 999,
-                  padding: '3px 12px 3px 5px',
+                  padding: '1px 7px 1px 3px',
                   cursor: 'pointer',
-                  fontSize: 11,
+                  fontSize: 10,
                   fontWeight: 700,
                   color: isLight ? '#3730a3' : '#e9d5ff',
-                  letterSpacing: 0.2,
+                  letterSpacing: 0.1,
                   fontFamily: 'inherit',
-                  boxShadow: isLight
-                    ? '0 0 0 3px rgba(var(--c-primary-rgb),.10), 0 3px 16px rgba(var(--c-primary-rgb),.28)'
-                    : '0 0 0 3px rgba(var(--c-primary-rgb),.12), 0 3px 20px rgba(139,92,246,.45)',
+                  boxShadow: 'none',
+                  lineHeight: 1.2,
                 }}
               >
-                <span
-                  style={{
-                    position: 'relative',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: 24,
-                    height: 24,
-                    borderRadius: '50%',
-                    flexShrink: 0,
-                    background: 'linear-gradient(135deg,var(--c-primary, #6366f1) 0%,#8b5cf6 60%,#a855f7 100%)',
-                    boxShadow: '0 2px 8px rgba(var(--c-primary-rgb),.55)',
-                    animation: 'guida-seal-glow 3s ease-in-out infinite',
-                  }}
-                >
-                  <span style={{ fontSize: 12, lineHeight: 1 }}>🗺️</span>
+                <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 18, height: 18, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,var(--c-primary, #6366f1) 0%,#8b5cf6 60%,#a855f7 100%)', fontSize: 10 }}>🗺️</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexWrap: 'wrap', minWidth: 0 }}>
+                  <span style={{ fontWeight: 800, fontSize: 10.5 }}>Cos'è la bacheca</span>
+                  <span className="guida-badge-detail" style={{ fontWeight: 600, fontSize: 10, opacity: 0.85 }}>spiegazione e mappa del sistema</span>
                 </span>
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '2px 5px',
-                    flexWrap: 'wrap',
-                    minWidth: 0,
-                    lineHeight: 1.25,
-                  }}
-                >
-                  <span style={{ fontWeight: 900, fontSize: 11.5, letterSpacing: 0.3 }}>{"Cos'è la bacheca"}</span>
-                  <span className="guida-badge-detail" style={{ fontWeight: 600, fontSize: 10.5, opacity: 0.85 }}>
-                    {'spiegazione e mappa del sistema'}
-                  </span>
-                </span>
-                <span style={{ fontSize: 9, opacity: 0.75 }}>▶</span>
               </button>
               {/* Privacy nella STESSA fascia dei contatori: una riga sola.
                   Il testo resta per intero (è un'informativa, non la si taglia).
@@ -302,98 +370,147 @@ function AppLayout(props: any) {
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: 8,
+                  gap: 4,
                   minWidth: 0,
                   maxWidth: '100%',
                   flexShrink: 1,
                   background: isLight
-                    ? 'linear-gradient(135deg,rgba(16,185,129,.20) 0%,rgba(34,197,94,.16) 100%)'
-                    : 'linear-gradient(135deg,rgba(16,185,129,.30) 0%,rgba(34,197,94,.22) 100%)',
-                  border: '1px solid ' + (isLight ? 'rgba(5,150,105,.45)' : 'rgba(52,211,153,.60)'),
+                    ? 'linear-gradient(135deg,rgba(16,185,129,.16) 0%,rgba(34,197,94,.12) 100%)'
+                    : 'linear-gradient(135deg,rgba(16,185,129,.24) 0%,rgba(34,197,94,.18) 100%)',
+                  border: '1px solid ' + (isLight ? 'rgba(5,150,105,.38)' : 'rgba(52,211,153,.5)'),
                   borderRadius: 999,
-                  padding: '3px 12px 3px 5px',
+                  padding: '1px 7px 1px 3px',
                   cursor: 'pointer',
-                  fontSize: 11,
+                  fontSize: 10,
                   fontWeight: 700,
                   color: isLight ? '#065f46' : '#d1fae5',
-                  letterSpacing: 0.2,
+                  letterSpacing: 0.1,
                   fontFamily: 'inherit',
-                  boxShadow: isLight
-                    ? '0 0 0 3px rgba(34,197,94,.10), 0 3px 16px rgba(16,185,129,.28)'
-                    : '0 0 0 3px rgba(34,197,94,.12), 0 3px 20px rgba(16,185,129,.45)',
+                  boxShadow: 'none',
+                  lineHeight: 1.2,
                 }}
               >
-                {/* Sigillo verde "verificato": alone animato + spunta. La chiave
-                    privacy-seal-glow è in styles.css (e in e2e/harness.html, che
-                    non carica lo stylesheet) — grazie all'alone il badge "respira"
-                    invece di restare un'icona ferma. */}
-                <span
-                  style={{
-                    position: 'relative',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    width: 24,
-                    height: 24,
-                    borderRadius: '50%',
-                    flexShrink: 0,
-                    background: 'linear-gradient(135deg,#10b981 0%,#22c55e 60%,var(--c-success, #4ade80) 100%)',
-                    boxShadow: '0 2px 8px rgba(16,185,129,.55)',
-                    animation: 'privacy-seal-glow 2.4s ease-in-out infinite',
-                  }}
-                >
-                  <span style={{ fontSize: 12, lineHeight: 1 }}>🛡️</span>
-                  {/* Spunta di conferma: angolo del sigillo, come un bollino. */}
-                  <span
-                    aria-hidden="true"
-                    style={{
-                      position: 'absolute',
-                      right: -4,
-                      bottom: -4,
-                      width: 13,
-                      height: 13,
-                      borderRadius: '50%',
-                      background: '#22c55e',
-                      color: '#04291a',
-                      fontSize: 9,
-                      fontWeight: 900,
-                      lineHeight: 1,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      border: '1.5px solid ' + (isLight ? '#f8fafc' : '#161320'),
-                      boxShadow: '0 1px 4px rgba(0,0,0,.35)',
-                    }}
-                  >
-                    {'✓'}
-                  </span>
+                <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 18, height: 18, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#10b981 0%,#22c55e 60%,var(--c-success, #4ade80) 100%)', fontSize: 10 }}>
+                  🛡️
+                  <span aria-hidden="true" style={{ position: 'absolute', right: -3, bottom: -3, width: 10, height: 10, borderRadius: '50%', background: '#22c55e', color: '#04291a', fontSize: 7, fontWeight: 900, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid ' + (isLight ? '#f8fafc' : '#161320') }}>✓</span>
                 </span>
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '2px 5px',
-                    flexWrap: 'wrap',
-                    minWidth: 0,
-                    lineHeight: 1.25,
-                  }}
-                >
-                  <span style={{ fontWeight: 900, fontSize: 11.5, letterSpacing: 0.3 }}>{'Privacy protetta'}</span>
-                  <span className="privacy-badge-detail" style={{ fontWeight: 600, fontSize: 10.5, opacity: 0.85 }}>
-                    {'nomi anonimi · IA trasparente · dati verificati dal docente'}
-                  </span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexWrap: 'wrap', minWidth: 0 }}>
+                  <span style={{ fontWeight: 800, fontSize: 10.5 }}>Privacy protetta</span>
+                  <span className="privacy-badge-detail" style={{ fontWeight: 600, fontSize: 10, opacity: 0.85 }}>nomi anonimi · IA trasparente · dati verificati dal docente</span>
                 </span>
-                <span style={{ fontSize: 9, opacity: 0.75 }}>▶</span>
               </button>
             </div>
           }
           {<FilterBar $={$} />}
           {<ProposalsPanel $={$} />}
           {
-            /* Tetto di larghezza: su un monitor grande la griglia si allargava
-               all'infinito creando colonne sempre più strette. */
             <div style={{ flex: 1, padding: '10px 14px 18px' }}>
-              <div style={{ maxWidth: 1500, margin: '0 auto' }}>{<CardGrid $={$} />}</div>
+              <div style={{ maxWidth: 1500, margin: '0 auto' }}>
+                {(function () {
+                  var base = ($.visibleSortedAll || $base.visibleSorted || []) as any[];
+                  var seen = $base.seenRef && $base.seenRef.current;
+                  var now = Date.now();
+                  var counts: any = { tipi: { nota: 0, domanda: 0, sondaggio: 0, quiz: 0 }, nuove: 0, fissate: 0, scadenza: 0, avviso: 0, allegati: 0, quizc: 0 };
+                  for (var i = 0; i < base.length; i++) {
+                    var c = base[i];
+                    var t = String(c.tipo || 'nota');
+                    if (t === 'domanda' || t === 'sondaggio' || t === 'quiz') counts.tipi[t]++; else counts.tipi.nota++;
+                    if (seen && !seen.has(String(c.id))) counts.nuove++;
+                    if (c.pinned) counts.fissate++;
+                    if (c.scadenza) { var ts = new Date(c.scadenza).getTime(); if (!isNaN(ts) && ts >= now && ts - now <= 48*60*60*1000) counts.scadenza++; }
+                    if ($base.isProf && $base.annunciSospesi && $base.annunciSospesi.some(function (x: any) { return String(x.id) === String(c.id); })) counts.avviso++;
+                    if (c.allegati && c.allegati.length) counts.allegati++;
+                    if (c.tipo === 'quiz' || (c.quizDomande && c.quizDomande.length)) counts.quizc++;
+                  }
+                  var Chip = function (props: any) {
+                    return (
+                      <button type="button" aria-label={props.a11yLabel || undefined} className={'view-toggle-btn' + (props.active ? ' active' : '')} onClick={props.onClick} aria-pressed={!!props.active} style={{ padding: '2px 7px', fontSize: 10.5, borderRadius: 999, whiteSpace: 'nowrap', minHeight: 22, lineHeight: 1.2 }}>
+                        {props.label}{typeof props.n === 'number' ? <span style={{ opacity: .75, marginLeft: 3 }}>{props.n}</span> : null}
+                      </button>
+                    );
+                  };
+                  var aula = !!(proiezione && altoContrasto);
+                  return (
+                    <>
+                      {onboardTip !== '0' && (
+                        <div className="onboard-tip" role="status" style={{ margin: '6px 0 6px', padding: '6px 10px' }}>
+                          <div className="text" style={{ fontSize: 11.5 }}><strong>Nuovo:</strong> viste, raggruppa, filtri rapidi, modalità Aula e accenti.</div>
+                          <button type="button" className="btn btn-ghost btn-sm" onClick={function () { try { localStorage.setItem('sb_onboard_tip','0'); } catch(e){} setOnboardTip('0'); }}>OK</button>
+                        </div>
+                      )}
+                      <div className="surface-card bacheca-tools-compact" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', padding: '4px 8px', borderRadius: 12, margin: '4px 0 6px' }}>
+                        <div style={{ display: 'inline-flex', gap: 3, flexWrap: 'wrap', alignItems: 'center' }}>
+                          <span className="overview-kpi" style={{ minWidth: 0, padding: '2px 7px', fontSize: 11 }}><strong>{$.bachecaOverview.visibili}</strong><span>{$.bachecaOverview.filtrati ? 'filtrate' : 'visibili'}</span></span>
+                          <Chip label="Nuove" n={counts.nuove} active={qfStato==='nuove'} onClick={function(){ setQfStato(qfStato==='nuove'?'tutti':'nuove'); }} />
+                          <Chip label="Fissate" n={counts.fissate} active={qfStato==='fissate'} onClick={function(){ setQfStato(qfStato==='fissate'?'tutti':'fissate'); }} />
+                          <Chip label="Scadenza 48h" n={counts.scadenza} active={qfStato==='scadenza'} onClick={function(){ setQfStato(qfStato==='scadenza'?'tutti':'scadenza'); }} />
+                          {$.isProf && !$.simulaSt && counts.avviso > 0 ? <Chip label="Con avviso" n={counts.avviso} active={qfStato==='avviso'} onClick={function(){ setQfStato(qfStato==='avviso'?'tutti':'avviso'); }} /> : null}
+                        </div>
+                        <button type="button" className={'view-toggle-btn' + (showFiltriToolbar ? ' active' : '')} aria-pressed={showFiltriToolbar} onClick={function () { setShowFiltriToolbar(function (v: boolean) { return !v; }); }} title="Mostra/nascondi filtri" style={{ padding: '2px 7px', fontSize: 10.5, borderRadius: 999, minHeight: 22 }}>Filtri {showFiltriToolbar ? '▴' : '▾'}</button>
+                        {(qfTipo !== 'tutti' || qfStato !== 'tutti' || qfExtra !== 'tutti') && !showFiltriToolbar && (
+                          <div style={{ display: 'inline-flex', gap: 3, flexWrap: 'wrap', alignItems: 'center' }}>
+                            {qfTipo !== 'tutti' && <Chip label={qfTipo === 'nota' ? 'Note' : qfTipo === 'domanda' ? 'Domande' : qfTipo === 'sondaggio' ? 'Sondaggi' : 'QCM'} active={true} onClick={function(){ setQfTipo('tutti'); }} />}
+                            {qfStato !== 'tutti' && <Chip label={qfStato === 'nuove' ? 'Nuove' : qfStato === 'fissate' ? 'Fissate' : qfStato === 'scadenza' ? 'Scadenza 48h' : 'Con avviso'} active={true} onClick={function(){ setQfStato('tutti'); }} />}
+                            {qfExtra !== 'tutti' && <Chip label={qfExtra === 'allegati' ? 'Allegati' : 'Ha QCM'} active={true} onClick={function(){ setQfExtra('tutti'); }} />}
+                            <button type="button" className="btn btn-ghost btn-sm" style={{ padding: '3px 8px' }} onClick={function () { setQfTipo('tutti'); setQfStato('tutti'); setQfExtra('tutti'); }}>Pulisci</button>
+                          </div>
+                        )}
+                        {showFiltriToolbar && (
+                          <>
+                            <div style={{ width: 1, height: 22, background: 'rgba(255,255,255,.12)' }} />
+                            <div style={{ display: 'inline-flex', gap: 3, flexWrap: 'wrap', alignItems: 'center' }}>
+                              <Chip label="Note" n={counts.tipi.nota} active={qfTipo==='nota'} onClick={function(){ setQfTipo(qfTipo==='nota'?'tutti':'nota'); }} />
+                              <Chip label="Domande" n={counts.tipi.domanda} active={qfTipo==='domanda'} onClick={function(){ setQfTipo(qfTipo==='domanda'?'tutti':'domanda'); }} />
+                              <Chip label="Sondaggi" n={counts.tipi.sondaggio} active={qfTipo==='sondaggio'} onClick={function(){ setQfTipo(qfTipo==='sondaggio'?'tutti':'sondaggio'); }} />
+                              <Chip label="QCM" a11yLabel="Filtra tipo QCM" n={counts.tipi.quiz} active={qfTipo==='quiz'} onClick={function(){ setQfTipo(qfTipo==='quiz'?'tutti':'quiz'); }} />
+                              <Chip label="Allegati" n={counts.allegati} active={qfExtra==='allegati'} onClick={function(){ setQfExtra(qfExtra==='allegati'?'tutti':'allegati'); }} />
+                              <Chip label="Ha QCM" a11yLabel="Con contenuti QCM" n={counts.quizc} active={qfExtra==='quiz'} onClick={function(){ setQfExtra(qfExtra==='quiz'?'tutti':'quiz'); }} />
+                              <button type="button" className="btn btn-ghost btn-sm" style={{ padding: '3px 8px' }} onClick={function () { setQfTipo('tutti'); setQfStato('tutti'); setQfExtra('tutti'); setQfTipo('nota'); }}>Solo note</button>
+                              <button type="button" className="btn btn-ghost btn-sm" style={{ padding: '3px 8px' }} onClick={function () { setQfTipo('quiz'); setQfStato('tutti'); setQfExtra('tutti'); }}>Solo QCM</button>
+                              <button type="button" className="btn btn-ghost btn-sm" style={{ padding: '3px 8px' }} onClick={function () { setQfTipo('tutti'); setQfStato('scadenza'); setQfExtra('tutti'); }}>In scadenza</button>
+                              {(qfTipo !== 'tutti' || qfStato !== 'tutti' || qfExtra !== 'tutti') && <button type="button" className="btn btn-ghost btn-sm" style={{ padding: '3px 8px' }} onClick={function () { setQfTipo('tutti'); setQfStato('tutti'); setQfExtra('tutti'); }}>Pulisci</button>}
+                            </div>
+                          </>
+                        )}
+                        <div style={{ marginLeft: 'auto', display: 'inline-flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                          <div className="view-toggle" role="group" aria-label="Vista bacheca" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <button type="button" className={'view-toggle-btn' + (bachecaVista === 'griglia' ? ' active' : '')} aria-pressed={bachecaVista === 'griglia'} onClick={function () { setBachecaVista('griglia'); }} title="Griglia">▦</button>
+                            <button type="button" className={'view-toggle-btn' + (bachecaVista === 'elenco' ? ' active' : '')} aria-pressed={bachecaVista === 'elenco'} onClick={function () { setBachecaVista('elenco'); }} title="Elenco">☰</button>
+                            <button type="button" className={'view-toggle-btn' + (bachecaVista === 'timeline' ? ' active' : '')} aria-pressed={bachecaVista === 'timeline'} onClick={function () { setBachecaVista('timeline'); }} title="Timeline">⏱</button>
+                          </div>
+                          <button type="button" className={'view-toggle-btn' + (bachecaRaggruppa ? ' active' : '')} aria-pressed={bachecaRaggruppa} onClick={function () { setBachecaRaggruppa(function (v: boolean) { return !v; }); }} title="Raggruppa">Gruppi</button>
+                          <button type="button" className={'view-toggle-btn' + (aula ? ' active' : '')} aria-pressed={aula} onClick={function () { var on = !(proiezione && altoContrasto); setProiezione(on); setAltoContrasto(on); }} title="Modalità Aula (proiezione + contrasto)">Aula</button>
+                          <button type="button" className={'view-toggle-btn' + (proiezione && !aula ? ' active' : '')} aria-pressed={proiezione} onClick={function () { setProiezione(function (v: boolean) { return !v; }); }} title="Proiezione">P</button>
+                          <button type="button" className={'view-toggle-btn' + (altoContrasto && !aula ? ' active' : '')} aria-pressed={altoContrasto} onClick={function () { setAltoContrasto(function (v: boolean) { return !v; }); }} title="Contrasto alto">C</button>
+                          <div className="accent-picker" aria-label="Colore accento" style={{ gap: 4 }}>
+                            {['indigo','violet','emerald','sky','amber','rose'].map(function (k) {
+                              var colors: any = { indigo: '#6366f1', violet: '#a855f7', emerald: '#10b981', sky: '#0ea5e9', amber: '#f59e0b', rose: '#f43f5e' };
+                              return <button key={k} type="button" className={'accent-dot' + (accento === k ? ' active' : '')} style={{ background: colors[k], width: 14, height: 14 }} aria-label={'Accento ' + k} title={k} onClick={function () { setAccento(k); }} />;
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                      {($.isProf && !$.simulaSt && ($.bachecaOverview.proposte > 0 || $.bachecaOverview.avvisi > 0 || $.bachecaOverview.inScadenza > 0)) && (
+                        <div className="surface-card" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', padding: '4px 8px', borderRadius: 12, margin: '0 0 6px', borderColor: 'rgba(245,158,11,.22)' }}>
+                          <span style={{ fontSize: 10.5, fontWeight: 800, color: 'var(--c-warn, #fbbf24)', letterSpacing: .2 }}>Priorità</span>
+                          {$.bachecaOverview.proposte > 0 && <span className="list-pill" style={{ background: 'rgba(239,68,68,.14)', color: 'var(--c-danger, #f87171)', padding: '2px 7px', fontSize: 10.5 }}>📝 {$.bachecaOverview.proposte} proposte</span>}
+                          {$.bachecaOverview.avvisi > 0 && (
+                            <button type="button" className="btn btn-ghost btn-sm" style={{ padding: '2px 7px', color: 'var(--c-warn, #fbbf24)', fontSize: 10.5, minHeight: 22 }} onClick={function () { if ($.riprovaTuttiAnnunci) $.riprovaTuttiAnnunci(); }}>
+                              🔔 {$.bachecaOverview.avvisi} avvisi da riprovare
+                            </button>
+                          )}
+                          {$.bachecaOverview.inScadenza > 0 && (
+                            <button type="button" className="view-toggle-btn" aria-pressed={qfStato === 'scadenza'} onClick={function () { setQfStato(qfStato === 'scadenza' ? 'tutti' : 'scadenza'); setBachecaVista('timeline'); }} style={{ padding: '2px 7px', fontSize: 10.5, borderRadius: 999, minHeight: 22 }}>
+                              ⏰ {$.bachecaOverview.inScadenza} in scadenza (48h)
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+                {<CardGrid $={$} />}
+              </div>
             </div>
           }
           </main>
@@ -498,6 +615,12 @@ function AppLayout(props: any) {
                   }}
                 >
                   {'⚠️ ' + $.aiErr}
+                </div>
+              )}
+              {!$.aiRunning && !$.aiErr && !$.aiResult && (
+                <div className="empty-state" style={{ padding: '28px 18px', marginBottom: 16, border: '1px dashed rgba(255,255,255,.12)', borderRadius: 16 }}>
+                  <div className="empty-state-title">Nessuna analisi ancora</div>
+                  <div className="empty-state-sub">Scegli l’ambito e avvia l’analisi: qui compariranno riepilogo, spunti e suggerimenti per la bacheca.</div>
                 </div>
               )}
               {$.aiResult &&
