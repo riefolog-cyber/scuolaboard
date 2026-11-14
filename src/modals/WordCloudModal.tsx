@@ -40,6 +40,9 @@ function WordCloudModal(props: any) {
     >
       {
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="wordcloud-modal-title"
           onClick={function (e: any) {
             e.stopPropagation();
           }}
@@ -60,7 +63,7 @@ function WordCloudModal(props: any) {
               {
                 <div>
                   {
-                    <h3 style={{ margin: 0, color: '#f1f5f9', fontSize: 16, fontWeight: 800 }}>
+                    <h3 id="wordcloud-modal-title" style={{ margin: 0, color: '#f1f5f9', fontSize: 16, fontWeight: 800 }}>
                       ☁️ Analisi parole per classe
                     </h3>
                   }

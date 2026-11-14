@@ -32,6 +32,9 @@ function AiQuizGenModal(props: any) {
     >
       {
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Genera quiz con AI"
           style={{
             background: '#0f172a',
             borderRadius: '20px 20px 0 0',

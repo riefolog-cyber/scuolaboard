@@ -80,6 +80,7 @@ function GuidaModal(props: any) {
     >
       <div
         role="dialog"
+        aria-modal="true"
         aria-label="Cos'è la bacheca"
         style={{
           background: cardBg,

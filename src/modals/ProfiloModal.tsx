@@ -55,6 +55,9 @@ function ProfiloModal(props: any) {
     >
       {
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Profilo studente"
           style={{
             background: 'rgba(15,23,42,.92)',
             backdropFilter: 'blur(24px)',

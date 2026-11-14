@@ -26,6 +26,9 @@ function TimerModal(props: any) {
     >
       {
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="timer-modal-title"
           style={{
             background: 'rgba(15,23,42,.92)',
             backdropFilter: 'blur(24px)',
@@ -43,7 +46,7 @@ function TimerModal(props: any) {
         >
           {<div style={{ fontSize: 36, textAlign: 'center', marginBottom: 10 }}>⏰</div>}
           {
-            <h3 style={{ margin: '0 0 6px', color: '#f1f5f9', fontSize: 16, fontWeight: 800, textAlign: 'center' }}>
+            <h3 id="timer-modal-title" style={{ margin: '0 0 6px', color: '#f1f5f9', fontSize: 16, fontWeight: 800, textAlign: 'center' }}>
               Imposta scadenza card
             </h3>
           }

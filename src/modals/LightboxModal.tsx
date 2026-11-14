@@ -6,6 +6,9 @@ function LightboxModal(props: any) {
   var setLb = props.setLightbox;
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={lb.didascalia ? 'Immagine: ' + lb.didascalia : 'Visualizzatore immagini'}
       style={{
         position: 'fixed',
         inset: 0,

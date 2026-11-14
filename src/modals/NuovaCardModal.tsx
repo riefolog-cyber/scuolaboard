@@ -57,6 +57,9 @@ function NuovaCardModal(props: any) {
     >
       {
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="nuova-card-modal-title"
           style={{
             background: isLight ? '#ffffff' : '#1c1a2e',
             borderRadius: '20px 20px 0 0',
@@ -85,7 +88,7 @@ function NuovaCardModal(props: any) {
             />
           }
           {
-            <h3 style={{ margin: '0 0 4px', color: isLight ? '#0f172a' : '#f1f5f9', fontSize: 15, fontWeight: 800 }}>
+            <h3 id="nuova-card-modal-title" style={{ margin: '0 0 4px', color: isLight ? '#0f172a' : '#f1f5f9', fontSize: 15, fontWeight: 800 }}>
               {editMode ? '✏️ Modifica card' : !isProf ? '💡 Proponi una card' : '➕ Nuova card'}
             </h3>
           }

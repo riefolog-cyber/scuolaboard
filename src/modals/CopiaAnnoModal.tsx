@@ -28,6 +28,9 @@ function CopiaAnnoModal(props: any) {
     >
       {
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="copia-anno-title"
           style={{
             background: '#1c1a2e',
             border: '1px solid rgba(139,92,246,.3)',
@@ -42,7 +45,7 @@ function CopiaAnnoModal(props: any) {
           }}
         >
           {<div style={{ fontSize: 34, marginBottom: 8 }}>📅</div>}
-          {<h3 style={{ margin: '0 0 4px', color: '#f1f5f9', fontSize: 16, fontWeight: 800 }}>Copia in altro anno</h3>}
+          {<h3 id="copia-anno-title" style={{ margin: '0 0 4px', color: '#f1f5f9', fontSize: 16, fontWeight: 800 }}>Copia in altro anno</h3>}
           {
             <p style={{ color: 'rgba(255,255,255,.52)', fontSize: 12, margin: '0 0 6px', lineHeight: 1.5 }}>
               {'"' + (card.titolo || '') + '"'}

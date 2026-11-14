@@ -27,6 +27,9 @@ function AmmModal(props: any) {
     >
       {
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="amm-modal-title"
           style={{
             background: isLight ? '#ffffff' : '#1c1a2e',
             border: isLight ? '1px solid rgba(15,23,42,.10)' : '1px solid rgba(245,158,11,.3)',
@@ -43,6 +46,7 @@ function AmmModal(props: any) {
           {<div style={{ fontSize: 36, textAlign: 'center', marginBottom: 8 }}>⚠️</div>}
           {
             <h3
+              id="amm-modal-title"
               style={{
                 margin: '0 0 4px',
                 color: isLight ? '#92400e' : 'var(--c-warn, #fbbf24)',

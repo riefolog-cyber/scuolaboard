@@ -44,6 +44,9 @@ function PrivacyModal(props: any) {
       >
         {
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="privacy-consent-title"
             style={{
               background: cardBg,
               border: cardBorder,
@@ -61,7 +64,7 @@ function PrivacyModal(props: any) {
               <div style={{ textAlign: 'center', marginBottom: 16 }}>
                 {<div style={{ fontSize: 44, marginBottom: 8 }}>🔒</div>}
                 {
-                  <div style={{ fontWeight: 900, color: titleColor, fontSize: 18, marginBottom: 4 }}>
+                  <div id="privacy-consent-title" style={{ fontWeight: 900, color: titleColor, fontSize: 18, marginBottom: 4 }}>
                     Prima di iniziare
                   </div>
                 }
@@ -126,6 +129,9 @@ function PrivacyModal(props: any) {
       }}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="privacy-info-title"
         style={{
           background: cardBg,
           border: cardBorder,
@@ -144,7 +150,7 @@ function PrivacyModal(props: any) {
         {/* Titolo */}
         <div style={{ textAlign: 'center', marginBottom: 20 }}>
           <div style={{ fontSize: 40, marginBottom: 8 }}>🛡️</div>
-          <div style={{ fontWeight: 900, color: titleColor, fontSize: 18, marginBottom: 4 }}>
+          <div id="privacy-info-title" style={{ fontWeight: 900, color: titleColor, fontSize: 18, marginBottom: 4 }}>
             La tua privacy è protetta
           </div>
           <div style={{ fontSize: 12, color: subColor }}>Come ScuolaBoard tutela i dati dei studenti</div>

@@ -91,6 +91,7 @@ function AppLayout(props: any) {
         flexDirection: 'column',
       }}
     >
+      <a href="#contenuto-principale" className="skip-link">Salta al contenuto principale</a>
       {
         <div
           style={{ height: 3, background: 'linear-gradient(90deg,var(--c-primary, #6366f1),#8b5cf6,#a855f7,#ec4899)', flexShrink: 0 }}
@@ -100,6 +101,7 @@ function AppLayout(props: any) {
       {<AIOverlay $={$} />}
       {($.view === 'bacheca' || $.simulaSt) && (
         <>
+          <main id="contenuto-principale" tabIndex={-1} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
           {
             <div
               style={{
@@ -394,10 +396,11 @@ function AppLayout(props: any) {
               <div style={{ maxWidth: 1500, margin: '0 auto' }}>{<CardGrid $={$} />}</div>
             </div>
           }
+          </main>
         </>
       )}
       {$.view === 'analisi' && !$.simulaSt && (
-        <div style={{ flex: 1, padding: '20px 24px', overflow: 'auto' }}>
+        <main id="contenuto-principale" tabIndex={-1} style={{ flex: 1, padding: '20px 24px', overflow: 'auto' }}>
           {
             <div style={{ maxWidth: 900, margin: '0 auto' }}>
               {
@@ -777,9 +780,9 @@ function AppLayout(props: any) {
               )}
             </div>
           }
-        </div>
+        </main>
       )}
-      {$.viewStudenti && !$.simulaSt && <StudentiPanel $={$} />}
+      {$.viewStudenti && !$.simulaSt && <main id="contenuto-principale" tabIndex={-1} style={{ flex: 1, display: 'flex', minHeight: 0 }}><StudentiPanel $={$} /></main>}
       {<Modals $={$} />}
       {$.showCard && (
         <Suspense

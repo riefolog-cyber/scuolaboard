@@ -39,6 +39,9 @@ function DuplicaModal(props: any) {
     >
       {
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="duplica-modal-title"
           style={{
             background: '#1c1a2e',
             border: '1px solid rgba(245,158,11,.3)',
@@ -53,7 +56,7 @@ function DuplicaModal(props: any) {
           }}
         >
           {<div style={{ fontSize: 34, marginBottom: 8 }}>📋</div>}
-          {<h3 style={{ margin: '0 0 4px', color: '#f1f5f9', fontSize: 16, fontWeight: 800 }}>Duplica card</h3>}
+          {<h3 id="duplica-modal-title" style={{ margin: '0 0 4px', color: '#f1f5f9', fontSize: 16, fontWeight: 800 }}>Duplica card</h3>}
           {
             <p style={{ color: 'rgba(255,255,255,.52)', fontSize: 12, margin: '0 0 6px', lineHeight: 1.5 }}>
               {'"' + (card.titolo || '') + '"'}

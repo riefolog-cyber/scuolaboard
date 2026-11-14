@@ -24,6 +24,9 @@ function EditAmmModal(props: any) {
     >
       {
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="edit-amm-title"
           style={{
             background: '#1c1a2e',
             border: '1px solid rgba(245,158,11,.3)',
@@ -37,7 +40,7 @@ function EditAmmModal(props: any) {
           }}
         >
           {
-            <h3 style={{ margin: '0 0 4px', color: 'var(--c-warn, #fbbf24)', fontSize: 15, fontWeight: 800 }}>
+            <h3 id="edit-amm-title" style={{ margin: '0 0 4px', color: 'var(--c-warn, #fbbf24)', fontSize: 15, fontWeight: 800 }}>
               ✏️ Modifica ammonizione
             </h3>
           }

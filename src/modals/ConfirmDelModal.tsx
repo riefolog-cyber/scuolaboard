@@ -68,6 +68,9 @@ function ConfirmDelModal(props: any) {
     >
       {
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirm-del-title"
           style={{
             background: '#1c1a2e',
             border: '1px solid rgba(239,68,68,.35)',
@@ -81,7 +84,7 @@ function ConfirmDelModal(props: any) {
           }}
         >
           {
-            <h3 style={{ margin: '0 0 4px', color: 'var(--c-danger, #f87171)', fontSize: 15, fontWeight: 800, textAlign: 'center' }}>
+            <h3 id="confirm-del-title" style={{ margin: '0 0 4px', color: 'var(--c-danger, #f87171)', fontSize: 15, fontWeight: 800, textAlign: 'center' }}>
               {modalTitle}
             </h3>
           }

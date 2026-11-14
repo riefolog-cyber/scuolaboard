@@ -309,6 +309,9 @@ function CercaModal(props: any) {
     >
       {
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Cerca nelle card"
           style={{
             background: isLight ? '#ffffff' : 'rgba(15,23,42,.98)',
             border: isLight ? '1px solid rgba(15,23,42,.12)' : '1px solid rgba(var(--c-primary-rgb),.35)',

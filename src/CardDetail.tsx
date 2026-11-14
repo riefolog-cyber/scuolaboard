@@ -167,6 +167,9 @@ function CardDetail__({ $: props$ }: any) {
     >
       <div
         className="modal-inner"
+        role="dialog"
+        aria-modal="true"
+        aria-label={'Dettaglio card: ' + (c.titolo || '')}
         style={{
           background: isLight ? '#ffffff' : 'rgba(15,23,42,.96)',
           backdropFilter: 'blur(24px)',

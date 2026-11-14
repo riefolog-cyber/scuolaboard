@@ -27,6 +27,9 @@ function RifiutaModal(props: any) {
     >
       {
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="rifiuta-modal-title"
           style={{
             background: '#1c1a2e',
             border: '1px solid rgba(239,68,68,.35)',
@@ -41,7 +44,7 @@ function RifiutaModal(props: any) {
         >
           {<div style={{ fontSize: 36, textAlign: 'center', marginBottom: 8 }}>❌</div>}
           {
-            <h3 style={{ margin: '0 0 4px', color: 'var(--c-danger, #f87171)', fontSize: 15, fontWeight: 800, textAlign: 'center' }}>
+            <h3 id="rifiuta-modal-title" style={{ margin: '0 0 4px', color: 'var(--c-danger, #f87171)', fontSize: 15, fontWeight: 800, textAlign: 'center' }}>
               Rifiuta proposta
             </h3>
           }

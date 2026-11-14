@@ -50,6 +50,9 @@ function ClasseModal(props: any) {
     >
       {
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="classe-modal-title"
           style={{
             background: '#1c1a2e',
             border: '1px solid rgba(var(--c-primary-rgb),.3)',
@@ -66,7 +69,7 @@ function ClasseModal(props: any) {
             <div style={{ textAlign: 'center', marginBottom: 16 }}>
               {<div style={{ fontSize: 44, marginBottom: 8 }}>🏫</div>}
               {
-                <div style={{ fontWeight: 900, color: '#f1f5f9', fontSize: 18, marginBottom: 4 }}>
+                <div id="classe-modal-title" style={{ fontWeight: 900, color: '#f1f5f9', fontSize: 18, marginBottom: 4 }}>
                   Scegli la tua classe
                 </div>
               }

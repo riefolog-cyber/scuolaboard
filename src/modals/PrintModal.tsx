@@ -37,6 +37,9 @@ function PrintModal(props: any) {
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Anteprima stampa"
       style={{
         position: 'fixed',
         inset: 0,
