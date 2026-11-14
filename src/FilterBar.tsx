@@ -64,9 +64,21 @@ function FilterBar__({ $: props$ }: any) {
         </div>
       }
       {$.filtroBarOpen && (
-        <div style={{ display: 'flex', gap: 6, padding: '6px 14px 10px', flexWrap: 'wrap', alignItems: 'center' }}>
+        <div
+          className="filter-chips-scroll"
+          style={{
+            display: 'flex',
+            gap: 8,
+            padding: '6px 14px 10px',
+            flexWrap: 'nowrap',
+            overflowX: 'auto',
+            alignItems: 'center',
+            WebkitOverflowScrolling: 'touch',
+            scrollbarWidth: 'none',
+          }}
+        >
           {
-            <span style={{ fontSize: 11, color: 'rgba(255,255,255,.52)', fontWeight: 700, letterSpacing: 1 }}>
+            <span style={{ fontSize: 11, color: 'rgba(255,255,255,.52)', fontWeight: 700, letterSpacing: 1, flex: '0 0 auto' }}>
               CLASSE:
             </span>
           }
@@ -84,6 +96,7 @@ function FilterBar__({ $: props$ }: any) {
                   borderRadius: 20,
                   border: '1px solid ' + (sel ? cc : 'rgba(255,255,255,.15)'),
                   background: sel ? cc + '33' : 'rgba(255,255,255,.04)',
+                  flex: '0 0 auto',
                 }}
               >
                 {
@@ -200,7 +213,9 @@ function FilterBar__({ $: props$ }: any) {
                       $.apriRinomina(cl);
                     }}
                     style={{
-                      padding: '3px 6px',
+                      padding: '6px 8px',
+                      minWidth: 30,
+                      minHeight: 30,
                       background: 'none',
                       border: 'none',
                       color: 'rgba(255,255,255,.8)',
@@ -239,7 +254,9 @@ function FilterBar__({ $: props$ }: any) {
                       }
                     }}
                     style={{
-                      padding: '3px 8px',
+                      padding: '6px 8px',
+                      minWidth: 30,
+                      minHeight: 30,
                       background: 'none',
                       border: 'none',
                       color: 'rgba(255,255,255,.8)',
@@ -259,13 +276,13 @@ function FilterBar__({ $: props$ }: any) {
               onClick={function () {
                 $.setFilterClasse('_solo');
               }}
-              style={filterBtn($.filterClasse === '_solo')}
+              style={Object.assign({ flex: '0 0 auto' }, filterBtn($.filterClasse === '_solo'))}
             >
               Solo prof
             </button>
           }
           {$.addingClasse ? (
-            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: 4, alignItems: 'center', flex: '0 0 auto' }}>
               {
                 <input
                   value={$.newClasseInput}
@@ -341,8 +358,10 @@ function FilterBar__({ $: props$ }: any) {
               style={{
                 display: 'flex',
                 alignItems: 'center',
+                justifyContent: 'center',
                 gap: 4,
-                padding: '3px 10px',
+                padding: '6px 12px',
+                minHeight: 30,
                 borderRadius: 20,
                 border: '1px dashed rgba(var(--c-primary-rgb),.5)',
                 background: 'rgba(var(--c-primary-rgb),.08)',
@@ -350,6 +369,7 @@ function FilterBar__({ $: props$ }: any) {
                 fontSize: 12,
                 fontWeight: 700,
                 cursor: 'pointer',
+                flex: '0 0 auto',
               }}
             >
               +

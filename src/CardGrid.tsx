@@ -75,82 +75,78 @@ function CardGrid__({ $ }: any) {
   }
 
   if ($.visibleSorted.length === 0) {
+    var filtroAttivo = $.filterClasse !== 'tutte';
     return (
-      <div className="empty-state" style={{ padding: '60px 20px' }}>
+      <div className="empty-state" style={{ padding: '56px 20px 64px', gap: 10 }}>
         {
-          <svg
-            width={80}
-            height={80}
-            viewBox="0 0 80 80"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            style={{ marginBottom: 16, opacity: 0.35 }}
+          <div
+            aria-hidden="true"
+            style={{
+              width: 88,
+              height: 88,
+              borderRadius: 24,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'linear-gradient(145deg, rgba(var(--c-primary-rgb),.16), rgba(var(--c-primary-rgb),.04))',
+              border: '1px solid rgba(var(--c-primary-rgb),.18)',
+              marginBottom: 6,
+              boxShadow: '0 10px 30px rgba(0,0,0,.18)',
+            }}
           >
-            {
-              <rect
-                x={8}
-                y={12}
-                width={64}
-                height={52}
-                rx={8}
-                stroke="rgba(var(--c-primary-rgb),.8)"
-                strokeWidth={2}
-                fill="rgba(var(--c-primary-rgb),.06)"
-              />
-            }
-            {<rect x={18} y={24} width={30} height={3} rx={2} fill="rgba(var(--c-primary-rgb),.5)" />}
-            {<rect x={18} y={32} width={44} height={3} rx={2} fill="rgba(255,255,255,.45)" />}
-            {<rect x={18} y={40} width={36} height={3} rx={2} fill="rgba(255,255,255,.15)" />}
-            {
-              <circle
-                cx={60}
-                cy={52}
-                r={10}
-                fill="rgba(var(--c-primary-rgb),.15)"
-                stroke="rgba(var(--c-primary-rgb),.4)"
-                strokeWidth={1.5}
-              />
-            }
-            {<path d="M56 52h8M60 48v8" stroke="rgba(var(--c-primary-rgb),.6)" strokeWidth={2} strokeLinecap="round" />}
-          </svg>
-        }
-        {
-          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6, color: 'rgba(255,255,255,.5)' }}>
-            {$.filterClasse !== 'tutte' ? 'Nessuna card per la classe ' + $.filterClasse : 'Nessun contenuto visibile'}
+            <svg width={42} height={42} viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x={8} y={12} width={64} height={52} rx={8} stroke="rgba(var(--c-primary-rgb),.85)" strokeWidth={2.5} fill="rgba(var(--c-primary-rgb),.08)" />
+              <rect x={18} y={24} width={30} height={3.5} rx={2} fill="rgba(var(--c-primary-rgb),.55)" />
+              <rect x={18} y={33} width={44} height={3.5} rx={2} fill="rgba(255,255,255,.5)" />
+              <rect x={18} y={42} width={36} height={3.5} rx={2} fill="rgba(255,255,255,.22)" />
+              <circle cx={60} cy={52} r={10} fill="rgba(var(--c-primary-rgb),.18)" stroke="rgba(var(--c-primary-rgb),.45)" strokeWidth={1.5} />
+              <path d="M56 52h8M60 48v8" stroke="rgba(var(--c-primary-rgb),.7)" strokeWidth={2} strokeLinecap="round" />
+            </svg>
           </div>
         }
         {
-          <div style={{ fontSize: 12, color: 'rgba(255,255,255,.3)', marginBottom: 16 }}>
-            {$.filterClasse !== 'tutte'
-              ? "Prova a selezionare un'altra classe"
-              : 'Le card appariranno qui quando verranno pubblicate'}
+          <div className="empty-state-title" style={{ textAlign: 'center' }}>
+            {filtroAttivo ? 'Nessuna card per la classe ' + $.filterClasse : 'Nessun contenuto visibile'}
           </div>
         }
-        {$.filterClasse !== 'tutte' && (
-          <button
-            onClick={function () {
-              $.setFilterClasse('tutte');
-            }}
-            className="btn btn-ghost btn-sm"
-          >
-            Mostra tutte le classi
-          </button>
-        )}
-        {$.isProf && (
-          <button
-            onClick={function () {
-              if ($.apriNuovaCard) $.apriNuovaCard();
-              else {
-                $.setEditMode(null);
-                $.setForm(Object.assign({}, FORM0));
-                $.setShowModal(true);
-              }
-            }}
-            className="btn btn-primary"
-          >
-            + Aggiungi la prima card
-          </button>
-        )}
+        {
+          <div className="empty-state-sub" style={{ marginBottom: 10 }}>
+            {filtroAttivo
+              ? 'Prova un’altra classe oppure torna alla vista completa della bacheca.'
+              : $.isProf
+                ? 'Crea la prima card per condividere materiali, compiti o avvisi con la classe.'
+                : 'Le card appariranno qui quando verranno pubblicate.'}
+          </div>
+        }
+        {
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center', marginTop: 4 }}>
+            {filtroAttivo && (
+              <button
+                onClick={function () {
+                  $.setFilterClasse('tutte');
+                }}
+                className="btn btn-ghost btn-sm"
+              >
+                Mostra tutte le classi
+              </button>
+            )}
+            {$.isProf && (
+              <button
+                onClick={function () {
+                  if ($.apriNuovaCard) $.apriNuovaCard();
+                  else {
+                    $.setEditMode(null);
+                    $.setForm(Object.assign({}, FORM0));
+                    $.setShowModal(true);
+                  }
+                }}
+                className="btn btn-primary"
+              >
+                + Aggiungi la prima card
+              </button>
+            )}
+          </div>
+        }
       </div>
     );
   }

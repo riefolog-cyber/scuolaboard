@@ -115,8 +115,11 @@ textarea,input,select,button{font-family:inherit}
   display:inline-flex;align-items:center;gap:3px;
   border-radius:20px;padding:3px 9px;cursor:pointer;
   font-size:11px;font-family:inherit;
-  transition:opacity .15s ease, transform .12s ease, box-shadow .15s ease;
+  transition:opacity .15s ease, transform .12s ease, box-shadow .15s ease, background .15s ease, border-color .15s ease;
 }
+.pill-btn:hover{filter:brightness(1.08)}
+.pill-btn:focus-visible{outline:2px solid #6366f1;outline-offset:2px}
+.filter-chips-scroll::-webkit-scrollbar{display:none}
 /* ── FASE 6: BADGE CHIP (badge testuali nella card) ── */
 .badge-chip{
   display:inline-flex;align-items:center;gap:3px;
@@ -243,7 +246,7 @@ button:focus-visible{
 }
 .empty-state-icon{font-size:56px;line-height:1}
 .empty-state-title{font-size:17px;font-weight:700;color:#f1f5f9;margin:0}
-.empty-state-sub{font-size:13px;color:rgba(255,255,255,.68);margin:0;text-align:center;max-width:300px;line-height:1.55}
+.empty-state-sub{font-size:13px;color:rgba(255,255,255,.72);margin:0;text-align:center;max-width:340px;line-height:1.55}
 
 
 /* ═══════════════════════════════════════════════════════
