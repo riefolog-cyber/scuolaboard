@@ -387,6 +387,22 @@ function CardItem__({ $, c, idx }: any) {
                     overflow: 'hidden',
                   }}
                 >
+                  {nuova && (
+                    <span
+                      aria-hidden="true"
+                      className="pulse"
+                      style={{
+                        display: 'inline-block',
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        background: 'var(--c-success, #4ade80)',
+                        marginRight: 6,
+                        verticalAlign: 'middle',
+                        boxShadow: '0 0 0 0 rgba(74,222,128,.6)',
+                      }}
+                    />
+                  )}
                   {c.titolo}
                 </div>
               }

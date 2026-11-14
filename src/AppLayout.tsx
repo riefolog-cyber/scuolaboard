@@ -15,6 +15,7 @@ import ProposalsPanel from './ProposalsPanel.tsx';
 import CardGrid from './CardGrid.tsx';
 import FAB from './FAB.tsx';
 import Toasts from './Toasts.tsx';
+import ScrollToTop from './ScrollToTop.tsx';
 import { etichettaSospesi } from './avvisi-classe.ts';
 // Fase 8b: trappola di focus per la CardDetail (modale lazy).
 import FocusTrap from './modals/focusTrap.tsx';
@@ -800,6 +801,7 @@ function AppLayout(props: any) {
         </Suspense>
       )}
       {<Toasts $={$} />}
+      {<ScrollToTop />}
       {window.SB_DEBUG && (
         <Suspense fallback={null}>
           <LazyDiagnostica isLight={$.isLight} />

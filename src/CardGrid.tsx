@@ -26,7 +26,7 @@ function CardGrid__({ $ }: any) {
         {
           <div className="card-grid" style={GRID_STYLE}>
             {' '}
-            {[1, 2, 3, 4, 5, 6, 7, 8].map(function (i: number) {
+            {Array.from({ length: Math.max(6, Math.ceil((typeof window !== 'undefined' ? window.innerWidth : 1200) / 320) * 2) }, function (_, i) { return i + 1; }).map(function (i: number) {
               // Skeleton fedele alla card vera (chip + titolo + due righe +
               // pillole): lo stacco al caricamento si nota molto meno.
               return (
