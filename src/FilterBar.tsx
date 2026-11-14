@@ -65,20 +65,16 @@ function FilterBar__({ $: props$ }: any) {
       }
       {$.filtroBarOpen && (
         <div
-          className="filter-chips-scroll"
           style={{
             display: 'flex',
             gap: 8,
             padding: '6px 14px 10px',
-            flexWrap: 'nowrap',
-            overflowX: 'auto',
+            flexWrap: 'wrap',
             alignItems: 'center',
-            WebkitOverflowScrolling: 'touch',
-            scrollbarWidth: 'none',
           }}
         >
           {
-            <span style={{ fontSize: 11, color: 'rgba(255,255,255,.52)', fontWeight: 700, letterSpacing: 1, flex: '0 0 auto' }}>
+            <span style={{ fontSize: 11, color: 'rgba(255,255,255,.52)', fontWeight: 700, letterSpacing: 1 }}>
               CLASSE:
             </span>
           }
@@ -96,7 +92,6 @@ function FilterBar__({ $: props$ }: any) {
                   borderRadius: 20,
                   border: '1px solid ' + (sel ? cc : 'rgba(255,255,255,.15)'),
                   background: sel ? cc + '33' : 'rgba(255,255,255,.04)',
-                  flex: '0 0 auto',
                 }}
               >
                 {
@@ -276,13 +271,13 @@ function FilterBar__({ $: props$ }: any) {
               onClick={function () {
                 $.setFilterClasse('_solo');
               }}
-              style={Object.assign({ flex: '0 0 auto' }, filterBtn($.filterClasse === '_solo'))}
+              style={filterBtn($.filterClasse === '_solo')}
             >
               Solo prof
             </button>
           }
           {$.addingClasse ? (
-            <div style={{ display: 'flex', gap: 4, alignItems: 'center', flex: '0 0 auto' }}>
+            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
               {
                 <input
                   value={$.newClasseInput}
@@ -369,7 +364,6 @@ function FilterBar__({ $: props$ }: any) {
                 fontSize: 12,
                 fontWeight: 700,
                 cursor: 'pointer',
-                flex: '0 0 auto',
               }}
             >
               +
