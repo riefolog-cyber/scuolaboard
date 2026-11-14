@@ -12,7 +12,7 @@
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{transition:background-color .25s ease, color .25s ease}
-body{font-family:'Inter Variable','Inter','Segoe UI',sans-serif;background:var(--c-bg);transition:background .25s ease, color .25s ease}
+body{font-family:'Inter Variable','Inter','Segoe UI',sans-serif;font-weight:500;background:var(--c-bg);transition:background .25s ease, color .25s ease}
 .card-wrap, .modal-inner, .scuola-header{transition:background .25s ease, border-color .25s ease, box-shadow .25s ease, color .25s ease}
 textarea,input,select,button{font-family:inherit}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
@@ -322,6 +322,9 @@ button:focus-visible{
   border:none;border-radius:10px;font-weight:700;cursor:pointer;
   font-family:inherit;transition:opacity .15s ease, transform .12s ease;
   outline:none;
+  /* Touch target minimo (Apple HIG / Material): 36 px di altezza cliccabile.
+     .btn-sm resta compatto (padding ridotto) ma non scende sotto i 32 px. */
+  min-height:36px;
 }
 .btn:hover{opacity:.82}
 .btn:active{transform:scale(.96)}

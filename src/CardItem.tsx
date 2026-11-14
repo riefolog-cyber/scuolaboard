@@ -175,7 +175,7 @@ function CardItem__({ $, c, idx }: any) {
                   alt=""
                   loading="lazy"
                   decoding="async"
-                  style={{ width: '100%', maxHeight: 200, objectFit: 'contain', display: 'block' }}
+                  style={{ width: '100%', aspectRatio: '16 / 9', maxHeight: 200, objectFit: 'contain', display: 'block' }}
                 />
               }
               {c.immagini && c.immagini.length > 0 && (

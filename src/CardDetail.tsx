@@ -244,7 +244,7 @@ function CardDetail__({ $: props$ }: any) {
               alt=""
               loading="lazy"
               decoding="async"
-              style={{ width: '100%', maxHeight: 240, objectFit: 'contain', display: 'block' }}
+              style={{ width: '100%', aspectRatio: '16 / 9', maxHeight: 240, objectFit: 'contain', display: 'block' }}
             />
           </div>
         )}
