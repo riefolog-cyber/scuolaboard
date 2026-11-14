@@ -7,6 +7,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { screen, fireEvent } from '@testing-library/react';
 import { renderApp } from './harness';
+import { apriCardDetail } from './card-helpers';
 import { PROF, PROF_DOC, mkCard, setupTestEnv, teardownTestEnv } from './fixtures';
 
 beforeEach(setupTestEnv);
@@ -31,16 +32,10 @@ describe('403 del Worker AI: il toast mostra la causa (hint)', () => {
 
     const seed = { users: { prof1: PROF_DOC }, cards: { c1: mkCard('c1', { titolo: 'Card AI' }) } };
     const { db } = await renderApp({ seed, user: PROF });
-    fireEvent.click(await screen.findByText('Card AI', {}));
+    await apriCardDetail('Card AI');
 
     // Avvia l'analisi AI: il 403 deve trasformarsi in un messaggio leggibile.
-    // ⚠️ Timeout ESPLICITO e PIÙ ALTO del default (12s): questo click è anche
-    // la prima attesa che paga il caricamento pigro di CardDetail (stessa
-    // deroga documentata in ai-elimina-flows.test.tsx). Con 8 worker + coverage
-    // l'import da solo supera i 12s e il test falliva qui, non sull'assert:
-    // il budget per-test di 40s sopra non c'entra, scattava il tetto di
-    // testing-library.
-    fireEvent.click(await screen.findByRole('button', { name: /\+ AI/ }, { timeout: 30000 }));
+    fireEvent.click(await screen.findByRole('button', { name: /\+ AI/ }));
     expect(await screen.findByText(/Origine non autorizzata/, {})).toBeTruthy();
     expect(await screen.findByText(/ALLOWED_ORIGINS/, {})).toBeTruthy();
     // Nessuna analisi salvata (la chiamata è fallita)

@@ -3,6 +3,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { screen, fireEvent, waitFor } from '@testing-library/react';
 import { renderApp } from './harness';
+import { apriCardDetail } from './card-helpers';
 import { PROF, PROF_DOC, STUD, STUD_DOC, mkCard, setupTestEnv, teardownTestEnv } from './fixtures';
 
 beforeEach(setupTestEnv);
@@ -48,7 +49,7 @@ describe('Eliminazione analisi AI (prof)', () => {
       },
     };
     const { db } = await renderApp({ seed, user: PROF });
-    fireEvent.click(await screen.findByText('Card con analisi', {}));
+    await apriCardDetail('Card con analisi');
 
     // Attende che la CardDetail lazy-loaded sia aperta prima di cercare i
     // pulsanti del pannello AI (la card ha anche il titolo in griglia → serve
@@ -60,7 +61,7 @@ describe('Eliminazione analisi AI (prof)', () => {
     // worker + coverage il solo import supera i 12s e il test falliva prima
     // ancora di arrivare ai pulsanti AI: il budget per-test di 40s qui sopra
     // non c'entra, perché il tetto che scattava era quello di testing-library.
-    await screen.findByRole('button', { name: /Chiudi card/ }, { timeout: 30000 });
+    // (barriera al lazy-load già gestita da apriCardDetail)
 
     // Apre il pannello AI (bottone "🤖 ▼ AI") e clicca "🗑️ Elimina analisi".
     // NB: CardDetail è lazy-loaded → findByRole (async), non getByRole.
