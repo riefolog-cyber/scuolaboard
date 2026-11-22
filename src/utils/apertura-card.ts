@@ -73,6 +73,14 @@ export function p95Apertura(): number | null {
   return percentile(95);
 }
 
+/**
+ * Quanti campioni ci sono nella finestra: un p95 su 2 misure non significa
+ * niente, e chi legge la Diagnostica deve poterlo capire.
+ */
+export function campioniApertura(): number {
+  return campioni.length;
+}
+
 /** Solo per i test: riporta il modulo allo stato iniziale. */
 export function azzeraApertura() {
   inizio = null;

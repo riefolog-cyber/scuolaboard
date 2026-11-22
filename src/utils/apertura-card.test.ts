@@ -6,6 +6,7 @@ import {
   mediaApertura,
   p50Apertura,
   p95Apertura,
+  campioniApertura,
   azzeraApertura,
 } from './apertura-card.ts';
 
@@ -55,6 +56,7 @@ describe('utils/apertura-card', function () {
       segnaApertura(0);
       segnaCardPronta(500);
     }
+    expect(campioniApertura()).toBe(20);
     expect(p50Apertura()).toBe(10);
     expect(p95Apertura()).toBe(500);
     expect(mediaApertura()).toBeCloseTo((18 * 10 + 2 * 500) / 20, 5);
@@ -69,6 +71,7 @@ describe('utils/apertura-card', function () {
       segnaApertura(0);
       segnaCardPronta(10);
     }
+    expect(campioniApertura()).toBe(20); // 21 misure, ma la finestra è 20
     expect(p50Apertura()).toBe(10);
     expect(p95Apertura()).toBe(10);
     // La media storica invece non dimentica: (1000 + 20×10) / 21.

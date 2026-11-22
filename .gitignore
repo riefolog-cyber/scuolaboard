@@ -90,3 +90,7 @@ login-non-carica.png
 # Cache tooling locale (project-id + script harvesting: ambiente di sviluppo,
 # non fa parte del progetto)
 .freebuff/
+
+# Baseline visive (e2e/visual.spec.js): dipendono da font e antialiasing della
+# macchina, quindi restano locali. Si generano con VISUAL=1 --update-snapshots.
+e2e/**/*-snapshots/

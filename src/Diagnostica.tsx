@@ -11,7 +11,7 @@ import {
   svuotaErrori,
   testoDiagnostica,
 } from './diagnostica.ts';
-import { durataApertura, p50Apertura, p95Apertura } from './utils/apertura-card.ts';
+import { campioniApertura, durataApertura, mediaApertura, p50Apertura, p95Apertura } from './utils/apertura-card.ts';
 
 export default function Diagnostica(props: any) {
   var [aperto, setAperto] = useState(false);
@@ -127,16 +127,25 @@ export default function Diagnostica(props: any) {
             </div>
 
             <div style={{ marginBottom: 12 }}>
-              {durataApertura() != null && (
-                <div style={{ fontSize: 11, color: subColor, marginBottom: 8 }}>
-                  {/* Una sola lettura per render: due chiamate davano due numeri
-                      diversi se la misura si chiudeva in mezzo. */}
-                  Apertura card: {Math.round(durataApertura() as number)} ms
-                  {p50Apertura() != null && p95Apertura() != null
-                    ? ' · p50 ' + Math.round(p50Apertura() as number) + ' · p95 ' + Math.round(p95Apertura() as number) + ' ms'
-                    : ''}
-                </div>
-              )}
+              {function () {
+                // Una lettura sola per dato: due chiamate davano numeri diversi
+                // se una misura si chiudeva in mezzo al render.
+                var ultima = durataApertura();
+                if (ultima == null) return null;
+                // Sotto i 5 campioni p50/p95 ripetono la stessa misura e la
+                // presentano come distribuzione: si mostra solo l'ultima.
+                var campioni = campioniApertura();
+                var completo = campioni >= 5;
+                return (
+                  <div style={{ fontSize: 11, color: subColor, marginBottom: 8 }}>
+                    Apertura card: {Math.round(ultima)} ms
+                    {completo ? ' · media ' + Math.round(mediaApertura() as number) : ''}
+                    {completo
+                      ? ' · p50 ' + Math.round(p50Apertura() as number) + ' · p95 ' + Math.round(p95Apertura() as number) + ' ms (ultime ' + campioni + ')'
+                      : ''}
+                  </div>
+                );
+              }()}
               <div style={{ fontWeight: 800, color: titleColor, fontSize: 12, marginBottom: 6 }}>Tempi di avvio (ms)</div>
               <div
                 style={{

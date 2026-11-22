@@ -897,8 +897,12 @@ html[data-theme="light"]{
   --sb-line-strong:rgba(255,255,255,.16);
   --sb-btn-bg:rgba(255,255,255,.10);
   --sb-pin-fg:#d8b4fe;
-  --sb-danger-fg:var(--c-danger, #f87171);
-  --sb-success-fg:var(--c-success, #4ade80);
+  /* Diversi da --c-danger/--c-success: più chiari qui nello scuro, più scuri
+     nel chiaro. Stanno su una tinta traslucida (badge .2/.25) sopra la
+     superficie, e i colori pieni davano 3,7:1 (nascosta) e 4,03:1 (nuova nel
+     chiaro). Verificato da contrasto-token. */
+  --sb-danger-fg:#fca5a5;
+  --sb-success-fg:#4ade80;
 }
 html[data-theme="light"]{
   --sb-panel-grad:linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
@@ -907,7 +911,7 @@ html[data-theme="light"]{
   --sb-btn-bg:rgba(15,23,42,.07);
   --sb-pin-fg:#6d28d9;
   --sb-danger-fg:#b91c1c;
-  --sb-success-fg:#15803d;
+  --sb-success-fg:#166534;
 }
 /* Maniglia sticky del dettaglio: anche il suo gradiente e la sua barretta erano
    ternari/colori fissi (bianco su bianco nel tema chiaro). */

@@ -48,7 +48,7 @@ scuolaboard/
 npm install        # Installa dipendenze
 npm run dev        # Avvia server sviluppo su http://localhost:5173
 npm run build      # Build di produzione in docs/
-npm test           # Esegue i test (1262 test, 103 file); soglie in vitest.config.js
+npm test           # Esegue i test (1279 test, 105 file); soglie in vitest.config.js
 npm run lint       # ESLint
 npx tsc --noEmit   # Typecheck
 npm run test:e2e   # Test E2E (Playwright, usa il Chrome di sistema)

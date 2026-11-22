@@ -5,33 +5,38 @@
 // Contrasto dei TOKEN nei due temi.
 //
 // PERCHÉ: `e2e/contrasto-temi.spec.js` misura quattro nodi veri nel browser, ma
-// solo quelli che qualcuno ha deciso di cercare. Qui si controllano TUTTE le
-// coppie testo/superficie dichiarate dai token: se un giorno `--sb-text-3` viene
-// schiarito nel tema chiaro, il test diventa rosso in millisecondi, senza
-// browser. Le due cose sono complementari: il test E2E prende gli stili inline
-// dimenticati, questo prende i token.
+// solo quelli che qualcuno ha deciso di cercare. Qui si controllano le coppie
+// testo/superficie e i badge di stato dichiarati dai token: se un giorno
+// `--sb-text-3` viene schiarito nel tema chiaro, il test diventa rosso in
+// millisecondi, senza browser.
+//
+// Il fondo NON è un colore scritto a mano: è `--c-bg`, quello che `body` usa
+// davvero (`styles.css:15`). La prima versione usava #0f172a / #ffffff, che sono
+// più scuri/più chiari del vero: il test era verde perché misurava un fondo che
+// non esiste (ottimista di ~1 punto di contrasto).
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, it, expect } from 'vitest';
 import { SELETTORE_TEMA_CHIARO, senzaCommenti, variabiliGlobali, variabiliIn } from './css-utils.ts';
+import { badgeStato } from './stato-card.ts';
 
 const CSS = senzaCommenti(fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8'));
 const SCURO = variabiliGlobali(CSS);
 const CHIARO = Object.assign({}, SCURO, variabiliIn(SELETTORE_TEMA_CHIARO, CSS));
-
-// Il fondo dell'app nei due temi: le superfici traslucide si compongono sopra.
-const BASE: Record<string, number[]> = {
-  dark: [15, 23, 42],
-  light: [255, 255, 255],
-};
+const TEMA: Record<string, Record<string, string>> = { dark: SCURO, light: CHIARO };
 const AA = 4.5;
 
-function parse(valore: string): number[] {
+function parse(valore: string, token: Record<string, string>): number[] {
   var v = String(valore || '').trim();
-  // `var(--c-danger, #f87171)`: si usa il fallback, che è il colore del tema
-  // scuro; quello chiaro lo sovrascrive con un valore diretto.
-  var rif = v.match(/var\([^,]+,\s*([^)]+)\)/);
-  if (rif) v = rif[1].trim();
+  // Due giri: la bolla delle risposte è `rgba(var(--c-primary-rgb),.05)`, quindi
+  // il primo replace lascia un'altra var da risolvere. Un token assente è un
+  // errore esplicito, non un fallback silenzioso che falserebbe la misura.
+  for (var giro = 0; giro < 2 && v.indexOf('var(') >= 0; giro++) {
+    v = v.replace(/var\(\s*(--[a-z0-9-]+)\s*\)/g, function (_m: string, nome: string) {
+      if (token[nome] == null) throw new Error('token mancante: ' + nome);
+      return token[nome];
+    });
+  }
   var hex = v.match(/^#([0-9a-f]{6})$/i);
   if (hex) {
     return [
@@ -49,6 +54,21 @@ function parse(valore: string): number[] {
     return [q[0], q[1], q[2], q.length > 3 ? q[3] : 1];
   }
   throw new Error('colore non riconosciuto: ' + valore);
+}
+
+/**
+ * Primo stop di un gradiente (`linear-gradient(180deg, #fff 0%, …)`).
+ * Il pannello del dettaglio è un gradiente: il testo va misurato sul colore
+ * che sta in cima, dove il titolo si legge davvero.
+ */
+function primoStop(valore: string, token: Record<string, string>): number[] {
+  // Lo stop può essere `rgba(15,23,42,.98)` (virgole interne): si cattura
+  // la funzione intera, non «fino alla prima virgola». Solo le forme che
+  // `parse` sa leggere: un gradiente diverso fallisce qui, con un messaggio
+  // chiaro, invece di misurare un colore sbagliato.
+  var m = String(valore || '').match(/linear-gradient\(\s*[^,]+,\s*(rgba?\([^)]*\)|#[0-9a-f]{6})/i);
+  if (!m) throw new Error('gradiente non riconosciuto: ' + valore);
+  return parse(m[1], token);
 }
 
 function sopra(top: number[], bottom: number[]): number[] {
@@ -72,24 +92,63 @@ function contrasto(a: number[], b: number[]): number {
   return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
 }
 
-describe.each(['dark', 'light'])('contrasto dei token · tema %s', function (tema) {
-  var token = tema === 'dark' ? SCURO : CHIARO;
-  var base = BASE[tema];
-  // Fondo della card: la superficie traslucida sopra il fondo dell'app.
-  var surface = sopra(parse(token['--sb-surface']), base);
-
-  it('i token esistono (il test non è vuoto)', function () {
-    expect(token['--sb-surface']).toBeTruthy();
-    expect(token['--sb-text-1']).toBeTruthy();
+describe('contrasto dei token', function () {
+  it('il test non è vuoto: `--c-bg` e le superfici esistono in entrambi i temi', function () {
+    ['dark', 'light'].forEach(function (tema) {
+      var t = TEMA[tema];
+      expect(t['--c-bg'], tema + ': --c-bg').toBeTruthy();
+      expect(t['--sb-surface'], tema + ': --sb-surface').toBeTruthy();
+      expect(t['--sb-text-1'], tema + ': --sb-text-1').toBeTruthy();
+    });
   });
+});
+
+describe.each(['dark', 'light'])('contrasto dei token · tema %s', function (tema) {
+  var token = TEMA[tema];
+  // Il fondo dell'app è quello che `body` usa davvero.
+  var base = parse(token['--c-bg'], token);
+  // Fondo della card: la superficie traslucida sopra il fondo dell'app.
+  var surface = sopra(parse(token['--sb-surface'], token), base);
 
   it.each(['--sb-text-1', '--sb-text-2', '--sb-text-3'])('%s regge AA sulla superficie della card', function (nome) {
-    var testo = sopra(parse(token[nome]), surface);
+    var testo = sopra(parse(token[nome], token), surface);
     expect(contrasto(testo, surface), nome + ' su --sb-surface').toBeGreaterThanOrEqual(AA);
   });
 
   it.each(['--sb-text-1', '--sb-text-2', '--sb-text-3'])('%s regge AA sul fondo del tema', function (nome) {
-    var testo = sopra(parse(token[nome]), base);
-    expect(contrasto(testo, base), nome + ' sul fondo').toBeGreaterThanOrEqual(AA);
+    var testo = sopra(parse(token[nome], token), base);
+    expect(contrasto(testo, base), nome + ' su --c-bg').toBeGreaterThanOrEqual(AA);
+  });
+
+  // Il pannello del dettaglio è un GRADIENTE, non la superficie della card:
+  // titolo (28px) e testo stanno là, e con `--sb-panel-grad` sbagliato il tema
+  // chiaro diventava «bianco su bianco» senza che nessun test lo vedesse.
+  it.each(['--sb-text-1', '--sb-text-2'])('%s regge AA sul pannello del dettaglio', function (nome) {
+    var pannello = primoStop(token['--sb-panel-grad'], token);
+    var testo = sopra(parse(token[nome], token), pannello);
+    expect(contrasto(testo, pannello), nome + ' su --sb-panel-grad').toBeGreaterThanOrEqual(AA);
+  });
+
+  // Bolle dei commenti: tinta sulla superficie della card, testo 1/2.
+  it.each(['--sb-bubble', '--sb-bubble-reply'])('il testo regge AA sulla bolla %s', function (nomeBolla) {
+    var bolla = sopra(parse(token[nomeBolla], token), surface);
+    ['--sb-text-1', '--sb-text-2'].forEach(function (nomeTesto) {
+      var testo = sopra(parse(token[nomeTesto], token), bolla);
+      expect(contrasto(testo, bolla), nomeTesto + ' su ' + nomeBolla).toBeGreaterThanOrEqual(AA);
+    });
+  });
+
+  // I badge di stato sono costruiti da `badgeStato`: il test usa i valori veri,
+  // non una copia. Il fondo è la tinta traslucida sopra la superficie della card.
+  it.each([
+    ['fissata', { pinned: true }, '--sb-pin-fg'],
+    ['nascosta', { nascosta: true, isProf: true }, '--sb-danger-fg'],
+    ['nuova', { nuova: true }, '--sb-success-fg'],
+  ])('il badge «%s» regge AA sul suo fondo', function (nome, opts, nomeToken) {
+    var b = badgeStato(opts)[0];
+    expect(b, nome).toBeTruthy();
+    var fondoBadge = sopra(parse(b.bg, token), surface);
+    var testo = sopra(parse(b.fg, token), fondoBadge);
+    expect(contrasto(testo, fondoBadge), nome + ' (' + nomeToken + ')').toBeGreaterThanOrEqual(AA);
   });
 });

@@ -53,6 +53,22 @@ for (const tema of ['light', 'dark']) {
 
     expect(await violazioni(), 'bacheca (' + tema + ')').toEqual([]);
 
+    // Vista elenco: è dove `content-visibility` è appena entrato, e dove ogni
+    // riga è un <button> che contiene altri bottoni (nested-interactive).
+    const elenco = page.locator('[title="Elenco"]');
+    // Esplicito (non `if count>0`): se il toggle viene rinominato, l'errore è
+    // «manca Elenco» e non un `.list-row` invisibile dal messaggio ambiguo.
+    await expect(elenco).toHaveCount(1);
+    await elenco.first().click();
+    await expect(page.locator('.list-row').first()).toBeVisible();
+    expect(await violazioni(), 'elenco (' + tema + ')').toEqual([]);
+
+    // Si torna alla griglia: il dettaglio si apre da `.card-wrap`, che in elenco
+    // non esiste.
+    const griglia = page.locator('[title="Griglia"]');
+    await expect(griglia).toHaveCount(1);
+    await griglia.first().click();
+
     await page.locator('.card-wrap').first().click();
     await expect(page.locator('#cd-commenti')).toBeVisible();
     expect(await violazioni(), 'dettaglio (' + tema + ')').toEqual([]);

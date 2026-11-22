@@ -17,10 +17,17 @@
 // la destinazione (`isLight ? 'Tema scuro' : 'Tema chiaro'`), quindi dopo il
 // click deve proporre l'altro tema e `data-theme` deve concordare.
 import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 
+// Path risolto rispetto a QUESTO file, non alla CWD: lanciato da un'altra
+// cartella lo script deve continuare a trovare il foglio di stile.
+const cssPath = fileURLToPath(new URL('../src/styles.css', import.meta.url));
 const url = process.argv[2] || 'http://localhost:5173/scuolaboard/e2e/harness.html';
-const out = 'screenshots';
+// Anche l'output segue il file, non la CWD: da `scripts/` le immagini non
+// devono finire in `scripts/screenshots/`. `SB_SHOT_DIR` permette di sceglierne
+// un'altra senza modificare lo script.
+const out = process.env.SB_SHOT_DIR || fileURLToPath(new URL('../screenshots', import.meta.url));
 fs.mkdirSync(out, { recursive: true });
 
 // In locale il progetto usa il Chrome di sistema (vedi playwright.config), non il
@@ -59,7 +66,7 @@ for (const tema of ['light', 'dark']) {
   const page = await browser.newPage({ viewport, colorScheme: tema === 'light' ? 'light' : 'dark' });
   await page.goto(url, { waitUntil: 'networkidle' });
   // Il CSS non è caricato dall'harness: lo iniettiamo per vedere la resa vera.
-  await page.addStyleTag({ path: 'src/styles.css' });
+  await page.addStyleTag({ path: cssPath });
 
   const stato = await vaiAlTema(page, tema);
   const atteso = tema === 'light' ? 'light' : 'dark';
@@ -72,6 +79,20 @@ for (const tema of ['light', 'dark']) {
   const file = out + '/bacheca-' + tema + '.png';
   await page.screenshot({ path: file, fullPage: false });
   console.log('scritto ' + file + ' (data-theme=' + stato.theme + ', toggle="' + stato.toggle + '")');
+
+  // Vista elenco: qui vive `content-visibility` su `.list-row`, che la bacheca a
+  // griglia non mostra. Si torna alla griglia prima del dettaglio.
+  const elenco = page.locator('[title="Elenco"]');
+  if ((await elenco.count()) > 0) {
+    await elenco.first().click();
+    await page.waitForTimeout(300);
+    const fileElenco = out + '/elenco-' + tema + '.png';
+    await page.screenshot({ path: fileElenco, fullPage: false });
+    console.log('scritto ' + fileElenco);
+    const griglia = page.locator('[title="Griglia"]');
+    if ((await griglia.count()) > 0) await griglia.first().click();
+    await page.waitForTimeout(300);
+  }
 
   // Anche il DETTAGLIO: è dove vivono i token del pannello, della maniglia e del
   // pulsante di chiusura, e dove un ternario dimenticato fa sparire un testo

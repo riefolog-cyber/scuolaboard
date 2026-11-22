@@ -67,14 +67,17 @@ async function contrastoTesto(page, pattern, radice) {
       ];
     }
 
-    // Fondo del tema dichiarato dai token, non ricavato dalla catena DOM:
-    // nell'harness la catena non è affidabile (body di scena, fogli iniettati) e
-    // faceva misurare "bianco su bianco" anche quando il testo era corretto.
+    // Fondo del tema dai token, non ricavato dalla catena DOM (che nell'harness
+    // non è affidabile: body di scena, fogli iniettati) e non scritto a mano:
+    // `--c-bg` è il colore che `body` usa davvero. I valori fissi di prima
+    // (#0f172a / #ffffff) erano più scuri/chiari del vero, quindi il test era
+    // ottimista di circa un punto di contrasto.
     // Il COLORE DEL TESTO invece si legge dal nodo vero: è quello che il bug
     // sbagliava (rgba(255,255,255,.8) su un pannello chiaro).
     var scuro = document.documentElement.getAttribute('data-theme') !== 'light';
-    var base = scuro ? [15, 23, 42] : [255, 255, 255];
     var rootStyle = getComputedStyle(document.documentElement);
+    var bgTema = parse(rootStyle.getPropertyValue('--c-bg').trim());
+    var base = bgTema ? [bgTema.r, bgTema.g, bgTema.b] : scuro ? [26, 26, 46] : [241, 245, 249];
     var sup = parse(rootStyle.getPropertyValue('--sb-surface').trim());
     var fondo = el.closest('.card-wrap') && sup ? sopra(sup, base) : base;
     var t = parse(getComputedStyle(el).color) || { r: 0, g: 0, b: 0, a: 1 };
@@ -96,16 +99,14 @@ async function apriHarnessConCss(page, tema) {
   // Tema vero: il toggle aggiorna ANCHE lo stato React (non solo data-theme).
   var destinazione = tema === 'light' ? 'Tema chiaro' : 'Tema scuro';
   var toggle = page.locator('[title="' + destinazione + '"]');
+  // Sempre esattamente un toggle: se il titolo cambia, il test lo dice qui
+  // invece di saltare il click e misurare il tema sbagliato.
+  await expect(page.locator('[title^="Tema"]')).toHaveCount(1);
   if ((await toggle.count()) > 0) await toggle.first().click();
   await expect(page.locator('[title="' + (tema === 'light' ? 'Tema scuro' : 'Tema chiaro') + '"]')).toHaveCount(1);
 
-  // Base del tema dichiarata esplicitamente: l'harness non è l'app (il suo body
-  // ha un colore di scena) e senza base la catena dei fondi cade sul bianco del
-  // canvas — il testo chiaro risultava "bianco su bianco" (1,04). Qui si misura
-  // il testo sul fondo che l'app ha davvero in quel tema.
-  await page.addStyleTag({
-    content: tema === 'light' ? 'html,body{background:#ffffff}' : 'html,body{background:#0f172a}',
-  });
+  // Nessun fondo iniettato: la base la dà `--c-bg` dentro la misura. L'harness
+  // non è l'app, ma `styles.css` (caricato con ?css=1) ha il token vero.
 }
 
 for (const tema of ['light', 'dark']) {

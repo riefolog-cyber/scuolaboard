@@ -304,9 +304,10 @@ function AppProvider({ children }: any) {
     // PRIMA modifica del dataset dopo l'apertura riapriva la CardDetail anche
     // dopo che editCard l'aveva chiusa (es. modale Modifica con card riaperta
     // sotto, stato incoerente alla chiusura della modale).
-    // La misura dell'apertura parte QUI, non nel call-site: dalla griglia,
-    // dalla lista, dalla ricerca, dalle proposte e dal deep-link tutti passano
-    // di qui, e un punto solo non può dimenticarsi una via.
+    // La misura dell'apertura parte QUI, non nel call-site: griglia, lista,
+    // ricerca e proposte aprono tutte di qui, e un punto solo non può
+    // dimenticarsi una via. Il deep-link (?card=) invece NON passa di qui —
+    // non è un click e non deve entrare nella media (vedi l'effetto sotto).
     segnaApertura();
     deepLinkDone.current = true;
     setShowCard(c);

@@ -14,7 +14,7 @@
 // (`$.isLight === false ?`, `tema === 'light' ?`). Non è una svista: le altre
 // forme non sono mai state usate qui, e allargare il pattern senza un caso reale
 // produrrebbe solo falsi positivi. Se una riscrittura entra nel codice, si
-// aggiunge il pattern nell stesso commit.
+// aggiunge il pattern nello stesso commit.
 import { describe, it, expect } from 'vitest';
 import cardItemRaw from './CardItem.tsx?raw';
 import cardDetailRaw from './CardDetail.tsx?raw';
