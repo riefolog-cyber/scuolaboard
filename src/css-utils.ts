@@ -58,7 +58,10 @@ export function variabiliIn(selettore: string, css: string): Record<string, stri
   const fuori: Record<string, string> = {};
   let m: RegExpExecArray | null;
   while ((m = re.exec(css)) !== null) {
-    for (const def of m[1].matchAll(/(--[a-z-]+)\s*:\s*([^;]+)/g)) {
+    // `[a-z0-9-]`, non `[a-z-]`: senza le cifre `--sb-text-1/2/3` venivano
+    // letti come `--sb-text-` e i token numerati restavano invisibili ai test
+    // statici (compreso "ogni token di colore ha l'equivalente chiaro").
+    for (const def of m[1].matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+)/g)) {
       fuori[def[1]] = def[2].trim();
     }
   }

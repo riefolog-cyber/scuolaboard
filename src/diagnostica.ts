@@ -18,6 +18,7 @@
 // - Nessun `console.*` qui: il modulo è letto dal pannello, non dalla console.
 
 import { mascheraPII } from './utils/pii.ts';
+import { durataApertura, mediaApertura } from './utils/apertura-card.ts';
 
 export type VoceErrore = {
   t: number;
@@ -166,6 +167,18 @@ export function testoDiagnostica(contesto?: any): string {
     d.forEach(function (v) {
       righe.push('  ' + v.nome + ': ' + v.ms);
     });
+  }
+
+  var apertura = durataApertura();
+  if (apertura != null) {
+    var media = mediaApertura();
+    righe.push('');
+    righe.push(
+      'Apertura card: ' +
+        Math.round(apertura) +
+        ' ms' +
+        (media != null ? ' (media ' + Math.round(media) + ' ms)' : '')
+    );
   }
 
   righe.push('');

@@ -7,6 +7,8 @@ node_modules/
 
 # ── Logs ──
 *.log
+# Catture di revisione visiva (scripts/screenshot-temi.mjs): locali, mai committate
+screenshots/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

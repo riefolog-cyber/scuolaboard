@@ -12,6 +12,7 @@ import useAmmonizioni from '../hooks/useAmmonizioni.ts';
 import useClassi from '../hooks/useClassi.ts';
 import useNotifiche from '../hooks/useNotifiche.ts';
 import useTheme from '../hooks/useTheme.ts';
+import { segnaApertura } from '../utils/apertura-card.ts';
 import useDragDrop from '../hooks/useDragDrop.ts';
 import { useAuth } from '../auth.ts';
 import { segna } from '../diagnostica.ts';
@@ -303,6 +304,10 @@ function AppProvider({ children }: any) {
     // PRIMA modifica del dataset dopo l'apertura riapriva la CardDetail anche
     // dopo che editCard l'aveva chiusa (es. modale Modifica con card riaperta
     // sotto, stato incoerente alla chiusura della modale).
+    // La misura dell'apertura parte QUI, non nel call-site: dalla griglia,
+    // dalla lista, dalla ricerca, dalle proposte e dal deep-link tutti passano
+    // di qui, e un punto solo non può dimenticarsi una via.
+    segnaApertura();
     deepLinkDone.current = true;
     setShowCard(c);
     markSeen(c.id);

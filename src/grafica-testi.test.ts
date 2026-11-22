@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { testoSecondario, TESTO_SECONDARIO_CHIARO, TESTO_SECONDARIO_SCURO } from './grafica-testi.ts';
+import { temaTipo } from './card-tipo-tema.ts';
+import { coloreScadenza } from './urgenza.ts';
 
 // Contrasto WCAG 2.1: (L1+0.05)/(L2+0.05), con la luminanza relativa sRGB.
 function lin(c: number) {
@@ -46,6 +48,28 @@ describe('grafica · contrasto dei testi secondari', function () {
 
   it('il testo secondario chiaro supera AA su una card non bianca', function () {
     expect(contrasto(hex(TESTO_SECONDARIO_CHIARO), CARD_CHIARA)).toBeGreaterThanOrEqual(AA);
+  });
+
+  it('i chip del tipo reggono il testo bianco (AA) su ogni tinta', function () {
+    // Il chip usa il fondo pieno e l'etichetta bianca: era l'ultimo punto sotto
+    // soglia (verde ≈2,2:1, blu ≈3,7:1). chipBg è la variante scura della tinta.
+    var tipi = ['domanda', 'sondaggio', 'quiz', 'nota'];
+    tipi.forEach(function (t) {
+      var bg = temaTipo(t).chipBg;
+      expect(bg).toMatch(/^#[0-9a-f]{6}$/i);
+      var c = contrasto(hex(bg), [255, 255, 255]);
+      expect(c).toBeGreaterThanOrEqual(AA);
+    });
+  });
+
+  it('le etichette di scadenza restano leggibili sul fondo della card', function () {
+    // Stessa regola dei chip: il colore deve reggere il testo piccolo. Prima di
+    // questo test nessuno misurava i tre colori di urgenza.
+    (['expired', 'today', 'soon'] as const).forEach(function (st) {
+      expect(contrasto(hex(coloreScadenza(st).fg), CARD_SCURA)).toBeGreaterThanOrEqual(AA);
+    });
+    // Lo stato "ok" è bianco traslucido: si compone sopra il fondo.
+    expect(contrasto(sopra(0.7, CARD_SCURA), CARD_SCURA)).toBeGreaterThanOrEqual(AA);
   });
 
   it('testoSecondario sceglie il valore del tema', function () {

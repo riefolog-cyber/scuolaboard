@@ -1,5 +1,6 @@
 {
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
     "@babel/plugin-transform-react-jsx": "^8.0.1",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.62.1",

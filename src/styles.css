@@ -854,3 +854,84 @@ html[data-theme="light"] textarea::placeholder{color:#94a3b8 !important}
 .filter-chip .chip-action{opacity:.0; max-width:0; padding-left:0 !important; padding-right:0 !important; overflow:hidden; transition:opacity .12s ease, max-width .12s ease, padding .12s ease}
 .filter-chip:hover .chip-action, .filter-chip:focus-within .chip-action, .filter-chip.selected .chip-action{opacity:1; max-width:24px; padding-left:3px !important; padding-right:3px !important}
 @media (hover: none){ .filter-chip .chip-action{opacity:.85; max-width:24px; padding-left:3px !important; padding-right:3px !important} }
+
+/* ── TOKEN DEI TESTI E DELLE SUPERFICI ────────────────────────────────────
+   I due temi erano gestiti con ternari `isLight ? … : …` dentro gli stili
+   inline: ogni elemento nuovo andava scritto due volte e un ternario
+   dimenticato sbagliava un tema solo (nessun test lo vede, perché l'harness E2E
+   monta senza CSS). Queste variabili sono la stessa scelta, in un punto solo:
+   chi scrive uno stile usa var(--sb-…) e non deve sapere quale tema è attivo. */
+:root{
+  --sb-text-1:#f8fafc;
+  --sb-text-2:rgba(255,255,255,.86);
+  --sb-text-3:rgba(255,255,255,.62);
+  --sb-line:rgba(255,255,255,.10);
+  --sb-surface:rgba(255,255,255,.055);
+  --sb-hero-bg:#0b1220;
+}
+html[data-theme="light"]{
+  --sb-text-1:#0f172a;
+  --sb-text-2:#334155;
+  --sb-text-3:#475569;
+  --sb-line:rgba(15,23,42,.08);
+  --sb-surface:rgba(255,255,255,.92);
+  --sb-hero-bg:#cbd5e1;
+}
+
+/* Card fuori schermo: il browser salta layout e paint, ma il DOM resta al suo
+   posto — il drag&drop continua a trovare .card-grid [id^="card-"] e i conteggi
+   non si troncano (è il motivo per cui la finestratura era stata scartata).
+   L'altezza stimata evita che la scrollbar "salti"; `auto` la memorizza dopo il
+   primo render. Limite noto: Ctrl+F non trova il testo delle card non ancora
+   renderizzate finché non si scorre. */
+.card-wrap{content-visibility:auto;contain-intrinsic-size:auto 320px}
+
+/* 720px sono ~72 caratteri: la misura di riga leggibile si ferma a 68ch. */
+.card-detail-reading{max-width:min(720px,68ch)}
+
+/* Completamento dei token: anche pannello di dettaglio, pulsante di chiusura e
+   colori semantici (fissata/errore/successo) avevano il loro ternario. */
+:root{
+  --sb-panel-grad:linear-gradient(180deg, rgba(15,23,42,.98) 0%, rgba(15,23,42,.94) 100%);
+  --sb-panel-shadow:0 -10px 70px rgba(0,0,0,.65);
+  --sb-line-strong:rgba(255,255,255,.16);
+  --sb-btn-bg:rgba(255,255,255,.10);
+  --sb-pin-fg:#d8b4fe;
+  --sb-danger-fg:var(--c-danger, #f87171);
+  --sb-success-fg:var(--c-success, #4ade80);
+}
+html[data-theme="light"]{
+  --sb-panel-grad:linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  --sb-panel-shadow:0 -10px 50px rgba(15,23,42,.14);
+  --sb-line-strong:rgba(15,23,42,.18);
+  --sb-btn-bg:rgba(15,23,42,.07);
+  --sb-pin-fg:#6d28d9;
+  --sb-danger-fg:#b91c1c;
+  --sb-success-fg:#15803d;
+}
+/* Maniglia sticky del dettaglio: anche il suo gradiente e la sua barretta erano
+   ternari/colori fissi (bianco su bianco nel tema chiaro). */
+:root{
+  --sb-handle-grad:linear-gradient(180deg, rgba(15,23,42,.97) 0%, rgba(15,23,42,.97) 55%, rgba(15,23,42,0) 100%);
+}
+html[data-theme="light"]{
+  --sb-handle-grad:linear-gradient(180deg, #ffffff 0%, #ffffff 55%, rgba(255,255,255,0) 100%);
+}
+/* Bolle dei commenti: anche loro avevano un ternario (con il testo chiaro su
+   bolla #f8fafc nel tema chiaro). */
+:root{
+  --sb-bubble:rgba(255,255,255,.03);
+  --sb-bubble-reply:rgba(var(--c-primary-rgb),.05);
+  --sb-bubble-border:rgba(255,255,255,.06);
+}
+html[data-theme="light"]{
+  --sb-bubble:#f8fafc;
+  --sb-bubble-reply:rgba(79,70,229,.06);
+  --sb-bubble-border:rgba(15,23,42,.06);
+}
+
+/* Vista lista: stessa ragione di .card-wrap (sopra), ma la misura è stata
+   fatta: 600 righe, un re-layout completo passa da ~17,3 ms a ~1,5 ms (-91%)
+   con content-visibility. Sotto le ~50 righe la differenza è nel rumore, sopra
+   è la differenza fra scorrere fluido e non. */
+.list-row{content-visibility:auto;contain-intrinsic-size:auto 84px}

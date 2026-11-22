@@ -58,11 +58,11 @@ function ListRow({ $, c }: any) {
       className={'list-row' + (c.pinned ? ' pinned' : '') + (nuova ? ' nuova' : '')}
       style={{
         width: '100%',
-        border: '1px solid ' + (isLight ? 'rgba(15,23,42,.08)' : 'rgba(255,255,255,.09)'),
+        border: '1px solid var(--sb-line)',
         borderLeft: '4px solid ' + (nascosta ? 'rgba(148,163,184,.5)' : tema.color),
         borderRadius: 16,
         padding: '12px 14px',
-        background: isLight ? 'rgba(255,255,255,.9)' : 'rgba(255,255,255,.045)',
+        background: 'var(--sb-surface)',
         display: 'flex',
         gap: 12,
         alignItems: 'center',
@@ -77,15 +77,15 @@ function ListRow({ $, c }: any) {
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 3 }}>
-            <span className="list-pill" style={{ background: tema.soft, color: isLight ? '#334155' : '#e2e8f0', border: '1px solid ' + tema.border }}>{etichettaTipo(c.tipo)}</span>
+            <span className="list-pill" style={{ background: tema.soft, color: 'var(--sb-text-2)', border: '1px solid ' + tema.border }}>{etichettaTipo(c.tipo)}</span>
             {c.pinned && <span className="list-pill" style={{ background: 'rgba(168,85,247,.18)', color: '#d8b4fe' }}>📌 Fissata</span>}
             {nascosta && $.isProf && <span className="list-pill" style={{ background: 'rgba(239,68,68,.16)', color: 'var(--c-danger, #f87171)' }}>Nascosta</span>}
             {nuova && <span className="list-pill" style={{ background: 'rgba(34,197,94,.18)', color: 'var(--c-success, #4ade80)' }}>Nuova</span>}
             <UrgencyBadge scadenza={c.scadenza} />
-            <span style={{ fontWeight: 800, fontSize: 15, color: isLight ? '#0f172a' : '#f8fafc', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>{c.titolo || '(senza titolo)'}</span>
+            <span style={{ fontWeight: 800, fontSize: 15, color: 'var(--sb-text-1)', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>{c.titolo || '(senza titolo)'}</span>
           </div>
-          {c.testo ? <div style={{ fontSize: 12.5, color: isLight ? '#475569' : 'rgba(255,255,255,.62)', lineHeight: 1.45, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.testo}</div> : null}
-          <div style={{ marginTop: 4, fontSize: 11.5, color: testoSecondario(isLight), display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {c.testo ? <div style={{ fontSize: 12, color: 'var(--sb-text-3)', lineHeight: 1.45, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.testo}</div> : null}
+          <div style={{ marginTop: 4, fontSize: 12, color: testoSecondario(isLight), display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {metaParts.map(function (p, i) { return <span key={i}>{p}</span>; })}
           </div>
         </div>

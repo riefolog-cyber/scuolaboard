@@ -8,25 +8,25 @@ function FilterBar__({ $: props$ }: any) {
   var $ = Object.assign({}, props$, useContext(FormContext));
   if (!$.isProf || $.simulaSt || $.view !== 'bacheca') return null;
   return (
-    <div style={{ background: 'rgba(255,255,255,.015)', borderBottom: '1px solid rgba(255,255,255,.06)' }}>
+    <div style={{ background: 'rgba(255,255,255,.015)', borderBottom: '1px solid var(--sb-line)' }}>
       <div
         style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '1px 10px', cursor: 'pointer', minHeight: 26 }}
         onClick={function () { $.setFiltroBarOpen(function (v: any) { return !v; }); }}
       >
-        <span style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,.55)', letterSpacing: 0.2 }}>
+        <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--sb-text-3)', letterSpacing: 0.2 }}>
           {$.filterClasse === 'tutte' ? '🏫 FILTRA PER CLASSE' : '🏫 CLASSE: ' + $.filterClasse}
         </span>
         {$.filterClasse !== 'tutte' && (
           <span style={{ background: 'var(--c-primary, #6366f1)', color: '#fff', borderRadius: 20, padding: '0 5px', fontSize: 9.5, fontWeight: 800, lineHeight: '16px' }}>{$.filterClasse}</span>
         )}
         {$.filterClasse !== 'tutte' && (
-          <button onClick={function (e: any) { e.stopPropagation(); $.setFilterClasse('tutte'); }} aria-label="×" title="Mostra tutte" style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,.5)', cursor: 'pointer', fontSize: 11, lineHeight: 1, padding: '0 1px' }}>×</button>
+          <button onClick={function (e: any) { e.stopPropagation(); $.setFilterClasse('tutte'); }} aria-label="×" title="Mostra tutte" style={{ background: 'none', border: 'none', color: 'var(--sb-text-3)', cursor: 'pointer', fontSize: 11, lineHeight: 1, padding: '0 1px' }}>×</button>
         )}
-        <span style={{ fontSize: 10, color: 'rgba(255,255,255,.35)', marginLeft: 'auto' }}>{$.filtroBarOpen ? '?' : '?'}</span>
+        <span style={{ fontSize: 10, color: 'var(--sb-text-3)', marginLeft: 'auto' }}>{$.filtroBarOpen ? '?' : '?'}</span>
       </div>
       {$.filtroBarOpen && (
         <div className="filter-panel-open" style={{ display: 'flex', gap: 3, padding: '1px 10px 5px', flexWrap: 'wrap', alignItems: 'center' }}>
-          <span style={{ fontSize: 9.5, color: 'rgba(255,255,255,.38)', fontWeight: 700, letterSpacing: 0.2 }}>CLASSE:</span>
+          <span style={{ fontSize: 9.5, color: 'var(--sb-text-3)', fontWeight: 700, letterSpacing: 0.2 }}>CLASSE:</span>
           {$.CLASSI_LIST.map(function (cl: any) {
             var sel = $.filterClasse === cl;
             var isCustom = $.CLASSI_DEFAULT.indexOf(cl) < 0;
@@ -40,7 +40,7 @@ function FilterBar__({ $: props$ }: any) {
                   alignItems: 'center',
                   gap: 0,
                   borderRadius: 14,
-                  border: '1px solid ' + (sel ? cc : 'rgba(255,255,255,.12)'),
+                  border: '1px solid ' + (sel ? cc : 'var(--sb-line)'),
                   background: sel ? cc + '28' : 'rgba(255,255,255,.025)',
                   maxWidth: '100%',
                 }}
@@ -64,7 +64,7 @@ function FilterBar__({ $: props$ }: any) {
                   {isCustom && (
                     <span style={{ width: 7, height: 7, borderRadius: '50%', background: cc, display: 'inline-block', flexShrink: 0 }} />
                   )}
-                  <span style={{ color: sel ? '#fff' : 'rgba(255,255,255,.72)' }}>{cl}</span>
+                  <span style={{ color: sel ? 'var(--sb-text-1)' : 'var(--sb-text-2)' }}>{cl}</span>
                 </button>
                 {$.rinominaClasse === cl ? (
                   <div style={{ display: 'flex', gap: 2, alignItems: 'center', paddingRight: 2 }} onClick={function (e: any) { e.stopPropagation(); }}>
@@ -77,7 +77,7 @@ function FilterBar__({ $: props$ }: any) {
                       }}
                       autoFocus={true}
                       maxLength={20}
-                      style={{ width: 64, padding: '1px 5px', border: '1px solid var(--c-primary, #6366f1)', borderRadius: 5, fontSize: 11, background: 'rgba(255,255,255,.1)', color: '#f1f5f9', height: 22 }}
+                      style={{ width: 64, padding: '1px 5px', border: '1px solid var(--c-primary, #6366f1)', borderRadius: 5, fontSize: 11, background: 'var(--sb-surface)', color: 'var(--sb-text-1)', height: 22 }}
                     />
                     <button
                       aria-label="Conferma rinomina"
@@ -91,7 +91,7 @@ function FilterBar__({ $: props$ }: any) {
                       aria-label="Annulla rinomina classe"
                       title="Annulla"
                       onClick={function () { $.setRinominaClasse(null); if ($.setRinominaConferma) $.setRinominaConferma(false); }}
-                      style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,.5)', cursor: 'pointer', fontSize: 11, lineHeight: 1, padding: '2px 3px', minHeight: 22 }}
+                      style={{ background: 'none', border: 'none', color: 'var(--sb-text-3)', cursor: 'pointer', fontSize: 11, lineHeight: 1, padding: '2px 3px', minHeight: 22 }}
                     >
                       ✕
                     </button>
@@ -102,7 +102,7 @@ function FilterBar__({ $: props$ }: any) {
                     aria-label={'Rinomina classe ' + cl}
                     title="Rinomina"
                     onClick={function (e: any) { e.stopPropagation(); $.apriRinomina(cl); }}
-                    style={{ padding: '1px 3px', minWidth: 18, minHeight: 20, background: 'none', border: 'none', color: 'rgba(255,255,255,.5)', fontSize: 10, cursor: 'pointer', lineHeight: 1 }}
+                    style={{ padding: '1px 3px', minWidth: 18, minHeight: 20, background: 'none', border: 'none', color: 'var(--sb-text-3)', fontSize: 10, cursor: 'pointer', lineHeight: 1 }}
                   >
                     ✎
                   </button>
@@ -129,7 +129,7 @@ function FilterBar__({ $: props$ }: any) {
                       if ($.filterClasse === cl) $.setFilterClasse('tutte');
                     }
                   }}
-                  style={{ padding: '1px 3px', minWidth: 18, minHeight: 20, background: 'none', border: 'none', color: 'rgba(255,255,255,.4)', fontSize: 10, cursor: 'pointer', lineHeight: 1 }}
+                  style={{ padding: '1px 3px', minWidth: 18, minHeight: 20, background: 'none', border: 'none', color: 'var(--sb-text-3)', fontSize: 10, cursor: 'pointer', lineHeight: 1 }}
                   title="Rimuovi"
                 >
                   ×
@@ -150,7 +150,7 @@ function FilterBar__({ $: props$ }: any) {
                 placeholder="es. 1AX"
                 autoFocus={true}
                 maxLength={20}
-                style={{ width: 90, padding: '2px 6px', border: '1px solid var(--c-primary, #6366f1)', borderRadius: 6, fontSize: 11, background: 'rgba(255,255,255,.1)', color: '#f1f5f9', height: 22 }}
+                style={{ width: 90, padding: '2px 6px', border: '1px solid var(--c-primary, #6366f1)', borderRadius: 6, fontSize: 11, background: 'var(--sb-surface)', color: 'var(--sb-text-1)', height: 22 }}
               />
               <button aria-label="Conferma nuova classe" onClick={$.addClasseCustom} style={{ background: 'var(--c-primary, #6366f1)', color: '#fff', border: 'none', borderRadius: 6, padding: '2px 7px', cursor: 'pointer', fontSize: 11, fontWeight: 700, minHeight: 22 }}>✓</button>
               <button aria-label="Annulla aggiunta classe" onClick={function () { $.setAddingClasse(false); $.setNewClasseInput(''); }} style={{ background: 'rgba(255,255,255,.07)', color: 'rgba(255,255,255,.58)', border: 'none', borderRadius: 6, padding: '2px 7px', cursor: 'pointer', fontSize: 11, minHeight: 22 }}>✕</button>
@@ -159,7 +159,7 @@ function FilterBar__({ $: props$ }: any) {
             <button
               aria-label="Aggiungi classe"
               onClick={function () { $.setAddingClasse(true); }}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3, padding: '1px 8px', minHeight: 22, borderRadius: 16, border: '1px dashed rgba(var(--c-primary-rgb),.5)', background: 'rgba(var(--c-primary-rgb),.08)', color: '#a5b4fc', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3, padding: '1px 8px', minHeight: 22, borderRadius: 16, border: '1px dashed rgba(var(--c-primary-rgb),.5)', background: 'rgba(var(--c-primary-rgb),.08)', color: 'var(--sb-text-2)', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
             >
               +
             </button>

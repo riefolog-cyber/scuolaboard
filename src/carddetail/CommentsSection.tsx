@@ -25,14 +25,8 @@ function CommentsSection({ $, c }: any) {
     var isReplying = $.replyTo && String($.replyTo.id) === String(item.id);
     var isReply = depth > 0;
     var itemKey = item.id != null ? String(item.id) : 'it-' + depth + '-' + (idx == null ? 'x' : idx);
-    var bubbleBg = isLight
-      ? isReply
-        ? 'rgba(79,70,229,.06)'
-        : '#f8fafc'
-      : isReply
-        ? 'rgba(var(--c-primary-rgb),.05)'
-        : 'rgba(255,255,255,.03)';
-    var bubbleBorder = isReply ? 'rgba(var(--c-primary-rgb),.15)' : 'rgba(255,255,255,.06)';
+    var bubbleBg = isReply ? 'var(--sb-bubble-reply)' : 'var(--sb-bubble)';
+    var bubbleBorder = isReply ? 'rgba(var(--c-primary-rgb),.15)' : 'var(--sb-bubble-border)';
     return (
       <div
         key={itemKey}
@@ -180,7 +174,7 @@ function CommentsSection({ $, c }: any) {
                   borderRadius: 12,
                   fontSize: 14,
                   lineHeight: 1.6,
-                  color: '#f1f5f9',
+                  color: 'var(--sb-text-1)',
                   resize: 'vertical',
                   overflowY: 'auto',
                   marginBottom: 6,
@@ -221,7 +215,7 @@ function CommentsSection({ $, c }: any) {
                     background: 'rgba(255,255,255,.07)',
                     border: '1px solid rgba(255,255,255,.12)',
                     borderRadius: 8,
-                    color: 'rgba(255,255,255,.6)',
+                    color: 'var(--sb-text-3)',
                     fontSize: 11,
                     fontWeight: 700,
                     cursor: 'pointer',
@@ -235,7 +229,7 @@ function CommentsSection({ $, c }: any) {
             <div
               style={{
                 fontSize: isReply ? 11 : 12,
-                color: 'rgba(255,255,255,.7)',
+                color: 'var(--sb-text-2)',
                 lineHeight: 1.5,
                 whiteSpace: 'pre-wrap',
               }}
@@ -280,7 +274,7 @@ function CommentsSection({ $, c }: any) {
                   borderRadius: 12,
                   fontSize: 14,
                   lineHeight: 1.6,
-                  color: '#f1f5f9',
+                  color: 'var(--sb-text-1)',
                   resize: 'vertical',
                   overflowY: 'auto',
                   marginBottom: 6,
@@ -322,7 +316,7 @@ function CommentsSection({ $, c }: any) {
                     background: 'rgba(255,255,255,.07)',
                     border: '1px solid rgba(255,255,255,.12)',
                     borderRadius: 8,
-                    color: 'rgba(255,255,255,.6)',
+                    color: 'var(--sb-text-3)',
                     fontSize: 11,
                     fontWeight: 700,
                     cursor: 'pointer',
@@ -343,7 +337,9 @@ function CommentsSection({ $, c }: any) {
                 marginTop: 4,
                 background: 'none',
                 border: 'none',
-                color: isLight ? '#b45309' : 'rgba(255,255,255,.35)',
+                // Colore di AVVISO (testo di ammonizione), non una superficie: ambra scura sul
+                  // chiaro, grigio sul scuro. Resta un ternario di proposito.
+                  color: isLight ? '#b45309' : 'rgba(255,255,255,.35)',
                 cursor: 'pointer',
                 fontSize: 10,
                 fontWeight: 700,
@@ -365,9 +361,9 @@ function CommentsSection({ $, c }: any) {
   }
 
   return (
-    <div style={{ borderTop: '1px solid rgba(255,255,255,.08)', padding: '14px 18px' }}>
+    <div style={{ borderTop: '1px solid var(--sb-line)', padding: '14px 18px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <span style={{ fontWeight: 800, fontSize: 13, color: 'rgba(255,255,255,.8)' }}>
+        <span style={{ fontWeight: 800, fontSize: 13, color: 'var(--sb-text-1)' }}>
           💬 Commenti ({visibili.length})
         </span>
         {$.isProf && !$.simulaSt && visibili.length >= 2 && (
@@ -396,7 +392,7 @@ function CommentsSection({ $, c }: any) {
       {/* Ogni classe ha la sua discussione: chi guarda filtrato vede solo la
           propria, il docente su 'tutte' le vede tutte con l'etichetta. */}
       {!tutti && contesto && (
-        <div style={{ fontSize: 11, color: 'rgba(255,255,255,.45)', marginBottom: 10 }}>
+        <div style={{ fontSize: 11, color: 'var(--sb-text-3)', marginBottom: 10 }}>
           Solo i commenti della {contesto} · le altre classi hanno una discussione separata
         </div>
       )}
@@ -447,7 +443,7 @@ function CommentsSection({ $, c }: any) {
             borderRadius: 14,
             fontSize: 15,
             lineHeight: 1.6,
-            color: '#f1f5f9',
+            color: 'var(--sb-text-1)',
             resize: 'vertical',
             overflowY: 'auto',
             boxSizing: 'border-box',

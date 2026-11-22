@@ -11,6 +11,7 @@ import {
   svuotaErrori,
   testoDiagnostica,
 } from './diagnostica.ts';
+import { durataApertura, p50Apertura, p95Apertura } from './utils/apertura-card.ts';
 
 export default function Diagnostica(props: any) {
   var [aperto, setAperto] = useState(false);
@@ -126,6 +127,16 @@ export default function Diagnostica(props: any) {
             </div>
 
             <div style={{ marginBottom: 12 }}>
+              {durataApertura() != null && (
+                <div style={{ fontSize: 11, color: subColor, marginBottom: 8 }}>
+                  {/* Una sola lettura per render: due chiamate davano due numeri
+                      diversi se la misura si chiudeva in mezzo. */}
+                  Apertura card: {Math.round(durataApertura() as number)} ms
+                  {p50Apertura() != null && p95Apertura() != null
+                    ? ' · p50 ' + Math.round(p50Apertura() as number) + ' · p95 ' + Math.round(p95Apertura() as number) + ' ms'
+                    : ''}
+                </div>
+              )}
               <div style={{ fontWeight: 800, color: titleColor, fontSize: 12, marginBottom: 6 }}>Tempi di avvio (ms)</div>
               <div
                 style={{

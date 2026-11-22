@@ -3,6 +3,7 @@ import { useContext, useEffect, useRef, useState } from 'react';
 import { normalizeLinks } from './app-utils.tsx';
 import { scrollInVista } from './utils/scroll.ts';
 import { testoSecondario } from './grafica-testi.ts';
+import { segnaCardPronta } from './utils/apertura-card.ts';
 import { sbSafeUrl } from './utils/format.ts';
 import { allegatoIcona, allegatoNome, isHtmlAllegato, urlAllegatoSicuro } from './allegati.ts';
 import { caricaAllegati } from './allegati-card-servizio.ts';
@@ -11,6 +12,11 @@ import FormContext from './contexts/FormContext.tsx';
 import { useCountdown, countdownStr } from './Countdown.tsx';
 import { temaTipo, etichettaTipo } from './card-tipo-tema.ts';
 
+// Import STATICI di proposito: il `lazy` è stato provato e scartato. Questi
+// quattro pannelli sono sempre nell'albero (la condizione quiz/prof è DENTRO il
+// componente), quindi con `lazy` il chunk si scaricherebbe comunque all'apertura
+// di ogni card: quattro richieste in più e un pop-in, senza risparmio. Per
+// renderlo utile servirebbe spostare la condizione fuori, duplicandola.
 import QuizPanel from './carddetail/QuizPanel.tsx';
 import AIPanel from './carddetail/AIPanel.tsx';
 import PartecipazionePanel from './carddetail/PartecipazionePanel.tsx';
@@ -130,6 +136,20 @@ function CardDetail__({ $: props$ }: any) {
       visto = true;
     };
   }, [$.user && $.user.uid]);
+
+  // Chiude la misura aperta da `openCard`: la durata (click → dettaglio pronto)
+  // la mostra il pannello Diagnostica, solo con SB_DEBUG. Sta PRIMA dell'early
+  // return: un hook dichiarato dopo un return condizionale cambia il numero di
+  // hook fra un render e l'altro e React lancia «Rendered more hooks than during
+  // the previous render». La dipendenza su `c.id` fa ripartire la misura se il
+  // componente resta montato mentre la card cambia.
+  useEffect(
+    function () {
+      if (c) segnaCardPronta();
+    },
+    [c && c.id]
+  );
+
   if (!c) return null;
   var isLight = !!$.isLight;
   var tema = temaTipo(c.tipo);
@@ -178,12 +198,12 @@ function CardDetail__({ $: props$ }: any) {
         aria-modal="true"
         aria-label={'Dettaglio card: ' + (c.titolo || '')}
         style={{
-          background: isLight ? 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)' : 'linear-gradient(180deg, rgba(15,23,42,.98) 0%, rgba(15,23,42,.94) 100%)',
+          background: 'var(--sb-panel-grad)',
           backdropFilter: 'blur(24px)',
           WebkitBackdropFilter: 'blur(24px)',
-          border: isLight ? '1px solid rgba(15,23,42,.10)' : '1px solid rgba(255,255,255,.11)',
+          border: '1px solid var(--sb-line)',
           borderRadius: '22px 22px 0 0',
-          boxShadow: isLight ? '0 -10px 50px rgba(15,23,42,.14)' : '0 -10px 70px rgba(0,0,0,.65)',
+          boxShadow: 'var(--sb-panel-shadow)',
           width: '100%',
           maxWidth: 760,
           maxHeight: '94vh',
@@ -214,12 +234,10 @@ function CardDetail__({ $: props$ }: any) {
             display: 'flex',
             justifyContent: 'center',
             padding: '10px 12px 6px',
-            background: isLight
-              ? 'linear-gradient(180deg, #ffffff 0%, #ffffff 55%, rgba(255,255,255,0) 100%)'
-              : 'linear-gradient(180deg, rgba(15,23,42,.97) 0%, rgba(15,23,42,.97) 55%, rgba(15,23,42,0) 100%)',
+            background: 'var(--sb-handle-grad)',
           }}
         >
-          <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,.25)', marginTop: 6 }} />
+          <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--sb-line-strong)', marginTop: 6 }} />
           <button
             onClick={function (e: any) {
               e.stopPropagation();
@@ -235,9 +253,9 @@ function CardDetail__({ $: props$ }: any) {
               width: 38,
               height: 38,
               borderRadius: '50%',
-              border: isLight ? '1px solid rgba(15,23,42,.18)' : '1px solid rgba(255,255,255,.16)',
-              background: isLight ? 'rgba(15,23,42,.07)' : 'rgba(255,255,255,.10)',
-              color: isLight ? 'rgba(15,23,42,.9)' : 'rgba(255,255,255,.9)',
+              border: '1px solid var(--sb-line-strong)',
+              background: 'var(--sb-btn-bg)',
+              color: 'var(--sb-text-1)',
               fontSize: 17,
               fontWeight: 700,
               lineHeight: 1,
@@ -260,7 +278,7 @@ function CardDetail__({ $: props$ }: any) {
           return (
             <div
               className="card-detail-hero"
-              style={{ width: '100%', background: isLight ? '#cbd5e1' : '#0b1220', cursor: 'pointer', overflow: 'hidden', position: 'relative', maxHeight: 340 }}
+              style={{ width: '100%', background: 'var(--sb-hero-bg)', cursor: 'pointer', overflow: 'hidden', position: 'relative', maxHeight: 340 }}
               onClick={function (e: any) {
                 e.stopPropagation();
                 $.setLightbox({ url: c.copertina, didascalia: c.titolo });
@@ -307,7 +325,7 @@ function CardDetail__({ $: props$ }: any) {
                   transition: 'filter .4s ease, transform .4s ease, opacity .4s ease',
                 }}
               />
-              <div style={{ position: 'absolute', left: 16, bottom: 14, zIndex: 2, display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderRadius: 999, background: 'rgba(15,23,42,.48)', border: '1px solid rgba(255,255,255,.18)', color: '#fff', backdropFilter: 'blur(8px)', fontWeight: 800, fontSize: 12 }}>
+              <div style={{ position: 'absolute', left: 16, bottom: 14, zIndex: 2, display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderRadius: 999, background: 'rgba(15,23,42,.72)', border: '1px solid rgba(255,255,255,.18)', color: '#fff', backdropFilter: 'blur(8px)', fontWeight: 800, fontSize: 12 }}>
                 <span>{tema.icon}</span><span>{etichettaTipo(c.tipo)}</span>
               </div>
             </div>
@@ -320,7 +338,10 @@ function CardDetail__({ $: props$ }: any) {
           <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginBottom: 12 }}>
             <span
               style={{
-                background: tema.color,
+                // chipBg, non color: il fondo pieno con etichetta bianca va
+                // sotto AA per «nota» (#94a3b8 ≈2,5:1). chipBg è la variante
+                // scura del tema, già usata da CardItem per lo stesso chip.
+                background: tema.chipBg,
                 color: '#fff',
                 borderRadius: 9,
                 padding: '5px 11px',
@@ -381,7 +402,7 @@ function CardDetail__({ $: props$ }: any) {
               margin: '0 0 10px',
               fontWeight: 900,
               fontSize: 28,
-              color: isLight ? '#0f172a' : '#f8fafc',
+              color: 'var(--sb-text-1)',
               lineHeight: 1.18,
               letterSpacing: 0.02,
             }}
@@ -391,7 +412,7 @@ function CardDetail__({ $: props$ }: any) {
 
           {/* Autor */}
           <div style={{ fontSize: 12, color: testoSecondario(isLight), marginBottom: 14 }}>
-            di <strong style={{ color: isLight ? '#0f172a' : 'rgba(255,255,255,.78)', fontWeight: 700 }}>{c.autore || 'Prof'}</strong> ·{' '}
+            di <strong style={{ color: 'var(--sb-text-1)', fontWeight: 700 }}>{c.autore || 'Prof'}</strong> ·{' '}
             {$.timeAgo(c.data)}
           </div>
           <nav className="detail-nav" aria-label="Sezioni card">
@@ -407,7 +428,7 @@ function CardDetail__({ $: props$ }: any) {
               id="cd-testo"
               className="card-detail-bodytext cd-section"
               style={{
-                color: isLight ? '#334155' : 'rgba(255,255,255,.86)',
+                color: 'var(--sb-text-2)',
                 marginBottom: 20,
                 whiteSpace: 'pre-wrap',
               }}
@@ -478,7 +499,7 @@ function CardDetail__({ $: props$ }: any) {
                 style={{
                   fontSize: 11,
                   fontWeight: 800,
-                  color: isLight ? '#475569' : 'rgba(255,255,255,.62)',
+                  color: 'var(--sb-text-3)',
                   marginBottom: 8,
                   letterSpacing: 1.2,
                 }}
@@ -616,7 +637,7 @@ if (isHtmlAllegato(al)) {
           {/* Links */}
           {cardLinks.length > 0 && (
             <div className="cd-section" style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 11, fontWeight: 800, color: isLight ? '#475569' : 'rgba(255,255,255,.62)', marginBottom: 8, letterSpacing: 1.2 }}>🔗 LINK</div>
+              <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--sb-text-3)', marginBottom: 8, letterSpacing: 1.2 }}>🔗 LINK</div>
               {cardLinks.map(function (link: any, i: any) {
                 // Allowlist URL: senza questo, `javascript:` finiva in un href e il
                 // click del docente eseguiva codice con la sua sessione aperta. Il
@@ -702,7 +723,7 @@ if (isHtmlAllegato(al)) {
                 style={{
                   fontSize: 11,
                   fontWeight: 800,
-                  color: isLight ? '#475569' : 'rgba(255,255,255,.62)',
+                  color: 'var(--sb-text-3)',
                   letterSpacing: 1.2,
                   marginBottom: 10,
                 }}

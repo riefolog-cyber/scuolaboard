@@ -36,8 +36,8 @@ function PartecipazionePanel({ $, c }: any) {
     return (
       <div
         style={{
-          background: 'rgba(255,255,255,.03)',
-          border: '1px solid rgba(255,255,255,.07)',
+          background: 'var(--sb-surface)',
+          border: '1px solid var(--sb-line)',
           borderRadius: 10,
           padding: '8px 12px',
           marginBottom: 12,
@@ -47,7 +47,7 @@ function PartecipazionePanel({ $, c }: any) {
           style={{
             fontSize: 11,
             fontWeight: 800,
-            color: 'rgba(255,255,255,.58)',
+            color: 'var(--sb-text-3)',
             letterSpacing: 1,
             marginBottom: 6,
           }}
@@ -57,38 +57,38 @@ function PartecipazionePanel({ $, c }: any) {
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <div style={{ flex: 1, minWidth: 70, textAlign: 'center' }}>
             <div style={{ fontSize: 18, fontWeight: 800, color: '#a5b4fc' }}>{totPart.length}</div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,.52)' }}>Partecipanti</div>
+            <div style={{ fontSize: 11, color: 'var(--sb-text-3)' }}>Partecipanti</div>
           </div>
           <div style={{ flex: 1, minWidth: 70, textAlign: 'center' }}>
             <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--c-success, #4ade80)' }}>{commentiV.length}</div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,.52)' }}>Commenti</div>
+            <div style={{ fontSize: 11, color: 'var(--sb-text-3)' }}>Commenti</div>
           </div>
           {c.opzioni && (
             <div style={{ flex: 1, minWidth: 70, textAlign: 'center' }}>
               <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--c-warn, #fbbf24)' }}>{votanti.length}</div>
-              <div style={{ fontSize: 11, color: 'rgba(255,255,255,.52)' }}>Votanti</div>
+              <div style={{ fontSize: 11, color: 'var(--sb-text-3)' }}>Votanti</div>
             </div>
           )}
           <div style={{ flex: 1, minWidth: 70, textAlign: 'center' }}>
             <div style={{ fontSize: 18, fontWeight: 800, color: '#f97316' }}>{likers.length}</div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,.52)' }}>Like</div>
+            <div style={{ fontSize: 11, color: 'var(--sb-text-3)' }}>Like</div>
           </div>
         </div>
         {commentatori.length > 0 && $.isProf && !$.simulaSt && (
-          <div style={{ marginTop: 6, fontSize: 11, color: 'rgba(255,255,255,.52)' }}>
-            <span style={{ fontWeight: 700, color: 'rgba(255,255,255,.45)' }}>💬 Chi ha commentato: </span>
+          <div style={{ marginTop: 6, fontSize: 11, color: 'var(--sb-text-3)' }}>
+            <span style={{ fontWeight: 700, color: 'var(--sb-text-3)' }}>💬 Chi ha commentato: </span>
             {commentatori.join(', ')}
           </div>
         )}
         {likers.length > 0 && $.isProf && !$.simulaSt && (
-          <div style={{ marginTop: 3, fontSize: 11, color: 'rgba(255,255,255,.52)' }}>
-            <span style={{ fontWeight: 700, color: 'rgba(255,255,255,.45)' }}>👍 Chi ha messo like: </span>
+          <div style={{ marginTop: 3, fontSize: 11, color: 'var(--sb-text-3)' }}>
+            <span style={{ fontWeight: 700, color: 'var(--sb-text-3)' }}>👍 Chi ha messo like: </span>
             {likers.join(', ')}
           </div>
         )}
         {votanti.length > 0 && $.isProf && !$.simulaSt && (
-          <div style={{ marginTop: 3, fontSize: 11, color: 'rgba(255,255,255,.52)' }}>
-            <span style={{ fontWeight: 700, color: 'rgba(255,255,255,.45)' }}>🗳️ Chi ha votato: </span>
+          <div style={{ marginTop: 3, fontSize: 11, color: 'var(--sb-text-3)' }}>
+            <span style={{ fontWeight: 700, color: 'var(--sb-text-3)' }}>🗳️ Chi ha votato: </span>
             {votanti.join(', ')}
           </div>
         )}
@@ -102,7 +102,9 @@ function PartecipazionePanel({ $, c }: any) {
           if (!ammCard.length) return null;
           return (
             <div style={{ marginTop: 6, background: 'rgba(245,158,11,.06)', borderRadius: 6, padding: '6px 8px' }}>
-              <div style={{ fontWeight: 700, color: 'rgba(245,158,11,.9)', fontSize: 11, marginBottom: 4 }}>
+              {/* `--c-warn`, non l'ambra con alpha: #b45309 nel tema chiaro, #fbbf24
+                  nello scuro. L'alpha su un fondo panna dava 1,66:1 (axe). */}
+              <div style={{ fontWeight: 700, color: 'var(--c-warn, #fbbf24)', fontSize: 11, marginBottom: 4 }}>
                 ⚠️ Ammoniti in questa card:
               </div>
               {ammCard.map(function (a: any) {
@@ -117,7 +119,7 @@ function PartecipazionePanel({ $, c }: any) {
                       marginBottom: 2,
                     }}
                   >
-                    <span style={{ fontSize: 11, color: 'rgba(245,158,11,.7)', flex: 1 }}>
+                    <span style={{ fontSize: 11, color: 'var(--c-warn, #fbbf24)', flex: 1 }}>
                       {a.nome + ' — ' + a.motivazione + (a.modificata ? ' ✎' : '')}
                     </span>
                     {$.isProf && !$.simulaSt && (
@@ -134,7 +136,7 @@ function PartecipazionePanel({ $, c }: any) {
                             padding: '1px 6px',
                             cursor: 'pointer',
                             fontSize: 11,
-                            color: 'rgba(245,158,11,.7)',
+                            color: 'var(--c-warn, #fbbf24)',
                           }}
                         >
                           ✏️

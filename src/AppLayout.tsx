@@ -434,7 +434,7 @@ function AppLayout(props: any) {
                     <>
                       {onboardTip !== '0' && (
                         <div className="onboard-tip" role="status" style={{ margin: '6px 0 6px', padding: '6px 10px' }}>
-                          <div className="text" style={{ fontSize: 11.5 }}><strong>Nuovo:</strong> viste, raggruppa, filtri rapidi, modalità Aula e accenti.</div>
+                          <div className="text" style={{ fontSize: 12 }}><strong>Nuovo:</strong> viste, raggruppa, filtri rapidi, modalità Aula e accenti.</div>
                           <button type="button" className="btn btn-ghost btn-sm" onClick={function () { try { localStorage.setItem('sb_onboard_tip','0'); } catch(e){} setOnboardTip('0'); }}>OK</button>
                         </div>
                       )}

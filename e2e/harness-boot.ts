@@ -15,6 +15,18 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { createFakeDb } from '../src/integration/fake-firestore';
 
+// ?css=1 carica src/styles.css anche qui. L'harness per scelta non lo carica
+// (i test coprono comportamento e stili inline), ma senza CSS non si può
+// verificare il tema chiaro né il contrasto calcolato: e2e/contrasto-temi.spec.js
+// e e2e/a11y.spec.js lo chiedono esplicitamente, gli altri test restano com'erano.
+if (/(?:^|[?&])css=1(?:&|$)/.test(window.location.search)) {
+  // `.catch`: se il foglio non arriva, la promise rifiutata resterebbe non
+  // gestita e il test fallirebbe su un'attesa scaduta senza dire perché.
+  import('../src/styles.css').catch(function (e) {
+    console.error('[harness] ?css=1 ma styles.css non è stato caricato', e);
+  });
+}
+
 window.React = React;
 window.ReactDOM = ReactDOM;
 

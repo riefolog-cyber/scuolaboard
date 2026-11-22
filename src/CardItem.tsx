@@ -6,6 +6,7 @@ import Countdown from './Countdown.tsx';
 import { temaTipo, etichettaTipo } from './card-tipo-tema.ts';
 import { statoScadenza, labelScadenza, coloreScadenza } from './urgenza.ts';
 import { testoSecondario } from './grafica-testi.ts';
+import { badgeStato } from './stato-card.ts';
 // CardItem.jsx · ScuolaBoard
 
 function CardItem__({ $, c, idx }: any) {
@@ -69,29 +70,7 @@ function CardItem__({ $, c, idx }: any) {
   // nuova). Gli altri restano nel DOM ma si rivelano al passaggio del mouse
   // (classe .card-badge-extra, sempre visibili su touch): meno rumore sui chip,
   // più gerarchia tra titolo e contorno.
-  var statoBadges: any[] = [];
-  if (c.pinned) {
-    statoBadges.push({
-      key: 'pin',
-      label: '📌 FISSATA',
-      title: 'Card fissata in cima',
-      bg: 'rgba(168,85,247,.25)',
-      fg: '#d8b4fe',
-      bd: 'rgba(168,85,247,.4)',
-    });
-  }
-  if (nascosta && $.isProf) {
-    statoBadges.push({ key: 'nasc', label: 'NASCOSTA', bg: 'rgba(239,68,68,.2)', fg: 'var(--c-danger, #f87171)' });
-  }
-  if (nuova) {
-    statoBadges.push({
-      key: 'nuovo',
-      label: 'NUOVO',
-      bg: 'rgba(34,197,94,.25)',
-      fg: 'var(--c-success, #4ade80)',
-      bd: 'rgba(34,197,94,.4)',
-    });
-  }
+  var statoBadges = badgeStato({ pinned: !!c.pinned, nascosta: nascosta, nuova: nuova, isProf: !!$.isProf });
 
   return (
     <div
@@ -126,15 +105,15 @@ function CardItem__({ $, c, idx }: any) {
         return {
           // Niente margin: la spaziatura tra le card è del gap della griglia
           // (CardGrid: grid row-major) — un margin qui la raddoppierebbe.
-          background: nascosta ? 'rgba(255,255,255,.02)' : (isLight ? 'rgba(255,255,255,.92)' : 'rgba(255,255,255,.055)'),
+          background: nascosta ? 'rgba(255,255,255,.02)' : 'var(--sb-surface)',
           backdropFilter: 'blur(14px)',
-          border: '1px solid ' + (nascosta ? 'rgba(255,255,255,.05)' : (isLight ? 'rgba(15,23,42,.08)' : 'rgba(255,255,255,.10)')),
+          border: '1px solid ' + (nascosta ? 'rgba(255,255,255,.05)' : 'var(--sb-line)'),
           borderRadius: 20,
           overflow: 'hidden',
           opacity: nascosta ? 0.45 : 1,
           transition: 'transform .2s cubic-bezier(.22,1,.36,1),box-shadow .2s,opacity .2s',
           borderTop: '3px solid ' + tipoBorder,
-          boxShadow: nascosta ? 'none' : ('0 10px 26px rgba(0,0,0,.10), 0 0 0 1px ' + (isLight ? 'rgba(15,23,42,.02)' : 'rgba(255,255,255,.02)') + ' inset'),
+          boxShadow: nascosta ? 'none' : '0 10px 26px rgba(0,0,0,.10)',
           // Entrata a cascata: le card compaiono in sequenza (max 300ms) invece
           // di lampeggiare tutte insieme al primo render.
           animationDelay: Math.min(idx || 0, 12) * 25 + 'ms',
@@ -145,6 +124,8 @@ function CardItem__({ $, c, idx }: any) {
         <div
           style={{ cursor: 'pointer', position: 'relative' }}
           onClick={function () {
+            // La misura dell'apertura parte dentro `openCard` (unico punto): qui
+            // il click è solo uno dei tanti percorsi che aprono una card.
             $.openCard(c);
           }}
         >
@@ -161,7 +142,7 @@ function CardItem__({ $, c, idx }: any) {
                 borderRadius: '50%',
                 background: tema.pattern,
                 pointerEvents: 'none',
-                opacity: isLight ? 0.9 : 1,
+                opacity: 1,
               }}
             />
           }
@@ -170,7 +151,7 @@ function CardItem__({ $, c, idx }: any) {
               className="card-cover"
               style={{
                 width: '100%',
-                background: isLight ? '#e2e8f0' : '#0b1220',
+                background: 'var(--sb-hero-bg)',
                 borderRadius: '16px 16px 0 0',
                 overflow: 'hidden',
                 position: 'relative',
@@ -280,7 +261,7 @@ function CardItem__({ $, c, idx }: any) {
                         <span
                           className={'badge-chip'}
                           style={{
-                            background: tipoCol,
+                            background: tema.chipBg,
                             color: '#fff',
                             padding: '3px 9px',
                             fontWeight: 800,
@@ -435,7 +416,7 @@ function CardItem__({ $, c, idx }: any) {
                   style={{
                     fontWeight: 800,
                     fontSize: 16,
-                    color: nascosta ? (isLight ? '#64748b' : 'rgba(255,255,255,.6)') : isLight ? '#0f172a' : '#f8fafc',
+                    color: nascosta ? 'var(--sb-text-3)' : 'var(--sb-text-1)',
                     lineHeight: 1.3,
                     marginBottom: 6,
                     letterSpacing: 0.05,
@@ -469,8 +450,8 @@ function CardItem__({ $, c, idx }: any) {
               {c.testo && (
                 <div
                   style={{
-                    fontSize: 12.5,
-                    color: isLight ? '#334155' : 'rgba(255,255,255,.72)',
+                    fontSize: 12,
+                    color: 'var(--sb-text-2)',
                     lineHeight: 1.55,
                     overflow: 'hidden',
                     display: '-webkit-box',
