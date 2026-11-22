@@ -41,6 +41,7 @@ Regola pratica:
 - **giudica `npm test` sull'exit code**, non sul "Test Files passed". In PowerShell: `$LASTEXITCODE` dopo `npm test`. Uno `0` è l'unico verdetto.
 - **ogni `.then()` su una promise che può rigettare va chiuso con `.catch()`**, anche vuoto. Il `.catch(function () {})` NON è un dimenticato: quando `fbSave` (o `cardServices.addAmmonizione`) è già lui a mostrare il toast, il catch serve solo a marcare la promise come gestita e a non duplicare il messaggio. Il commento nel codice deve dirlo, così il catch vuoto non viene "pulito" via.
 - Non usare `@typescript-eslint/no-floating-promises` come rete: il codebase è `any` ovunque (`db` arriva da `window.db`), quindi la regola non vedrebbe la gran parte delle catene. Il controllo che funziona è l'exit code.
+- `src/test-setup.ts` collega un handler `unhandledRejection` a `src/utils/rejection-guardia.ts`: la rejection viene attribuita al test in corso e l'`afterEach` la trasforma in un errore che **nomina il test** («Unhandled rejection durante «…»: messaggio»), invece di lasciare solo l'exit code 1. L'attribuzione è best-effort (l'evento arriva al termine del turno): le voci che nessun test reclama vengono segnalate a fine file dall'`afterAll`, mai scartate.
 
 ## Regole non negoziabili
 

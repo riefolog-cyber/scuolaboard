@@ -75,3 +75,58 @@ window.quizListenRisposte = () => () => {};
 window.callGroqJSON = () => Promise.resolve(null);
 window.callGroqText = () => Promise.resolve('');
 window.ValutazioneApertaAI = () => null;
+
+// ── Rejection non gestite: nome del test colpevole ─────────────────────────
+// `vitest run` esce con 1 quando resta una promise rifiutata senza gestore, ma
+// non dice QUALE test l'ha creata: è già costato tre volte e un commit rosso
+// (AGENTS, «Il verde non basta»). L'handler attribuisce la rejection al test in
+// corso e l'afterEach la trasforma in un errore con nome e messaggio, così il
+// fallimento dice cosa cercare invece di lasciare solo un exit code.
+import { creaGuardiaRejection } from './utils/rejection-guardia.ts';
+import { afterAll, afterEach, beforeEach } from 'vitest';
+
+const guardiaRejection = creaGuardiaRejection();
+// `process` via globalThis: il progetto non carica @types/node (nessuna
+// dipendenza da tipi Node nel resto del codice).
+const processo = (globalThis as any).process;
+if (processo && typeof processo.on === 'function') {
+  processo.on('unhandledRejection', function (reason: any) {
+    // Solo registrare: lanciare qui farebbe cadere il worker a metà file.
+    guardiaRejection.registra(reason);
+  });
+}
+
+beforeEach(function (ctx: any) {
+  guardiaRejection.inizia((ctx && ctx.task && ctx.task.name) || '(test sconosciuto)');
+});
+
+afterEach(function () {
+  var nome = guardiaRejection.corrente() || '';
+  var voci = guardiaRejection.consuma(nome);
+  if (!voci.length) return;
+  throw new Error(
+    'Unhandled rejection durante «' +
+      nome +
+      '»: ' +
+      voci
+        .map(function (v) {
+          return v.messaggio;
+        })
+        .join(' | ') +
+      '. Chiudi la catena con .catch(): se fbSave ha già mostrato il toast, il catch serve solo a marcare la promise come gestita.'
+  );
+});
+
+// La coda può arrivare dopo l'afterEach dell'ultimo test: non deve sparire.
+afterAll(function () {
+  var rimaste = guardiaRejection.orfane();
+  if (!rimaste.length) return;
+  throw new Error(
+    'Unhandled rejection non attribuita: ' +
+      rimaste
+        .map(function (v) {
+          return v.test + ': ' + v.messaggio;
+        })
+        .join(' | ')
+  );
+});
