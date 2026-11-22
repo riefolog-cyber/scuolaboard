@@ -965,7 +965,7 @@ function AppProvider({ children }: any) {
     // `cards/{id}/allegati` (un documento per file), quindi il MiB della card è
     // tutto per testo e immagini. Fino al 24/10/2026 la copertina doveva
     // riservare spazio ai PDF ed era la causa del "Card troppo grande".
-    var usedKB = imgUsageKB(form.copertina, form.immagini);
+    var usedKB = imgUsageKB(form.copertina, form.immagini, form.copertinaThumb);
     var currentSlots = (form.copertina ? 1 : 0) + (form.immagini || []).length;
     var imgMimeOk = function (t: any) {
       return t === 'image/jpeg' || t === 'image/png' || t === 'image/gif' || t === 'image/webp';
@@ -1003,10 +1003,21 @@ function AppProvider({ children }: any) {
           var thumbTargetKB = 18;
           var thumb = '';
           try {
-            thumb = await window.compressImage(file, thumbPx, thumbPx, thumbQ, thumbTargetKB);
+            // Dalla copertina GIÀ compressa (b64), non dal File: un solo decode
+            // dell'originale invece di due, e nessun secondo encode a piena
+            // risoluzione. Se la funzione non c'è (test con mock parziale) o la
+            // data URL non è decodificabile, si ricade sull'originale.
+            var compressDataUrl = (window as any).compressDataUrl;
+            if (typeof compressDataUrl === 'function') {
+              thumb = await compressDataUrl(b64, thumbPx, thumbPx, thumbQ, thumbTargetKB);
+            }
           } catch (e) {
-            thumb = b64; // fallback: meglio l'originale che niente
+            thumb = '';
           }
+          if (!thumb) thumb = b64; // fallback: meglio l'originale che niente
+          // Anche la miniatura sta nel documento della card: senza questa riga il
+          // budget delle immagini successive la ignorava.
+          usedKB += urlKB(thumb);
           setForm(function (p: any) {
             return Object.assign({}, p, { copertina: b64, copertinaThumb: thumb });
           });

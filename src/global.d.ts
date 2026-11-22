@@ -67,6 +67,8 @@ interface Window {
   aiCacheSetAll: any;
   ANNI_DISPONIBILI: string[];
   compressImage: any;
+  /** Miniatura/immagine da una data URL già in memoria (app-utils compressDataUrl). */
+  compressDataUrl: any;
   quizListenRisposte: any;
   ValutazioneApertaAI: any;
   h: any;

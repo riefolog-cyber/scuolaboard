@@ -87,6 +87,9 @@ describe('imgUsageKB / computeImageTargetKB (budget dinamico delle immagini)', (
     expect(imgUsageKB(url, [])).toBeCloseTo(1000, 5);
     expect(imgUsageKB(null, [{ url: 'A'.repeat(1024 * 400) }])).toBeCloseTo(400, 5);
     expect(imgUsageKB(undefined, [])).toBe(0);
+    // La miniatura vive nello stesso documento della copertina: se non entra nel
+    // conto, il budget delle immagini successive la ignora (~18 KB per card).
+    expect(imgUsageKB(fakeImage(100), [], fakeImage(10)) - imgUsageKB(fakeImage(100), [])).toBeGreaterThan(9.9);
   });
 
   it('gli allegati NON riducono il budget delle immagini', () => {

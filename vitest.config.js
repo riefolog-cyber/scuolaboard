@@ -33,11 +33,13 @@ export default defineConfig({
       reportsDirectory: './coverage',
       include: ['src/**/*.{ts,tsx}'],
       exclude: ['src/**/*.test.{ts,tsx}', 'src/test-setup.ts'],
-      // Threshold anti-regressione (misura 14/11/2026, suite completa con
-      // coverage: lines 80.34%, stmts 78.80%, funcs 77.94%, branches 68.34%).
-      // Soglie 2–3 punti sotto il misurato: il CI fallisce solo se la copertura
-      // scende davvero, non sul rumore di v8 tra una run e l'altra. Alzare le
-      // soglie man mano che la copertura cresce, mai abbassarle.
+      // Threshold anti-regressione, tarate 1,5–2,5 punti sotto la copertura
+      // MISURATA sull'albero corrente (`npx vitest run --coverage`): il CI
+      // fallisce solo se la copertura scende davvero, non sul rumore di v8 tra
+      // una run e l'altra. Alzare le soglie man mano che la copertura cresce,
+      // mai abbassarle. Non scrivere qui numeri "storici": la misura cambia a
+      // ogni modulo nuovo, e un commento con un numero vecchio è peggio di
+      // nessun numero.
       thresholds: {
         lines: 78,
         statements: 76,

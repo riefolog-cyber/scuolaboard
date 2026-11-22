@@ -2,21 +2,43 @@
 
 export type StatoScadenza = 'ok' | 'soon' | 'today' | 'expired' | 'none';
 
+// Mezzanotte locale del giorno che contiene `t`. Serve a ragionare per giorni di
+// calendario e non per "distanza in ore": prima la soglia era `diff <= 24h` e una
+// card che scadeva DOMANI alle 9 compariva come "Oggi" — l'etichetta diceva una
+// cosa falsa a tutta la classe.
+function inizioGiorno(t: number): number {
+  var d = new Date(t);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+// Domani si calcola con `setDate` e non sommando 24h: nei giorni di cambio
+// dell'ora legale il giorno dura 23 o 25 ore, e la somma fissa sbaglierebbe il
+// confine (una scadenza di domani finirebbe in "ok" o in "Oggi").
+function inizioDomani(oggiMs: number): number {
+  var d = new Date(oggiMs);
+  d.setDate(d.getDate() + 1);
+  return d.getTime();
+}
+
 export function statoScadenza(scadenza: any, now = Date.now()): StatoScadenza {
   if (!scadenza) return 'none';
   var t = new Date(scadenza).getTime();
   if (isNaN(t)) return 'none';
-  var diff = t - now;
-  if (diff < 0) return 'expired';
-  if (diff <= 24 * 60 * 60 * 1000) return 'today';
-  if (diff <= 48 * 60 * 60 * 1000) return 'soon';
+  if (t < now) return 'expired';
+  var oggi = inizioGiorno(now);
+  var giorno = inizioGiorno(t);
+  if (giorno === oggi) return 'today';
+  if (giorno === inizioDomani(oggi)) return 'soon';
   return 'ok';
 }
 
 export function labelScadenza(stato: StatoScadenza): string {
   if (stato === 'expired') return 'Scaduta';
   if (stato === 'today') return 'Oggi';
-  if (stato === 'soon') return 'In scadenza';
+  // `soon` è "domani" (giorno di calendario successivo), non "entro 48 ore":
+  // l'etichetta dice quello che lo stato significa davvero.
+  if (stato === 'soon') return 'Domani';
   return '';
 }
 

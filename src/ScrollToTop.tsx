@@ -1,11 +1,11 @@
 // ScrollToTop.tsx — pulsante "torna in cima" per bacheche lunghe.
 //
 // Perché esiste: con 200+ card il ritorno in cima costa molti swipe su telefono.
-// Il pulsante appare solo dopo 600 px di scroll e si nasconde in cima. Il
-// prefers-reduced-motion disattiva lo smooth scroll automaticamente (il
-// listener CSS globale azzera transition/animation, ma scrollTo con behavior
-// 'smooth' è controllato dal browser: qui usiamo 'auto' se ridotto).
+// Il pulsante appare solo dopo 600 px di scroll e si nasconde in cima. Lo
+// scroll rispetta "riduci movimento" tramite utils/scroll.ts (un solo punto per
+// tutte le chiamate programmatiche: il CSS non può fermare behavior:'smooth').
 import { useState, useEffect } from 'react';
+import { scrollInCima } from './utils/scroll.ts';
 
 export default function ScrollToTop() {
   var [visibile, setVisibile] = useState(false);
@@ -25,13 +25,7 @@ export default function ScrollToTop() {
       type="button"
       className="scroll-top-btn"
       aria-label="Torna in cima"
-      onClick={function () {
-        var ridotto = false;
-        try {
-          ridotto = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        } catch (e) {}
-        window.scrollTo({ top: 0, behavior: ridotto ? 'auto' : 'smooth' });
-      }}
+      onClick={scrollInCima}
       style={{
         position: 'fixed',
         right: 16,

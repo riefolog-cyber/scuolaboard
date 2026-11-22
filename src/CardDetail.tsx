@@ -1,6 +1,8 @@
 // CardDetail.jsx · ScuolaBoard
 import { useContext, useEffect, useRef, useState } from 'react';
 import { normalizeLinks } from './app-utils.tsx';
+import { scrollInVista } from './utils/scroll.ts';
+import { testoSecondario } from './grafica-testi.ts';
 import { sbSafeUrl } from './utils/format.ts';
 import { allegatoIcona, allegatoNome, isHtmlAllegato, urlAllegatoSicuro } from './allegati.ts';
 import { caricaAllegati } from './allegati-card-servizio.ts';
@@ -264,6 +266,22 @@ function CardDetail__({ $: props$ }: any) {
                 $.setLightbox({ url: c.copertina, didascalia: c.titolo });
               }}
             >
+              {/* Riempie le bande del letterbox con l'immagine stessa sfocata:
+                  una locandina verticale resta intera, senza il ritaglio alto/basso
+                  che faceva objectFit 'cover'. */}
+              <div
+                aria-hidden="true"
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  backgroundImage: 'url("' + c.copertina + '")',
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  filter: 'blur(20px) saturate(.8)',
+                  transform: 'scale(1.1)',
+                  opacity: 0.55,
+                }}
+              />
               <img
                 src={c.copertina}
                 alt=""
@@ -276,10 +294,12 @@ function CardDetail__({ $: props$ }: any) {
                   setCopertinaLoadedSrc(c.copertina);
                 }}
                 style={{
+                  position: 'relative',
+                  zIndex: 1, // sopra il riempimento sfocato, qualunque sia l'ordine del DOM
                   width: '100%',
                   aspectRatio: '16 / 9',
                   maxHeight: 340,
-                  objectFit: 'cover',
+                  objectFit: 'contain',
                   display: 'block',
                   filter: copertinaCaricata ? 'saturate(1.03)' : 'blur(14px) saturate(.9)',
                   transform: copertinaCaricata ? 'scale(1)' : 'scale(1.05)',
@@ -370,15 +390,15 @@ function CardDetail__({ $: props$ }: any) {
           </h2>
 
           {/* Autor */}
-          <div style={{ fontSize: 12, color: isLight ? '#64748b' : 'rgba(255,255,255,.48)', marginBottom: 14 }}>
+          <div style={{ fontSize: 12, color: testoSecondario(isLight), marginBottom: 14 }}>
             di <strong style={{ color: isLight ? '#0f172a' : 'rgba(255,255,255,.78)', fontWeight: 700 }}>{c.autore || 'Prof'}</strong> ·{' '}
             {$.timeAgo(c.data)}
           </div>
           <nav className="detail-nav" aria-label="Sezioni card">
-            {c.testo ? <button type="button" className={activeSection === 'cd-testo' ? 'active' : ''} onClick={function(){ var r=scrollRef.current; var el=r && r.querySelector('#cd-testo'); if(el) el.scrollIntoView({behavior:'smooth', block:'start'}); }}>Contenuto</button> : null}
-            {c.allegati && c.allegati.length ? <button type="button" className={activeSection === 'cd-allegati' ? 'active' : ''} onClick={function(){ var r=scrollRef.current; var el=r && r.querySelector('#cd-allegati'); if(el) el.scrollIntoView({behavior:'smooth', block:'start'}); }}>Allegati</button> : null}
-            {(c.tipo === 'sondaggio' || c.tipo === 'quiz' || (c.quizDomande && c.quizDomande.length)) ? <button type="button" className={activeSection === 'cd-interattivo' ? 'active' : ''} onClick={function(){ var r=scrollRef.current; var el=r && r.querySelector('#cd-interattivo'); if(el) el.scrollIntoView({behavior:'smooth', block:'start'}); }}>Attività</button> : null}
-            <button type="button" className={activeSection === 'cd-commenti' ? 'active' : ''} onClick={function(){ var r=scrollRef.current; var el=r && r.querySelector('#cd-commenti'); if(el) el.scrollIntoView({behavior:'smooth', block:'start'}); }}>Commenti</button>
+            {c.testo ? <button type="button" className={activeSection === 'cd-testo' ? 'active' : ''} onClick={function(){ var r=scrollRef.current; var el=r && r.querySelector('#cd-testo'); if(el) scrollInVista(el); }}>Contenuto</button> : null}
+            {c.allegati && c.allegati.length ? <button type="button" className={activeSection === 'cd-allegati' ? 'active' : ''} onClick={function(){ var r=scrollRef.current; var el=r && r.querySelector('#cd-allegati'); if(el) scrollInVista(el); }}>Allegati</button> : null}
+            {(c.tipo === 'sondaggio' || c.tipo === 'quiz' || (c.quizDomande && c.quizDomande.length)) ? <button type="button" className={activeSection === 'cd-interattivo' ? 'active' : ''} onClick={function(){ var r=scrollRef.current; var el=r && r.querySelector('#cd-interattivo'); if(el) scrollInVista(el); }}>Attività</button> : null}
+            <button type="button" className={activeSection === 'cd-commenti' ? 'active' : ''} onClick={function(){ var r=scrollRef.current; var el=r && r.querySelector('#cd-commenti'); if(el) scrollInVista(el); }}>Commenti</button>
           </nav>
 
           {/* Testo */}
@@ -661,7 +681,7 @@ if (isHtmlAllegato(al)) {
                       style={{
                         background: 'none',
                         border: 'none',
-                        color: 'rgba(255,255,255,.45)',
+                        color: testoSecondario(isLight),
                         fontSize: 14,
                         cursor: 'pointer',
                         padding: '0 2px',

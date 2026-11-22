@@ -48,11 +48,14 @@ scuolaboard/
 npm install        # Installa dipendenze
 npm run dev        # Avvia server sviluppo su http://localhost:5173
 npm run build      # Build di produzione in docs/
-npm test           # Esegue i test (495 test, 46 file — copertura critica >60%)
+npm test           # Esegue i test (1215 test, 96 file); soglie in vitest.config.js
 npm run lint       # ESLint
 npx tsc --noEmit   # Typecheck
 npm run test:e2e   # Test E2E (Playwright, usa il Chrome di sistema)
 ```
+
+Richiede **Node 24.22.1 o superiore** (`engines` in `package.json`): con Node 20/22
+`npm ci` mostra un warning `EBADENGINE` e il toolchain non è quello su cui gira la CI.
 
 ### ⚠️ Porta del dev server: SOLO 5173
 

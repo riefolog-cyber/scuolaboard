@@ -29,6 +29,69 @@ function getDb(): any {
 // prima migrations/migrate-card-annoscolastico.js per le card legacy.
 // onInvalidate (opzionale): chiamato quando i dati cambiano, per invalidare la
 // cache combinata dell'istanza che possiede questo store (createCombinedStore).
+/**
+ * Applica i cambi di UN documento alla volta alla mappa id → card, riusando gli
+ * oggetti che non sono stati toccati.
+ *
+ * PERCHÉ: `CardItem` è memoizzato con `prev.c !== next.c`. Ricostruire l'array
+ * da zero a ogni snapshot (come si faceva: `s.forEach(d => a.push(d.data()))`)
+ * dà una nuova identità a TUTTE le card, quindi il memo esce alla prima riga e un
+ * solo like o commento ri-renderizza l'intera bacheca. Con `docChanges` solo la
+ * card cambiata è nuova, e il confronto a 14 campi torna a fare il suo lavoro.
+ */
+export function applicaDocChanges(
+  perId: Map<string, any>,
+  changes: Array<{ type: string; id: string; data?: any }>
+): Map<string, any> {
+  var next = new Map(perId);
+  changes.forEach(function (ch) {
+    var id = String(ch.id);
+    if (ch.type === 'removed') next.delete(id);
+    else if (ch.data !== undefined) next.set(id, ch.data);
+  });
+  return next;
+}
+
+/**
+ * Aggiorna la mappa dallo snapshot. Usa `docChanges` quando lo snapshot lo
+ * espone (Firestore vero: solo i documenti cambiati). Il ramo di fallback serve
+ * agli snapshot che non lo implementano (il fake dei test): lì `data()` può
+ * restituire lo stesso riferimento, quindi il riuso avviene per identità. In
+ * Firestore vero quel ramo non si usa.
+ */
+export function aggiornaMappaDaSnapshot(perId: Map<string, any>, s: any): Map<string, any> {
+  if (s && typeof s.docChanges === 'function') {
+    return applicaDocChanges(
+      perId,
+      s.docChanges().map(function (ch: any) {
+        return {
+          type: ch.type,
+          id: String(ch.doc.id),
+          data: ch.type === 'removed' ? undefined : ch.doc.data(),
+        };
+      })
+    );
+  }
+  var next = new Map<string, any>();
+  s.forEach(function (d: any) {
+    var id = String(d.id);
+    var cur = d.data();
+    var old = perId.get(id);
+    next.set(id, old === cur ? old : cur);
+  });
+  return next;
+}
+
+/** Card nell'ordine dello snapshot, scartando gli id non più presenti. */
+export function cardsDaMappa(perId: Map<string, any>, ordine: string[]): any[] {
+  var out: any[] = [];
+  ordine.forEach(function (id) {
+    var c = perId.get(String(id));
+    if (c != null) out.push(c);
+  });
+  return out;
+}
+
 function createCardsStore(user: any, anno: string | null, onInvalidate?: () => void) {
   var isProf = !!(user && user.role === 'prof');
   var primoSnapshotSegnato = false;
@@ -36,6 +99,9 @@ function createCardsStore(user: any, anno: string | null, onInvalidate?: () => v
   // Stato LOCALE all'istanza: due store creati con lo stesso anno/ruolo NON
   // condividono nulla — il destroy() di uno non tocca l'altro.
   var snapshot: any[] = [];
+  // Ultimo oggetto visto per ogni id: è ciò che permette di riusare le card
+  // invariate invece di ricrearle a ogni snapshot.
+  var perId = new Map<string, any>();
   var loaded = false;
   var errore: any = null;
   var listeners = new Set<() => void>();
@@ -65,11 +131,12 @@ function createCardsStore(user: any, anno: string | null, onInvalidate?: () => v
         if (!isProf) q = q.where('visibile', '==', true);
         unsub = q.onSnapshot(
           function (s: any) {
-            var a: any[] = [];
+            perId = aggiornaMappaDaSnapshot(perId, s);
+            var ordine: string[] = [];
             s.forEach(function (d: any) {
-              a.push(d.data());
+              ordine.push(String(d.id));
             });
-            snapshot = a;
+            snapshot = cardsDaMappa(perId, ordine);
             loaded = true;
             errore = null;
             if (!primoSnapshotSegnato) {
@@ -126,6 +193,7 @@ function createCardsStore(user: any, anno: string | null, onInvalidate?: () => v
         unsub = null;
       }
       snapshot = [];
+      perId.clear();
       loaded = false;
       errore = null;
       listeners.clear(); // SOLO i listener di questa istanza

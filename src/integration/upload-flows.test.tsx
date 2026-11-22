@@ -133,6 +133,42 @@ describe('Upload immagini (prof)', () => {
     expect(target).toBeGreaterThan(250);
   });
 
+  // Ottimizzazione: la miniatura NON deve ricomprimere il File originale (due
+  // decode e due encode della stessa foto, il primo a 12 MP). Deve partire dalla
+  // copertina già ridotta a 1920 px, cioè dal b64 appena prodotto.
+  it('la miniatura della copertina nasce dal b64 già ridotto: un solo decode del file', async () => {
+    const compressMock = vi.fn().mockResolvedValue('data:image/png;base64,ORIGINALE');
+    const thumbMock = vi.fn().mockResolvedValue('data:image/jpeg;base64,MINI');
+    const { db } = await renderApp({ seed: { users: { prof1: PROF_DOC }, cards: {} }, user: PROF });
+    window.compressImage = compressMock;
+    (window as any).compressDataUrl = thumbMock;
+
+    fireEvent.click(await screen.findByTitle('Nuova card', {}));
+    fireEvent.input(screen.getByPlaceholderText('Es. Riflessione su…'), {
+      target: { value: 'Card con copertina' },
+    });
+
+    const inputs = Array.from(document.querySelectorAll('input[type="file"]'));
+    const coverInput = inputs.find((i) => i.accept === 'image/*' && !i.multiple);
+    fireEvent.change(coverInput, { target: { files: [new File(['x'], 'copertina.png', { type: 'image/png' })] } });
+
+    await waitFor(() => expect(thumbMock).toHaveBeenCalledTimes(1));
+    // Il File è passato UNA volta sola alla compressione piena…
+    expect(compressMock).toHaveBeenCalledTimes(1);
+    // …e la miniatura riceve il b64, non il File.
+    expect(thumbMock.mock.calls[0][0]).toBe('data:image/png;base64,ORIGINALE');
+    expect(thumbMock.mock.calls[0][1]).toBe(320);
+    expect(thumbMock.mock.calls[0][2]).toBe(320);
+
+    fireEvent.click(screen.getByText('✅ Crea card'));
+    await waitFor(() => {
+      const found = db._all('cards').find(([, c]) => c.titolo === 'Card con copertina');
+      expect(found).toBeTruthy();
+      expect(found[1].copertina).toBe('data:image/png;base64,ORIGINALE');
+      expect(found[1].copertinaThumb).toBe('data:image/jpeg;base64,MINI');
+    });
+  });
+
   // Regressione: in CardDetail la galleria usava `src={img}` con img = oggetto
   // {id,url,didascalia} → renderizzava "[object Object]" e l'immagine (con la
   // sua didascalia) non si vedeva quando la card aveva anche una copertina.
@@ -157,6 +193,12 @@ describe('Upload immagini (prof)', () => {
     const galleryImg = screen.getAllByRole('img').find((i) => i.getAttribute('alt') === 'Seconda immagine');
     expect(galleryImg).toBeTruthy();
     expect(galleryImg.getAttribute('src')).toBe('data:image/png;base64,IMMAGINE2');
+
+    // La copertina intera resta visibile: 'contain' con il riempimento sfocato
+    // dietro, non 'cover' che tagliava le immagini verticali.
+    const heroImg = document.querySelector('.card-detail-hero img') as HTMLImageElement;
+    expect(heroImg).toBeTruthy();
+    expect(heroImg.style.objectFit).toBe('contain');
   });
 });
 

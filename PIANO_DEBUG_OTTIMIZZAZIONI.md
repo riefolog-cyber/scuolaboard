@@ -20,7 +20,9 @@ preciso, indicato con il file.
 | P2-4 — dead-code in CI come report non bloccante | ✅ fatto | `99298f3` |
 | P0-1 (resto) — immagini delle card in sottocollezione (come allegati) | ⏳ condizionato | — (solo se scatta una delle 3 condizioni del §7) |
 | P0-2 — nomi in `avvisiMancanti` | ❌ won't fix | — (trade-off accettato: i nomi servono al badge e `loadStudenti` non è sempre caricato; già esposti nei commenti) |
-| P1-2, P1-5, P2-3, P2-4, P3-* | ⏳ da fare | — |
+| P1-5 — misura del bundle Firebase | ✅ fatto (sola misura, nessun taglio) | — |
+| P1-2 — finestratura della griglia | ⏸ valutata e rinviata (vedi §4) | — |
+| P2-3, P3-* | ⏳ da fare | — |
 
 Le priorità sono quattro, non cinque:
 
@@ -157,6 +159,17 @@ React.
 row-major con altezze variabili e il drag & drop usa `getBoundingClientRect` su tutte
 le card (`src/hooks/useDragDrop.ts`, `computeDropTarget`), che con la virtualizzazione
 si romperebbe. Il blocco incrementale mantiene il DOM completo per il drag.
+
+**Valutata il 22/11/2026 e NON implementata.** Una prima versione (blocchi da 40 con
+«Mostra altre») è stata scritta e poi rimossa. Tre motivi, in ordine di peso:
+(1) con il DOM troncato il drag & drop non può droppare oltre la 40ª card —
+`useDragDrop` cerca i target con `document.querySelectorAll('.card-grid [id^="card-"]')`,
+e una card non montata non esiste; (2) i gruppi mostravano conteggi troncati («Altre 12»
+su 200 card), cioè un numero falso proprio dove il docente cerca il totale; (3) manca
+la misura che questa stessa sezione chiede, e senza quella il costo (un click in più,
+un file di test che duplica i mock della griglia) si paga al buio. Per riprenderla serve
+prima il Profiler con 300 card: se il primo render resta sotto ~200 ms, il DOM completo
+può restare.
 
 **File:** `src/CardGrid.tsx`, `src/contexts/AppProvider.tsx` (nessun cambio se il
 blocco è locale allo stato della griglia). **Sforzo:** 1 giorno.

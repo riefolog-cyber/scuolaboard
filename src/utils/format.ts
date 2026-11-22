@@ -1,6 +1,7 @@
 // src/utils/format.ts — utility pure di formattazione
 // Estratto da app-utils.ts (Fase 2d): nessuna dipendenza da Firestore/React.
 // app-utils.ts importa queste funzioni e le ri-registra su window.* / SB.*.
+import { temaTipo } from '../card-tipo-tema.ts';
 
 var CLASSI_COLORS = [
   '#f59e0b',
@@ -91,13 +92,16 @@ export function timeAgo(d: string | number | Date) {
   if (weeks < 5) return weeks + 'sett fa';
   return fmt(d);
 }
+// Colore e icona del tipo NON si riscrivono qui: la fonte unica è `temaTipo`
+// (src/card-tipo-tema.ts), che usano CardItem, CardGrid e CardDetail. Questi due
+// restano come alias per i punti non ancora migrati al tema (CercaModal,
+// PrintModal): una seconda tabella con gli stessi valori era una deriva in attesa
+// di accadere.
 export function badgeBg(t: string) {
-  return t === 'domanda' ? 'var(--c-primary, #6366f1)' : t === 'sondaggio' ? '#22c55e' : t === 'quiz' ? '#a855f7' : '#94a3b8';
+  return temaTipo(t).badge;
 }
 export function tipoIcon(t: string) {
-  // Nota → 📄 (era 📌): la graffetta del pin è il badge delle card FISSATE in
-  // cima, tenerla anche come icona del tipo rendeva ambigua la prima riga.
-  return t === 'domanda' ? '💬' : t === 'sondaggio' ? '🗳️' : t === 'quiz' ? '🧩' : '📄';
+  return temaTipo(t).icon;
 }
 
 // Allowlist URL: solo http(s). Blocca esplicitamente javascript:, data:, vbscript:,

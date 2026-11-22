@@ -1,5 +1,11 @@
 // card-tipo-tema.ts — linguaggio visivo per tipo di card (griglia, lista, dettaglio)
 // Non cambia i dati: solo presentazione coerente (colore, etichetta, pattern).
+//
+// FONTE UNICA: colore, icona ed etichetta del tipo vivono SOLO qui. `badgeBg` e
+// `tipoIcon` in utils/format.ts derivano da questo modulo (restano come alias per
+// i punti non ancora migrati al tema). Una seconda tabella con gli stessi valori
+// era una deriva in attesa di accadere: cambiare il colore del quiz in un punto
+// e non nell'altro avrebbe fatto divergere la bacheca dalla ricerca e dalla stampa.
 
 export type TipoCard = 'domanda' | 'sondaggio' | 'quiz' | string;
 
@@ -7,6 +13,8 @@ export type TemaTipo = {
   key: string;
   label: string;
   icon: string;
+  /** Colore pieno del badge (il primary segue il token CSS del tema). */
+  badge: string;
   color: string;
   soft: string;
   border: string;
@@ -20,6 +28,7 @@ var TEMI: Record<string, TemaTipo> = {
     key: 'domanda',
     label: 'DOMANDA',
     icon: '💬',
+    badge: 'var(--c-primary, #6366f1)',
     color: '#6366f1',
     soft: 'rgba(var(--c-primary-rgb),.18)',
     border: 'rgba(var(--c-primary-rgb),.45)',
@@ -31,6 +40,7 @@ var TEMI: Record<string, TemaTipo> = {
     key: 'sondaggio',
     label: 'SONDAGGIO',
     icon: '🗳️',
+    badge: '#22c55e',
     color: '#22c55e',
     soft: 'rgba(34,197,94,.18)',
     border: 'rgba(34,197,94,.45)',
@@ -42,6 +52,7 @@ var TEMI: Record<string, TemaTipo> = {
     key: 'quiz',
     label: 'QUIZ',
     icon: '🧩',
+    badge: '#a855f7',
     color: '#a855f7',
     soft: 'rgba(168,85,247,.18)',
     border: 'rgba(168,85,247,.45)',
@@ -53,6 +64,7 @@ var TEMI: Record<string, TemaTipo> = {
     key: 'nota',
     label: 'NOTA',
     icon: '📄',
+    badge: '#94a3b8',
     color: '#94a3b8',
     soft: 'rgba(148,163,184,.18)',
     border: 'rgba(148,163,184,.40)',

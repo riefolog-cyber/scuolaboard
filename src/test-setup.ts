@@ -68,6 +68,9 @@ window.__firestoreSync = {
 // quizListenRisposte, ValutazioneApertaAI, callGroqJSON/Text).
 window.ANNI_DISPONIBILI = ['2025/2026', '2026/2027'];
 window.compressImage = () => Promise.resolve('');
+// Secondo ingresso della compressione (miniatura da data URL): senza stub, un
+// test che carica una copertina userebbe il canvas di jsdom.
+(window as any).compressDataUrl = () => Promise.resolve('');
 window.quizListenRisposte = () => () => {};
 window.callGroqJSON = () => Promise.resolve(null);
 window.callGroqText = () => Promise.resolve('');

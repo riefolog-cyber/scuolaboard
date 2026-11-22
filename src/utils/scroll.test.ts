@@ -1,0 +1,47 @@
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { comportamentoScroll, movimentoRidotto, scrollInVista, scrollInCima } from './scroll.ts';
+
+function mockMatchMedia(matches: boolean) {
+  vi.stubGlobal('matchMedia', function () {
+    return { matches: matches, addEventListener: function () {}, removeEventListener: function () {} };
+  });
+}
+
+afterEach(function () {
+  vi.unstubAllGlobals();
+});
+
+describe('utils/scroll', function () {
+  it('con "riduci movimento" attivo lo scroll è immediato, non animato', function () {
+    mockMatchMedia(true);
+    expect(movimentoRidotto()).toBe(true);
+    expect(comportamentoScroll()).toBe('auto');
+  });
+
+  it('senza preferenza lo scroll resta fluido', function () {
+    mockMatchMedia(false);
+    expect(comportamentoScroll()).toBe('smooth');
+  });
+
+  it('scrollInVista passa block start e il comportamento scelto', function () {
+    mockMatchMedia(true);
+    var el = { scrollIntoView: vi.fn() };
+    scrollInVista(el);
+    expect(el.scrollIntoView).toHaveBeenCalledWith({ behavior: 'auto', block: 'start' });
+  });
+
+  it('scrollInVista su un elemento nullo non lancia', function () {
+    expect(function () {
+      scrollInVista(null);
+      scrollInVista({});
+    }).not.toThrow();
+  });
+
+  it('scrollInCima rispetta reduced-motion', function () {
+    mockMatchMedia(true);
+    var scrollTo = vi.fn();
+    vi.stubGlobal('scrollTo', scrollTo);
+    scrollInCima();
+    expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'auto' });
+  });
+});

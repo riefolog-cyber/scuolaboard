@@ -4,6 +4,8 @@ import CardItem from './CardItem.tsx';
 import { FORM0 } from './app-utils.tsx';
 import { temaTipo, etichettaTipo } from './card-tipo-tema.ts';
 import { statoScadenza, labelScadenza, coloreScadenza } from './urgenza.ts';
+import { scrollInVista } from './utils/scroll.ts';
+import { testoSecondario } from './grafica-testi.ts';
 
 // Griglia ROW-MAJOR (riga per riga, da sinistra a destra).
 export const GRID_STYLE = {
@@ -83,7 +85,7 @@ function ListRow({ $, c }: any) {
             <span style={{ fontWeight: 800, fontSize: 15, color: isLight ? '#0f172a' : '#f8fafc', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>{c.titolo || '(senza titolo)'}</span>
           </div>
           {c.testo ? <div style={{ fontSize: 12.5, color: isLight ? '#475569' : 'rgba(255,255,255,.62)', lineHeight: 1.45, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.testo}</div> : null}
-          <div style={{ marginTop: 4, fontSize: 11.5, color: isLight ? '#64748b' : 'rgba(255,255,255,.48)', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <div style={{ marginTop: 4, fontSize: 11.5, color: testoSecondario(isLight), display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {metaParts.map(function (p, i) { return <span key={i}>{p}</span>; })}
           </div>
         </div>
@@ -139,7 +141,7 @@ function TimelineView({ $, cards }: any) {
     <div className="timeline-wrap view-fade-in">
       {hasToday && (
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <button type="button" className="btn btn-ghost btn-sm" onClick={function () { var el = document.getElementById('timeline-day-' + todayKey); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}>Vai a oggi</button>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={function () { var el = document.getElementById('timeline-day-' + todayKey); if (el) scrollInVista(el); }}>Vai a oggi</button>
         </div>
       )}
       {days.length === 0 && <div className="empty-state-sub" style={{ textAlign: 'left', maxWidth: 'none' }}>Nessuna card con scadenza: usa Griglia o Elenco per vedere tutti i contenuti.</div>}

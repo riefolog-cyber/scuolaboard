@@ -118,102 +118,126 @@ export function fbDel(id: any) {
   );
   return p;
 }
-export function compressImage(file: File, maxW: number, maxH: number, quality?: number, targetKB?: number) {
-  if (!file.type.startsWith('image/'))
-    return Promise.reject(new Error("Il file selezionato non è un'immagine valida."));
+// ── Compressione immagini ─────────────────────────────────────────────────
+// UN solo algoritmo, due ingressi: il File scelto dall'utente e una data URL già
+// ridotta (la miniatura della copertina). Prima la miniatura ricompressa il File
+// originale: due decode e due encode della stessa foto, il primo a piena
+// risoluzione (12 MP da un telefono). Ora la miniatura nasce dall'immagine a
+// 1920 px appena prodotta — un solo decode dell'originale.
+function comprimiDaImmagine(img: any, maxW: number, maxH: number, quality?: number, targetKB?: number): string {
   var CFG = window.SB_CONFIG || {};
   var TARGET_KB = targetKB != null ? targetKB : CFG.IMG_TARGET_KB != null ? CFG.IMG_TARGET_KB : 250;
   var qStart = quality != null ? quality : CFG.IMG_QUALITY != null ? CFG.IMG_QUALITY : 0.85;
   var qMin = CFG.IMG_QUALITY_MIN != null ? CFG.IMG_QUALITY_MIN : 0.55;
+
+  var w = img.naturalWidth,
+    h = img.naturalHeight;
+  var scale = Math.min(1, maxW / w, maxH / h);
+  var cw = Math.round(w * scale),
+    ch = Math.round(h * scale);
+  var canvas = document.createElement('canvas');
+  canvas.width = cw;
+  canvas.height = ch;
+  var ctx = canvas.getContext('2d')!;
+  ctx.drawImage(img, 0, 0, cw, ch);
+  // Encoding: WebP quando il browser lo supporta (≈30% più piccolo a parità
+  // di qualità e mantiene la trasparenza); altrimenti JPEG. Se toDataURL
+  // non supporta il tipo, il canvas restituisce PNG: in quel caso si usa
+  // JPEG (molto più compatto).
+  function encode(cur: any, q: number) {
+    var webp: any;
+    try {
+      webp = cur.toDataURL('image/webp', q);
+    } catch (e) {
+      // toDataURL webp non supportato: caduta su JPEG
+      return cur.toDataURL('image/jpeg', q);
+    }
+    if (webp.indexOf('data:image/webp') === 0) return webp;
+    return cur.toDataURL('image/jpeg', q);
+  }
+  function kbOf(b64: string) {
+    // KB **di documento**: la data URL è ciò che finisce in Firestore, quindi
+    // 1 carattere = 1 byte. Con ×0.75 (byte del file) il target era un quarto
+    // più grande di quello che il documento poteva contenere.
+    return Math.round(b64.length / 1024);
+  }
+  // Ricerca adattiva della qualità: parte da qStart e scende finché il
+  // risultato entra nel target (mai sotto qMin). Massimizza la qualità per
+  // il budget disponibile — molto meglio dei gradini fissi.
+  function fit(cur: any, fromQ: number) {
+    var q = fromQ;
+    var last: any = null;
+    var lastKb = 0;
+    for (var i = 0; i < 10; i++) {
+      var b64 = encode(cur, q);
+      var kb = kbOf(b64);
+      if (kb <= TARGET_KB) return { b64: b64, kb: kb };
+      last = b64;
+      lastKb = kb;
+      if (q <= qMin) break;
+      q = Math.max(qMin, Math.round((q - 0.05) * 100) / 100);
+    }
+    return { b64: last, kb: lastKb };
+  }
+  function downscale(src: any, factor: number) {
+    var c = document.createElement('canvas');
+    c.width = Math.max(64, Math.round(src.width * factor));
+    c.height = Math.max(64, Math.round(src.height * factor));
+    c.getContext('2d')!.drawImage(src, 0, 0, c.width, c.height);
+    return c;
+  }
+  var cur = canvas;
+  var result = fit(cur, qStart);
+  if (result.kb > TARGET_KB) {
+    cur = downscale(cur, 0.85);
+    result = fit(cur, qStart);
+  }
+  if (result.kb > TARGET_KB) {
+    cur = downscale(cur, 0.8);
+    result = fit(cur, qStart);
+  }
+  return result.b64;
+}
+
+function caricaImmagine(src: string): Promise<any> {
   return new Promise(function (resolve, reject) {
     var img = new Image();
-    var url = URL.createObjectURL(file);
-    var revoked = false;
-    function cleanup() {
-      if (!revoked) {
-        URL.revokeObjectURL(url);
-        revoked = true;
-      }
-    }
     img.onload = function () {
-      cleanup();
-      try {
-        var w = img.naturalWidth,
-          h = img.naturalHeight;
-        var scale = Math.min(1, maxW / w, maxH / h);
-        var cw = Math.round(w * scale),
-          ch = Math.round(h * scale);
-        var canvas = document.createElement('canvas');
-        canvas.width = cw;
-        canvas.height = ch;
-        var ctx = canvas.getContext('2d')!;
-        ctx.drawImage(img, 0, 0, cw, ch);
-        // Encoding: WebP quando il browser lo supporta (≈30% più piccolo a parità
-        // di qualità e mantiene la trasparenza); altrimenti JPEG. Se toDataURL
-        // non supporta il tipo, il canvas restituisce PNG: in quel caso si usa
-        // JPEG (molto più compatto).
-        function encode(cur: any, q: number) {
-          var webp: any;
-          try {
-            webp = cur.toDataURL('image/webp', q);
-          } catch (e) {
-            // toDataURL webp non supportato: caduta su JPEG
-            return cur.toDataURL('image/jpeg', q);
-          }
-          if (webp.indexOf('data:image/webp') === 0) return webp;
-          return cur.toDataURL('image/jpeg', q);
-        }
-        function kbOf(b64: string) {
-          // KB **di documento**: la data URL è ciò che finisce in Firestore, quindi
-          // 1 carattere = 1 byte. Con ×0.75 (byte del file) il target era un quarto
-          // più grande di quello che il documento poteva contenere.
-          return Math.round(b64.length / 1024);
-        }
-        // Ricerca adattiva della qualità: parte da qStart e scende finché il
-        // risultato entra nel target (mai sotto qMin). Massimizza la qualità per
-        // il budget disponibile — molto meglio dei gradini fissi.
-        function fit(cur: any, fromQ: number) {
-          var q = fromQ;
-          var last: any = null;
-          var lastKb = 0;
-          for (var i = 0; i < 10; i++) {
-            var b64 = encode(cur, q);
-            var kb = kbOf(b64);
-            if (kb <= TARGET_KB) return { b64: b64, kb: kb };
-            last = b64;
-            lastKb = kb;
-            if (q <= qMin) break;
-            q = Math.max(qMin, Math.round((q - 0.05) * 100) / 100);
-          }
-          return { b64: last, kb: lastKb };
-        }
-        function downscale(src: any, factor: number) {
-          var c = document.createElement('canvas');
-          c.width = Math.max(64, Math.round(src.width * factor));
-          c.height = Math.max(64, Math.round(src.height * factor));
-          c.getContext('2d')!.drawImage(src, 0, 0, c.width, c.height);
-          return c;
-        }
-        var cur = canvas;
-        var result = fit(cur, qStart);
-        if (result.kb > TARGET_KB) {
-          cur = downscale(cur, 0.85);
-          result = fit(cur, qStart);
-        }
-        if (result.kb > TARGET_KB) {
-          cur = downscale(cur, 0.8);
-          result = fit(cur, qStart);
-        }
-        resolve(result.b64);
-      } catch (e) {
-        reject(e);
-      }
+      resolve(img);
     };
     img.onerror = function (e) {
-      cleanup();
       reject(e);
     };
-    img.src = url;
+    img.src = src;
+  });
+}
+
+export function compressImage(file: File, maxW: number, maxH: number, quality?: number, targetKB?: number) {
+  if (!file.type.startsWith('image/'))
+    return Promise.reject(new Error("Il file selezionato non è un'immagine valida."));
+  var url = URL.createObjectURL(file);
+  return caricaImmagine(url).then(
+    function (img) {
+      try {
+        return comprimiDaImmagine(img, maxW, maxH, quality, targetKB);
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    },
+    function (e) {
+      URL.revokeObjectURL(url);
+      throw e;
+    }
+  );
+}
+
+/**
+ * Come `compressImage`, ma parte da una data URL già in memoria: è il caso della
+ * miniatura della copertina, che così non decodifica di nuovo il file originale.
+ */
+export function compressDataUrl(dataUrl: string, maxW: number, maxH: number, quality?: number, targetKB?: number) {
+  return caricaImmagine(dataUrl).then(function (img) {
+    return comprimiDaImmagine(img, maxW, maxH, quality, targetKB);
   });
 }
 
@@ -787,6 +811,7 @@ SB.escapeForPrompt = escapeForPrompt;
 // usati via window.* o mockati dai test a call-time: compressImage,
 // quizListenRisposte, ValutazioneApertaAI, ANNI_DISPONIBILI, db.
 window.compressImage = compressImage;
+window.compressDataUrl = compressDataUrl;
 window.quizListenRisposte = quizListenRisposte;
 window.ValutazioneApertaAI = ValutazioneApertaAI;
 window.db = db;

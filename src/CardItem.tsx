@@ -5,6 +5,7 @@ import { classeContestoCommenti, commentiVisibili, mostraTuttiCommenti } from '.
 import Countdown from './Countdown.tsx';
 import { temaTipo, etichettaTipo } from './card-tipo-tema.ts';
 import { statoScadenza, labelScadenza, coloreScadenza } from './urgenza.ts';
+import { testoSecondario } from './grafica-testi.ts';
 // CardItem.jsx · ScuolaBoard
 
 function CardItem__({ $, c, idx }: any) {
@@ -419,7 +420,7 @@ function CardItem__({ $, c, idx }: any) {
                 <div
                   style={{
                     fontSize: 11,
-                    color: isLight ? '#64748b' : 'rgba(255,255,255,.42)',
+                    color: testoSecondario(isLight),
                     marginBottom: 5,
                     cursor: 'grab',
                     userSelect: 'none',
@@ -542,7 +543,7 @@ function CardItem__({ $, c, idx }: any) {
                       );
                     })
                     .concat([
-                      <div key="voti" style={{ fontSize: 11, color: 'rgba(255,255,255,.45)', marginTop: 3 }}>
+                      <div key="voti" style={{ fontSize: 11, color: testoSecondario(isLight), marginTop: 3 }}>
                         {totV + ' voti'}
                       </div>,
                     ])}
@@ -803,7 +804,7 @@ function CardItem__({ $, c, idx }: any) {
                   '1px solid ' +
                   ($.preferiti.indexOf(String(c.id)) >= 0 ? 'rgba(245,158,11,.5)' : 'rgba(255,255,255,.1)'),
                 fontSize: 13,
-                color: $.preferiti.indexOf(String(c.id)) >= 0 ? 'var(--c-warn, #fbbf24)' : 'rgba(255,255,255,.45)',
+                color: $.preferiti.indexOf(String(c.id)) >= 0 ? 'var(--c-warn, #fbbf24)' : testoSecondario(isLight),
               }}
             >
               {$.preferiti.indexOf(String(c.id)) >= 0 ? '★' : '☆'}
@@ -836,7 +837,7 @@ function CardItem__({ $, c, idx }: any) {
           }
           {<span style={{ flex: 1, order: 5 }} />}
           {
-            <span title={$.fmt(c.data)} style={{ order: 6, fontSize: 11, color: 'rgba(255,255,255,.45)' }}>
+            <span title={$.fmt(c.data)} style={{ order: 6, fontSize: 11, color: testoSecondario(isLight) }}>
               {$.timeAgo(c.data)}
             </span>
           }

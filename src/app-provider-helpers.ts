@@ -319,8 +319,15 @@ export function urlKB(url: any): number {
   return String(url || '').length / 1024;
 }
 
-export function imgUsageKB(coverB64: string | null | undefined, immagini: any[] | null | undefined): number {
-  var kb = coverB64 ? urlKB(coverB64) : 0;
+export function imgUsageKB(
+  coverB64: string | null | undefined,
+  immagini: any[] | null | undefined,
+  thumbB64?: string | null
+): number {
+  // La miniatura è una data URL come la copertina: vive nello stesso documento e
+  // consuma lo stesso MiB. Non contarla qui rendeva il cruscotto ottimista di
+  // ~18 KB per ogni card con copertina.
+  var kb = (coverB64 ? urlKB(coverB64) : 0) + (thumbB64 ? urlKB(thumbB64) : 0);
   (immagini || []).forEach(function (x: any) {
     if (x && x.url) kb += urlKB(x.url);
   });

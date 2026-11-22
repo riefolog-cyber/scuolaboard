@@ -112,6 +112,7 @@ Regola pratica:
 14. **Un errore non cancella dati già mostrati** (leggere prima di toccare `firestore-sync.ts`): l'handler di errore di `onSnapshot` **conserva l'ultimo snapshot valido**. Prima faceva `snapshot = []`, e la conseguenza era che un QUALSIASI errore transitorio — segnale perso, cambio di rete, WebSocket chiusa — faceva comparire "Nessun contenuto visibile" al posto delle card: un'affermazione falsa, perché le card non erano sparite, erano illeggibili *in quel momento*. Verificato sul telefono: era questo il difetto, non la cache persistente.
     - **Non "ottimizzare" azzerando lo snapshot per risparmiare memoria**: meglio card un po' datate che nessuna card. Se invece non è mai arrivato nulla, lo stato vuoto è corretto e l'utente va avvisato (una volta per episodio, identificato per **codice** d'errore, non per identità dell'oggetto `Error`, che è nuovo a ogni oscillazione).
     - Le trappole inverse sono già coperte: il toast di successo deve **aspettare la promessa** (vedi regola 13), e il testo scritto dall'utente non si azzera se la scrittura fallisce.
+    - **Il mapping dello snapshot riusa l'oggetto della card quando il documento non è cambiato** (`aggiornaMappaDaSnapshot`: `docChanges` → `applicaDocChanges`, con fallback per gli snapshot che non lo espongono). `CardItem` è memoizzato con `prev.c !== next.c`: se il mapping ricrea tutti gli oggetti — com'era `s.forEach(d => a.push(d.data()))` — un solo like ri-renderizza **tutte** le card e il memo a 14 campi diventa inerte. `src/firestore-sync-memo.test.ts` lo fissa (30 card, un documento cambiato ⇒ **una** identità nuova) e il Profiler misura 60 card: ~273 ms con oggetti tutti nuovi contro ~9 ms con uno nuovo. Non tornare al mapping completo "per semplicità": la semplificazione costa 30× sul render.
     - `fake-firestore.ts` espone `_failReads(coll)`/`_allowReads(coll)` per simulare la caduta della connessione (`_failReads` notifica subito i listener, come farebbe Firestore). I test di questa regola stanno in `src/integration/regression-fixes.test.tsx` e **non devono usare attese a tempo fisso**: su runner caricato falliscono (è il flake già noto, vedi `perf-profiler.test.tsx`). Aspetta una condizione positiva con `waitFor`.
 
 ## Test
@@ -130,6 +131,7 @@ Regola pratica:
 - Commenti in italiano che spiegano il **perché** (il repository è pieno di note "perché" su bug passati: mantieni quello stile), non il cosa.
 - Commit in stile conventional commits in italiano con scope: `fix(classi,login): …`, `build(docs): …`, `test(quiz): …`.
 - I file del repository usano terminatori **CRLF**: mantienili quando modifichi file esistenti.
+- **`console.log` solo dietro `SB_DEBUG`** (`window.SB_DEBUG`, attivabile con `?debug=1` e persistito in `localStorage`): i `console.warn`/`console.error` restano per le cose azionabili, non per il rumore di un successo. Un log di diagnostica sempre attivo insegna a ignorare la console, e i fallimenti veri finiscono nello stesso mucchio.
 
 ## File di riferimento utili
 

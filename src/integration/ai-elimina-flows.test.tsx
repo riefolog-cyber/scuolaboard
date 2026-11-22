@@ -51,17 +51,9 @@ describe('Eliminazione analisi AI (prof)', () => {
     const { db } = await renderApp({ seed, user: PROF });
     await apriCardDetail('Card con analisi');
 
-    // Attende che la CardDetail lazy-loaded sia aperta prima di cercare i
-    // pulsanti del pannello AI (la card ha anche il titolo in griglia → serve
-    // un selettore univoco della modale, es. il bottone Chiudi ✕).
-    //
-    // ⚠️ Timeout ESPLICITO e PIÙ ALTO del default (12s), unica deroga ammessa:
-    // questa è l'attesa che paga il caricamento pigro di CardDetail e il costo
-    // cresce con la contendenza (misurato 8,65s da solo sotto carico). Con 8
-    // worker + coverage il solo import supera i 12s e il test falliva prima
-    // ancora di arrivare ai pulsanti AI: il budget per-test di 40s qui sopra
-    // non c'entra, perché il tetto che scattava era quello di testing-library.
-    // (barriera al lazy-load già gestita da apriCardDetail)
+    // `apriCardDetail` ha già atteso la modale con il budget dedicato al
+    // lazy-load (30s, vedi card-helpers.ts): qui si può cercare direttamente il
+    // pannello AI, senza ripetere l'attesa.
 
     // Apre il pannello AI (bottone "🤖 ▼ AI") e clicca "🗑️ Elimina analisi".
     // NB: CardDetail è lazy-loaded → findByRole (async), non getByRole.
