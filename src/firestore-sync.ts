@@ -47,7 +47,10 @@ export function applicaDocChanges(
   changes.forEach(function (ch) {
     var id = String(ch.id);
     if (ch.type === 'removed') next.delete(id);
-    else if (ch.data !== undefined) next.set(id, ch.data);
+    // `data` presente ma undefined vale come dato cambiato: `cardsDaMappa`
+    // scarta i null/undefined. Scartarlo qui mascherebbe un dato mancante come
+    // "nessun cambiamento", tenendo in vita l'oggetto vecchio.
+    else if ('data' in ch) next.set(id, ch.data);
   });
   return next;
 }

@@ -11,10 +11,11 @@
 // - NIENTE di questo modulo esce dal dispositivo da solo: nessun invio, nessun
 //   Firestore, nessun localStorage. Chiude la scheda, sparisce. È l'unico modo
 //   per avere diagnostica senza mandare dati di studenti a terzi.
-// - Il testo copiato passa da `mascheraPII` (email, CF, IBAN, telefoni): un
-//   errore può contenere il testo che l'ha causato. I nomi degli studenti NON
-//   sono coperti (servirebbe il roster): per questo i campi strutturati portano
-//   solo codici, durate e conteggi, e il messaggio libero resta mascherato.
+// - Il testo copiato NON include messaggi né stack: `mascheraPII` copre email,
+//   CF, IBAN e telefoni ma NON i nomi (servirebbe il roster), e un errore può
+//   contenere il titolo di una card o il nome di uno studente. Quei campi restano
+//   nel pannello locale, dove chi segnala può leggerli; in uscita vanno solo
+//   codici, durate, conteggi e la tappa del codice (nome errore + tipo + ora).
 // - Nessun `console.*` qui: il modulo è letto dal pannello, non dalla console.
 
 import { mascheraPII } from './utils/pii.ts';
@@ -187,8 +188,13 @@ export function testoDiagnostica(contesto?: any): string {
     righe.push('  nessuno');
   } else {
     errori.forEach(function (e, i) {
-      righe.push('  ' + (i + 1) + ') ' + oraLocale(e.t) + ' [' + e.tipo + '] ' + e.nome + ': ' + e.messaggio);
-      if (e.stack) righe.push('     ' + e.stack);
+      // Messaggio e stack sono testo LIBERO: possono contenere nomi o titoli di
+      // card, e qui il testo va a finire in una issue (potenzialmente pubblica).
+      // `mascheraPII` non copre i nomi: quindi NON li esportiamo. Il pannello
+      // locale li mostra comunque a chi sta facendo la segnalazione.
+      righe.push(
+        '  ' + (i + 1) + ') ' + oraLocale(e.t) + ' [' + e.tipo + '] ' + e.nome + ': (testo omesso, vedi pannello)'
+      );
     });
   }
 
@@ -197,3 +203,11 @@ export function testoDiagnostica(contesto?: any): string {
   // non nei singoli campi.
   return mascheraPII(righe.join('\n')).txt;
 }
+
+// Registrazione a livello di MODULO, non nel corpo di main.tsx: gli import ES
+// vengono tutti valutati prima di qualunque istruzione di main, quindi un errore
+// durante la valutazione di globals/firebase-init/app-state (proprio i guasti di
+// avvio che vogliamo registrare) non arriverebbe mai al buffer se aspettassimo
+// la chiamata in main. La funzione è idempotente, quindi i test possono
+// richiamarla senza duplicare gli ascoltatori.
+avviaDiagnostica();

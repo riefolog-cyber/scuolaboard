@@ -71,17 +71,20 @@ describe('diagnostica · errori', function () {
 });
 
 describe('diagnostica · testo copiabile', function () {
-  it('maschera email e telefono e porta i metadati freddi', function () {
+  it('non esporta messaggi liberi e porta i metadati freddi', function () {
     window.dispatchEvent(new ErrorEvent('error', {
       message: 'scrivi a mario.rossi@scuolaboard.it oppure 333 1234567',
       error: new Error('scrivi a mario.rossi@scuolaboard.it oppure 333 1234567'),
     }));
     segna('auth');
     var t = testoDiagnostica({ versione: '1.2.3', tema: 'scuro' });
-    expect(t).toContain('[EMAIL_1]');
-    expect(t).toContain('[TEL_1]');
+    // Il messaggio libero non si copia più: mascheraPII copre email/telefono ma
+    // non i nomi, e la destinazione è una issue. Resta il nome errore + il tipo.
     expect(t).not.toContain('mario.rossi@scuolaboard.it');
     expect(t).not.toContain('333 1234567');
+    expect(t).not.toContain('scrivi a');
+    expect(t).toContain('[errore] Error');
+    expect(t).toContain('(testo omesso, vedi pannello)');
     expect(t).toContain('Versione: 1.2.3');
     expect(t).toContain('Tema: scuro');
     expect(t).toContain('auth:');

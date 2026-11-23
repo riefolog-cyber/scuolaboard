@@ -114,6 +114,12 @@ describe('memo di CardItem — comportamento del comparatore', () => {
     expect(cardItemAreEqual(base, con({ user: { uid: 'p2' } }))).toBe(false);
   });
 
+  it('ri-renderizza al battito degli annunci sospesi (badge "avviso non inviato")', () => {
+    // Il battito 30s di AppProvider produce sempre un array nuovo: senza questo
+    // confronto il badge resterebbe invisibile finché non cambiasse qualcos'altro.
+    expect(cardItemAreEqual(base, con({ annunciSospesi: [] }))).toBe(false);
+  });
+
   it('NON ri-renderizza se cambia solo un campo non confrontato (è il punto del memo)', () => {
     // Se questo fallisce, ogni keystroke/azione ri-renderizzerebbe tutta la
     // griglia: il difetto opposto, cioè la perdita di ottimizzazione.

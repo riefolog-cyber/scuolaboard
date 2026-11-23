@@ -22,11 +22,15 @@ import commentsRaw from './carddetail/CommentsSection.tsx?raw';
 import partecipazioneRaw from './carddetail/PartecipazionePanel.tsx?raw';
 import filterBarRaw from './FilterBar.tsx?raw';
 import cardGridRaw from './CardGrid.tsx?raw';
+import diagnosticaRaw from './Diagnostica.tsx?raw';
+import appLayoutRaw from './AppLayout.tsx?raw';
 
-// Unica eccezione ammessa: l'ambra del testo di ammonizione è un colore di
-// AVVISO, non una superficie del tema (spiegato nel file).
+// Eccezioni ammesse: l'ambra del testo di ammonizione è un colore di AVVISO, non
+// una superficie del tema; in Diagnostica resta solo l'etichetta ('chiaro'/'scuro')
+// passata al testo copiato, che non è uno stile.
 var ECCEZIONI: Record<string, number> = {
   'CommentsSection.tsx': 1,
+  'Diagnostica.tsx': 1,
 };
 
 var FILE: Record<string, string> = {
@@ -35,6 +39,8 @@ var FILE: Record<string, string> = {
   'CommentsSection.tsx': commentsRaw,
   'PartecipazionePanel.tsx': partecipazioneRaw,
   'FilterBar.tsx': filterBarRaw,
+  'Diagnostica.tsx': diagnosticaRaw,
+  'AppLayout.tsx': appLayoutRaw,
 };
 
 describe('temi · nessun nuovo ternario isLight nei file migrati', function () {

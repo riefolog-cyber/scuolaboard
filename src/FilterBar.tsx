@@ -22,7 +22,7 @@ function FilterBar__({ $: props$ }: any) {
         {$.filterClasse !== 'tutte' && (
           <button onClick={function (e: any) { e.stopPropagation(); $.setFilterClasse('tutte'); }} aria-label="×" title="Mostra tutte" style={{ background: 'none', border: 'none', color: 'var(--sb-text-3)', cursor: 'pointer', fontSize: 11, lineHeight: 1, padding: '0 1px' }}>×</button>
         )}
-        <span style={{ fontSize: 10, color: 'var(--sb-text-3)', marginLeft: 'auto' }}>{$.filtroBarOpen ? '?' : '?'}</span>
+        <span style={{ fontSize: 10, color: 'var(--sb-text-3)', marginLeft: 'auto' }}>{$.filtroBarOpen ? '▴' : '▾'}</span>
       </div>
       {$.filtroBarOpen && (
         <div className="filter-panel-open" style={{ display: 'flex', gap: 3, padding: '1px 10px 5px', flexWrap: 'wrap', alignItems: 'center' }}>

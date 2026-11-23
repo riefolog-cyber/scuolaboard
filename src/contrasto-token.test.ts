@@ -152,3 +152,19 @@ describe.each(['dark', 'light'])('contrasto dei token · tema %s', function (tem
     expect(contrasto(testo, fondoBadge), nome + ' (' + nomeToken + ')').toBeGreaterThanOrEqual(AA);
   });
 });
+
+// I toast non hanno un token dedicato: il colore è scritto nella regola, quindi
+// la guardia legge il CSS. Le tinte traslucide chiare di prima davano bianco su
+// verde 2,7:1, ambra 2,3:1 e rosso 4,1:1 nel tema scuro (quello predefinito).
+describe('contrasto dei toast · testo bianco', function () {
+  it.each(['ok', 'warn', 'err'])('.toast.%s regge AA', function (kind) {
+    var m = CSS.match(new RegExp('\\.toast\\.' + kind + '\\{[^}]*background:(linear-gradient\\([^;]+)'));
+    expect(m, '.toast.' + kind + ' ha uno sfondo gradiente').toBeTruthy();
+    var sfondo = primoStop(m![1], TEMA.dark);
+    expect(contrasto([255, 255, 255], sfondo)).toBeGreaterThanOrEqual(AA);
+  });
+
+  it('nessun override del tema chiaro rimette il testo scuro sui toast', function () {
+    expect(CSS).not.toMatch(/html\[data-theme="light"\]\s+\.toast\.[a-z]+\{color:/);
+  });
+});

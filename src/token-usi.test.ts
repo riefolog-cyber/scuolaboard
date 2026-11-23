@@ -12,10 +12,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, it, expect } from 'vitest';
-import { senzaCommenti, variabiliGlobali } from './css-utils.ts';
+import { SELETTORE_TEMA_CHIARO, senzaCommenti, variabiliGlobali, variabiliIn } from './css-utils.ts';
 
 const CSS = senzaCommenti(fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8'));
-const DEFINITI = new Set(Object.keys(variabiliGlobali(CSS)));
+// Anche i `--c-*` contano: un refuso in `var(--c-bg)` ha lo stesso effetto
+// silenzioso di uno in `var(--sb-…)`. I token definiti solo nel tema chiaro
+// valgono comunque (il fallback di :root non copre quei casi).
+const DEFINITI = new Set(
+  Object.keys(Object.assign({}, variabiliGlobali(CSS), variabiliIn(SELETTORE_TEMA_CHIARO, CSS)))
+);
 
 /** Tutti i .ts/.tsx sotto `dir`, esclusi i test (citano i token nei commenti). */
 function sorgenti(dir: string, accumulati: string[] = []): string[] {
@@ -33,12 +38,12 @@ function sorgenti(dir: string, accumulati: string[] = []): string[] {
 }
 
 describe('token CSS · i riferimenti esistono', function () {
-  it('nessun var(--sb-…) inventato nei sorgenti', function () {
+  it('nessun var(--sb-…/--c-…) inventato nei sorgenti', function () {
     var usati: Record<string, string> = {};
     sorgenti(__dirname).forEach(function (f) {
       var testo = fs.readFileSync(f, 'utf8');
       // Il file stesso è escluso (è un .test), quindi questo pattern non si conta.
-      var re = /var\((--sb-[a-z0-9-]+)/g;
+      var re = /var\((--(?:sb|c)-[a-z0-9-]+)/g;
       var m;
       while ((m = re.exec(testo)) !== null) {
         if (!usati[m[1]]) usati[m[1]] = path.basename(f);

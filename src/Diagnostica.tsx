@@ -21,17 +21,23 @@ export default function Diagnostica(props: any) {
   if (!window.SB_DEBUG) return null;
 
   var isLight = !!props.isLight;
-  var overlayBg = isLight ? 'rgba(15,23,42,.45)' : 'rgba(0,0,0,.92)';
-  var cardBg = isLight ? '#ffffff' : '#1c1a2e';
-  var cardBorder = isLight ? '1px solid rgba(15,23,42,.10)' : '1px solid rgba(var(--c-primary-rgb),.3)';
-  var titleColor = isLight ? '#0f172a' : '#f1f5f9';
-  var subColor = isLight ? '#64748b' : 'rgba(255,255,255,.5)';
-  var infoBg = isLight ? '#f8fafc' : 'rgba(255,255,255,.04)';
-  var infoBorder = isLight ? '1px solid rgba(15,23,42,.08)' : '1px solid rgba(255,255,255,.08)';
-  var infoTextColor = isLight ? '#334155' : 'rgba(255,255,255,.72)';
+  // Etichetta per il testo copiato (non è uno stile): unico ternario residuo,
+  // dichiarato come eccezione in tema-token.test.ts insieme a CommentsSection.
+  var tema = isLight ? 'chiaro' : 'scuro';
+  // Colori dai token: il pannello è lazy e visibile solo con SB_DEBUG, quindi
+  // nessun test jsdom/E2E vedrebbe un ramo dimenticato. I token, a differenza
+  // dei ternari, non possono sbagliare un tema solo.
+  var overlayBg = 'var(--sb-overlay-bg)';
+  var cardBg = 'var(--sb-dialog-bg)';
+  var cardBorder = '1px solid var(--sb-line-strong)';
+  var titleColor = 'var(--sb-text-1)';
+  var subColor = 'var(--sb-text-3)';
+  var infoBg = 'var(--sb-bubble)';
+  var infoBorder = '1px solid var(--sb-line)';
+  var infoTextColor = 'var(--sb-text-2)';
 
   function copia() {
-    var testo = testoDiagnostica({ tema: isLight ? 'chiaro' : 'scuro' });
+    var testo = testoDiagnostica({ tema: tema });
     setMostraTesto(true);
     setCopiato(false);
     try {
@@ -73,8 +79,8 @@ export default function Diagnostica(props: any) {
           width: 40,
           height: 40,
           borderRadius: 20,
-          border: '1px solid rgba(255,255,255,.15)',
-          background: 'rgba(15,15,30,.85)',
+          border: '1px solid var(--sb-line-strong)',
+          background: 'var(--sb-dialog-bg)',
           backdropFilter: 'blur(6px)',
           color: '#fff',
           fontSize: 18,
@@ -186,7 +192,7 @@ export default function Diagnostica(props: any) {
                     fontSize: 10.5,
                     fontWeight: 700,
                     background: 'transparent',
-                    border: '1px solid rgba(255,255,255,.15)',
+                    border: '1px solid var(--sb-line-strong)',
                     color: subColor,
                     borderRadius: 8,
                     padding: '3px 8px',
@@ -251,7 +257,7 @@ export default function Diagnostica(props: any) {
                   padding: '10px 16px',
                   background: 'transparent',
                   color: subColor,
-                  border: '1px solid rgba(255,255,255,.15)',
+                  border: '1px solid var(--sb-line-strong)',
                   borderRadius: 10,
                   fontSize: 12.5,
                   fontWeight: 700,
@@ -269,7 +275,7 @@ export default function Diagnostica(props: any) {
                 </div>
                 <textarea
                   readOnly
-                  value={testoDiagnostica({ tema: isLight ? 'chiaro' : 'scuro' })}
+                  value={testoDiagnostica({ tema: tema })}
                   style={{
                     width: '100%',
                     minHeight: 120,

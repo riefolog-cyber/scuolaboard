@@ -85,15 +85,24 @@ window.ValutazioneApertaAI = () => null;
 import { creaGuardiaRejection } from './utils/rejection-guardia.ts';
 import { afterAll, afterEach, beforeEach } from 'vitest';
 
-const guardiaRejection = creaGuardiaRejection();
 // `process` via globalThis: il progetto non carica @types/node (nessuna
 // dipendenza da tipi Node nel resto del codice).
 const processo = (globalThis as any).process;
-if (processo && typeof processo.on === 'function') {
-  processo.on('unhandledRejection', function (reason: any) {
-    // Solo registrare: lanciare qui farebbe cadere il worker a metà file.
-    guardiaRejection.registra(reason);
-  });
+// Il setup gira una volta per file ma il worker PROCESSO è riutilizzato: senza
+// singleton, ogni file agganciava un nuovo listener `unhandledRejection` che
+// restava attivo e accumulava voci che nessuno avrebbe mai consumato. La guardia
+// vive su process, non su globalThis (che in jsdom cambia a ogni file).
+const CHIAVE_GUARDIA = '__sbGuardiaRejection';
+var guardiaRejection: any = processo && processo[CHIAVE_GUARDIA];
+if (!guardiaRejection) {
+  guardiaRejection = creaGuardiaRejection();
+  if (processo) processo[CHIAVE_GUARDIA] = guardiaRejection;
+  if (processo && typeof processo.on === 'function') {
+    processo.on('unhandledRejection', function (reason: any) {
+      // Solo registrare: lanciare qui farebbe cadere il worker a metà file.
+      guardiaRejection.registra(reason);
+    });
+  }
 }
 
 beforeEach(function (ctx: any) {
@@ -109,7 +118,7 @@ afterEach(function () {
       nome +
       '»: ' +
       voci
-        .map(function (v) {
+        .map(function (v: any) {
           return v.messaggio;
         })
         .join(' | ') +
@@ -124,7 +133,7 @@ afterAll(function () {
   throw new Error(
     'Unhandled rejection non attribuita: ' +
       rimaste
-        .map(function (v) {
+        .map(function (v: any) {
           return v.test + ': ' + v.messaggio;
         })
         .join(' | ')

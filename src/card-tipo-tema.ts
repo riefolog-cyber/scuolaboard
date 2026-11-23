@@ -19,7 +19,8 @@ export type TemaTipo = {
    * Fondo del chip con ETICHETTA BIANCA: è una variante più scura di `color`,
    * perché il colore pieno non regge il bianco (verde #22c55e ≈2,2:1, blu
    * #3b82f6 ≈3,7:1: sotto AA per testo da 11–12 px). Il modulo resta la fonte
-   * unica, il test di contrasto verifica questi quattro valori.
+   * unica, `grafica-testi.test.ts` verifica il contrasto di questi quattro
+   * valori (non `card-tipo-tema.test.ts`, che controlla solo la fonte unica).
    */
   chipBg: string;
   color: string;

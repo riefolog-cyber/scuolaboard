@@ -20,7 +20,7 @@ function ProposalsPanel__({ $ }: any) {
         $.cards.filter(function (c: any) {
           return c.proposta === true && $.user && c.autore === $.myName($.user);
         }).length > 0 && (
-          <div style={panelStyle(isLight ? 'rgba(139,92,246,.08)' : 'rgba(139,92,246,.08)', 'rgba(139,92,246,.22)')}>
+          <div style={panelStyle('rgba(139,92,246,.08)', 'rgba(139,92,246,.22)')}>
             <div style={{ fontWeight: 800, color: '#a78bfa', fontSize: 12, marginBottom: 8, letterSpacing: 1 }}>
               ⏳ LE TUE PROPOSTE IN ATTESA
             </div>
@@ -145,7 +145,7 @@ function ProposalsPanel__({ $ }: any) {
           </div>
         )}
       {$.isProf && !$.simulaSt && $.proposte.length > 0 && (
-        <div style={panelStyle(isLight ? 'rgba(249,115,22,.08)' : 'rgba(249,115,22,.08)', 'rgba(249,115,22,.24)')}>
+        <div style={panelStyle('rgba(249,115,22,.08)', 'rgba(249,115,22,.24)')}>
           <div style={{ fontWeight: 800, color: '#fb923c', fontSize: 12, marginBottom: 8, letterSpacing: 1 }}>
             ⏳ PROPOSTE IN ATTESA
           </div>

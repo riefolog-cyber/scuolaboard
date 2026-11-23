@@ -105,12 +105,21 @@ export function useCountdown(scadenza: any): number {
       var ms = scadMs - Date.now();
       if (ms <= 0) return; // già scaduta: nessun timer, stato statico
       register(scadMs);
+      // Il ticker è condiviso: se una qualsiasi scadenza è sotto le 24h va a 1s
+      // per tutti. Le scadenze lontane mostrano solo "3g 2h", che non cambia di
+      // secondo in secondo: ricevono un timestamp arrotondato al minuto, così
+      // non si ri-renderizzano 60 volte senza mostrare nulla di nuovo. Il testo
+      // resta esatto al minuto e il bucket si aggiorna da solo quando la card
+      // entra sotto le 24h (li il tick al secondo torna a servire).
+      function bucket(n: number): number {
+        return scadMs - n > 86400000 ? Math.floor(n / 60000) * 60000 : n;
+      }
       var cb = function (n: number) {
-        setNow(n);
+        setNow(bucket(n));
       };
       listeners.add(cb);
       // Primo valore aggiornato subito, senza aspettare il primo tick.
-      setNow(Date.now());
+      setNow(bucket(Date.now()));
       return function () {
         listeners.delete(cb);
         unregister(scadMs);
@@ -173,7 +182,9 @@ export default function Countdown({ scadenza }: any) {
         borderRadius: 20,
         padding: '2px 8px',
         fontSize: 11,
-        color: fmt.expired || urgente ? 'var(--c-danger, #f87171)' : entro24h ? 'var(--c-warn, #fbbf24)' : 'rgba(255,255,255,.62)',
+        // `--c-danger`/`--c-warn` sono già theme-aware; lo stato "ok" era bianco
+        // fisso (invisibile sul tema chiaro), ora usa il token del testo secondario.
+        color: fmt.expired || urgente ? 'var(--c-danger, #f87171)' : entro24h ? 'var(--c-warn, #fbbf24)' : 'var(--sb-text-3, rgba(255,255,255,.62))',
         fontWeight: 700,
         marginTop: 4,
       }}

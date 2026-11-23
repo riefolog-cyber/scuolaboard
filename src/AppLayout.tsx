@@ -22,6 +22,26 @@ import FocusTrap from './modals/focusTrap.tsx';
 import StudentiPanel from './StudentiPanel.tsx';
 import Modals from './Modals.tsx';
 
+// Chip dei filtri rapidi: DEVE stare a livello di modulo. Se fosse definita
+// dentro il render, ogni click (setQfStato → re-render) creerebbe un tipo di
+// elemento nuovo: React smonteria e rimontasse il pulsante appena premuto,
+// che perderebbe il focus (navigazione da tastiera).
+function Chip(props: any) {
+  return (
+    <button
+      type="button"
+      aria-label={props.a11yLabel || undefined}
+      className={'view-toggle-btn' + (props.active ? ' active' : '')}
+      onClick={props.onClick}
+      aria-pressed={!!props.active}
+      style={{ padding: '2px 7px', fontSize: 10.5, borderRadius: 999, whiteSpace: 'nowrap', minHeight: 22, lineHeight: 1.2 }}
+    >
+      {props.label}
+      {typeof props.n === 'number' ? <span style={{ opacity: 0.75, marginLeft: 3 }}>{props.n}</span> : null}
+    </button>
+  );
+}
+
 // Lazy-loaded components for code splitting
 var LazyCardDetail = lazy(function () {
   return import('./CardDetail.tsx');
@@ -130,6 +150,43 @@ function AppLayout(props: any) {
     },
     [quickFiltered, $base.cards, $base.proposte, $base.annunciSospesi, $base.seenRef && $base.seenRef.current, $base.visibleSorted]
   );
+  // Conteggi dei filtri rapidi: prima il ciclo stava dentro l'IIFE del JSX e
+  // girava a ogni render del provider (fino a 600 card). Stessa logica di
+  // `overview`, con le sue dipendenze: il battito degli annunci e le aperture
+  // locali aggiornano i conteggi, i keystroke no.
+  var counts = useMemo(
+    function () {
+      var base = ($base.visibleSorted || []) as any[];
+      var seen = $base.seenRef && $base.seenRef.current;
+      var now = Date.now();
+      var out: any = {
+        tipi: { nota: 0, domanda: 0, sondaggio: 0, quiz: 0 },
+        nuove: 0,
+        fissate: 0,
+        scadenza: 0,
+        avviso: 0,
+        allegati: 0,
+        quizc: 0,
+      };
+      for (var i = 0; i < base.length; i++) {
+        var c = base[i];
+        var t = String(c.tipo || 'nota');
+        if (t === 'domanda' || t === 'sondaggio' || t === 'quiz') out.tipi[t]++;
+        else out.tipi.nota++;
+        if (seen && !seen.has(String(c.id))) out.nuove++;
+        if (c.pinned) out.fissate++;
+        if (c.scadenza) {
+          var ts = new Date(c.scadenza).getTime();
+          if (!isNaN(ts) && ts >= now && ts - now <= 48 * 60 * 60 * 1000) out.scadenza++;
+        }
+        if ($base.isProf && $base.annunciSospesi && $base.annunciSospesi.some(function (x: any) { return String(x.id) === String(c.id); })) out.avviso++;
+        if (c.allegati && c.allegati.length) out.allegati++;
+        if (c.tipo === 'quiz' || (c.quizDomande && c.quizDomande.length)) out.quizc++;
+      }
+      return out;
+    },
+    [$base.visibleSorted, $base.seenRef && $base.seenRef.current, $base.isProf, $base.annunciSospesi]
+  );
   var quickFilterActive = qfTipo !== 'tutti' || qfStato !== 'tutti' || qfExtra !== 'tutti';
   var $ = Object.assign({}, $base, {
     bachecaVista: bachecaVista, setBachecaVista: setBachecaVista,
@@ -175,14 +232,11 @@ function AppLayout(props: any) {
 
   if (!$.user) return <LoginScreen $={$} />;
 
-  var isLight = !!$.isLight;
   return (
     <div
       style={{
         minHeight: '100vh',
-        background: isLight
-          ? 'linear-gradient(160deg,#f8fafc 0%,#eef2ff 50%,#f1f5f9 100%)'
-          : 'linear-gradient(160deg,#12111a 0%,#161320 50%,#1a1528 100%)',
+        background: 'var(--sb-app-grad)',
         display: 'flex',
         flexDirection: 'column',
       }}
@@ -206,11 +260,9 @@ function AppLayout(props: any) {
                 justifyContent: 'flex-start',
                 gap: 6,
                 padding: '4px 10px',
-                background: isLight
-                  ? 'linear-gradient(90deg,rgba(79,70,229,.08) 0%,rgba(248,250,252,.96) 45%,rgba(34,197,94,.08) 100%)'
-                  : 'linear-gradient(90deg,rgba(var(--c-primary-rgb),.10) 0%,rgba(15,23,42,.72) 45%,rgba(34,197,94,.08) 100%)',
-                borderBottom: isLight ? '1px solid rgba(15,23,42,.10)' : '1px solid rgba(255,255,255,.10)',
-                boxShadow: isLight ? '0 6px 18px rgba(15,23,42,.06)' : '0 8px 22px rgba(0,0,0,.18)',
+                background: 'var(--sb-live-grad)',
+                borderBottom: '1px solid var(--sb-line)',
+                boxShadow: 'var(--sb-live-shadow)',
                 flexWrap: 'wrap',
                 // Fascia UNICA (contatori + privacy) agganciata in alto mentre si
                 // scorre: i numeri della bacheca restano sotto gli occhi e si
@@ -233,23 +285,23 @@ function AppLayout(props: any) {
                     fontSize: 10,
                     fontWeight: 800,
                     letterSpacing: 2,
-                    color: isLight ? '#475569' : 'rgba(255,255,255,.65)',
+                    color: 'var(--sb-live-fg)',
                   }}
                 >
                   LIVE
                 </span>
               }
-              {<span style={{ fontSize: 10, color: isLight ? '#94a3b8' : 'rgba(255,255,255,.4)' }}>•</span>}
+              {<span style={{ fontSize: 10, color: 'var(--sb-live-sep)' }}>•</span>}
               {
-                <span style={{ fontSize: 10.5, color: isLight ? '#334155' : 'rgba(255,255,255,.56)' }}>
+                <span style={{ fontSize: 10.5, color: 'var(--sb-live-meta)' }}>
                   {$.cards.filter(function (c: any) {
                     return !c.proposta;
                   }).length + ' card'}
                 </span>
               }
-              {<span style={{ fontSize: 10, color: isLight ? '#94a3b8' : 'rgba(255,255,255,.4)' }}>•</span>}
+              {<span style={{ fontSize: 10, color: 'var(--sb-live-sep)' }}>•</span>}
               {
-                <span style={{ fontSize: 10.5, color: isLight ? '#334155' : 'rgba(255,255,255,.56)' }}>
+                <span style={{ fontSize: 10.5, color: 'var(--sb-live-meta)' }}>
                   {$.totC + ' commenti'}
                 </span>
               }
@@ -280,7 +332,7 @@ function AppLayout(props: any) {
                     alignItems: 'center',
                     gap: 6,
                     background: 'rgba(245,158,11,.18)',
-                    color: isLight ? '#92400e' : 'var(--c-warn, #fbbf24)',
+                    color: 'var(--sb-warn-fg)',
                     borderRadius: 20,
                     padding: '1px 3px 1px 7px',
                     fontSize: 10.5,
@@ -299,7 +351,7 @@ function AppLayout(props: any) {
                     style={{
                       border: 'none',
                       background: 'rgba(245,158,11,.35)',
-                      color: isLight ? '#78350f' : '#fde68a',
+                      color: 'var(--sb-warn-btn-fg)',
                       borderRadius: 20,
                       padding: '1px 7px',
                       fontSize: 10,
@@ -332,16 +384,14 @@ function AppLayout(props: any) {
                   minWidth: 0,
                   maxWidth: '100%',
                   flexShrink: 1,
-                  background: isLight
-                    ? 'linear-gradient(135deg,rgba(var(--c-primary-rgb),.14) 0%,rgba(168,85,247,.12) 100%)'
-                    : 'linear-gradient(135deg,rgba(var(--c-primary-rgb),.24) 0%,rgba(168,85,247,.18) 100%)',
-                  border: '1px solid ' + (isLight ? 'rgba(79,70,229,.32)' : 'rgba(139,92,246,.45)'),
+                  background: 'var(--sb-guida-grad)',
+                  border: '1px solid var(--sb-guida-border)',
                   borderRadius: 999,
                   padding: '1px 7px 1px 3px',
                   cursor: 'pointer',
                   fontSize: 10,
                   fontWeight: 700,
-                  color: isLight ? '#3730a3' : '#e9d5ff',
+                  color: 'var(--sb-guida-fg)',
                   letterSpacing: 0.1,
                   fontFamily: 'inherit',
                   boxShadow: 'none',
@@ -374,16 +424,14 @@ function AppLayout(props: any) {
                   minWidth: 0,
                   maxWidth: '100%',
                   flexShrink: 1,
-                  background: isLight
-                    ? 'linear-gradient(135deg,rgba(16,185,129,.16) 0%,rgba(34,197,94,.12) 100%)'
-                    : 'linear-gradient(135deg,rgba(16,185,129,.24) 0%,rgba(34,197,94,.18) 100%)',
-                  border: '1px solid ' + (isLight ? 'rgba(5,150,105,.38)' : 'rgba(52,211,153,.5)'),
+                  background: 'var(--sb-privacy-grad)',
+                  border: '1px solid var(--sb-privacy-border)',
                   borderRadius: 999,
                   padding: '1px 7px 1px 3px',
                   cursor: 'pointer',
                   fontSize: 10,
                   fontWeight: 700,
-                  color: isLight ? '#065f46' : '#d1fae5',
+                  color: 'var(--sb-privacy-fg)',
                   letterSpacing: 0.1,
                   fontFamily: 'inherit',
                   boxShadow: 'none',
@@ -392,7 +440,7 @@ function AppLayout(props: any) {
               >
                 <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 18, height: 18, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#10b981 0%,#22c55e 60%,var(--c-success, #4ade80) 100%)', fontSize: 10 }}>
                   🛡️
-                  <span aria-hidden="true" style={{ position: 'absolute', right: -3, bottom: -3, width: 10, height: 10, borderRadius: '50%', background: '#22c55e', color: '#04291a', fontSize: 7, fontWeight: 900, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid ' + (isLight ? '#f8fafc' : '#161320') }}>✓</span>
+                  <span aria-hidden="true" style={{ position: 'absolute', right: -3, bottom: -3, width: 10, height: 10, borderRadius: '50%', background: '#22c55e', color: '#04291a', fontSize: 7, fontWeight: 900, lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--sb-privacy-check-border)' }}>✓</span>
                 </span>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexWrap: 'wrap', minWidth: 0 }}>
                   <span style={{ fontWeight: 800, fontSize: 10.5 }}>Privacy protetta</span>
@@ -407,28 +455,9 @@ function AppLayout(props: any) {
             <div style={{ flex: 1, padding: '10px 14px 18px' }}>
               <div style={{ maxWidth: 1500, margin: '0 auto' }}>
                 {(function () {
-                  var base = ($.visibleSortedAll || $base.visibleSorted || []) as any[];
-                  var seen = $base.seenRef && $base.seenRef.current;
-                  var now = Date.now();
-                  var counts: any = { tipi: { nota: 0, domanda: 0, sondaggio: 0, quiz: 0 }, nuove: 0, fissate: 0, scadenza: 0, avviso: 0, allegati: 0, quizc: 0 };
-                  for (var i = 0; i < base.length; i++) {
-                    var c = base[i];
-                    var t = String(c.tipo || 'nota');
-                    if (t === 'domanda' || t === 'sondaggio' || t === 'quiz') counts.tipi[t]++; else counts.tipi.nota++;
-                    if (seen && !seen.has(String(c.id))) counts.nuove++;
-                    if (c.pinned) counts.fissate++;
-                    if (c.scadenza) { var ts = new Date(c.scadenza).getTime(); if (!isNaN(ts) && ts >= now && ts - now <= 48*60*60*1000) counts.scadenza++; }
-                    if ($base.isProf && $base.annunciSospesi && $base.annunciSospesi.some(function (x: any) { return String(x.id) === String(c.id); })) counts.avviso++;
-                    if (c.allegati && c.allegati.length) counts.allegati++;
-                    if (c.tipo === 'quiz' || (c.quizDomande && c.quizDomande.length)) counts.quizc++;
-                  }
-                  var Chip = function (props: any) {
-                    return (
-                      <button type="button" aria-label={props.a11yLabel || undefined} className={'view-toggle-btn' + (props.active ? ' active' : '')} onClick={props.onClick} aria-pressed={!!props.active} style={{ padding: '2px 7px', fontSize: 10.5, borderRadius: 999, whiteSpace: 'nowrap', minHeight: 22, lineHeight: 1.2 }}>
-                        {props.label}{typeof props.n === 'number' ? <span style={{ opacity: .75, marginLeft: 3 }}>{props.n}</span> : null}
-                      </button>
-                    );
-                  };
+                  // `counts` e `Chip` sono calcolati fuori dal render (vedi sopra):
+                  // qui resta solo il JSX, così un click su un filtro non perde
+                  // il focus rimontando il pulsante.
                   var aula = !!(proiezione && altoContrasto);
                   return (
                     <>

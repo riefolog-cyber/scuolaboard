@@ -9,9 +9,10 @@
 // percorso che si decide di provare; qui la regola vale per ogni hook, presente
 // e futuro, e costa zero.
 //
-// Il file ha un solo componente (`function CardDetail__` → `export default`):
-// la verifica può quindi guardare l'intero intervallo senza confondere gli hook
-// di eventuali altri componenti.
+// L'intervallo va da `function CardDetail__` a `export default`: la foglia
+// `ScadenzaDetail` sta prima, quindi i suoi hook (incondizionati, senza early
+// return) non entrano nel controllo. Se un giorno un altro componente venisse
+// messo dentro l'intervallo, la guardia lo vedrebbe come parte di CardDetail__.
 import { describe, it, expect } from 'vitest';
 import raw from './CardDetail.tsx?raw';
 

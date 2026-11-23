@@ -99,10 +99,14 @@ textarea,input,select,button{font-family:inherit}
 .toast{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;font-size:13px;font-weight:700;color:#fff;line-height:1.4;animation:toast-in .28s cubic-bezier(.22,1,.36,1);box-shadow:0 14px 34px rgba(0,0,0,.35);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.14)}
 .toast-icon{font-size:15px;line-height:1;flex-shrink:0}
 .toast-msg{flex:1;min-width:0}
-.toast.ok{background:linear-gradient(135deg, rgba(34,197,94,.92), rgba(22,163,74,.88));border-color:rgba(134,239,172,.35)}
-.toast.warn{background:linear-gradient(135deg, rgba(245,158,11,.94), rgba(217,119,6,.88));border-color:rgba(253,230,138,.35);color:#fff7ed}
-.toast.err{background:linear-gradient(135deg, rgba(239,68,68,.94), rgba(220,38,38,.88));border-color:rgba(254,202,202,.35)}
-.toast-action{background:rgba(255,255,255,.22);border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:4px 10px;cursor:pointer;font-size:11px;font-weight:800;color:#fff}
+/* I toast sono testo da LEGGERE (errori di salvataggio, conferme): le tinte
+   traslucide chiare di prima davano bianco su verde 2,7:1, ambra 2,3:1 e rosso
+   4,1:1 nel tema scuro predefinito. Tinte scure opache in ENTRAMBI i temi, così
+   il testo bianco regge AA senza un override che ne sbagli uno solo. */
+.toast.ok{background:linear-gradient(135deg, #166534, #15803d);border-color:rgba(134,239,172,.35)}
+.toast.warn{background:linear-gradient(135deg, #92400e, #b45309);border-color:rgba(253,230,138,.35)}
+.toast.err{background:linear-gradient(135deg, #991b1b, #b91c1c);border-color:rgba(254,202,202,.35)}
+.toast-action{background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.35);border-radius:8px;padding:4px 10px;cursor:pointer;font-size:11px;font-weight:800;color:#fff}
 .toast-action:hover{background:rgba(255,255,255,.3)}
 @keyframes toast-in{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
 @media (max-width: 480px){
@@ -291,21 +295,6 @@ button:focus-visible{
 .card-wrap:active{
   transform:translateY(-1px) scale(1.001);
   box-shadow:0 8px 22px rgba(99,102,241,.18), 0 3px 10px rgba(0,0,0,.22) !important;
-}
-/* ── RENDERING ON-DEMAND delle card fuori viewport ── */
-/* Con classi intere la griglia può avere centinaia di card: layout, paint e
-   backdrop-filter di tutte insieme si sentono sui telefoni lenti, anche se
-   l'utente ne vede 6. `content-visibility:auto` salta il lavoro per le card
-   lontane dallo schermo; `contain-intrinsic-size:auto 340px` ricorda l'altezza
-   reale dopo il primo render (340px è solo la stima iniziale) per non far
-   ballare la scrollbar. La card ha già `overflow:hidden`, quindi la paint
-   containment non taglia nulla che non fosse già tagliato; il `@supports`
-   lascia i browser senza supporto esattamente come prima. */
-@supports (content-visibility: auto){
-  .card-wrap{
-    content-visibility:auto;
-    contain-intrinsic-size:auto 340px;
-  }
 }
 /* Badge "extra" (classi, secondo stato): a riposo nascosti, si rivelano col
    passaggio del mouse o col focus da tastiera. Sui touch restano sempre
@@ -784,7 +773,6 @@ html[data-theme="light"] .btn-ghost:hover{background:#fff;border-color:rgba(15,2
 html[data-theme="light"] .scroll-top-btn{
   background:rgba(255,255,255,.9) !important;color:#0f172a !important;border-color:rgba(15,23,42,.12) !important;
 }
-html[data-theme="light"] .toast.warn{color:#431407}
 html[data-theme="light"] .cd-section{background:rgba(15,23,42,.03); border-color:rgba(15,23,42,.08)}
 html[data-theme="light"] .proposal-item:hover{background:rgba(15,23,42,.03) !important}
 /* Link */
@@ -868,6 +856,27 @@ html[data-theme="light"] textarea::placeholder{color:#94a3b8 !important}
   --sb-line:rgba(255,255,255,.10);
   --sb-surface:rgba(255,255,255,.055);
   --sb-hero-bg:#0b1220;
+  /* Overlay e dialog del pannello diagnostico: servono anche qui, non solo
+     nel componente lazy, altrimenti il ternario in jsdom non lo vede nessuno. */
+  --sb-overlay-bg:rgba(0,0,0,.92);
+  --sb-dialog-bg:#1c1a2e;
+  --sb-app-grad:linear-gradient(160deg,#12111a 0%,#161320 50%,#1a1528 100%);
+  /* Fascia LIVE e sigilli della bacheca: gradienti, bordi e testi che prima
+     erano scritti due volte nei ternari di AppLayout. */
+  --sb-live-grad:linear-gradient(90deg,rgba(var(--c-primary-rgb),.10) 0%,rgba(15,23,42,.72) 45%,rgba(34,197,94,.08) 100%);
+  --sb-live-shadow:0 8px 22px rgba(0,0,0,.18);
+  --sb-live-fg:rgba(255,255,255,.65);
+  --sb-live-sep:rgba(255,255,255,.4);
+  --sb-live-meta:rgba(255,255,255,.56);
+  --sb-warn-fg:#fbbf24;
+  --sb-warn-btn-fg:#fde68a;
+  --sb-guida-grad:linear-gradient(135deg,rgba(var(--c-primary-rgb),.24) 0%,rgba(168,85,247,.18) 100%);
+  --sb-guida-border:rgba(139,92,246,.45);
+  --sb-guida-fg:#e9d5ff;
+  --sb-privacy-grad:linear-gradient(135deg,rgba(16,185,129,.24) 0%,rgba(34,197,94,.18) 100%);
+  --sb-privacy-border:rgba(52,211,153,.5);
+  --sb-privacy-fg:#d1fae5;
+  --sb-privacy-check-border:#161320;
 }
 html[data-theme="light"]{
   --sb-text-1:#0f172a;
@@ -875,6 +884,23 @@ html[data-theme="light"]{
   --sb-text-3:#475569;
   --sb-line:rgba(15,23,42,.08);
   --sb-surface:rgba(255,255,255,.92);
+  --sb-overlay-bg:rgba(15,23,42,.45);
+  --sb-dialog-bg:#ffffff;
+  --sb-app-grad:linear-gradient(160deg,#f8fafc 0%,#eef2ff 50%,#f1f5f9 100%);
+  --sb-live-grad:linear-gradient(90deg,rgba(79,70,229,.08) 0%,rgba(248,250,252,.96) 45%,rgba(34,197,94,.08) 100%);
+  --sb-live-shadow:0 6px 18px rgba(15,23,42,.06);
+  --sb-live-fg:#475569;
+  --sb-live-sep:#94a3b8;
+  --sb-live-meta:#334155;
+  --sb-warn-fg:#92400e;
+  --sb-warn-btn-fg:#78350f;
+  --sb-guida-grad:linear-gradient(135deg,rgba(var(--c-primary-rgb),.14) 0%,rgba(168,85,247,.12) 100%);
+  --sb-guida-border:rgba(79,70,229,.32);
+  --sb-guida-fg:#3730a3;
+  --sb-privacy-grad:linear-gradient(135deg,rgba(16,185,129,.16) 0%,rgba(34,197,94,.12) 100%);
+  --sb-privacy-border:rgba(5,150,105,.38);
+  --sb-privacy-fg:#065f46;
+  --sb-privacy-check-border:#f8fafc;
   --sb-hero-bg:#cbd5e1;
 }
 

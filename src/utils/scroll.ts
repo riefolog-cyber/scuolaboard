@@ -36,13 +36,17 @@ export function scrollInVista(el: any) {
   }
 }
 
-/** Torna in cima alla pagina. */
-export function scrollInCima() {
+/** Torna in cima alla pagina (o al contenitore passato, es. il pannello del dettaglio). */
+export function scrollInCima(root?: any) {
+  // `onClick={scrollInCima}` passa l'evento come primo argomento: senza questo
+  // controllo l'evento verrebbe scambiato per il contenitore e lo scroll non
+  // partirebbe (il catch inghiottirebbe l'errore).
+  var target = root && typeof root.scrollTo === 'function' ? root : window;
   try {
-    window.scrollTo({ top: 0, behavior: comportamentoScroll() });
+    target.scrollTo({ top: 0, behavior: comportamentoScroll() });
   } catch (e) {
     try {
-      window.scrollTo(0, 0);
+      target.scrollTo(0, 0);
     } catch (e2) {
       /* niente da fare */
     }

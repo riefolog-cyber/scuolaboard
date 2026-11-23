@@ -1,7 +1,7 @@
 // CardDetail.jsx · ScuolaBoard
 import { useContext, useEffect, useRef, useState } from 'react';
 import { normalizeLinks } from './app-utils.tsx';
-import { scrollInVista } from './utils/scroll.ts';
+import { scrollInVista, scrollInCima } from './utils/scroll.ts';
 import { testoSecondario } from './grafica-testi.ts';
 import { segnaCardPronta } from './utils/apertura-card.ts';
 import { sbSafeUrl } from './utils/format.ts';
@@ -26,14 +26,63 @@ import RifiutaModal from './carddetail/RifiutaModal.tsx';
 import AllegatoHtmlPreview from './carddetail/AllegatoHtmlPreview.tsx';
 import { chiaveAllegato, giaCompletato, leggiConsegne, registraConsegna } from './allegato-consegna-servizio.ts';
 
+// Il tick del countdown sta in una FOGLIA, non in CardDetail__: qui lo stato
+// `now` cambia ogni secondo e, se stesse nel genitore, ri-renderizzerebbe l'intera
+// modale (quiz, AI, partecipazione, commenti…), nessuno dei quali è memoizzato.
+// La guardia carddetail-hook-order.test.ts resta valida: il hook è incondizionato
+// dentro questa foglia, che viene montata solo quando c'è una scadenza.
+function ScadenzaDetail({ scadenza, id, isProf, simulaSt, setCardTimer, isLight }: any) {
+  var now = useCountdown(scadenza);
+  var fmt = countdownStr(scadenza, now);
+  var expired = fmt.expired;
+  return (
+    <div
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 4,
+        background: expired ? 'rgba(239,68,68,.15)' : 'rgba(245,158,11,.12)',
+        border: '1px solid ' + (expired ? 'rgba(239,68,68,.3)' : 'rgba(245,158,11,.25)'),
+        borderRadius: 20,
+        padding: '3px 10px',
+        fontSize: 11,
+        // --c-danger/--c-warn sono già theme-aware (chiari nello scuro, scuri
+        // nel chiaro): il colore fisso di prima era invisibile in un tema solo.
+        color: expired ? 'var(--c-danger, #f87171)' : 'var(--c-warn, #fbbf24)',
+        fontWeight: 700,
+        marginBottom: 12,
+      }}
+    >
+      <span>{'⏰ ' + fmt.str}</span>
+      {isProf && !simulaSt && (
+        <button
+          onClick={function (e: any) {
+            e.stopPropagation();
+            setCardTimer(id, null);
+          }}
+          title="Rimuovi scadenza"
+          aria-label="Rimuovi scadenza"
+          style={{
+            background: 'none',
+            border: 'none',
+            color: testoSecondario(isLight),
+            fontSize: 14,
+            cursor: 'pointer',
+            padding: '0 2px',
+          }}
+        >
+          ×
+        </button>
+      )}
+    </div>
+  );
+}
+
 function CardDetail__({ $: props$ }: any) {
   // Merge del FormContext (split di UIContext): i pannelli (commenti, quiz,
   // rifiuta) leggono editingCm/replyTesto/nc/qRisposte… che ora vivono qui.
   var $ = Object.assign({}, props$, useContext(FormContext));
   var c = $.showCard;
-  // Hook chiamato SEMPRE (prima dell'early return): il timer locale aggiorna
-  // solo questo pannello, non l'intera app (vedi Countdown.tsx).
-  var cdNow = useCountdown(c && c.scadenza);
   // Allegato HTML in anteprima: stato locale del pannello (non nel FormContext),
   // perché non deve sopravvivire alla chiusura della card.
   var [htmlPreview, setHtmlPreview] = useState<any>(null);
@@ -669,51 +718,17 @@ if (isHtmlAllegato(al)) {
             </div>
           )}
 
-          {/* Scadenza */}
-          {c.scadenza &&
-            (function () {
-              var fmt = countdownStr(c.scadenza, cdNow);
-              var expired = fmt.expired;
-              return (
-                <div
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 4,
-                    background: expired ? 'rgba(239,68,68,.15)' : 'rgba(245,158,11,.12)',
-                    border: '1px solid ' + (expired ? 'rgba(239,68,68,.3)' : 'rgba(245,158,11,.25)'),
-                    borderRadius: 20,
-                    padding: '3px 10px',
-                    fontSize: 11,
-                    color: expired ? 'var(--c-danger, #f87171)' : 'var(--c-warn, #fbbf24)',
-                    fontWeight: 700,
-                    marginBottom: 12,
-                  }}
-                >
-                  <span>{'⏰ ' + fmt.str}</span>
-                  {$.isProf && !$.simulaSt && (
-                    <button
-                      onClick={function (e: any) {
-                        e.stopPropagation();
-                        $.setCardTimer(c.id, null);
-                      }}
-                      title="Rimuovi scadenza"
-                      aria-label="Rimuovi scadenza"
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: testoSecondario(isLight),
-                        fontSize: 14,
-                        cursor: 'pointer',
-                        padding: '0 2px',
-                      }}
-                    >
-                      ×
-                    </button>
-                  )}
-                </div>
-              );
-            })()}
+          {/* Scadenza: il tick vive nella foglia, non qui (vedi ScadenzaDetail) */}
+          {c.scadenza && (
+            <ScadenzaDetail
+              scadenza={c.scadenza}
+              id={c.id}
+              isProf={$.isProf}
+              simulaSt={$.simulaSt}
+              setCardTimer={$.setCardTimer}
+              isLight={isLight}
+            />
+          )}
 
           <div id="cd-interattivo">
           {/* Sondaggio */}
@@ -940,7 +955,7 @@ if (isHtmlAllegato(al)) {
         {/* Comments section */}
         <div id="cd-commenti"><CommentsSection $={$} c={c} /></div>
         <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
-          <button type="button" className="btn btn-ghost btn-sm" onClick={function () { if (scrollRef.current) scrollRef.current.scrollTo({ top: 0, behavior: "smooth" }); }}>? Torna su</button>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={function () { scrollInCima(scrollRef.current); }}>? Torna su</button>
         </div>
 
         {/* Rifiuta proposta modal */}

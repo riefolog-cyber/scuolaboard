@@ -1007,23 +1007,26 @@ function AppProvider({ children }: any) {
           var thumbPx = 320;
           var thumbQ = 0.72;
           var thumbTargetKB = 18;
-          var thumb = '';
+          var thumb: string | null = null;
           try {
             // Dalla copertina GIÀ compressa (b64), non dal File: un solo decode
             // dell'originale invece di due, e nessun secondo encode a piena
             // risoluzione. Se la funzione non c'è (test con mock parziale) o la
-            // data URL non è decodificabile, si ricade sull'originale.
+            // data URL non è decodificabile, lasciamo null: CardItem ricade già
+            // su `copertina`, e duplicare qui il base64 a piena risoluzione
+            // raddoppierebbe il peso del documento (e può far scattare il guard
+            // "Card troppo grande" per una card che con un thumb vero passerebbe).
             var compressDataUrl = (window as any).compressDataUrl;
             if (typeof compressDataUrl === 'function') {
               thumb = await compressDataUrl(b64, thumbPx, thumbPx, thumbQ, thumbTargetKB);
             }
           } catch (e) {
-            thumb = '';
+            thumb = null;
           }
-          if (!thumb) thumb = b64; // fallback: meglio l'originale che niente
           // Anche la miniatura sta nel documento della card: senza questa riga il
-          // budget delle immagini successive la ignorava.
-          usedKB += urlKB(thumb);
+          // budget delle immagini successive la ignorava. Senza thumb non c'è
+          // nulla da contare: l'originale è già stato aggiunto a usedKB sopra.
+          if (thumb) usedKB += urlKB(thumb);
           setForm(function (p: any) {
             return Object.assign({}, p, { copertina: b64, copertinaThumb: thumb });
           });

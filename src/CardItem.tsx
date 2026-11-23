@@ -48,7 +48,14 @@ function CardItem__({ $, c, idx }: any) {
   // Badge PERSISTENTE (non un toast): se l'annuncio alla classe non è partito,
   // il docente lo vede sulla card finché non è risolto, con i nomi di chi è
   // rimasto senza avviso (quando li conosciamo).
-  var avviso = $.isProf && !$.simulaSt && avvisoInSospeso(c, Date.now());
+  // La verità è la STESSA lista che alimenta l'indicatore in alto: il battito da
+  // 30s di AppProvider ne cambia l'identità e, siccome il campo è confrontato dal
+  // memo, la card si ri-renderizza quando il solo passare del tempo rende il
+  // badge visibile (caso "conteggio ignoto"). Date.now() resta solo come fallback
+  // per i test che costruiscono `$` a mano senza annunciSospesi.
+  var avviso = $.isProf && !$.simulaSt && ($.annunciSospesi
+    ? $.annunciSospesi.some(function (x: any) { return String(x.id) === String(c.id); })
+    : avvisoInSospeso(c, Date.now()));
   var mancantiTxt = avviso ? dettaglioMancanti(c) : '';
   var cc = c.classi || ['TUTTE'];
   var tema = temaTipo(c.tipo);
@@ -468,7 +475,7 @@ function CardItem__({ $, c, idx }: any) {
                 {function () {
                   var st = statoScadenza(c.scadenza);
                   if (st === 'none' || st === 'ok') return null;
-                  var col = coloreScadenza(st);
+                  var col = coloreScadenza(st, $.isLight);
                   return <span className="urgency-badge" style={{ background: col.bg, color: col.fg, borderColor: col.bd }}>⏰ {labelScadenza(st)}</span>;
                 }()}
               </div>
@@ -965,6 +972,7 @@ function CardItem__({ $, c, idx }: any) {
 /** Campi di `$` confrontati: se ne cambia l'identità, la card si ri-renderizza. */
 export var CAMPI_CARD_ITEM: string[] = [
   'isLight', // tema chiaro/scuro
+  'annunciSospesi', // battito 30s: senza il confronto il badge "avviso non inviato" non compare
   'isProf', // badge e azioni da docente
   'simulaSt', // anteprima studente
   'bulkMode', // barra selezione multipla

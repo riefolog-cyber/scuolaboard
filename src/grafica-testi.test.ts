@@ -62,14 +62,21 @@ describe('grafica · contrasto dei testi secondari', function () {
     });
   });
 
-  it('le etichette di scadenza restano leggibili sul fondo della card', function () {
+  it('le etichette di scadenza restano leggibili in ENTRAMBI i temi', function () {
     // Stessa regola dei chip: il colore deve reggere il testo piccolo. Prima di
-    // questo test nessuno misurava i tre colori di urgenza.
-    (['expired', 'today', 'soon'] as const).forEach(function (st) {
-      expect(contrasto(hex(coloreScadenza(st).fg), CARD_SCURA)).toBeGreaterThanOrEqual(AA);
+    // questo test veniva misurato solo il tema scuro: #fbbf24 e #f87171 sul fondo
+    // chiaro stanno sotto AA, quindi le etichette "Scaduta/Oggi/Domani" sparivano.
+    ([false, true] as const).forEach(function (isLight) {
+      var fondo = isLight ? CARD_CHIARA : CARD_SCURA;
+      (['expired', 'today', 'soon'] as const).forEach(function (st) {
+        expect(contrasto(hex(coloreScadenza(st, isLight).fg), fondo)).toBeGreaterThanOrEqual(AA);
+      });
+      // Lo stato "ok" è bianco traslucido solo nel tema scuro: si compone sopra
+      // il fondo, invece nel tema chiaro è già un hex scuro.
+      var okFg = coloreScadenza('ok', isLight).fg;
+      var okRgb = okFg.indexOf('#') === 0 ? hex(okFg) : sopra(0.7, fondo);
+      expect(contrasto(okRgb, fondo)).toBeGreaterThanOrEqual(AA);
     });
-    // Lo stato "ok" è bianco traslucido: si compone sopra il fondo.
-    expect(contrasto(sopra(0.7, CARD_SCURA), CARD_SCURA)).toBeGreaterThanOrEqual(AA);
   });
 
   it('testoSecondario sceglie il valore del tema', function () {

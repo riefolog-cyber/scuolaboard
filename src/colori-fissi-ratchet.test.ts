@@ -11,10 +11,9 @@
 // la prima versione contava solo la forma compatta, e bastava uno spazio per
 // aggirarla senza vedere il test rosso.
 //
-// Quando migri qualcosa, abbassa la soglia: il numero può solo scendere.
-// Se un test dice "expected 30 to be less than or equal to 29", hai aggiunto un
-// colore fisso: usa un token (o giustifica e alza la soglia in un commit
-// dedicato, spiegando perché quel colore non è del tema).
+// Quando migri qualcosa, abbassa la soglia: il numero può solo scendere, mai
+// salire (AGENTS.md). Se un test dice "expected 30 to be less than or equal to
+// 29", hai aggiunto un colore fisso: migralo a un token, non alzare la soglia.
 import { describe, it, expect } from 'vitest';
 import cardItemRaw from './CardItem.tsx?raw';
 import cardDetailRaw from './CardDetail.tsx?raw';

@@ -44,4 +44,12 @@ describe('utils/scroll', function () {
     scrollInCima();
     expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'auto' });
   });
+
+  it('scrollInCima sul pannello del dettaglio usa il suo scrollTo', function () {
+    // Il "Torna su" della card non scorre window ma il div interno della modale.
+    mockMatchMedia(true);
+    var scrollTo = vi.fn();
+    scrollInCima({ scrollTo: scrollTo });
+    expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'auto' });
+  });
 });

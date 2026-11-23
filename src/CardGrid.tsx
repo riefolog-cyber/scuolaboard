@@ -23,10 +23,10 @@ function fmtDataBreve(d: any) {
   }
 }
 
-function UrgencyBadge({ scadenza }: any) {
+function UrgencyBadge({ scadenza, isLight }: any) {
   var st = statoScadenza(scadenza);
   if (st === 'none' || st === 'ok') return null;
-  var c = coloreScadenza(st);
+  var c = coloreScadenza(st, isLight);
   var txt = labelScadenza(st);
   return (
     <span className="urgency-badge" style={{ background: c.bg, color: c.fg, borderColor: c.bd }}>
@@ -81,7 +81,7 @@ function ListRow({ $, c }: any) {
             {c.pinned && <span className="list-pill" style={{ background: 'rgba(168,85,247,.18)', color: '#d8b4fe' }}>📌 Fissata</span>}
             {nascosta && $.isProf && <span className="list-pill" style={{ background: 'rgba(239,68,68,.16)', color: 'var(--c-danger, #f87171)' }}>Nascosta</span>}
             {nuova && <span className="list-pill" style={{ background: 'rgba(34,197,94,.18)', color: 'var(--c-success, #4ade80)' }}>Nuova</span>}
-            <UrgencyBadge scadenza={c.scadenza} />
+            <UrgencyBadge scadenza={c.scadenza} isLight={isLight} />
             <span style={{ fontWeight: 800, fontSize: 15, color: 'var(--sb-text-1)', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%' }}>{c.titolo || '(senza titolo)'}</span>
           </div>
           {c.testo ? <div style={{ fontSize: 12, color: 'var(--sb-text-3)', lineHeight: 1.45, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.testo}</div> : null}

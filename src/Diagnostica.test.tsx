@@ -21,26 +21,30 @@ describe('Diagnostica · pannello', function () {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
-  it('con SB_DEBUG mostra gli errori e il testo copiato non contiene la PII', function () {
+  it('con SB_DEBUG mostra gli errori, ma il testo copiato non contiene PII', function () {
     (window as any).SB_DEBUG = true;
     window.dispatchEvent(
       new ErrorEvent('error', {
-        message: 'scrivi a mario.rossi@scuolaboard.it',
-        error: new Error('scrivi a mario.rossi@scuolaboard.it'),
+        message: 'Compito di Giulia troppo lungo: scrivi a mario.rossi@scuolaboard.it',
+        error: new Error('Compito di Giulia troppo lungo: scrivi a mario.rossi@scuolaboard.it'),
       })
     );
     render(<Diagnostica isLight={false} />);
     fireEvent.click(screen.getByRole('button', { name: 'Apri diagnostica' }));
     expect(screen.getByRole('dialog', { name: /Diagnostica di ScuolaBoard/ })).toBeTruthy();
-    // L'errore registrato è visibile nel pannello.
+    // L'errore registrato è visibile nel pannello locale, dove serve a capire.
     expect(screen.getByText(/mario\.rossi@scuolaboard\.it/)).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: /Copia diagnostica/ }));
     var textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
-    // In uscita (testo copiabile) l'indirizzo è mascherato: è l'unico canale
-    // da cui il contenuto può lasciare il dispositivo.
-    expect(textarea.value).toContain('[EMAIL_1]');
+    // In uscita (testo copiabile, destinazione: una issue) NON vanno né email
+    // né nomi né titoli: `mascheraPII` non copre i nomi, quindi il messaggio
+    // libero resta solo nel pannello. Restano nome errore, tipo e orario.
     expect(textarea.value).not.toContain('mario.rossi@scuolaboard.it');
+    expect(textarea.value).not.toContain('Giulia');
+    expect(textarea.value).not.toContain('Compito di');
+    expect(textarea.value).toContain('[errore] Error');
+    expect(textarea.value).toContain('(testo omesso, vedi pannello)');
     expect(textarea.value).toContain('ScuolaBoard — diagnostica');
   });
 });
