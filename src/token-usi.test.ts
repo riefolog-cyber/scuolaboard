@@ -64,6 +64,9 @@ describe('token CSS · i riferimenti esistono', function () {
   });
 
   it('nessun token esiste SOLO nel tema chiaro', function () {
+    // Se il parser non trovasse il blocco light, CHIARI sarebbe vuoto e il test
+    // passerebbe sempre: la guardia della guardia impedisce quel falso verde.
+    expect(Object.keys(CHIARI).length, 'blocco del tema chiaro non letto').toBeGreaterThan(10);
     // Se un token nasce solo in html[data-theme="light"], nel tema scuro la
     // dichiarazione viene ignorata e il testo ricade sul colore ereditato.
     var soloTemaChiaro = Object.keys(CHIARI).filter(function (n) {

@@ -16,8 +16,11 @@ function hex(h: string) {
 }
 // Testo traslucido sopra un fondo: compositing alpha, come fa il browser.
 function sopra(alpha: number, fondo: number[]) {
-  return fondo.map(function (c) {
-    return Math.round(255 * alpha + c * (1 - alpha));
+  return sopraColore([255, 255, 255], alpha, fondo);
+}
+function sopraColore(rgb: number[], alpha: number, fondo: number[]) {
+  return fondo.map(function (c, i) {
+    return Math.round(rgb[i] * alpha + c * (1 - alpha));
   });
 }
 function contrasto(a: number[], b: number[]) {
@@ -75,8 +78,12 @@ describe('grafica · contrasto dei testi secondari', function () {
       // dal valore restituito (un 0.7 scritto a mano qui rendeva il test cieco
       // se in urgenza.ts scendeva sotto soglia).
       var okFg = coloreScadenza('ok', isLight).fg;
-      var alfa = okFg.match(/rgba\([^,]+,[^,]+,[^,]+,\s*([\d.]+)\)/);
-      var okRgb = alfa ? sopra(Number(alfa[1]), fondo) : hex(okFg);
+      var rgba = okFg.match(/rgba\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*\)/);
+      // Si compongono i quattro canali letti dal codice: un rgba(15,23,42,.7)
+      // su fondo scuro resterebbe invisibile, e il vecchio test misurava bianco.
+      var okRgb = rgba
+        ? sopraColore([Number(rgba[1]), Number(rgba[2]), Number(rgba[3])], Number(rgba[4]), fondo)
+        : hex(okFg);
       expect(contrasto(okRgb, fondo)).toBeGreaterThanOrEqual(AA);
     });
   });

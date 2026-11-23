@@ -91,6 +91,20 @@ describe('firestore-sync · riuso delle identità (memo delle card)', function (
     expect(dopo[2]).toBe(prima[2]);
   });
 
+  it('un modified con data undefined rimuove la card (non la lascia vecchia)', function () {
+    // `'data' in ch` (invece di `ch.data !== undefined`) è deliberato: scartare
+    // il cambio maschererebbe un dato mancante come "nessun cambiamento".
+    var perId = new Map<string, any>([['c1', { id: 'c1', titolo: 'Vecchia' }]]);
+    var next = applicaDocChanges(perId, [{ type: 'modified', id: 'c1', data: undefined }]);
+    expect(cardsDaMappa(next, ['c1'])).toEqual([]);
+  });
+
+  it('removed resta cancellata anche con data presente', function () {
+    var perId = new Map<string, any>([['c1', { id: 'c1' }]]);
+    var next = applicaDocChanges(perId, [{ type: 'removed', id: 'c1', data: { id: 'c1' } }]);
+    expect(next.size).toBe(0);
+  });
+
   it('applicaDocChanges non muta la mappa ricevuta', function () {
     var perId = new Map<string, any>([['c1', { id: 'c1' }]]);
     var next = applicaDocChanges(perId, [{ type: 'removed', id: 'c1' }]);

@@ -49,8 +49,9 @@ function tronca(valore: any, max: number): string {
 }
 
 // Il `name` di un errore NON è un codice garantito: chi rigetta una promise può
-// metterci qualunque stringa (un titolo di card, un nome). In uscita va solo un
-// codice noto, altrimenti un placeholder: il testo copiato finisce in una issue.
+// metterci qualunque stringa (un titolo di card, un nome). Questa funzione va
+// applicata SOLO in `testoDiagnostica` (l'unico canale in uscita): il pannello
+// locale deve continuare a mostrare il nome vero per chi fa il debug.
 var NOMI_ERRORE_NOTI = [
   'Error',
   'TypeError',
@@ -63,14 +64,22 @@ var NOMI_ERRORE_NOTI = [
   'FirebaseError',
   'AbortError',
   'TimeoutError',
+  'QuotaExceededError',
+  'InvalidStateError',
+  'NetworkError',
+  'NotAllowedError',
+  'SecurityError',
+  'DataCloneError',
+  'VersionError',
+  'ConstraintError',
 ];
-function nomeErroreSicuro(nome: any): string {
+function nomeErroreSicuro(nome: unknown): string {
   var s = String(nome == null ? '' : nome);
   return NOMI_ERRORE_NOTI.indexOf(s) >= 0 ? s : 'Error';
 }
 
 // Stessa idea per versione/tema e nomi delle tappe: solo caratteri "da codice".
-function codiceSicuro(valore: any, fallback: string): string {
+function codiceSicuro(valore: unknown, fallback: string): string {
   var s = String(valore == null ? '' : valore);
   return /^[A-Za-z0-9._-]{1,40}$/.test(s) ? s : fallback;
 }
@@ -101,7 +110,7 @@ export function avviaDiagnostica() {
     aggiungiErrore({
       t: Date.now(),
       tipo: 'errore',
-      nome: nomeErroreSicuro((e && e.error && e.error.name) || 'Error'),
+      nome: (e && e.error && e.error.name) || 'Error',
       messaggio: tronca((e && e.message) || (e && e.error && e.error.message) || '', MAX_MESSAGGIO),
       stack: primaRigaStack(e && e.error && e.error.stack),
     });
@@ -112,7 +121,7 @@ export function avviaDiagnostica() {
     aggiungiErrore({
       t: Date.now(),
       tipo: 'promessa',
-      nome: nomeErroreSicuro((r && r.name) || 'Error'),
+      nome: (r && r.name) || 'Error',
       messaggio: tronca((r && r.message) || r || '', MAX_MESSAGGIO),
       stack: primaRigaStack(r && r.stack),
     });
@@ -220,7 +229,7 @@ export function testoDiagnostica(contesto?: any): string {
       // `mascheraPII` non copre i nomi: quindi NON li esportiamo. Il pannello
       // locale li mostra comunque a chi sta facendo la segnalazione.
       righe.push(
-        '  ' + (i + 1) + ') ' + oraLocale(e.t) + ' [' + e.tipo + '] ' + e.nome + ': (testo omesso, vedi pannello)'
+        '  ' + (i + 1) + ') ' + oraLocale(e.t) + ' [' + e.tipo + '] ' + nomeErroreSicuro(e.nome) + ': (testo omesso, vedi pannello)'
       );
     });
   }

@@ -709,7 +709,9 @@ describe('annunciInSospeso · identità stabile quando non c\'è nulla da riprov
   it('due chiamate senza annunci pendenti restituiscono lo stesso array', function () {
     // L\'array viaggia nel contesto dell\'app: un riferimento nuovo a ogni snapshot
     // farebbe ri-renderizzare le card anche se nessuna card è cambiata.
-    expect(annunciInSospeso([], Date.now())).toBe(annunciInSospeso([], Date.now()));
-    expect(annunciInSospeso(null as any, Date.now())).toBe(annunciInSospeso([], Date.now()));
+    var vuoto = annunciInSospeso([], Date.now());
+    expect(vuoto).toEqual([]);
+    expect(vuoto).toBe(annunciInSospeso([], Date.now()));
+    expect(annunciInSospeso(null as unknown as any[], Date.now())).toBe(vuoto);
   });
 });

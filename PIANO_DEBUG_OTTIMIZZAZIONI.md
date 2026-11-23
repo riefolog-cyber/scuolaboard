@@ -1,8 +1,10 @@
 # Piano di debug e ottimizzazioni — ScuolaBoard
 
-Stato al **14/11/2026**, dopo i quick win 1–6 (timeout AI, log diagnostico gated, Node
+Stato al **23/11/2026**, dopo i quick win 1–6 (timeout AI, log diagnostico gated, Node
 allineato, `content-visibility` sulle card, font Inter variabile, soglie di coverage
-alzate). Questo documento dice **cosa resta da fare, in che ordine e come si verifica**.
+alzate) e le revisioni del 22–23/11: P1-2 valutata e rinviata, helper `apriCardDetail`
+fatto, diagnostica hardening PII, memo di `CardItem` e badge avvisi corretti.
+Questo documento dice **cosa resta da fare, in che ordine e come si verifica**.
 Non è una lista di desideri: ogni voce nasce da una misura o da un pezzo di codice
 preciso, indicato con il file.
 
@@ -18,7 +20,7 @@ preciso, indicato con il file.
 | P1-3 — un solo ticker condiviso per i countdown | ✅ fatto | `82657f8` |
 | P2-1 — helper condiviso `apriCardDetail` per il lazy-load | ✅ fatto | `cf79806` |
 | P2-4 — dead-code in CI come report non bloccante | ✅ fatto | `99298f3` |
-| P0-1 (resto) — immagini delle card in sottocollezione (come allegati) | ⏳ condizionato | — (solo se scatta una delle 3 condizioni del §7) |
+| P0-1 (resto) — immagini delle card in sottocollezione (come allegati) | ⏳ condizionato | — (nessuna misura ha scatto finora: va rieseguita su una classe da 30 card) |
 | P0-2 — nomi in `avvisiMancanti` | ❌ won't fix | — (trade-off accettato: i nomi servono al badge e `loadStudenti` non è sempre caricato; già esposti nei commenti) |
 | P1-5 — misura del bundle Firebase | ✅ fatto (sola misura, nessun taglio) | — |
 | P1-2 — finestratura della griglia | ⏸ valutata e rinviata (vedi §4) | — |
@@ -236,12 +238,13 @@ diversi** per lo stesso motivo: la prima attesa di un test di integrazione che a
 12 s di `asyncUtilTimeout`. Il budget per-test di 40 s restava largo (8,65 s misurati):
 scattava il tetto di testing-library, non quello del test.
 
-Oggi è risolto con un timeout esplicito di 30 s sulle due attese (deroga ammessa,
-perché è **più alto** del default, con il motivo scritto accanto). Il passo successivo
-è evitare che la terza volta si scopra in CI: un helper `apriCardDetail()` in
-`src/integration/harness.ts` che apre la card e attende la modale con quel budget, e
-una riga in AGENTS. **Sforzo:** 2 ore. **Verifica:** `npm run test:budget` sui file di
-integrazione (i più carichi devono stare sotto l'80%).
+Risolto con un timeout esplicito di 30 s sulle due attese (deroga ammessa,
+perché è **più alto** del default, con il motivo scritto accanto) e, dal 22/11,
+con l'helper `apriCardDetail()` in `src/integration/card-helpers.ts` (commit
+`cf79806`) che apre la card e attende la modale con quel budget. La riga in AGENTS
+c'è. **Verifica continuativa:** `npm run test:budget`, ora anche in CI notturna
+(`.github/workflows/test-budget-notte.yml`), che apre una issue se un test si
+avvicina al tetto.
 
 ### P2-2 · `console` come unico canale di diagnosi
 
@@ -309,8 +312,8 @@ e va deciso con l'utente, non deciso dal piano.
 | 1 | **P1-4** diagnostica + mark di boot | 1 g | Rende misurabili tutte le altre voci: senza numeri, P1-1/P1-2 si fanno a occhio |
 | 2 | **P0-1** immagini in sottocollezione + miniatura | 2–3 g | È il costo e la lentezza più grossi, e ha già un precedente collaudato (allegati) |
 | 3 | **P1-3** ticker unico dei countdown | 0,5 g | Piccolo, indipendente, effetto misurabile |
-| 4 | **P0-2** nomi in `avvisiMancanti` | 0,5 g | Privacy: meglio chiuderla prima della prossima revisione |
-| 5 | **P1-2** finestratura della griglia | 1 g | Da fare **dopo** la miniatura: altrimenti si ottimizza il render su immagini ancora enormi |
+| 4 | **P0-2** nomi in `avvisiMancanti` | — | ❌ won't fix: trade-off accettato (AGENTS §11), i nomi servono al badge |
+| 5 | **P1-2** finestratura della griglia | — | ⏸ valutata e rinviata il 22/11 (drag & drop, conteggi tronchi, serve Profiler 300 card) |
 | 6 | **P2-1/P2-3** igiene dei test | 0,5 g | Continua, non blocca nulla |
 | 7 | **P1-5** misura del bundle Firebase | 0,5 g | Solo misura: decide se c'è un lavoro da mettere in P1 |
 | 8 | **P3-1** tipi nei moduli puri | 3–4 g | Quando c'è una finestra senza urgenze |
@@ -330,5 +333,6 @@ Tre numeri, da rileggere fra tre mesi:
    deve scendere di almeno un ordine di grandezza (P0-1 + P1-1).
 2. **Tempo da `boot` a `primo-paint`** su un telefono di fascia media: misurato dai
    `mark` di P1-4, non a impressione.
-3. **Test al 100% del budget**: zero in `npm run test:budget`. Oggi i due file di
-   integrazione del lazy-load erano esattamente lì.
+3. **Test al 100% del budget**: zero in `npm run test:budget`. I due file del
+   lazy-load erano esattamente lì; dopo `cf79806` e il job notturno si tiene
+   sotto controllo con una issue automatica invece di scoprirlo in CI.

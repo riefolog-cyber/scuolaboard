@@ -71,7 +71,7 @@ import {
   aggiungiDomandaPubblicata,
   rimuoviDomandaPubblicata,
   notifyProposalAuthor,
-  imgUsageKB,
+  usedKBPerUpload,
   urlKB,
   computeImageTargetKB,
   cardJsonSize,
@@ -971,12 +971,10 @@ function AppProvider({ children }: any) {
     // `cards/{id}/allegati` (un documento per file), quindi il MiB della card è
     // tutto per testo e immagini. Fino al 24/10/2026 la copertina doveva
     // riservare spazio ai PDF ed era la causa del "Card troppo grande".
-    // Se stiamo SOSTITUENDO la copertina, il peso della vecchia (e del suo thumb)
-    // non sarà più nel documento salvato: conteggiarlo farebbe comprimere di più
-    // le immagini successive e poteva scattare un falso "Card troppo grande".
-    var usedKB = isCover
-      ? imgUsageKB(null, form.immagini, null)
-      : imgUsageKB(form.copertina, form.immagini, form.copertinaThumb);
+    // La riserva del thumb e l'esclusione della vecchia copertina stanno in un
+    // helper puro testato (usedKBPerUpload): qui non va riscritto il calcolo.
+    var usedKB = usedKBPerUpload(form, isCover);
+    var thumbTargetKB = 18;
     var currentSlots = (isCover ? 0 : form.copertina ? 1 : 0) + (form.immagini || []).length;
     var imgMimeOk = function (t: any) {
       return t === 'image/jpeg' || t === 'image/png' || t === 'image/gif' || t === 'image/webp';
@@ -1011,7 +1009,6 @@ function AppProvider({ children }: any) {
           // `copertina` e si carica solo aprendo la card; la bacheca usa thumb.
           var thumbPx = 320;
           var thumbQ = 0.72;
-          var thumbTargetKB = 18;
           var thumb: string | null = null;
           try {
             // Dalla copertina GIÀ compressa (b64), non dal File: un solo decode
@@ -2329,6 +2326,7 @@ var cardsValue = useMemo(
       totC,
       proposte,
       annunciSospesiDaRiprovare,
+      segnaleAnnunci,
       cardsHook.cards,
       user,
     ]

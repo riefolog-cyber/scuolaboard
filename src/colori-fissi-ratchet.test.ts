@@ -29,9 +29,9 @@ var SOGLIE: Record<string, number> = {
   'CardItem.tsx': 29,
   'CardDetail.tsx': 19,
   'CardGrid.tsx': 7,
-  // 16 residui nella fascia LIVE e nei pulsanti: il ratchet li congela, poi si
-  // abbassa migrando i punti uno alla volta (mai si alza).
-  'AppLayout.tsx': 16,
+  // Nuova guardia, conteggio iniziale 16 già abbassato a 11 migrando i badge IA
+  // e un separatore ai token. Da continuare ad abbassare, mai alzare.
+  'AppLayout.tsx': 11,
   'FilterBar.tsx': 4,
   'CommentsSection.tsx': 13,
   // Già migrato per intero: qui il ratchet è a zero, cioè non si torna indietro.

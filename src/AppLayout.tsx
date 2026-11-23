@@ -486,7 +486,7 @@ function AppLayout(props: any) {
                         )}
                         {showFiltriToolbar && (
                           <>
-                            <div style={{ width: 1, height: 22, background: 'rgba(255,255,255,.12)' }} />
+                            <div style={{ width: 1, height: 22, background: 'var(--sb-line)' }} />
                             <div style={{ display: 'inline-flex', gap: 3, flexWrap: 'wrap', alignItems: 'center' }}>
                               <Chip label="Note" n={counts.tipi.nota} active={qfTipo==='nota'} onClick={function(){ setQfTipo(qfTipo==='nota'?'tutti':'nota'); }} />
                               <Chip label="Domande" n={counts.tipi.domanda} active={qfTipo==='domanda'} onClick={function(){ setQfTipo(qfTipo==='domanda'?'tutti':'domanda'); }} />
@@ -819,8 +819,8 @@ function AppLayout(props: any) {
                             gap: 5,
                           }}
                         >
-                          <span style={{ fontSize: 10, color: 'rgba(255,255,255,.35)' }}>🤖</span>
-                          <span style={{ fontSize: 10, color: 'rgba(255,255,255,.35)', fontStyle: 'italic' }}>
+                          <span style={{ fontSize: 10, color: 'var(--sb-text-3)' }}>🤖</span>
+                          <span style={{ fontSize: 10, color: 'var(--sb-text-3)', fontStyle: 'italic' }}>
                             Analisi generata con IA – revisionata dal docente
                           </span>
                         </div>
@@ -905,8 +905,8 @@ function AppLayout(props: any) {
                             gap: 5,
                           }}
                         >
-                          <span style={{ fontSize: 10, color: 'rgba(255,255,255,.35)' }}>🤖</span>
-                          <span style={{ fontSize: 10, color: 'rgba(255,255,255,.35)', fontStyle: 'italic' }}>
+                          <span style={{ fontSize: 10, color: 'var(--sb-text-3)' }}>🤖</span>
+                          <span style={{ fontSize: 10, color: 'var(--sb-text-3)', fontStyle: 'italic' }}>
                             Analisi generata con IA – revisionata dal docente
                           </span>
                         </div>

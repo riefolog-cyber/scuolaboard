@@ -63,6 +63,16 @@ describe('memo di CardItem — i campi confrontati sono completi', () => {
     expect(dup(CAMPI_NON_CONFRONTATI)).toEqual([]);
   });
 
+  it('nessun campo confrontato è rimasto orfano (eccetto il trigger del memo)', () => {
+    // Il guardiano naturale (letture ⊆ liste) non vede il difetto opposto:
+    // rimettere `annunciSospesi` in CAMPI_CARD_ITEM senza leggerlo renderebbe il
+    // memo cieco e ri-renderizzerebbe tutte le card a ogni snapshot.
+    var letti = new Set(campiLetti(srcCardItem));
+    var trigger = new Set(['segnaleAnnunci']); // letto solo dal comparatore, non nel corpo
+    var orfani = CAMPI_CARD_ITEM.filter((c) => !letti.has(c) && !trigger.has(c));
+    expect(orfani, 'campi confrontati ma non letti: ' + orfani.join(', ')).toEqual([]);
+  });
+
   it('la scansione trova i campi davvero (non vuota: altrimenti il test è inutile)', () => {
     // Se il pattern smettesse di corrispondere, il test sopra passerebbe sempre.
     var letti = campiLetti(srcCardItem);
@@ -121,6 +131,12 @@ describe('memo di CardItem — comportamento del comparatore', () => {
     // ogni snapshot Firestore (che ricrea l'array anche se le card sono uguali).
     expect(cardItemAreEqual(base, con({ segnaleAnnunci: 1 }))).toBe(false);
     expect(cardItemAreEqual(base, con({ segnaleAnnunci: 0 }))).toBe(true);
+  });
+
+  it('NON ri-renderizza se cambia l\'array degli annunci (non è confrontato)', () => {
+    // Uno snapshot Firestore lo ricrea a ogni like: confrontarlo per identità
+    // farebbe ri-renderizzare 30 card per un solo like.
+    expect(cardItemAreEqual(base, con({ annunciSospesi: [] }))).toBe(true);
   });
 
   it('NON ri-renderizza se cambia solo un campo non confrontato (è il punto del memo)', () => {

@@ -26,7 +26,6 @@ vi.mock('./CardItem.tsx', async function () {
 });
 
 import CardGrid from './CardGrid.tsx';
-import { annunciInSospeso } from './avvisi-classe.ts';
 
 beforeEach(function () {
   vi.stubGlobal('FORM0', {
@@ -158,15 +157,11 @@ describe('CardItem · numero di render per aggiornamento', function () {
   });
 
   it('un nuovo array di annunci sospesi non ri-renderizza le card (conta il segnale)', function () {
-    // Uno snapshot Firestore ricrea l'array annunciSospesi anche se nessuna card
-    // è cambiata: il memo confronta `segnaleAnnunci` (intero), non l'array.
+    // Due ARRAY DIVERSI, non il solito array congelato: se domani qualcuno
+    // rimettere `annunciSospesi` in CAMPI_CARD_ITEM, questo test deve diventare
+    // rosso (30 render). Il contenuto può anche essere lo stesso.
     var base = cards(30);
-    var base$ = make$({
-      cards: base,
-      visibleSorted: base,
-      annunciSospesi: annunciInSospeso([], Date.now()),
-      segnaleAnnunci: 0,
-    });
+    var base$ = make$({ cards: base, visibleSorted: base, annunciSospesi: [], segnaleAnnunci: 0 });
     var r = render(React.createElement(CardGrid, { $: base$ }));
     expect(resi.length).toBe(30);
     resi.length = 0;
@@ -176,7 +171,7 @@ describe('CardItem · numero di render per aggiornamento', function () {
         $: Object.assign({}, base$, {
           cards: base,
           visibleSorted: base,
-          annunciSospesi: annunciInSospeso([], Date.now()),
+          annunciSospesi: [{ id: 'c1', avvisiPendenti: true }],
           segnaleAnnunci: 0,
         }),
       })

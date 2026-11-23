@@ -96,7 +96,7 @@ function ListRow({ $, c }: any) {
             {c.pinned ? '📌' : '📍'}
           </button>
         )}
-        <div aria-hidden="true" style={{ color: isLight ? '#94a3b8' : 'rgba(255,255,255,.35)', fontSize: 18, fontWeight: 700 }}>›</div>
+        <div aria-hidden="true" style={{ color: 'var(--sb-text-3)', fontSize: 18, fontWeight: 700 }}>›</div>
       </div>
     </div>
   );

@@ -37,11 +37,20 @@ var FILE: Record<string, string> = {
   'CommentsSection.tsx': commentsRaw,
   'PartecipazionePanel.tsx': partecipazioneRaw,
   'FilterBar.tsx': filterBarRaw,
+  'CardGrid.tsx': cardGridRaw,
   'Diagnostica.tsx': diagnosticaRaw,
   'AppLayout.tsx': appLayoutRaw,
 };
 
 describe('temi · nessun nuovo ternario isLight nei file migrati', function () {
+  it('la lista dei file sorvegliati non si è ristretta', function () {
+    // Se qualcuno togliesse un file da FILE, un ternario lì dentro passerebbe
+    // inosservato e il tema sbagliato non sarebbe visto da nessun test.
+    expect(Object.keys(FILE).length, 'file di tema tolto dalla guardia').toBeGreaterThanOrEqual(7);
+    expect(Object.keys(FILE)).toContain('AppLayout.tsx');
+    expect(Object.keys(FILE)).toContain('Diagnostica.tsx');
+  });
+
   it('il conteggio resta quello atteso (di norma zero)', function () {
     Object.keys(FILE).forEach(function (nome) {
       var n = (FILE[nome].match(/isLight\s*\?/g) || []).length;

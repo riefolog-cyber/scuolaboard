@@ -14,6 +14,7 @@ import {
   cardJsonSize,
   CARD_SIZE_LIMIT,
   imgUsageKB,
+  usedKBPerUpload,
   urlKB,
   computeImageTargetKB,
   aggiungiDomandaPubblicata,
@@ -90,6 +91,17 @@ describe('imgUsageKB / computeImageTargetKB (budget dinamico delle immagini)', (
     // La miniatura vive nello stesso documento della copertina: se non entra nel
     // conto, il budget delle immagini successive la ignora (~18 KB per card).
     expect(imgUsageKB(fakeImage(100), [], fakeImage(10)) - imgUsageKB(fakeImage(100), [])).toBeGreaterThan(9.9);
+  });
+
+  it('sostituendo la copertina si esclude la vecchia ma si riserva il thumb nuovo', () => {
+    const immagini = [{ url: fakeImage(300) }, { url: fakeImage(250) }];
+    const form = { copertina: fakeImage(120), copertinaThumb: fakeImage(18), immagini };
+    // La vecchia copertina non ci sarà più nel documento, ma la nuova avrà un
+    // thumb: escludere tutto senza riservare i suoi 18 KB faceva crescere il
+    // target della copertina oltre il margine e scattava un falso "troppo grande".
+    expect(usedKBPerUpload(form, true)).toBeCloseTo(550 + 18, 0);
+    expect(usedKBPerUpload(form, false)).toBeCloseTo(120 + 18 + 550, 0);
+    expect(usedKBPerUpload(null, true)).toBe(18);
   });
 
   it('gli allegati NON riducono il budget delle immagini', () => {

@@ -104,11 +104,27 @@ describe('diagnostica · testo copiabile', function () {
         error: Object.assign(new Error('boom'), { name: 'Compito di Giulia' }),
       })
     );
+    // Il pannello locale conserva il nome vero (serve a chi fa il debug)...
+    expect(elencoErrori()[0].nome).toBe('Compito di Giulia');
     var t = testoDiagnostica({ versione: '1.2.3', tema: 'chiaro' });
+    // ...ma l'unico canale in uscita lo riduce a un codice noto.
     expect(t).not.toContain('Giulia');
     expect(t).not.toContain('Compito di');
     expect(t).toContain('[errore] Error');
     expect(t).toContain('Tema: chiaro');
+  });
+
+  it('sanitizza anche il nome da unhandledrejection e i metadati di contesto', function () {
+    var rejection = new Event('unhandledrejection') as any;
+    rejection.reason = Object.assign(new Error('boom'), { name: 'Compito di Giulia' });
+    window.dispatchEvent(rejection);
+    segna('tappa Giulia');
+    var t = testoDiagnostica({ versione: '1.2 Giulia', tema: 'chiaro Giulia' });
+    expect(t).not.toContain('Giulia');
+    expect(t).toContain('[promessa] Error');
+    expect(t).toContain('Versione: (versione)');
+    expect(t).toContain('Tema: (tema)');
+    expect(t).toContain('tappa:');
   });
 
   it('il messaggio lungo viene troncato a 300 caratteri', function () {

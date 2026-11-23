@@ -335,6 +335,21 @@ export function imgUsageKB(
 }
 
 /**
+ * KB già occupati dal documento prima di un upload di immagini.
+ * Con `isCover` la vecchia copertina sparisce, ma la nuova avrà comunque una
+ * miniatura: la sua quota va RISERVATA qui, perché viene sommata a `usedKB`
+ * solo dopo che `computeImageTargetKB` ha scelto la qualità della copertina.
+ * Senza riserva, la copertina nuova si prende lo spazio del thumb e il guard
+ * "Card troppo grande" scatta su una card che una volta salvata starebbe dentro.
+ */
+export function usedKBPerUpload(form: any, isCover: boolean, thumbRiservaKB = 18): number {
+  var f = form || {};
+  return isCover
+    ? imgUsageKB(null, f.immagini, null) + thumbRiservaKB
+    : imgUsageKB(f.copertina, f.immagini, f.copertinaThumb);
+}
+
+/**
  * Target in KB **di documento** (base64, come lo conta cardJsonSize) per la
  * prossima immagine. `usedKB` e `cardLimitKB` devono usare la stessa unità.
  */

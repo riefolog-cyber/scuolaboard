@@ -1,8 +1,10 @@
 # COSE IN SOSPESO
 
-Aggiornato al **11/10/2026**. **Una sola cosa da fare, tua**: pubblicare le
-Rules di `allegati_consegne` in Firebase Console. Il controllo Safari che era in
-lista è stato eseguito ed è verde.
+Aggiornato al **23/11/2026**. **Nessuna azione immediata rimasta in questo file**:
+le Rules di `allegati_consegne`, `classiEscluse`, `consensi/{uid}`,
+`classiPerAnnoSoloAggiunte()` e della sottocollezione allegati sono state tutte
+pubblicate in Firebase Console (11/10 e 25/10/2026). Resta il promemoria operativo
+in calce: **ogni futura modifica a `rules firestore.txt` va pubblicata a mano**.
 Stato del repository: `main` in sync con `origin/main`, working tree pulito,
 **987 test verdi (exit 0)** + **8 E2E su WebKit verdi**, `tsc --noEmit` pulito,
 eslint senza warning.
@@ -140,9 +142,11 @@ bloccare la build.
 
 ## 4. Cose che NON saprei fare senza di te
 
-- **Ripubblicare le rules**: serve l'accesso alla Console. L'ultima volta è
-  stata fatta (11/10/2026, `classiEscluse`); quella delle `allegati_consegne` è
-  ancora da fare. La prossima sarà ogni volta che si tocca `rules firestore.txt`.
+- **Ripubblicare le rules**: serve l'accesso alla Console. Ultima pubblicazione
+  il 25/10/2026 (`consensi/{uid}`, `classiPerAnnoSoloAggiunte()`, sottocollezione
+  allegati). Al 23/11/2026 non ci sono rules modificate e non pubblicate: i tre
+  cicli di review successivi non hanno toccato `rules firestore.txt`.
+  La prossima sarà ogni volta che si tocca `rules firestore.txt`.
 - **Il bundle da 1083 KB** (vendor-firebase 606 KB): si può valutare un import
   selettivo di Firebase, ma è un intervento che tocca l'inizializzazione
   dell'app — da fare con calma, non di corsa.

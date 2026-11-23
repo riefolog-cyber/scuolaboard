@@ -126,10 +126,11 @@ describe('Upload immagini (prof)', () => {
     fireEvent.change(coverInput, { target: { files: [new File(['x'], 'copertina.png', { type: 'image/png' })] } });
     await waitFor(() => expect(compressMock).toHaveBeenCalledTimes(1));
 
-    // Target della card vuota con una sola immagine: (900-10)/3 ≈ 297KB. Il PDF
-    // da 300KB non deve togliergli nulla.
+    // Target della card vuota: (900 - 10 overhead - 18 riserva thumb)/3 ≈ 291KB.
+    // Il PDF da 300KB non deve togliergli nulla: la differenza rispetto ai vecchi
+    // 297KB è solo la quota riservata alla miniatura della copertina.
     const target = compressMock.mock.calls[0][4];
-    expect(target).toBe(Math.round((900 - 10) / 3));
+    expect(target).toBe(Math.round((900 - 10 - 18) / 3));
     expect(target).toBeGreaterThan(250);
   });
 

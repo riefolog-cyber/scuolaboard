@@ -44,14 +44,10 @@ function parse(valore: string, token: Record<string, string>): number[] {
       return token[nome];
     });
   }
-  var hex = v.match(/^#([0-9a-f]{6})$/i);
+  var hex = v.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
   if (hex) {
-    return [
-      parseInt(hex[1].slice(0, 2), 16),
-      parseInt(hex[1].slice(2, 4), 16),
-      parseInt(hex[1].slice(4, 6), 16),
-      1,
-    ];
+    var h = hex[1].length === 3 ? hex[1].replace(/./g, function (c) { return c + c; }) : hex[1];
+    return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16), 1];
   }
   var rgb = v.match(/rgba?\(([^)]+)\)/);
   if (rgb) {
@@ -164,38 +160,60 @@ describe.each(['dark', 'light'])('contrasto dei token · tema %s', function (tem
 // la guardia legge il CSS. Le tinte traslucide chiare di prima davano bianco su
 // verde 2,7:1, ambra 2,3:1 e rosso 4,1:1 nel tema scuro (quello predefinito).
 function stopGradiente(valore: string): number[][] {
-  var m = String(valore).match(/linear-gradient\(([^)]+)\)/i);
+  var m = String(valore).match(/linear-gradient\(([\s\S]+)\)\s*$/i);
   if (!m) throw new Error('gradiente non riconosciuto: ' + valore);
-  var parti = m[1].split(',').map(function (s) {
-    return s.trim();
-  });
-  if (/deg$/.test(parti[0])) parti.shift(); // l'angolo non è un colore
-  return parti.map(function (p) {
-    return parse(p, TEMA.dark);
-  });
+  // Tokenizza per funzione, non per virgola: `rgba(…,…,…)` ha virgole interne e
+  // `split(',')` lo smembrava (fail-closed, ma costringeva a "aggiustare" il
+  // test prendendo solo il primo stop — che è il modo per indebolirlo).
+  var token = /rgba?\([^)]*\)|#[0-9a-f]{3,8}|[\d.]+(?:deg|%|turn)/gi;
+  var parti = m[1].match(token) || [];
+  return parti
+    .filter(function (p) {
+      return !/(deg|%|turn)$/i.test(p); // angolo e offset non sono colori
+    })
+    .map(function (p) {
+      return parse(p, TEMA.dark);
+    });
+}
+
+function coloreTestoToast(): number[] {
+  var corpo = corpoDi('.toast', CSS);
+  // Ancorato a `;` o inizio riga: `background-color:#fff` non deve bastare.
+  var m = corpo.match(/(?:^|;)\s*color\s*:\s*(#[0-9a-f]{3,8}|rgba?\([^)]*\))/i);
+  if (!m) throw new Error('.toast senza colore di testo');
+  return parse(m[1], TEMA.dark);
 }
 
 describe('contrasto dei toast', function () {
   it('il testo resta bianco in entrambi i temi (letto dal CSS, non scritto a mano)', function () {
-    expect(corpoDi('.toast', CSS), '.toast non dichiara un colore').toMatch(/color:\s*#fff\b/i);
-    var override = selettoriCheDichiara('color:', CSS).filter(function (s) {
-      return /data-theme="light"/.test(s) && /toast/.test(s);
-    });
-    expect(override, 'override del colore dei toast: ' + override.join(' | ')).toEqual([]);
+    expect(coloreTestoToast().slice(0, 3)).toEqual([255, 255, 255]);
+
+    // Qualsiasi blocco light che parli di toast e dichiari colore o sfondo: non
+    // serve che selettore e dichiarazione stiano nella stessa stringa cercata.
+    var override: string[] = [];
+    for (const m of CSS.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      if (/data-theme/.test(m[1]) && /toast/.test(m[1] + m[2]) && /(?:^|;)\s*(color|background)\s*:/i.test(m[2])) {
+        override.push(m[1].trim());
+      }
+    }
+    expect(override, 'override del tema chiaro sui toast: ' + override.join(' | ')).toEqual([]);
   });
 
-  it('la guardia del gradiente legge TUTTI gli stop', function () {
+  it('la guardia del gradiente legge TUTTI gli stop (hex, rgba e offset)', function () {
     // Senza questa, un futuro stop chiaro passerebbe inosservato (e un gradiente
-    // senza angolo verrebbe letto a rovescio).
+    // con rgba o offset mandava la CI rossa, invitando a leggere solo il primo).
     expect(stopGradiente('linear-gradient(135deg, #166534, #15803d)')).toHaveLength(2);
     expect(stopGradiente('linear-gradient(#166534, #15803d)')).toHaveLength(2);
+    expect(stopGradiente('linear-gradient(135deg, #166534 0%, #15803d 100%)')).toHaveLength(2);
+    expect(stopGradiente('linear-gradient(135deg, rgba(22,101,52,1), rgba(21,128,61,1))')).toHaveLength(2);
   });
 
   it.each(['ok', 'warn', 'err'])('.toast.%s regge AA su ogni stop', function (kind) {
     var m = CSS.match(new RegExp('\\.toast\\.' + kind + '\\{[^}]*background:(linear-gradient\\([^;]+)'));
     expect(m, '.toast.' + kind + ' ha uno sfondo gradiente').toBeTruthy();
+    var testo = coloreTestoToast();
     stopGradiente(m![1]).forEach(function (sfondo) {
-      expect(contrasto([255, 255, 255], sfondo)).toBeGreaterThanOrEqual(AA);
+      expect(contrasto(sopra(testo, sfondo), sfondo)).toBeGreaterThanOrEqual(AA);
     });
   });
 });
