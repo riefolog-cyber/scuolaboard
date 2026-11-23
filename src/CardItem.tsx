@@ -48,14 +48,12 @@ function CardItem__({ $, c, idx }: any) {
   // Badge PERSISTENTE (non un toast): se l'annuncio alla classe non è partito,
   // il docente lo vede sulla card finché non è risolto, con i nomi di chi è
   // rimasto senza avviso (quando li conosciamo).
-  // La verità è la STESSA lista che alimenta l'indicatore in alto: il battito da
-  // 30s di AppProvider ne cambia l'identità e, siccome il campo è confrontato dal
-  // memo, la card si ri-renderizza quando il solo passare del tempo rende il
-  // badge visibile (caso "conteggio ignoto"). Date.now() resta solo come fallback
-  // per i test che costruiscono `$` a mano senza annunciSospesi.
-  var avviso = $.isProf && !$.simulaSt && ($.annunciSospesi
-    ? $.annunciSospesi.some(function (x: any) { return String(x.id) === String(c.id); })
-    : avvisoInSospeso(c, Date.now()));
+  // Stessa funzione usata dall'indicatore in alto (avvisi-classe.ts): non c'è
+  // una seconda verità. Il campo `segnaleAnnunci` nel memo è un intero che cambia
+  // solo al battito 30s con annunci pendenti: è quello a far comparire il badge
+  // nel caso "conteggio ignoto", senza passare al confronto l'array degli annunci
+  // (che Firestore ricrea a ogni snapshot e azzererebbe l'ottimizzazione).
+  var avviso = $.isProf && !$.simulaSt && avvisoInSospeso(c, Date.now());
   var mancantiTxt = avviso ? dettaglioMancanti(c) : '';
   var cc = c.classi || ['TUTTE'];
   var tema = temaTipo(c.tipo);
@@ -972,7 +970,7 @@ function CardItem__({ $, c, idx }: any) {
 /** Campi di `$` confrontati: se ne cambia l'identità, la card si ri-renderizza. */
 export var CAMPI_CARD_ITEM: string[] = [
   'isLight', // tema chiaro/scuro
-  'annunciSospesi', // battito 30s: senza il confronto il badge "avviso non inviato" non compare
+  'segnaleAnnunci', // intero del battito 30s: il solo passare del tempo fa comparire il badge
   'isProf', // badge e azioni da docente
   'simulaSt', // anteprima studente
   'bulkMode', // barra selezione multipla

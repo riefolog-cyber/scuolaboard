@@ -48,6 +48,33 @@ function tronca(valore: any, max: number): string {
   return s.length > max ? s.slice(0, max) + '…' : s;
 }
 
+// Il `name` di un errore NON è un codice garantito: chi rigetta una promise può
+// metterci qualunque stringa (un titolo di card, un nome). In uscita va solo un
+// codice noto, altrimenti un placeholder: il testo copiato finisce in una issue.
+var NOMI_ERRORE_NOTI = [
+  'Error',
+  'TypeError',
+  'ReferenceError',
+  'SyntaxError',
+  'RangeError',
+  'EvalError',
+  'URIError',
+  'AggregateError',
+  'FirebaseError',
+  'AbortError',
+  'TimeoutError',
+];
+function nomeErroreSicuro(nome: any): string {
+  var s = String(nome == null ? '' : nome);
+  return NOMI_ERRORE_NOTI.indexOf(s) >= 0 ? s : 'Error';
+}
+
+// Stessa idea per versione/tema e nomi delle tappe: solo caratteri "da codice".
+function codiceSicuro(valore: any, fallback: string): string {
+  var s = String(valore == null ? '' : valore);
+  return /^[A-Za-z0-9._-]{1,40}$/.test(s) ? s : fallback;
+}
+
 function primaRigaStack(stack: any): string {
   var s = String(stack == null ? '' : stack);
   // Solo la riga del punto di lancio (file:linea), non tutto lo stack: il resto
@@ -74,7 +101,7 @@ export function avviaDiagnostica() {
     aggiungiErrore({
       t: Date.now(),
       tipo: 'errore',
-      nome: (e && e.error && e.error.name) || 'Error',
+      nome: nomeErroreSicuro((e && e.error && e.error.name) || 'Error'),
       messaggio: tronca((e && e.message) || (e && e.error && e.error.message) || '', MAX_MESSAGGIO),
       stack: primaRigaStack(e && e.error && e.error.stack),
     });
@@ -85,7 +112,7 @@ export function avviaDiagnostica() {
     aggiungiErrore({
       t: Date.now(),
       tipo: 'promessa',
-      nome: (r && r.name) || 'Error',
+      nome: nomeErroreSicuro((r && r.name) || 'Error'),
       messaggio: tronca((r && r.message) || r || '', MAX_MESSAGGIO),
       stack: primaRigaStack(r && r.stack),
     });
@@ -141,8 +168,8 @@ export function testoDiagnostica(contesto?: any): string {
   var righe: string[] = [];
   righe.push('ScuolaBoard — diagnostica');
   righe.push('Quando: ' + new Date().toISOString());
-  if (c.versione) righe.push('Versione: ' + String(c.versione));
-  if (c.tema) righe.push('Tema: ' + String(c.tema));
+  if (c.versione) righe.push('Versione: ' + codiceSicuro(c.versione, '(versione)'));
+  if (c.tema) righe.push('Tema: ' + codiceSicuro(c.tema, '(tema)'));
   try {
     righe.push('Pagina: ' + String(location.pathname));
   } catch (e) {}
@@ -166,7 +193,7 @@ export function testoDiagnostica(contesto?: any): string {
     righe.push('  (nessuna tappa registrata)');
   } else {
     d.forEach(function (v) {
-      righe.push('  ' + v.nome + ': ' + v.ms);
+      righe.push('  ' + codiceSicuro(v.nome, 'tappa') + ': ' + v.ms);
     });
   }
 

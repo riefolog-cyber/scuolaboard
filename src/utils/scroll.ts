@@ -38,9 +38,12 @@ export function scrollInVista(el: any) {
 
 /** Torna in cima alla pagina (o al contenitore passato, es. il pannello del dettaglio). */
 export function scrollInCima(root?: any) {
-  // `onClick={scrollInCima}` passa l'evento come primo argomento: senza questo
-  // controllo l'evento verrebbe scambiato per il contenitore e lo scroll non
-  // partirebbe (il catch inghiottirebbe l'errore).
+  // `onClick={scrollInCima}` passa l'evento React come primo argomento: ha
+  // `nativeEvent` e va trattato come "nessun contenitore" → scorre la pagina.
+  // Un ref `null` (pannello non ancora attaccato) invece non deve fare niente,
+  // come nel vecchio `if (scrollRef.current) scrollRef.current.scrollTo(…)`.
+  if (root && typeof root.scrollTo !== 'function' && root.nativeEvent) root = undefined;
+  if (root === null) return;
   var target = root && typeof root.scrollTo === 'function' ? root : window;
   try {
     target.scrollTo({ top: 0, behavior: comportamentoScroll() });

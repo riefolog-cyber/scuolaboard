@@ -95,6 +95,22 @@ describe('diagnostica · testo copiabile', function () {
     expect(t.indexOf('nessuno')).toBeGreaterThanOrEqual(0);
   });
 
+  it('il nome dell\'errore è un codice, non testo libero con nomi', function () {
+    // `Promise.reject({ name: '…' })` può mettere qualunque stringa in `name`:
+    // mascherare solo il messaggio non basta, il nome finiva nella issue.
+    window.dispatchEvent(
+      new ErrorEvent('error', {
+        message: 'boom',
+        error: Object.assign(new Error('boom'), { name: 'Compito di Giulia' }),
+      })
+    );
+    var t = testoDiagnostica({ versione: '1.2.3', tema: 'chiaro' });
+    expect(t).not.toContain('Giulia');
+    expect(t).not.toContain('Compito di');
+    expect(t).toContain('[errore] Error');
+    expect(t).toContain('Tema: chiaro');
+  });
+
   it('il messaggio lungo viene troncato a 300 caratteri', function () {
     var lungo = new Array(400).join('a');
     window.dispatchEvent(new ErrorEvent('error', { message: lungo, error: new Error(lungo) }));

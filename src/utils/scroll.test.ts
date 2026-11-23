@@ -52,4 +52,21 @@ describe('utils/scroll', function () {
     scrollInCima({ scrollTo: scrollTo });
     expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'auto' });
   });
+
+  it('scrollInCima sul pannello rispetta reduced-motion anche con scroll fluido', function () {
+    mockMatchMedia(false);
+    var scrollTo = vi.fn();
+    scrollInCima({ scrollTo: scrollTo });
+    expect(scrollTo).toHaveBeenCalledTimes(1);
+    expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
+  });
+
+  it('scrollInCima con ref null non scorre la pagina', function () {
+    // Il pulsante del dettaglio può essere cliccato prima che il ref sia attaccato:
+    // scorrere window farebbe saltare la bacheca invece del solo pannello.
+    var scrollTo = vi.fn();
+    vi.stubGlobal('scrollTo', scrollTo);
+    scrollInCima(null);
+    expect(scrollTo).not.toHaveBeenCalled();
+  });
 });

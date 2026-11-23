@@ -971,8 +971,13 @@ function AppProvider({ children }: any) {
     // `cards/{id}/allegati` (un documento per file), quindi il MiB della card è
     // tutto per testo e immagini. Fino al 24/10/2026 la copertina doveva
     // riservare spazio ai PDF ed era la causa del "Card troppo grande".
-    var usedKB = imgUsageKB(form.copertina, form.immagini, form.copertinaThumb);
-    var currentSlots = (form.copertina ? 1 : 0) + (form.immagini || []).length;
+    // Se stiamo SOSTITUENDO la copertina, il peso della vecchia (e del suo thumb)
+    // non sarà più nel documento salvato: conteggiarlo farebbe comprimere di più
+    // le immagini successive e poteva scattare un falso "Card troppo grande".
+    var usedKB = isCover
+      ? imgUsageKB(null, form.immagini, null)
+      : imgUsageKB(form.copertina, form.immagini, form.copertinaThumb);
+    var currentSlots = (isCover ? 0 : form.copertina ? 1 : 0) + (form.immagini || []).length;
     var imgMimeOk = function (t: any) {
       return t === 'image/jpeg' || t === 'image/png' || t === 'image/gif' || t === 'image/webp';
     };
@@ -1721,6 +1726,13 @@ function AppProvider({ children }: any) {
     },
     [cardsHook.cards, tickSospesi]
   );
+  // Segnale PRIMITIVO per il memo di CardItem. `cardsHook.cards` cambia identità
+  // a OGNI snapshot Firestore (cardsDaMappa crea un array nuovo), quindi passare
+  // l'array annunciSospesi al confronto ri-renderizzerebbe tutta la griglia a
+  // ogni like. Con questo intero, il ri-render delle card avviene solo al battito
+  // 30s (quando serve per il badge "conteggio ignoto") o quando l'ultimo annuncio
+  // pendente si chiude. L'array resta all'indicatore in alto e a "Riprova tutti".
+  var segnaleAnnunci = haAnnunciPendenti ? tickSospesi : 0;
 
   // ── BUILD CONTEXT VALUES ──
   var authValue = useMemo(
@@ -2244,6 +2256,7 @@ var cardsValue = useMemo(
         riprovaAnnuncio: riprovaAnnuncio,
         riprovaTuttiAnnunci: riprovaTuttiAnnunci,
         annunciSospesi: annunciSospesiDaRiprovare,
+        segnaleAnnunci: segnaleAnnunci,
         apriDuplica: apriDuplica,
         // Handlers
         toggleLike: toggleLike,

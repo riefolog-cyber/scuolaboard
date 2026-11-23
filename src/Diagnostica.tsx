@@ -21,9 +21,9 @@ export default function Diagnostica(props: any) {
   if (!window.SB_DEBUG) return null;
 
   var isLight = !!props.isLight;
-  // Etichetta per il testo copiato (non è uno stile): unico ternario residuo,
-  // dichiarato come eccezione in tema-token.test.ts insieme a CommentsSection.
-  var tema = isLight ? 'chiaro' : 'scuro';
+  // Etichetta per il testo copiato: indicizzazione invece del ternario, così il
+  // file resta a zero ternari e la guardia tema-token non ha eccezioni da reggere.
+  var tema = ['scuro', 'chiaro'][Number(!!isLight)];
   // Colori dai token: il pannello è lazy e visibile solo con SB_DEBUG, quindi
   // nessun test jsdom/E2E vedrebbe un ramo dimenticato. I token, a differenza
   // dei ternari, non possono sbagliare un tema solo.

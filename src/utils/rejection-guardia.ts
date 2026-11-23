@@ -57,9 +57,20 @@ export function creaGuardiaRejection(opts: { onVoce?: (_v: VoceRejection) => voi
       });
       return prese;
     },
-    /** Voci che nessun test ha reclamato (coda arrivata dopo l'afterEach). */
+    /**
+     * Voci che nessun test ha reclamato (coda arrivata dopo l'afterEach).
+     * Distruttiva: il guardia è un singleton condiviso da tutti i file del
+     * worker. Senza lo svuotamento, le stesse voci verrebbero risegnalate
+     * dall'afterAll di ogni file successivo, attribuite al file sbagliato.
+     */
     orfane: function (): VoceRejection[] {
-      return voci.slice();
+      var rimaste = voci.slice();
+      voci = [];
+      return rimaste;
+    },
+    /** Fine del file: il nome dell'ultimo test non passa al file successivo. */
+    fine: function () {
+      corrente = null;
     },
     corrente: function () {
       return corrente;

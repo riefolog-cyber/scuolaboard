@@ -26,6 +26,7 @@ vi.mock('./CardItem.tsx', async function () {
 });
 
 import CardGrid from './CardGrid.tsx';
+import { annunciInSospeso } from './avvisi-classe.ts';
 
 beforeEach(function () {
   vi.stubGlobal('FORM0', {
@@ -154,6 +155,33 @@ describe('CardItem · numero di render per aggiornamento', function () {
     });
     r.rerender(React.createElement(CardGrid, { $: Object.assign({}, base$, { cards: tutte, visibleSorted: tutte }) }));
     expect(resi.length).toBe(10);
+  });
+
+  it('un nuovo array di annunci sospesi non ri-renderizza le card (conta il segnale)', function () {
+    // Uno snapshot Firestore ricrea l'array annunciSospesi anche se nessuna card
+    // è cambiata: il memo confronta `segnaleAnnunci` (intero), non l'array.
+    var base = cards(30);
+    var base$ = make$({
+      cards: base,
+      visibleSorted: base,
+      annunciSospesi: annunciInSospeso([], Date.now()),
+      segnaleAnnunci: 0,
+    });
+    var r = render(React.createElement(CardGrid, { $: base$ }));
+    expect(resi.length).toBe(30);
+    resi.length = 0;
+
+    r.rerender(
+      React.createElement(CardGrid, {
+        $: Object.assign({}, base$, {
+          cards: base,
+          visibleSorted: base,
+          annunciSospesi: annunciInSospeso([], Date.now()),
+          segnaleAnnunci: 0,
+        }),
+      })
+    );
+    expect(resi.length).toBe(0);
   });
 
   it('cambiare un campo NON confrontato non ri-renderizza nessuna card', function () {

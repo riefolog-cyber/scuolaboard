@@ -39,6 +39,16 @@ describe('guardia delle unhandled rejection', function () {
     expect(g.orfane()).toHaveLength(0);
   });
 
+  it('orfane svuota: il singleton non risegnala le stesse voci nei file successivi', function () {
+    var g = creaGuardiaRejection();
+    g.inizia('A');
+    g.registra('boom');
+    expect(g.orfane()).toHaveLength(1);
+    expect(g.orfane()).toHaveLength(0);
+    g.fine();
+    expect(g.corrente()).toBeNull();
+  });
+
   it('le voci non reclamate restano orfane', function () {
     var g = creaGuardiaRejection();
     g.inizia('tardi');

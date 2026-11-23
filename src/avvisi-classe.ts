@@ -116,13 +116,22 @@ export function dettaglioMancanti(card: any): string {
   return 'Mancano ' + nomi.slice(0, 8).join(', ') + (nomi.length > 8 ? ' e altri ' + (nomi.length - 8) : '');
 }
 
+// Array vuoto CONDIVISO: `annunciSospesi` è confrontato per identità dal memo
+// di CardItem. Senza questo, a ogni snapshot Firestore (che produce un nuovo
+// array `cards` anche quando gli oggetti card sono riusati) `filter` restituiva
+// un `[]` nuovo e ri-renderizzava TUTTE le card — il costo del like tornava a
+// 30 render. Il caso con annunci pendenti resta un array nuovo: lì il ri-render
+// è necessario per mostrare il badge derivato dal tempo.
+var NESSUN_ANNUNCIO: any[] = Object.freeze([] as any[]) as any[];
+
 // Le card con un annuncio in sospeso: alimenta l'indicatore in alto, che le
 // riprova TUTTE in una volta ("Riprova tutti").
 export function annunciInSospeso(cards: any[], nowMs: number): any[] {
-  if (!Array.isArray(cards)) return [];
-  return cards.filter(function (c: any) {
+  if (!Array.isArray(cards)) return NESSUN_ANNUNCIO;
+  var trovate = cards.filter(function (c: any) {
     return avvisoInSospeso(c, nowMs);
   });
+  return trovate.length ? trovate : NESSUN_ANNUNCIO;
 }
 
 // Testo dell'indicatore in alto: quante card hanno un annuncio in sospeso.

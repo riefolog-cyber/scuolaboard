@@ -17,7 +17,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, it, expect } from 'vitest';
-import { SELETTORE_TEMA_CHIARO, senzaCommenti, variabiliGlobali, variabiliIn } from './css-utils.ts';
+import {
+  SELETTORE_TEMA_CHIARO,
+  senzaCommenti,
+  variabiliGlobali,
+  variabiliIn,
+  corpoDi,
+  selettoriCheDichiara,
+} from './css-utils.ts';
 import { badgeStato } from './stato-card.ts';
 
 const CSS = senzaCommenti(fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8'));
@@ -156,15 +163,39 @@ describe.each(['dark', 'light'])('contrasto dei token · tema %s', function (tem
 // I toast non hanno un token dedicato: il colore è scritto nella regola, quindi
 // la guardia legge il CSS. Le tinte traslucide chiare di prima davano bianco su
 // verde 2,7:1, ambra 2,3:1 e rosso 4,1:1 nel tema scuro (quello predefinito).
-describe('contrasto dei toast · testo bianco', function () {
-  it.each(['ok', 'warn', 'err'])('.toast.%s regge AA', function (kind) {
-    var m = CSS.match(new RegExp('\\.toast\\.' + kind + '\\{[^}]*background:(linear-gradient\\([^;]+)'));
-    expect(m, '.toast.' + kind + ' ha uno sfondo gradiente').toBeTruthy();
-    var sfondo = primoStop(m![1], TEMA.dark);
-    expect(contrasto([255, 255, 255], sfondo)).toBeGreaterThanOrEqual(AA);
+function stopGradiente(valore: string): number[][] {
+  var m = String(valore).match(/linear-gradient\(([^)]+)\)/i);
+  if (!m) throw new Error('gradiente non riconosciuto: ' + valore);
+  var parti = m[1].split(',').map(function (s) {
+    return s.trim();
+  });
+  if (/deg$/.test(parti[0])) parti.shift(); // l'angolo non è un colore
+  return parti.map(function (p) {
+    return parse(p, TEMA.dark);
+  });
+}
+
+describe('contrasto dei toast', function () {
+  it('il testo resta bianco in entrambi i temi (letto dal CSS, non scritto a mano)', function () {
+    expect(corpoDi('.toast', CSS), '.toast non dichiara un colore').toMatch(/color:\s*#fff\b/i);
+    var override = selettoriCheDichiara('color:', CSS).filter(function (s) {
+      return /data-theme="light"/.test(s) && /toast/.test(s);
+    });
+    expect(override, 'override del colore dei toast: ' + override.join(' | ')).toEqual([]);
   });
 
-  it('nessun override del tema chiaro rimette il testo scuro sui toast', function () {
-    expect(CSS).not.toMatch(/html\[data-theme="light"\]\s+\.toast\.[a-z]+\{color:/);
+  it('la guardia del gradiente legge TUTTI gli stop', function () {
+    // Senza questa, un futuro stop chiaro passerebbe inosservato (e un gradiente
+    // senza angolo verrebbe letto a rovescio).
+    expect(stopGradiente('linear-gradient(135deg, #166534, #15803d)')).toHaveLength(2);
+    expect(stopGradiente('linear-gradient(#166534, #15803d)')).toHaveLength(2);
+  });
+
+  it.each(['ok', 'warn', 'err'])('.toast.%s regge AA su ogni stop', function (kind) {
+    var m = CSS.match(new RegExp('\\.toast\\.' + kind + '\\{[^}]*background:(linear-gradient\\([^;]+)'));
+    expect(m, '.toast.' + kind + ' ha uno sfondo gradiente').toBeTruthy();
+    stopGradiente(m![1]).forEach(function (sfondo) {
+      expect(contrasto([255, 255, 255], sfondo)).toBeGreaterThanOrEqual(AA);
+    });
   });
 });

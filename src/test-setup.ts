@@ -93,9 +93,12 @@ const processo = (globalThis as any).process;
 // restava attivo e accumulava voci che nessuno avrebbe mai consumato. La guardia
 // vive su process, non su globalThis (che in jsdom cambia a ogni file).
 const CHIAVE_GUARDIA = '__sbGuardiaRejection';
-var guardiaRejection: any = processo && processo[CHIAVE_GUARDIA];
-if (!guardiaRejection) {
-  guardiaRejection = creaGuardiaRejection();
+const guardiaEsistente: any = processo && processo[CHIAVE_GUARDIA];
+// Tipato (non `any`): un rename di inizia/consuma/orfane/fine viene preso dal
+// typecheck invece di essere scoperto a runtime in tutti i file di test.
+var guardiaRejection: ReturnType<typeof creaGuardiaRejection> =
+  guardiaEsistente || creaGuardiaRejection();
+if (!guardiaEsistente) {
   if (processo) processo[CHIAVE_GUARDIA] = guardiaRejection;
   if (processo && typeof processo.on === 'function') {
     processo.on('unhandledRejection', function (reason: any) {
@@ -129,6 +132,9 @@ afterEach(function () {
 // La coda può arrivare dopo l'afterEach dell'ultimo test: non deve sparire.
 afterAll(function () {
   var rimaste = guardiaRejection.orfane();
+  // Il guardia è condiviso tra i file del worker: svuota orfane (vedi modulo) e
+  // azzera il nome corrente, così il file successivo non eredita l'ultimo test.
+  guardiaRejection.fine();
   if (!rimaste.length) return;
   throw new Error(
     'Unhandled rejection non attribuita: ' +

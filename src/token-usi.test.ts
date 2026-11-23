@@ -1,7 +1,7 @@
 // @ts-nocheck — legge i sorgenti dal filesystem (node:fs/path), come
 // `css-coerenti.test.ts` e `contrasto-token.test.ts`.
 //
-// OGNI `var(--sb-…)` USATO DEVE ESISTERE IN `:root`.
+// OGNI `var(--sb-…)` / `var(--c-…)` USATO DEVE ESISTERE IN `:root`.
 //
 // PERCHÉ: un refuso (`var(--sb-lines)`) non produce nessun errore. Il CSS ignora
 // la dichiarazione e il testo ricade sul colore ereditato — spesso nero su fondo
@@ -16,11 +16,11 @@ import { SELETTORE_TEMA_CHIARO, senzaCommenti, variabiliGlobali, variabiliIn } f
 
 const CSS = senzaCommenti(fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8'));
 // Anche i `--c-*` contano: un refuso in `var(--c-bg)` ha lo stesso effetto
-// silenzioso di uno in `var(--sb-…)`. I token definiti solo nel tema chiaro
-// valgono comunque (il fallback di :root non copre quei casi).
-const DEFINITI = new Set(
-  Object.keys(Object.assign({}, variabiliGlobali(CSS), variabiliIn(SELETTORE_TEMA_CHIARO, CSS)))
-);
+// silenzioso di uno in `var(--sb-…)`. La fonte è SOLO `:root`: un token definito
+// solo nel tema chiaro non esiste nel tema scuro (quello predefinito), ed è
+// esattamente il fallback silenzioso che questa guardia deve bloccare.
+const DEFINITI = new Set(Object.keys(variabiliGlobali(CSS)));
+const CHIARI = variabiliIn(SELETTORE_TEMA_CHIARO, CSS);
 
 /** Tutti i .ts/.tsx sotto `dir`, esclusi i test (citano i token nei commenti). */
 function sorgenti(dir: string, accumulati: string[] = []): string[] {
@@ -61,5 +61,14 @@ describe('token CSS · i riferimenti esistono', function () {
     // Guardia sulla guardia: se il raccoglitore si rompe, il test sopra
     // passerebbe sempre su una lista vuota.
     expect(Object.keys(usati).length, 'nessun token raccolto: la scansione è rotta').toBeGreaterThan(10);
+  });
+
+  it('nessun token esiste SOLO nel tema chiaro', function () {
+    // Se un token nasce solo in html[data-theme="light"], nel tema scuro la
+    // dichiarazione viene ignorata e il testo ricade sul colore ereditato.
+    var soloTemaChiaro = Object.keys(CHIARI).filter(function (n) {
+      return !DEFINITI.has(n);
+    });
+    expect(soloTemaChiaro, 'token assenti in :root: ' + soloTemaChiaro.join(', ')).toEqual([]);
   });
 });

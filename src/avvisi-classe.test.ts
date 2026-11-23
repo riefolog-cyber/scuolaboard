@@ -704,3 +704,12 @@ describe('annunciaClasse: non rifiuta MAI in nessun modo di fallimento', () => {
     await expect(annunciaClasse({ card, anno: '2026/2027' })).resolves.toBeTruthy();
   });
 });
+
+describe('annunciInSospeso · identità stabile quando non c\'è nulla da riprovare', function () {
+  it('due chiamate senza annunci pendenti restituiscono lo stesso array', function () {
+    // L\'array viaggia nel contesto dell\'app: un riferimento nuovo a ogni snapshot
+    // farebbe ri-renderizzare le card anche se nessuna card è cambiata.
+    expect(annunciInSospeso([], Date.now())).toBe(annunciInSospeso([], Date.now()));
+    expect(annunciInSospeso(null as any, Date.now())).toBe(annunciInSospeso([], Date.now()));
+  });
+});

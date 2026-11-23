@@ -71,10 +71,12 @@ describe('grafica · contrasto dei testi secondari', function () {
       (['expired', 'today', 'soon'] as const).forEach(function (st) {
         expect(contrasto(hex(coloreScadenza(st, isLight).fg), fondo)).toBeGreaterThanOrEqual(AA);
       });
-      // Lo stato "ok" è bianco traslucido solo nel tema scuro: si compone sopra
-      // il fondo, invece nel tema chiaro è già un hex scuro.
+      // Lo stato "ok" è bianco traslucido solo nel tema scuro: l'alfa va LETTA
+      // dal valore restituito (un 0.7 scritto a mano qui rendeva il test cieco
+      // se in urgenza.ts scendeva sotto soglia).
       var okFg = coloreScadenza('ok', isLight).fg;
-      var okRgb = okFg.indexOf('#') === 0 ? hex(okFg) : sopra(0.7, fondo);
+      var alfa = okFg.match(/rgba\([^,]+,[^,]+,[^,]+,\s*([\d.]+)\)/);
+      var okRgb = alfa ? sopra(Number(alfa[1]), fondo) : hex(okFg);
       expect(contrasto(okRgb, fondo)).toBeGreaterThanOrEqual(AA);
     });
   });

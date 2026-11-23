@@ -91,6 +91,7 @@ describe('memo di CardItem — comportamento del comparatore', () => {
       preferiti: [],
       aiMap: {},
       sommarioResult: null,
+      segnaleAnnunci: 0,
       // non confrontati
       openCard: () => {},
       toggleLike: () => {},
@@ -115,9 +116,11 @@ describe('memo di CardItem — comportamento del comparatore', () => {
   });
 
   it('ri-renderizza al battito degli annunci sospesi (badge "avviso non inviato")', () => {
-    // Il battito 30s di AppProvider produce sempre un array nuovo: senza questo
-    // confronto il badge resterebbe invisibile finché non cambiasse qualcos'altro.
-    expect(cardItemAreEqual(base, con({ annunciSospesi: [] }))).toBe(false);
+    // `segnaleAnnunci` è un intero che cambia solo al battito 30s. Confrontare
+    // l'ARRAY degli annunci invece farebbe ri-renderizzare tutta la griglia a
+    // ogni snapshot Firestore (che ricrea l'array anche se le card sono uguali).
+    expect(cardItemAreEqual(base, con({ segnaleAnnunci: 1 }))).toBe(false);
+    expect(cardItemAreEqual(base, con({ segnaleAnnunci: 0 }))).toBe(true);
   });
 
   it('NON ri-renderizza se cambia solo un campo non confrontato (è il punto del memo)', () => {
