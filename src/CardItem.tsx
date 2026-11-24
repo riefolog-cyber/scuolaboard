@@ -812,9 +812,11 @@ function CardItem__({ $, c, idx }: any) {
               }}
               style={{
                 order: 4,
-                background: azioniOpen ? 'rgba(var(--c-primary-rgb),.28)' : 'rgba(255,255,255,.06)',
-                border: '1px solid ' + (azioniOpen ? 'rgba(var(--c-primary-rgb),.45)' : 'rgba(255,255,255,.12)'),
-                color: azioniOpen ? '#c7d2fe' : 'rgba(255,255,255,.62)',
+                // Token dei temi: i vecchi bianchi fissi rendevano il "⋯"
+                // invisibile nel tema chiaro (visibile solo nelle screenshot).
+                background: azioniOpen ? 'var(--sb-primary-soft-bg)' : 'var(--sb-btn-soft-bg)',
+                border: '1px solid ' + (azioniOpen ? 'var(--sb-primary-soft-border)' : 'var(--sb-btn-soft-border)'),
+                color: azioniOpen ? 'var(--sb-primary-fg)' : 'var(--sb-text-3)',
                 fontWeight: 800,
               }}
             >

@@ -877,6 +877,24 @@ html[data-theme="light"] textarea::placeholder{color:#94a3b8 !important}
   --sb-privacy-border:rgba(52,211,153,.5);
   --sb-privacy-fg:#d1fae5;
   --sb-privacy-check-border:#161320;
+  /* Header e menu a comparsa: prima ogni colore era un ternario isLight in
+     Header.tsx, fuori da qualsiasi guardia (un refuso sbagliava un tema solo). */
+  --sb-header-bg:rgba(15,20,40,.85);
+  --sb-header-border:rgba(var(--c-primary-rgb),.18);
+  --sb-header-shadow:0 2px 20px rgba(0,0,0,.3);
+  --sb-btn-soft-bg:rgba(255,255,255,.06);
+  --sb-btn-soft-border:rgba(255,255,255,.1);
+  --sb-menu-bg:rgba(13,13,30,.98);
+  --sb-menu-border:rgba(var(--c-primary-rgb),.35);
+  --sb-menu-shadow:0 12px 40px rgba(0,0,0,.6);
+  --sb-primary-fg:#a5b4fc;
+  --sb-primary-soft-bg:rgba(var(--c-primary-rgb),.18);
+  --sb-primary-soft-border:rgba(var(--c-primary-rgb),.35);
+  --sb-notifica-nonletta:#e0e7ff;
+  --sb-warn-soft-bg:rgba(245,158,11,.12);
+  --sb-warn-soft-border:rgba(245,158,11,.3);
+  --sb-danger-soft-bg:rgba(239,68,68,.2);
+  --sb-danger-soft-border:rgba(239,68,68,.3);
 }
 html[data-theme="light"]{
   --sb-text-1:#0f172a;
@@ -901,6 +919,22 @@ html[data-theme="light"]{
   --sb-privacy-border:rgba(5,150,105,.38);
   --sb-privacy-fg:#065f46;
   --sb-privacy-check-border:#f8fafc;
+  --sb-header-bg:rgba(255,255,255,.92);
+  --sb-header-border:rgba(15,23,42,.08);
+  --sb-header-shadow:0 2px 20px rgba(15,23,42,.06);
+  --sb-btn-soft-bg:rgba(15,23,42,.06);
+  --sb-btn-soft-border:rgba(15,23,42,.12);
+  --sb-menu-bg:#ffffff;
+  --sb-menu-border:rgba(15,23,42,.12);
+  --sb-menu-shadow:0 12px 32px rgba(15,23,42,.12);
+  --sb-primary-fg:#4f46e5;
+  --sb-primary-soft-bg:rgba(79,70,229,.10);
+  --sb-primary-soft-border:rgba(79,70,229,.20);
+  --sb-notifica-nonletta:#312e81;
+  --sb-warn-soft-bg:rgba(245,158,11,.10);
+  --sb-warn-soft-border:rgba(245,158,11,.22);
+  --sb-danger-soft-bg:rgba(239,68,68,.12);
+  --sb-danger-soft-border:rgba(239,68,68,.3);
   --sb-hero-bg:#cbd5e1;
 }
 

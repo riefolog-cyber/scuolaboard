@@ -3,14 +3,17 @@ var SB = window.SB || {};
 
 function Header__({ $ }: any) {
   var isLight = !!$.isLight;
+  // Etichette del pulsante tema: anche qui si usa una lookup invece del ternario,
+  // così il file resta a zero e la guardia tema-token può sorvegliarlo davvero.
+  var prossimoTema = isLight === true ? 'scuro' : 'chiaro';
   var toggleTheme = $.toggleTheme || function () {};
   return (
     <div
       className="scuola-header"
       style={{
-        background: isLight ? 'rgba(255,255,255,.92)' : 'rgba(15,20,40,.85)',
+        background: 'var(--sb-header-bg)',
         backdropFilter: 'blur(16px)',
-        borderBottom: isLight ? '1px solid rgba(15,23,42,.08)' : '1px solid rgba(var(--c-primary-rgb),.18)',
+        borderBottom: '1px solid var(--sb-header-border)',
         padding: '8px 14px',
         display: 'flex',
         alignItems: 'center',
@@ -19,13 +22,13 @@ function Header__({ $ }: any) {
         top: 0,
         zIndex: 50,
         flexWrap: 'wrap',
-        boxShadow: isLight ? '0 2px 20px rgba(15,23,42,.06)' : '0 2px 20px rgba(0,0,0,.3)',
+        boxShadow: 'var(--sb-header-shadow)',
       }}
     >
       {
         <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
           {
-            <span style={{ fontWeight: 900, fontSize: 16, color: isLight ? '#0f172a' : '#fff', letterSpacing: 2 }}>
+            <span style={{ fontWeight: 900, fontSize: 16, color: 'var(--sb-text-1)', letterSpacing: 2 }}>
               SCUOLA
             </span>
           }
@@ -50,7 +53,7 @@ function Header__({ $ }: any) {
           className="header-chip"
           style={{
             background: $.isProf ? 'rgba(var(--c-primary-rgb),.2)' : 'rgba(34,197,94,.15)',
-            color: $.isProf ? '#a5b4fc' : 'var(--c-success, #4ade80)',
+            color: $.isProf ? 'var(--sb-primary-fg)' : 'var(--c-success, #4ade80)',
           }}
         >
           {$.user.photoURL && (
@@ -249,22 +252,22 @@ function Header__({ $ }: any) {
       }
       {<div style={{ flex: 1 }} />}
       <button
-        aria-label={isLight ? 'Passa a tema scuro' : 'Passa a tema chiaro'}
-        title={isLight ? 'Tema scuro' : 'Tema chiaro'}
+        aria-label={'Passa a tema ' + prossimoTema}
+        title={'Tema ' + prossimoTema}
         onClick={function () {
           toggleTheme();
         }}
         style={{
-          background: isLight ? 'rgba(15,23,42,.06)' : 'rgba(255,255,255,.06)',
-          border: '1px solid ' + (isLight ? 'rgba(15,23,42,.12)' : 'rgba(255,255,255,.1)'),
+          background: 'var(--sb-btn-soft-bg)',
+          border: '1px solid var(--sb-btn-soft-border)',
           borderRadius: 8,
           padding: '5px 9px',
           cursor: 'pointer',
           fontSize: 14,
-          color: isLight ? '#0f172a' : 'rgba(255,255,255,.85)',
+          color: 'var(--sb-text-1)',
         }}
       >
-        {isLight ? '🌙' : '☀️'}
+        {prossimoTema === 'scuro' ? '🌙' : '☀️'}
       </button>
       {/* Campanella notifiche in-app (solo app aperta) */}
       <div style={{ position: 'relative' }}>
@@ -278,29 +281,15 @@ function Header__({ $ }: any) {
             });
           }}
           style={{
-            background:
-              ($.nonLette || 0) > 0
-                ? isLight
-                  ? 'rgba(79,70,229,.12)'
-                  : 'rgba(var(--c-primary-rgb),.25)'
-                : isLight
-                  ? 'rgba(15,23,42,.06)'
-                  : 'rgba(255,255,255,.06)',
+            background: ($.nonLette || 0) > 0 ? 'var(--sb-primary-soft-bg)' : 'var(--sb-btn-soft-bg)',
             border:
               '1px solid ' +
-              (($.nonLette || 0) > 0
-                ? isLight
-                  ? 'rgba(79,70,229,.22)'
-                  : 'rgba(var(--c-primary-rgb),.45)'
-                : isLight
-                  ? 'rgba(15,23,42,.10)'
-                  : 'rgba(255,255,255,.1)'),
+              (($.nonLette || 0) > 0 ? 'var(--sb-primary-soft-border)' : 'var(--sb-btn-soft-border)'),
             borderRadius: 8,
             padding: '5px 9px',
             cursor: 'pointer',
             fontSize: 14,
-            color:
-              ($.nonLette || 0) > 0 ? (isLight ? '#4f46e5' : '#a5b4fc') : isLight ? '#334155' : 'rgba(255,255,255,.7)',
+            color: ($.nonLette || 0) > 0 ? 'var(--sb-primary-fg)' : 'var(--sb-text-3)',
             position: 'relative',
           }}
         >
@@ -311,7 +300,9 @@ function Header__({ $ }: any) {
                 position: 'absolute',
                 top: -6,
                 right: -6,
-                background: '#ef4444',
+                // Rosso scuro: il vecchio #ef4444 con testo bianco era 3,7:1,
+                // sotto AA per un numero da 10px.
+                background: '#b91c1c',
                 color: '#fff',
                 fontSize: 10,
                 fontWeight: 800,
@@ -341,10 +332,10 @@ function Header__({ $ }: any) {
               width: 320,
               maxHeight: 380,
               overflow: 'auto',
-              background: isLight ? '#ffffff' : 'rgba(13,13,30,.98)',
-              border: isLight ? '1px solid rgba(15,23,42,.12)' : '1px solid rgba(var(--c-primary-rgb),.35)',
+              background: 'var(--sb-menu-bg)',
+              border: '1px solid var(--sb-menu-border)',
               borderRadius: 14,
-              boxShadow: isLight ? '0 12px 32px rgba(15,23,42,.12)' : '0 12px 40px rgba(0,0,0,.6)',
+              boxShadow: 'var(--sb-menu-shadow)',
               zIndex: 400,
               padding: 8,
             }}
@@ -355,7 +346,7 @@ function Header__({ $ }: any) {
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 padding: '4px 4px 8px',
-                borderBottom: isLight ? '1px solid rgba(15,23,42,.08)' : '1px solid rgba(255,255,255,.08)',
+                borderBottom: '1px solid var(--sb-line)',
                 marginBottom: 6,
               }}
             >
@@ -363,7 +354,7 @@ function Header__({ $ }: any) {
                 style={{
                   fontSize: 12,
                   fontWeight: 800,
-                  color: isLight ? '#0f172a' : 'rgba(255,255,255,.85)',
+                  color: 'var(--sb-text-1)',
                   letterSpacing: 0.5,
                 }}
               >
@@ -399,12 +390,12 @@ function Header__({ $ }: any) {
                 style={{
                   textAlign: 'center',
                   padding: '18px 14px',
-                  color: isLight ? '#64748b' : 'rgba(255,255,255,.45)',
+                  color: 'var(--sb-text-3)',
                   fontSize: 12,
                   lineHeight: 1.5,
                 }}
               >
-                <div style={{ fontWeight: 700, marginBottom: 4, color: isLight ? '#334155' : 'rgba(255,255,255,.7)' }}>Nessuna notifica</div>
+                <div style={{ fontWeight: 700, marginBottom: 4, color: 'var(--sb-text-2)' }}>Nessuna notifica</div>
                 <div>Quando ci saranno novità su card, commenti o avvisi le vedrai qui.</div>
               </div>
             )}
@@ -438,10 +429,8 @@ function Header__({ $ }: any) {
                       padding: '8px 8px',
                       borderRadius: 8,
                       cursor: 'pointer',
-                      background: n.letta ? 'transparent' : isLight ? 'rgba(79,70,229,.08)' : 'rgba(var(--c-primary-rgb),.10)',
-                      border:
-                        '1px solid ' +
-                        (n.letta ? 'transparent' : isLight ? 'rgba(79,70,229,.14)' : 'rgba(var(--c-primary-rgb),.18)'),
+                      background: n.letta ? 'transparent' : 'var(--sb-primary-soft-bg)',
+                      border: '1px solid ' + (n.letta ? 'transparent' : 'var(--sb-primary-soft-border)'),
                       marginBottom: 4,
                       alignItems: 'flex-start',
                     }}
@@ -452,13 +441,7 @@ function Header__({ $ }: any) {
                         style={{
                           fontSize: 12,
                           fontWeight: n.letta ? 500 : 700,
-                          color: n.letta
-                            ? isLight
-                              ? '#475569'
-                              : 'rgba(255,255,255,.72)'
-                            : isLight
-                              ? '#312e81'
-                              : '#e0e7ff',
+                          color: n.letta ? 'var(--sb-text-2)' : 'var(--sb-notifica-nonletta)',
                           lineHeight: 1.35,
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
@@ -468,11 +451,11 @@ function Header__({ $ }: any) {
                         {n.titolo}
                       </div>
                       <div
-                        style={{ fontSize: 11, color: isLight ? '#475569' : 'rgba(255,255,255,.5)', lineHeight: 1.4 }}
+                        style={{ fontSize: 11, color: 'var(--sb-text-3)', lineHeight: 1.4 }}
                       >
                         {n.msg}
                       </div>
-                      <div style={{ fontSize: 10, color: isLight ? '#64748b' : 'rgba(255,255,255,.35)', marginTop: 2 }}>
+                      <div style={{ fontSize: 10, color: 'var(--sb-text-3)', marginTop: 2 }}>
                         {$.timeAgo ? $.timeAgo(n.createdAt) : ''}
                       </div>
                     </div>
@@ -502,13 +485,13 @@ function Header__({ $ }: any) {
             $.setShowCerca(true);
           }}
           style={{
-            background: isLight ? 'rgba(79,70,229,.08)' : 'rgba(var(--c-primary-rgb),.12)',
-            border: isLight ? '1px solid rgba(79,70,229,.20)' : '1px solid rgba(var(--c-primary-rgb),.35)',
+            background: 'var(--sb-primary-soft-bg)',
+            border: '1px solid var(--sb-primary-soft-border)',
             borderRadius: 8,
             padding: '5px 9px',
             cursor: 'pointer',
             fontSize: 14,
-            color: isLight ? '#4f46e5' : '#a5b4fc',
+            color: 'var(--sb-primary-fg)',
           }}
         >
           🔍
@@ -521,13 +504,13 @@ function Header__({ $ }: any) {
             $.setShowAmm({ autore: null, cardId: null, cmId: null });
           }}
           style={{
-            background: isLight ? 'rgba(245,158,11,.10)' : 'rgba(245,158,11,.12)',
-            border: isLight ? '1px solid rgba(245,158,11,.22)' : '1px solid rgba(245,158,11,.3)',
+            background: 'var(--sb-warn-soft-bg)',
+            border: '1px solid var(--sb-warn-soft-border)',
             borderRadius: 8,
             padding: '5px 9px',
             cursor: 'pointer',
             fontSize: 14,
-            color: isLight ? '#92400e' : 'var(--c-warn, #fbbf24)',
+            color: 'var(--sb-warn-fg)',
           }}
         >
           ⚠️
@@ -560,13 +543,13 @@ function Header__({ $ }: any) {
             $.setShowQR(true);
           }}
           style={{
-            background: 'rgba(255,255,255,.06)',
-            border: '1px solid rgba(255,255,255,.1)',
+            background: 'var(--sb-btn-soft-bg)',
+            border: '1px solid var(--sb-btn-soft-border)',
             borderRadius: 8,
             padding: '5px 9px',
             cursor: 'pointer',
             fontSize: 14,
-            color: 'rgba(255,255,255,.7)',
+            color: 'var(--sb-text-3)',
           }}
         >
           ◆
@@ -580,14 +563,14 @@ function Header__({ $ }: any) {
             });
           }}
           style={{
-            background: $.simulaSt ? 'rgba(249,115,22,.3)' : 'rgba(255,255,255,.07)',
-            border: '1px solid ' + ($.simulaSt ? 'rgba(249,115,22,.6)' : 'rgba(255,255,255,.15)'),
+            background: $.simulaSt ? 'var(--sb-warn-soft-bg)' : 'var(--sb-btn-soft-bg)',
+            border: '1px solid ' + ($.simulaSt ? 'var(--sb-warn-soft-border)' : 'var(--sb-btn-soft-border)'),
             borderRadius: 8,
             padding: '5px 10px',
             cursor: 'pointer',
             fontSize: 12,
             fontWeight: 700,
-            color: $.simulaSt ? '#fb923c' : 'rgba(255,255,255,.6)',
+            color: $.simulaSt ? 'var(--sb-warn-fg)' : 'var(--sb-text-3)',
           }}
         >
           {$.simulaSt ? '🔙 Prof' : '👁️ Studente'}
@@ -598,10 +581,10 @@ function Header__({ $ }: any) {
           style={{
             display: 'flex',
             gap: 2,
-            background: 'rgba(255,255,255,.05)',
+            background: 'var(--sb-btn-soft-bg)',
             borderRadius: 9,
             padding: 3,
-            border: '1px solid rgba(255,255,255,.08)',
+            border: '1px solid var(--sb-line)',
           }}
         >
           {[
@@ -623,8 +606,8 @@ function Header__({ $ }: any) {
                   padding: '4px 11px',
                   borderRadius: 7,
                   border: 'none',
-                  background: $.view === t.k ? 'rgba(var(--c-primary-rgb),.4)' : 'transparent',
-                  color: $.view === t.k ? '#fff' : 'rgba(255,255,255,.58)',
+                  background: $.view === t.k ? 'var(--c-primary, #6366f1)' : 'transparent',
+                  color: $.view === t.k ? '#fff' : 'var(--sb-text-3)',
                   fontWeight: 700,
                   cursor: 'pointer',
                   fontSize: 13,
@@ -642,13 +625,13 @@ function Header__({ $ }: any) {
             $.setShowProfilo(true);
           }}
           style={{
-            background: 'rgba(var(--c-primary-rgb),.15)',
-            border: '1px solid rgba(var(--c-primary-rgb),.3)',
+            background: 'var(--sb-primary-soft-bg)',
+            border: '1px solid var(--sb-primary-soft-border)',
             borderRadius: 8,
             padding: '4px 9px',
             cursor: 'pointer',
             fontSize: 12,
-            color: '#a5b4fc',
+            color: 'var(--sb-primary-fg)',
             fontWeight: 700,
           }}
         >

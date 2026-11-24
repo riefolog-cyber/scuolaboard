@@ -8,12 +8,28 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
-const URL = '/scuolaboard/e2e/harness.html?css=1';
-// `nested-interactive` è la quinta: trova i controlli annidati (un bottone dentro
-// un altro), che rompono la tastiera e lo screen reader. Aggiunta dopo che le
-// prime quattro erano a zero, non insieme: una regola alla volta, così quando
-// diventa rossa si sa quale causa guardare.
-const REGOLE = ['color-contrast', 'button-name', 'link-name', 'label', 'nested-interactive'];
+// `a11y=1` aggiunge alla seed una card con scadenza: i badge urgenza e il
+// countdown non comparivano mai nell'audit, quindi i loro colori non erano
+// coperti da axe (li copriva solo il test statico dei token).
+const URL = '/scuolaboard/e2e/harness.html?css=1&a11y=1';
+// `target-size` (WCAG 2.2) è la sesta: controlla che i pulsanti siano almeno
+// 24x24. Aggiunta dopo che le prime cinque erano a zero, una alla volta, così
+// quando diventa rossa si sa quale causa guardare.
+const REGOLE = ['color-contrast', 'button-name', 'link-name', 'label', 'nested-interactive', 'target-size'];
+
+async function violazioni(page) {
+  const r = await new AxeBuilder({ page }).withRules(REGOLE).analyze();
+  return r.violations.map((v) => ({
+    regola: v.id,
+    impatto: v.impact,
+    nodi: v.nodes.slice(0, 3).map((n) => ({
+      target: n.target.join(' '),
+      // Il riepilogo dice i colori misurati: senza, un rosso axe è
+      // indistinguibile da un falso positivo dell'animazione.
+      perche: (n.failureSummary || '').replace(/\s+/g, ' ').slice(0, 220),
+    })),
+  }));
+}
 
 // Axe legge i colori CALCOLATI: se l'audit parte durante l'animazione di apertura
 // del dettaglio, l'opacità intermedia fa sembrare tutto sotto contrasto (falso
@@ -37,21 +53,7 @@ for (const tema of ['light', 'dark']) {
   test('bacheca e dettaglio senza violazioni nelle regole base (' + tema + ')', async ({ page }) => {
     await apri(page, tema);
 
-    async function violazioni() {
-      const r = await new AxeBuilder({ page }).withRules(REGOLE).analyze();
-      return r.violations.map((v) => ({
-        regola: v.id,
-        impatto: v.impact,
-        nodi: v.nodes.slice(0, 3).map((n) => ({
-          target: n.target.join(' '),
-          // Il riepilogo dice i colori misurati: senza, un rosso axe è
-          // indistinguibile da un falso positivo dell'animazione.
-          perche: (n.failureSummary || '').replace(/\s+/g, ' ').slice(0, 220),
-        })),
-      }));
-    }
-
-    expect(await violazioni(), 'bacheca (' + tema + ')').toEqual([]);
+    expect(await violazioni(page), 'bacheca (' + tema + ')').toEqual([]);
 
     // Vista elenco: è dove `content-visibility` è appena entrato, e dove ogni
     // riga è un <button> che contiene altri bottoni (nested-interactive).
@@ -61,7 +63,7 @@ for (const tema of ['light', 'dark']) {
     await expect(elenco).toHaveCount(1);
     await elenco.first().click();
     await expect(page.locator('.list-row').first()).toBeVisible();
-    expect(await violazioni(), 'elenco (' + tema + ')').toEqual([]);
+    expect(await violazioni(page), 'elenco (' + tema + ')').toEqual([]);
 
     // Si torna alla griglia: il dettaglio si apre da `.card-wrap`, che in elenco
     // non esiste.
@@ -71,6 +73,20 @@ for (const tema of ['light', 'dark']) {
 
     await page.locator('.card-wrap').first().click();
     await expect(page.locator('#cd-commenti')).toBeVisible();
-    expect(await violazioni(), 'dettaglio (' + tema + ')').toEqual([]);
+    expect(await violazioni(page), 'dettaglio (' + tema + ')').toEqual([]);
+  });
+
+  test('toast e badge scadenza senza violazioni (' + tema + ')', async ({ page }) => {
+    await apri(page, tema);
+    // Il badge con scadenza è nella seed con a11y=1: presente fin dall'inizio
+    // nella bacheca, quindi lo audit già il primo controllo del test qui sopra.
+    await expect(page.locator('#card-cScad').getByText(/Oggi|Domani|Scaduta|⏰/).first()).toBeVisible();
+
+    // "Copia link" è un percorso noto che mostra un toast: lo auditiamo mentre è
+    // visibile, così il contrasto del testo dei toast è coperto anche nel browser.
+    await page.locator('#card-c1').getByRole('button', { name: 'Altre azioni' }).click();
+    await page.locator('#card-c1').getByRole('button', { name: 'Copia link' }).click();
+    await expect(page.locator('.toast').first()).toBeVisible();
+    expect(await violazioni(page), 'toast (' + tema + ')').toEqual([]);
   });
 }

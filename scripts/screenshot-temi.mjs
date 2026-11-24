@@ -14,8 +14,8 @@
 // gli stili inline che leggono `isLight` dallo stato React restano scuri, e lo
 // screenshot mostra un ibrido che non esiste in produzione. Qui si preme il
 // toggle dell'header e si VERIFICA l'allineamento: il titolo del pulsante dice
-// la destinazione (`isLight ? 'Tema scuro' : 'Tema chiaro'`), quindi dopo il
-// click deve proporre l'altro tema e `data-theme` deve concordare.
+// la destinazione (il tema a cui si passa), quindi dopo il click deve proporre
+// l'altro tema e `data-theme` deve concordare.
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';

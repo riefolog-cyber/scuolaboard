@@ -159,6 +159,17 @@ const c1 = {
   annoScolastico: '2026/2027',
 };
 
+// Card con scadenza SOLO quando l'URL lo chiede: senza, i badge "Oggi/Domani"
+// e il countdown non sono mai nel DOM auditato da axe, quindi un difetto di
+// contrasto lì dentro resterebbe invisibile (era già successo con urgenza.ts).
+const cScad = {
+  ...c1,
+  id: 'cScad',
+  titolo: 'Card con scadenza',
+  scadenza: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+  ordine: 4,
+};
+
 const p1 = {
   id: 'p1',
   tipo: 'nota',
@@ -226,6 +237,9 @@ const quizRisposte = {
   },
 };
 
+// `a11y=1` aggiunge la card con scadenza senza toccare gli altri test E2E.
+const cardsSeed = params.get('a11y') === '1' ? { c1, p1, q1, cScad } : { c1, p1, q1 };
+
 const seed = asStudent
   ? {
       users: {
@@ -238,11 +252,11 @@ const seed = asStudent
           classiPerAnno: { '2026/2027': '3AO' },
         },
       },
-      cards: { c1, p1, q1 },
+      cards: cardsSeed,
     }
   : {
       users: { prof1: { role: 'prof', nome: 'Prof', cognome: 'Rossi', classiPerAnno: {} } },
-      cards: { c1, p1, q1 },
+      cards: cardsSeed,
       quiz_risposte: quizRisposte,
       // Ammonizione pre-esistente sulla card c1: alimenta il pannello
       // "⚠️ Ammoniti in questa card" della CardDetail → bottone ✏️ (EditAmm)

@@ -34,7 +34,7 @@ function Chip(props: any) {
       className={'view-toggle-btn' + (props.active ? ' active' : '')}
       onClick={props.onClick}
       aria-pressed={!!props.active}
-      style={{ padding: '2px 7px', fontSize: 10.5, borderRadius: 999, whiteSpace: 'nowrap', minHeight: 22, lineHeight: 1.2 }}
+      style={{ padding: '2px 7px', fontSize: 10.5, borderRadius: 999, whiteSpace: 'nowrap', minHeight: 24, lineHeight: 1.2 }}
     >
       {props.label}
       {typeof props.n === 'number' ? <span style={{ opacity: 0.75, marginLeft: 3 }}>{props.n}</span> : null}
@@ -475,7 +475,7 @@ function AppLayout(props: any) {
                           <Chip label="Scadenza 48h" n={counts.scadenza} active={qfStato==='scadenza'} onClick={function(){ setQfStato(qfStato==='scadenza'?'tutti':'scadenza'); }} />
                           {$.isProf && !$.simulaSt && counts.avviso > 0 ? <Chip label="Con avviso" n={counts.avviso} active={qfStato==='avviso'} onClick={function(){ setQfStato(qfStato==='avviso'?'tutti':'avviso'); }} /> : null}
                         </div>
-                        <button type="button" className={'view-toggle-btn' + (showFiltriToolbar ? ' active' : '')} aria-pressed={showFiltriToolbar} onClick={function () { setShowFiltriToolbar(function (v: boolean) { return !v; }); }} title="Mostra/nascondi filtri" style={{ padding: '2px 7px', fontSize: 10.5, borderRadius: 999, minHeight: 22 }}>Filtri {showFiltriToolbar ? '▴' : '▾'}</button>
+                        <button type="button" className={'view-toggle-btn' + (showFiltriToolbar ? ' active' : '')} aria-pressed={showFiltriToolbar} onClick={function () { setShowFiltriToolbar(function (v: boolean) { return !v; }); }} title="Mostra/nascondi filtri" style={{ padding: '2px 7px', fontSize: 10.5, borderRadius: 999, minHeight: 24 }}>Filtri {showFiltriToolbar ? '▴' : '▾'}</button>
                         {(qfTipo !== 'tutti' || qfStato !== 'tutti' || qfExtra !== 'tutti') && !showFiltriToolbar && (
                           <div style={{ display: 'inline-flex', gap: 3, flexWrap: 'wrap', alignItems: 'center' }}>
                             {qfTipo !== 'tutti' && <Chip label={qfTipo === 'nota' ? 'Note' : qfTipo === 'domanda' ? 'Domande' : qfTipo === 'sondaggio' ? 'Sondaggi' : 'QCM'} active={true} onClick={function(){ setQfTipo('tutti'); }} />}
@@ -514,7 +514,34 @@ function AppLayout(props: any) {
                           <div className="accent-picker" aria-label="Colore accento" style={{ gap: 4 }}>
                             {['indigo','violet','emerald','sky','amber','rose'].map(function (k) {
                               var colors: any = { indigo: '#6366f1', violet: '#a855f7', emerald: '#10b981', sky: '#0ea5e9', amber: '#f59e0b', rose: '#f43f5e' };
-                              return <button key={k} type="button" className={'accent-dot' + (accento === k ? ' active' : '')} style={{ background: colors[k], width: 14, height: 14 }} aria-label={'Accento ' + k} title={k} onClick={function () { setAccento(k); }} />;
+                              // Il pallino resta 14px, ma l'area cliccabile è 24x24:
+                              // axe target-size segnalava i 14px come area troppo
+                              // piccola (e lo spazio fra vicini era solo 12px).
+                              return (
+                                <button
+                                  key={k}
+                                  type="button"
+                                  className={'accent-dot' + (accento === k ? ' active' : '')}
+                                  style={{
+                                    width: 24,
+                                    height: 24,
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    padding: 0,
+                                    border: 'none',
+                                    background: 'transparent',
+                                    cursor: 'pointer',
+                                  }}
+                                  aria-label={'Accento ' + k}
+                                  title={k}
+                                  onClick={function () {
+                                    setAccento(k);
+                                  }}
+                                >
+                                  <span aria-hidden="true" style={{ width: 14, height: 14, borderRadius: '50%', background: colors[k] }} />
+                                </button>
+                              );
                             })}
                           </div>
                         </div>
@@ -524,12 +551,12 @@ function AppLayout(props: any) {
                           <span style={{ fontSize: 10.5, fontWeight: 800, color: 'var(--c-warn, #fbbf24)', letterSpacing: .2 }}>Priorità</span>
                           {$.bachecaOverview.proposte > 0 && <span className="list-pill" style={{ background: 'rgba(239,68,68,.14)', color: 'var(--c-danger, #f87171)', padding: '2px 7px', fontSize: 10.5 }}>📝 {$.bachecaOverview.proposte} proposte</span>}
                           {$.bachecaOverview.avvisi > 0 && (
-                            <button type="button" className="btn btn-ghost btn-sm" style={{ padding: '2px 7px', color: 'var(--c-warn, #fbbf24)', fontSize: 10.5, minHeight: 22 }} onClick={function () { if ($.riprovaTuttiAnnunci) $.riprovaTuttiAnnunci(); }}>
+                            <button type="button" className="btn btn-ghost btn-sm" style={{ padding: '2px 7px', color: 'var(--c-warn, #fbbf24)', fontSize: 10.5, minHeight: 24 }} onClick={function () { if ($.riprovaTuttiAnnunci) $.riprovaTuttiAnnunci(); }}>
                               🔔 {$.bachecaOverview.avvisi} avvisi da riprovare
                             </button>
                           )}
                           {$.bachecaOverview.inScadenza > 0 && (
-                            <button type="button" className="view-toggle-btn" aria-pressed={qfStato === 'scadenza'} onClick={function () { setQfStato(qfStato === 'scadenza' ? 'tutti' : 'scadenza'); setBachecaVista('timeline'); }} style={{ padding: '2px 7px', fontSize: 10.5, borderRadius: 999, minHeight: 22 }}>
+                            <button type="button" className="view-toggle-btn" aria-pressed={qfStato === 'scadenza'} onClick={function () { setQfStato(qfStato === 'scadenza' ? 'tutti' : 'scadenza'); setBachecaVista('timeline'); }} style={{ padding: '2px 7px', fontSize: 10.5, borderRadius: 999, minHeight: 24 }}>
                               ⏰ {$.bachecaOverview.inScadenza} in scadenza (48h)
                             </button>
                           )}

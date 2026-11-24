@@ -19,6 +19,7 @@ import cardItemRaw from './CardItem.tsx?raw';
 import cardDetailRaw from './CardDetail.tsx?raw';
 import cardGridRaw from './CardGrid.tsx?raw';
 import appLayoutRaw from './AppLayout.tsx?raw';
+import headerRaw from './Header.tsx?raw';
 import filterBarRaw from './FilterBar.tsx?raw';
 import commentsRaw from './carddetail/CommentsSection.tsx?raw';
 import partecipazioneRaw from './carddetail/PartecipazionePanel.tsx?raw';
@@ -32,6 +33,8 @@ var SOGLIE: Record<string, number> = {
   // Nuova guardia, conteggio iniziale 16 già abbassato a 11 migrando i badge IA
   // e un separatore ai token. Da continuare ad abbassare, mai alzare.
   'AppLayout.tsx': 11,
+  // Nuova guardia su Header: i 5 residui sono nei menu a comparsa, da migrare.
+  'Header.tsx': 5,
   'FilterBar.tsx': 4,
   'CommentsSection.tsx': 13,
   // Già migrato per intero: qui il ratchet è a zero, cioè non si torna indietro.
@@ -43,6 +46,7 @@ var FILE: Record<string, string> = {
   'CardDetail.tsx': cardDetailRaw,
   'CardGrid.tsx': cardGridRaw,
   'AppLayout.tsx': appLayoutRaw,
+  'Header.tsx': headerRaw,
   'FilterBar.tsx': filterBarRaw,
   'CommentsSection.tsx': commentsRaw,
   'PartecipazionePanel.tsx': partecipazioneRaw,

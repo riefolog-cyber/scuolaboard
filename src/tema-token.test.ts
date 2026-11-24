@@ -24,6 +24,7 @@ import filterBarRaw from './FilterBar.tsx?raw';
 import cardGridRaw from './CardGrid.tsx?raw';
 import diagnosticaRaw from './Diagnostica.tsx?raw';
 import appLayoutRaw from './AppLayout.tsx?raw';
+import headerRaw from './Header.tsx?raw';
 
 // Unica eccezione ammessa: l'ambra del testo di ammonizione è un colore di
 // AVVISO, non una superficie del tema (spiegato nel file).
@@ -40,6 +41,7 @@ var FILE: Record<string, string> = {
   'CardGrid.tsx': cardGridRaw,
   'Diagnostica.tsx': diagnosticaRaw,
   'AppLayout.tsx': appLayoutRaw,
+  'Header.tsx': headerRaw,
 };
 
 describe('temi · nessun nuovo ternario isLight nei file migrati', function () {
