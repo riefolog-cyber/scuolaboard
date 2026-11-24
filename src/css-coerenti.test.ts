@@ -141,6 +141,16 @@ describe('css: l\'alone del badge "avviso non inviato" (regola 11)', () => {
   });
 });
 
+describe('css: hover dell\'header e pulsante vista attivo', () => {
+  it('entrambe le regole hover escludono aria-pressed=true', () => {
+    // L'hover ha !important: se una delle due regole perdesse il :not(), il
+    // pulsante attivo (testo bianco) tornerebbe invisibile in quel tema.
+    const regole = CSS.match(/\.scuola-header button[^{]*:hover\s*\{[^}]*\}/g) || [];
+    expect(regole.length, 'regole hover dell\'header trovate').toBeGreaterThanOrEqual(2);
+    regole.forEach((r) => expect(r).toContain(':not([aria-pressed="true"])'));
+  });
+});
+
 describe('css: accessibilità del movimento', () => {
   it('prefers-reduced-motion è gestito', () => {
     // Le animazioni pulsate (alone, bounce del like) sono un problema per chi

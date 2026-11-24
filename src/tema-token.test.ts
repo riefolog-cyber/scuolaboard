@@ -10,15 +10,15 @@
 // Legge i file come testo con `?raw` (come rules-anni-consistency.test.ts):
 // nessuna API di Node, nessun @types/node da aggiungere.
 //
-// LIMITE CONOSCIUTO: il pattern copre `isLight ?`, `$.isLight ?` e anche
-// `isLight === true ?` (forma usata in passato in Header), ma non riscritture
-// con altre variabili (`tema === 'light' ?`). Se una entra nel codice, si
-// aggiunge il pattern nello stesso commit insieme al caso sintetico.
+// LIMITE CONOSCIUTO: il pattern copre `isLight ?`, `$.isLight ?` e i confronti
+// stretti `isLight === true ?` / `=== false ?`. Non copre `==`, `!==`, parentesi
+// o altre variabili (`tema === 'light' ?`). Se una entra nel codice si aggiorna
+// il pattern nello stesso commit insieme al caso sintetico.
 import { describe, it, expect } from 'vitest';
 
 // Pattern usato dal conteggio qui sotto: lo si congela con un caso sintetico,
 // altrimenti una regex sbagliata farebbe passare sempre il test principale.
-const TERNARIO = /isLight\s*(?:===\s*true\s*)?\?/g;
+const TERNARIO = /\bisLight\b(?:\s*===\s*(?:true|false)\s*)?\s+\?/g;
 import cardItemRaw from './CardItem.tsx?raw';
 import cardDetailRaw from './CardDetail.tsx?raw';
 import commentsRaw from './carddetail/CommentsSection.tsx?raw';
@@ -51,10 +51,17 @@ describe('temi · nessun nuovo ternario isLight nei file migrati', function () {
   it('la lista dei file sorvegliati non si è ristretta', function () {
     // Se qualcuno togliesse un file da FILE, un ternario lì dentro passerebbe
     // inosservato e il tema sbagliato non sarebbe visto da nessun test.
-    expect(Object.keys(FILE).length, 'file di tema tolto dalla guardia').toBeGreaterThanOrEqual(9);
-    expect(Object.keys(FILE)).toContain('AppLayout.tsx');
-    expect(Object.keys(FILE)).toContain('Diagnostica.tsx');
-    expect(Object.keys(FILE)).toContain('Header.tsx');
+    expect(Object.keys(FILE).sort()).toEqual([
+      'AppLayout.tsx',
+      'CardDetail.tsx',
+      'CardGrid.tsx',
+      'CardItem.tsx',
+      'CommentsSection.tsx',
+      'Diagnostica.tsx',
+      'FilterBar.tsx',
+      'Header.tsx',
+      'PartecipazionePanel.tsx',
+    ]);
   });
 
   it('il conteggio resta quello atteso (di norma zero)', function () {
@@ -65,14 +72,20 @@ describe('temi · nessun nuovo ternario isLight nei file migrati', function () {
   });
 
   it('la guardia riconosce davvero le forme che deve bloccare', function () {
-    // Il limite noto (isLight === true ?) resta fuori: qui si congelano le forme
-    // che il pattern DICHIARA di vedere, così non può rompersi in silenzio.
+    // Qui si congelano le forme che il pattern DICHIARA di vedere (compreso il
+    // confronto esplicito a true), così non può rompersi in silenzio.
     expect(('color: isLight ? "bianco" : "nero"'.match(TERNARIO) || []).length).toBe(1);
     expect(('color: $.isLight ? "bianco" : "nero"'.match(TERNARIO) || []).length).toBe(1);
     expect(('color: isLight\n  ? "bianco"\n  : "nero"'.match(TERNARIO) || []).length).toBe(1);
     expect(('color: isLight === true ? "bianco" : "nero"'.match(TERNARIO) || []).length).toBe(1);
     // Il flag `g` deve contare TUTTE le occorrenze, non solo la prima.
     expect(('a: isLight ? 1 : 2; b: $.isLight ? 3 : 4'.match(TERNARIO) || []).length).toBe(2);
+    // Limiti noti congelati: se la regex si allargasse senza motivo, questi
+    // casi diventerebbero rossi e costringerebbero a riconsiderare il pattern.
+    expect('x?: boolean'.match(TERNARIO)).toBeNull(); // proprietà TS opzionale
+    expect(('!isLight ? 1 : 2'.match(TERNARIO) || []).length).toBe(1); // negazione comunque intercettata
+    expect(('isLight === false ? 1 : 2'.match(TERNARIO) || []).length).toBe(1);
+    expect('tema === "light" ? 1 : 2'.match(TERNARIO)).toBeNull();
   });
 
   it('la griglia usa i token per superficie e bordi (non colori fissi)', function () {

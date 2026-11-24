@@ -34,6 +34,13 @@ describe('Header', () => {
     return render(React.createElement(Header, { $: merged }));
   }
 
+  it('i pulsanti vista espongono aria-pressed (il CSS esclude solo l\'attivo dall\'hover)', () => {
+    renderHeader({ view: 'bacheca' });
+    expect(screen.getByLabelText('Vai alla bacheca')).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByLabelText('Analisi AI')).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByLabelText('Gestione studenti')).toHaveAttribute('aria-pressed', 'false');
+  });
+
   it('renders SCUOLA BOARD branding', () => {
     renderHeader();
     expect(screen.getByText('SCUOLA')).toBeInTheDocument();

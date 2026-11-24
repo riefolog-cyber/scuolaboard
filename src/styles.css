@@ -934,7 +934,7 @@ html[data-theme="light"]{
   --sb-privacy-check-border:#f8fafc;
   --sb-header-bg:rgba(255,255,255,.92);
   --sb-header-border:rgba(15,23,42,.08);
-  --sb-header-shadow:0 2px 20px rgba(15,23,42,.06);
+  --sb-header-shadow:0 2px 20px rgba(15,23,42,.08);
   --sb-btn-soft-bg:rgba(15,23,42,.06);
   --sb-btn-soft-border:rgba(15,23,42,.12);
   --sb-menu-bg:#ffffff;

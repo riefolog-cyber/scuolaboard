@@ -22,11 +22,13 @@ async function violazioni(page, richiesto) {
   if (richiesto) {
     // Non basta che il toast sia ancora nel DOM: deve risultare tra i nodi che
     // axe HA effettivamente analizzato, altrimenti il test può passare a vuoto.
-    // `incomplete` conta: con uno sfondo a gradiente axe non riesce a decidere
-    // il contrasto e classifica il nodo come incomplete, ma lo HA analizzato.
-    const analizzato = [...r.passes, ...r.incomplete].some((p) =>
-      p.nodes.some((n) => n.target.join(' ').includes(richiesto))
-    );
+    // Solo `color-contrast` conta: un discendente analizzato da `target-size`
+    // non dimostra che il contrasto del toast sia stato misurato. `incomplete`
+    // vale perché con lo sfondo a gradiente axe non decide (in quel caso il
+    // contrasto è garantito dal test statico di contrasto-token.test.ts).
+    const analizzato = [...r.passes, ...r.incomplete]
+      .filter((p) => p.id === 'color-contrast')
+      .some((p) => p.nodes.some((n) => n.target.some((t) => new RegExp('(^|[\\s.])' + richiesto.replace(/^\./, '') + '(?!\\w)').test(t))));
     expect(analizzato, 'axe non ha analizzato ' + richiesto).toBe(true);
   }
   return r.violations.map((v) => ({
@@ -101,7 +103,8 @@ for (const tema of ['light', 'dark']) {
       window.setTimeout = function (fn, ms) {
         // Durata letta dalla config dell'app (useToast.ts): se cambia, il patch
         // la segue invece di diventare un numero magico vuoto.
-        var durataToast = (window.SB_CONFIG && window.SB_CONFIG.TOAST_TIMEOUT_MS) || 2400;
+        var cfg = window.SB_CONFIG;
+        var durataToast = cfg && typeof cfg.TOAST_TIMEOUT_MS === 'number' ? cfg.TOAST_TIMEOUT_MS : 2400;
         var args = Array.prototype.slice.call(arguments, 2);
         return reale.call(window, fn, ms === durataToast ? 60000 : ms, ...args);
       };

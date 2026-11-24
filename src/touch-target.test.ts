@@ -8,10 +8,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, it, expect } from 'vitest';
+import { senzaCommenti } from './css-utils.ts';
 import filterBarRaw from './FilterBar.tsx?raw';
 import appLayoutRaw from './AppLayout.tsx?raw';
 
-const CSS = fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8');
+const CSS = senzaCommenti(fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8'));
 
 var FILE: Record<string, string> = {
   'FilterBar.tsx': filterBarRaw,
@@ -43,7 +44,11 @@ describe('accessibilità · area minima dei controlli', function () {
   it('i pallini accento hanno area 24px nel CSS (non più solo in inline)', function () {
     // La geometria è passata dall'inline a `.accent-dot`: senza questo controllo
     // resterebbe coperta solo da axe, che è un test E2E e non gira sempre.
-    expect(CSS).toMatch(/\.accent-dot\{[^}]*width:24px;[^}]*height:24px/);
+    var blocco = (CSS.match(/\.accent-dot\{[^}]*\}/) || [])[0] || '';
+    expect(blocco, '.accent-dot con area 24px').toMatch(/width\s*:\s*24px/);
+    expect(blocco, '.accent-dot con area 24px').toMatch(/height\s*:\s*24px/);
+    // Guardia della guardia: una regola solo commentata non deve bastare.
+    expect(senzaCommenti('/* .accent-dot{width:24px;height:24px} */')).toBe('');
   });
 
   it('nessun minHeight/minWidth sotto 24px (0 = layout flex, non un pulsante)', function () {

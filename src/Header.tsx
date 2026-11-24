@@ -3,9 +3,9 @@ var SB = window.SB || {};
 
 function Header__({ $ }: any) {
   var isLight = !!$.isLight;
-  // Pura lookup (nessun ternario, nemmeno camuffato): la guardia tema-token
-  // cerca il punto interrogativo dopo isLight, e la forma con confronto
-  // esplicito a true lo aggirerebbe: resta solo la lookup indicizzata.
+  // Lookup indicizzata, non ternario: la guardia tema-token riconosce sia la
+  // forma semplice sia il confronto esplicito a true. Restano fuori negazioni
+  // e confronti diversi, quindi la lookup resta la forma più sicura.
   var prossimoTema = ['chiaro', 'scuro'][Number(isLight === true)];
   var toggleTheme = $.toggleTheme || function () {};
   return (

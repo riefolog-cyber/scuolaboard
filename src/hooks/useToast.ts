@@ -14,7 +14,8 @@ function useToast() {
     // Unica fonte di verità: `SB_CONFIG.TOAST_TIMEOUT_MS` (app-state.ts). Il
     // letterale 2400 resta solo come fallback nei test che non fanno il boot.
     var cfg: any = (window as any).SB_CONFIG;
-    var durata = (cfg && cfg.TOAST_TIMEOUT_MS) || 2400;
+    // `0` è un valore legittimo (nessuna auto-chiusura), quindi non si usa `||`.
+    var durata = cfg && typeof cfg.TOAST_TIMEOUT_MS === 'number' ? cfg.TOAST_TIMEOUT_MS : 2400;
     setTimeout(function () {
       setToasts(function (p: Toast[]) {
         return p.filter(function (t: Toast) {
