@@ -17,6 +17,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, it, expect } from 'vitest';
+import headerRaw from './Header.tsx?raw';
 import {
   SELETTORE_TEMA_CHIARO,
   senzaCommenti,
@@ -173,6 +174,13 @@ describe.each(['dark', 'light'])('contrasto dei token · tema %s', function (tem
   it('il pulsante «vista attiva» regge AA con testo bianco', function () {
     // Prima usava il primary pieno: 4,47:1 nel tema scuro, appena sotto soglia.
     expect(contrasto([255, 255, 255], parse(token['--sb-primary-solid'], token))).toBeGreaterThanOrEqual(AA);
+    // Ancora il testo al sorgente: se Header cambia token, la coppia misurata
+    // qui sopra diventerebbe un token orfano e la guardia resterebbe cieca.
+    expect(headerRaw).toContain('var(--sb-primary-solid)');
+    expect(headerRaw).toContain('var(--sb-danger-fg)');
+    expect(headerRaw).toContain('var(--sb-warn-fg)');
+    expect(headerRaw).toContain('var(--sb-primary-fg)');
+    expect(headerRaw).toContain('var(--sb-notifica-nonletta)');
   });
 });
 

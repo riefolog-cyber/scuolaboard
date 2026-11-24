@@ -568,13 +568,16 @@ html[data-theme="light"] body{
   color:var(--c-text);
 }
 /* Header */
+/* Stessi token misurati da contrasto-token.test.ts: prima qui c'erano valori
+   fissi con !important, quindi il test misurava un colore che il browser non
+   applicava mai. */
 html[data-theme="light"] .scuola-header{
-  background:rgba(255,255,255,.94) !important;
+  background:var(--sb-header-bg) !important;
   backdrop-filter:blur(16px);
-  border-bottom:1px solid rgba(15,23,42,.08) !important;
-  box-shadow:0 2px 20px rgba(15,23,42,.08) !important;
+  border-bottom:1px solid var(--sb-header-border) !important;
+  box-shadow:var(--sb-header-shadow) !important;
 }
-html[data-theme="light"] .scuola-header button:hover{
+html[data-theme="light"] .scuola-header button:not([aria-pressed="true"]):hover{
   background:rgba(15,23,42,.06) !important;
 }
 html[data-theme="light"] .scuola-header div[style*="rgba(13,13,30"]{

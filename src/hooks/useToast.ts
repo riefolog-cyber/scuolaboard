@@ -11,13 +11,17 @@ function useToast() {
     setToasts(function (p: Toast[]) {
       return p.concat([{ id: id, msg: msg, type: type || 'ok' }]);
     });
+    // Unica fonte di verità: `SB_CONFIG.TOAST_TIMEOUT_MS` (app-state.ts). Il
+    // letterale 2400 resta solo come fallback nei test che non fanno il boot.
+    var cfg: any = (window as any).SB_CONFIG;
+    var durata = (cfg && cfg.TOAST_TIMEOUT_MS) || 2400;
     setTimeout(function () {
       setToasts(function (p: Toast[]) {
         return p.filter(function (t: Toast) {
           return t.id !== id;
         });
       });
-    }, 2400);
+    }, durata);
   }, []);
 
   // Espone il toast globalmente: fbSave/fbDel in app-utils lo usano come

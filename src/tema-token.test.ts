@@ -10,16 +10,15 @@
 // Legge i file come testo con `?raw` (come rules-anni-consistency.test.ts):
 // nessuna API di Node, nessun @types/node da aggiungere.
 //
-// LIMITE CONOSCIUTO: cerca la forma `isLight ?`, non le sue riscritture
-// (`$.isLight === false ?`, `tema === 'light' ?`). Non è una svista: le altre
-// forme non sono mai state usate qui, e allargare il pattern senza un caso reale
-// produrrebbe solo falsi positivi. Se una riscrittura entra nel codice, si
-// aggiunge il pattern nello stesso commit.
+// LIMITE CONOSCIUTO: il pattern copre `isLight ?`, `$.isLight ?` e anche
+// `isLight === true ?` (forma usata in passato in Header), ma non riscritture
+// con altre variabili (`tema === 'light' ?`). Se una entra nel codice, si
+// aggiunge il pattern nello stesso commit insieme al caso sintetico.
 import { describe, it, expect } from 'vitest';
 
 // Pattern usato dal conteggio qui sotto: lo si congela con un caso sintetico,
 // altrimenti una regex sbagliata farebbe passare sempre il test principale.
-const TERNARIO = /isLight\s*\?/g;
+const TERNARIO = /isLight\s*(?:===\s*true\s*)?\?/g;
 import cardItemRaw from './CardItem.tsx?raw';
 import cardDetailRaw from './CardDetail.tsx?raw';
 import commentsRaw from './carddetail/CommentsSection.tsx?raw';
@@ -71,6 +70,9 @@ describe('temi · nessun nuovo ternario isLight nei file migrati', function () {
     expect(('color: isLight ? "bianco" : "nero"'.match(TERNARIO) || []).length).toBe(1);
     expect(('color: $.isLight ? "bianco" : "nero"'.match(TERNARIO) || []).length).toBe(1);
     expect(('color: isLight\n  ? "bianco"\n  : "nero"'.match(TERNARIO) || []).length).toBe(1);
+    expect(('color: isLight === true ? "bianco" : "nero"'.match(TERNARIO) || []).length).toBe(1);
+    // Il flag `g` deve contare TUTTE le occorrenze, non solo la prima.
+    expect(('a: isLight ? 1 : 2; b: $.isLight ? 3 : 4'.match(TERNARIO) || []).length).toBe(2);
   });
 
   it('la griglia usa i token per superficie e bordi (non colori fissi)', function () {

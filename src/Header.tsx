@@ -4,7 +4,8 @@ var SB = window.SB || {};
 function Header__({ $ }: any) {
   var isLight = !!$.isLight;
   // Pura lookup (nessun ternario, nemmeno camuffato): la guardia tema-token
-  // cerca la forma con `?`, e un `isLight === true ? …` la aggirerebbe.
+  // cerca il punto interrogativo dopo isLight, e la forma con confronto
+  // esplicito a true lo aggirerebbe: resta solo la lookup indicizzata.
   var prossimoTema = ['chiaro', 'scuro'][Number(isLight === true)];
   var toggleTheme = $.toggleTheme || function () {};
   return (
@@ -592,12 +593,15 @@ function Header__({ $ }: any) {
             { k: 'analisi', i: '🤖' },
             { k: '$.studenti', i: '👥' },
           ].map(function (t) {
+            // Gruppo di pulsanti di vista: aria-pressed rende lo stato leggibile
+            // agli screen reader e esclude l'attivo dall'hover bianco dell'header.
             return (
               <button
                 key={t.k}
                 aria-label={
                   t.k === 'bacheca' ? 'Vai alla bacheca' : t.k === 'analisi' ? 'Analisi AI' : 'Gestione studenti'
                 }
+                aria-pressed={$.view === t.k}
                 onClick={function () {
                   $.setView(t.k);
                   $.setViewStudenti(t.k === '$.studenti');

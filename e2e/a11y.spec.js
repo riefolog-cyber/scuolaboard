@@ -17,8 +17,18 @@ const URL = '/scuolaboard/e2e/harness.html?css=1&a11y=1';
 // quando diventa rossa si sa quale causa guardare.
 const REGOLE = ['color-contrast', 'button-name', 'link-name', 'label', 'nested-interactive', 'target-size'];
 
-async function violazioni(page) {
+async function violazioni(page, richiesto) {
   const r = await new AxeBuilder({ page }).withRules(REGOLE).analyze();
+  if (richiesto) {
+    // Non basta che il toast sia ancora nel DOM: deve risultare tra i nodi che
+    // axe HA effettivamente analizzato, altrimenti il test può passare a vuoto.
+    // `incomplete` conta: con uno sfondo a gradiente axe non riesce a decidere
+    // il contrasto e classifica il nodo come incomplete, ma lo HA analizzato.
+    const analizzato = [...r.passes, ...r.incomplete].some((p) =>
+      p.nodes.some((n) => n.target.join(' ').includes(richiesto))
+    );
+    expect(analizzato, 'axe non ha analizzato ' + richiesto).toBe(true);
+  }
   return r.violations.map((v) => ({
     regola: v.id,
     impatto: v.impact,
@@ -100,8 +110,6 @@ for (const tema of ['light', 'dark']) {
     await page.locator('#card-c1').getByRole('button', { name: 'Altre azioni' }).click();
     await page.locator('#card-c1').getByRole('button', { name: 'Copia link' }).click();
     await expect(page.locator('.toast').first()).toBeVisible();
-    expect(await violazioni(page), 'toast (' + tema + ')').toEqual([]);
-    // Il toast deve essere ANCORA lì dopo l'audit: prova che è stato esaminato.
-    await expect(page.locator('.toast').first()).toBeVisible();
+    expect(await violazioni(page, '.toast'), 'toast (' + tema + ')').toEqual([]);
   });
 }
