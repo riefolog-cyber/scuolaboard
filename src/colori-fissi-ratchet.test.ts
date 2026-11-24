@@ -27,13 +27,14 @@ import partecipazioneRaw from './carddetail/PartecipazionePanel.tsx?raw';
 var BIANCO_FISSO = /rgba\(\s*255\s*,\s*255\s*,\s*255\s*,/g;
 
 var SOGLIE: Record<string, number> = {
-  'CardItem.tsx': 29,
+  'CardItem.tsx': 26,
   'CardDetail.tsx': 19,
-  'CardGrid.tsx': 7,
+  'CardGrid.tsx': 6,
   // Nuova guardia, conteggio iniziale 16 già abbassato a 11 migrando i badge IA
   // e un separatore ai token. Da continuare ad abbassare, mai alzare.
   'AppLayout.tsx': 11,
-  // Nuova guardia su Header: i 5 residui sono nei menu a comparsa, da migrare.
+  // Nuova guardia su Header: 5 residui (menu a comparsa e select della preview
+  // vista studente), da migrare uno alla volta. Soglia già stretta.
   'Header.tsx': 5,
   'FilterBar.tsx': 4,
   'CommentsSection.tsx': 13,
@@ -53,6 +54,12 @@ var FILE: Record<string, string> = {
 };
 
 describe('grafica · ratchet dei colori fissi', function () {
+  it('la lista dei file sorvegliati non si è ristretta', function () {
+    expect(Object.keys(FILE).length, 'file tolto dal ratchet').toBeGreaterThanOrEqual(8);
+    expect(Object.keys(FILE)).toContain('Header.tsx');
+    expect(Object.keys(FILE)).toContain('AppLayout.tsx');
+  });
+
   it('il numero di rgba(255,255,255,…) non cresce (spazi ignorati)', function () {
     Object.keys(FILE).forEach(function (nome) {
       var n = (FILE[nome].match(BIANCO_FISSO) || []).length;

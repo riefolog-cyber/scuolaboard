@@ -154,6 +154,26 @@ describe.each(['dark', 'light'])('contrasto dei token · tema %s', function (tem
     var testo = sopra(parse(b.fg, token), fondoBadge);
     expect(contrasto(testo, fondoBadge), nome + ' (' + nomeToken + ')').toBeGreaterThanOrEqual(AA);
   });
+
+  // Nuove coppie dell'header e del menu notifiche: finora nessun test statico le
+  // misurava, e il dropdown non viene mai aperto dagli audit axe. La tinta va
+  // composta sulla superficie REALE (header o menu), non su --c-bg: misurare un
+  // fondo che non esiste era il difetto dei vecchi colori fissi.
+  it.each([
+    ['--sb-primary-fg', '--sb-primary-soft-bg', '--sb-header-bg'],
+    ['--sb-warn-fg', '--sb-warn-soft-bg', '--sb-header-bg'],
+    ['--sb-notifica-nonletta', '--sb-primary-soft-bg', '--sb-menu-bg'],
+    ['--sb-danger-fg', '--sb-danger-soft-bg', '--sb-menu-bg'],
+  ])('%s regge AA su %s (%s)', function (nomeTesto, nomeFondo, nomeSuperficie) {
+    var superficie = sopra(parse(token[nomeSuperficie], token), base);
+    var fondo = sopra(parse(token[nomeFondo], token), superficie);
+    expect(contrasto(parse(token[nomeTesto], token), fondo)).toBeGreaterThanOrEqual(AA);
+  });
+
+  it('il pulsante «vista attiva» regge AA con testo bianco', function () {
+    // Prima usava il primary pieno: 4,47:1 nel tema scuro, appena sotto soglia.
+    expect(contrasto([255, 255, 255], parse(token['--sb-primary-solid'], token))).toBeGreaterThanOrEqual(AA);
+  });
 });
 
 // I toast non hanno un token dedicato: il colore è scritto nella regola, quindi

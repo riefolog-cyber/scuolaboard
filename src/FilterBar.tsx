@@ -20,7 +20,7 @@ function FilterBar__({ $: props$ }: any) {
           <span style={{ background: 'var(--c-primary, #6366f1)', color: '#fff', borderRadius: 20, padding: '0 5px', fontSize: 9.5, fontWeight: 800, lineHeight: '16px' }}>{$.filterClasse}</span>
         )}
         {$.filterClasse !== 'tutte' && (
-          <button onClick={function (e: any) { e.stopPropagation(); $.setFilterClasse('tutte'); }} aria-label="×" title="Mostra tutte" style={{ background: 'none', border: 'none', color: 'var(--sb-text-3)', cursor: 'pointer', fontSize: 11, lineHeight: 1, padding: '0 1px' }}>×</button>
+          <button onClick={function (e: any) { e.stopPropagation(); $.setFilterClasse('tutte'); }} aria-label="×" title="Mostra tutte" style={{ background: 'none', border: 'none', color: 'var(--sb-text-3)', cursor: 'pointer', fontSize: 11, lineHeight: 1, padding: '0 1px', minWidth: 24, minHeight: 24 }}>×</button>
         )}
         <span style={{ fontSize: 10, color: 'var(--sb-text-3)', marginLeft: 'auto' }}>{$.filtroBarOpen ? '▴' : '▾'}</span>
       </div>
@@ -77,7 +77,7 @@ function FilterBar__({ $: props$ }: any) {
                       }}
                       autoFocus={true}
                       maxLength={20}
-                      style={{ width: 64, padding: '1px 5px', border: '1px solid var(--c-primary, #6366f1)', borderRadius: 5, fontSize: 11, background: 'var(--sb-surface)', color: 'var(--sb-text-1)', height: 22 }}
+                      style={{ width: 64, padding: '1px 5px', border: '1px solid var(--c-primary, #6366f1)', borderRadius: 5, fontSize: 11, background: 'var(--sb-surface)', color: 'var(--sb-text-1)', height: 24 }}
                     />
                     <button
                       aria-label="Conferma rinomina"
@@ -102,7 +102,7 @@ function FilterBar__({ $: props$ }: any) {
                     aria-label={'Rinomina classe ' + cl}
                     title="Rinomina"
                     onClick={function (e: any) { e.stopPropagation(); $.apriRinomina(cl); }}
-                    style={{ padding: '1px 3px', minWidth: 24, minHeight: 24, background: 'none', border: 'none', color: 'var(--sb-text-3)', fontSize: 10, cursor: 'pointer', lineHeight: 1 }}
+                    style={{ padding: '1px 3px', minHeight: 24, background: 'none', border: 'none', color: 'var(--sb-text-3)', fontSize: 10, cursor: 'pointer', lineHeight: 1 }}
                   >
                     ✎
                   </button>
@@ -129,7 +129,7 @@ function FilterBar__({ $: props$ }: any) {
                       if ($.filterClasse === cl) $.setFilterClasse('tutte');
                     }
                   }}
-                  style={{ padding: '1px 3px', minWidth: 24, minHeight: 24, background: 'none', border: 'none', color: 'var(--sb-text-3)', fontSize: 10, cursor: 'pointer', lineHeight: 1 }}
+                  style={{ padding: '1px 3px', minHeight: 24, background: 'none', border: 'none', color: 'var(--sb-text-3)', fontSize: 10, cursor: 'pointer', lineHeight: 1 }}
                   title="Rimuovi"
                 >
                   ×
@@ -150,7 +150,7 @@ function FilterBar__({ $: props$ }: any) {
                 placeholder="es. 1AX"
                 autoFocus={true}
                 maxLength={20}
-                style={{ width: 90, padding: '2px 6px', border: '1px solid var(--c-primary, #6366f1)', borderRadius: 6, fontSize: 11, background: 'var(--sb-surface)', color: 'var(--sb-text-1)', height: 22 }}
+                style={{ width: 90, padding: '2px 6px', border: '1px solid var(--c-primary, #6366f1)', borderRadius: 6, fontSize: 11, background: 'var(--sb-surface)', color: 'var(--sb-text-1)', height: 24 }}
               />
               <button aria-label="Conferma nuova classe" onClick={$.addClasseCustom} style={{ background: 'var(--c-primary, #6366f1)', color: '#fff', border: 'none', borderRadius: 6, padding: '2px 7px', cursor: 'pointer', fontSize: 11, fontWeight: 700, minHeight: 24 }}>✓</button>
               <button aria-label="Annulla aggiunta classe" onClick={function () { $.setAddingClasse(false); $.setNewClasseInput(''); }} style={{ background: 'rgba(255,255,255,.07)', color: 'rgba(255,255,255,.58)', border: 'none', borderRadius: 6, padding: '2px 7px', cursor: 'pointer', fontSize: 11, minHeight: 24 }}>✕</button>

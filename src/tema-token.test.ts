@@ -16,6 +16,10 @@
 // produrrebbe solo falsi positivi. Se una riscrittura entra nel codice, si
 // aggiunge il pattern nello stesso commit.
 import { describe, it, expect } from 'vitest';
+
+// Pattern usato dal conteggio qui sotto: lo si congela con un caso sintetico,
+// altrimenti una regex sbagliata farebbe passare sempre il test principale.
+const TERNARIO = /isLight\s*\?/g;
 import cardItemRaw from './CardItem.tsx?raw';
 import cardDetailRaw from './CardDetail.tsx?raw';
 import commentsRaw from './carddetail/CommentsSection.tsx?raw';
@@ -48,16 +52,25 @@ describe('temi · nessun nuovo ternario isLight nei file migrati', function () {
   it('la lista dei file sorvegliati non si è ristretta', function () {
     // Se qualcuno togliesse un file da FILE, un ternario lì dentro passerebbe
     // inosservato e il tema sbagliato non sarebbe visto da nessun test.
-    expect(Object.keys(FILE).length, 'file di tema tolto dalla guardia').toBeGreaterThanOrEqual(7);
+    expect(Object.keys(FILE).length, 'file di tema tolto dalla guardia').toBeGreaterThanOrEqual(9);
     expect(Object.keys(FILE)).toContain('AppLayout.tsx');
     expect(Object.keys(FILE)).toContain('Diagnostica.tsx');
+    expect(Object.keys(FILE)).toContain('Header.tsx');
   });
 
   it('il conteggio resta quello atteso (di norma zero)', function () {
     Object.keys(FILE).forEach(function (nome) {
-      var n = (FILE[nome].match(/isLight\s*\?/g) || []).length;
+      var n = (FILE[nome].match(TERNARIO) || []).length;
       expect(n, nome + ': usare un token --sb-* invece del ternario').toBe(ECCEZIONI[nome] || 0);
     });
+  });
+
+  it('la guardia riconosce davvero le forme che deve bloccare', function () {
+    // Il limite noto (isLight === true ?) resta fuori: qui si congelano le forme
+    // che il pattern DICHIARA di vedere, così non può rompersi in silenzio.
+    expect(('color: isLight ? "bianco" : "nero"'.match(TERNARIO) || []).length).toBe(1);
+    expect(('color: $.isLight ? "bianco" : "nero"'.match(TERNARIO) || []).length).toBe(1);
+    expect(('color: isLight\n  ? "bianco"\n  : "nero"'.match(TERNARIO) || []).length).toBe(1);
   });
 
   it('la griglia usa i token per superficie e bordi (non colori fissi)', function () {

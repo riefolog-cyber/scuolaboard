@@ -374,7 +374,9 @@ p{line-height:1.6}
 .scuola-header{
   box-shadow:0 10px 30px rgba(0,0,0,.18);
 }
-.scuola-header button:hover{
+/* Il pulsante «vista attiva» ha aria-pressed=true: l'hover generico lo rendeva
+   quasi bianco, col testo bianco sopra (invisibile). */
+.scuola-header button:not([aria-pressed="true"]):hover{
   background:rgba(255,255,255,.1) !important;
 }
 .scuola-header .header-chip{
@@ -465,9 +467,13 @@ p{line-height:1.6}
 .onboard-tip{display:flex; align-items:flex-start; gap:10px; margin:10px 14px 0; padding:10px 12px; border-radius:14px; border:1px solid rgba(var(--c-primary-rgb),.28); background:linear-gradient(135deg, rgba(var(--c-primary-rgb),.14), rgba(168,85,247,.10))}
 .onboard-tip .text{flex:1; font-size:12.5px; line-height:1.5; color:rgba(255,255,255,.82)}
 .onboard-tip .title{font-weight:800; color:#f8fafc; margin-bottom:2px}
-.accent-picker{display:inline-flex; gap:6px; align-items:center}
-.accent-dot{width:18px; height:18px; border-radius:50%; border:2px solid rgba(255,255,255,.25); cursor:pointer; padding:0}
-.accent-dot.active{box-shadow:0 0 0 2px rgba(255,255,255,.2), 0 0 0 4px rgba(var(--c-primary-rgb),.25); border-color:#fff}
+.accent-picker{display:inline-flex; gap:4px; align-items:center}
+/* Geometria nel CSS, non inline: l'area cliccabile è 24px (WCAG 2.2) e il disco
+   visivo è tornato a 18px con bordo (prima della correzione target-size era
+  18px, durante la correzione era sceso a 14px senza bordo). */
+.accent-dot{width:24px; height:24px; border-radius:50%; border:none; background:transparent; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; padding:0}
+.accent-dot > span{width:18px; height:18px; border-radius:50%; border:2px solid var(--sb-line-strong)}
+.accent-dot.active{box-shadow:0 0 0 2px rgba(255,255,255,.2), 0 0 0 4px rgba(var(--c-primary-rgb),.25)}
 html.projection body{font-size:17px}
 html.projection .card-wrap .empty-state-sub, html.projection .empty-state-sub{font-size:15px}
 html.projection .pill-btn, html.projection .badge-chip, html.projection .list-pill{font-size:12px}
@@ -839,9 +845,12 @@ html[data-theme="light"] textarea::placeholder{color:#94a3b8 !important}
 .detail-nav button.active{background:rgba(var(--c-primary-rgb),.22); color:#fff; border-color:rgba(var(--c-primary-rgb),.4)}
 
 /* FilterBar: controlli chip contestuali per ridurre ingombro */
-.filter-chip .chip-action{opacity:.0; max-width:0; padding-left:0 !important; padding-right:0 !important; overflow:hidden; transition:opacity .12s ease, max-width .12s ease, padding .12s ease}
-.filter-chip:hover .chip-action, .filter-chip:focus-within .chip-action, .filter-chip.selected .chip-action{opacity:1; max-width:24px; padding-left:3px !important; padding-right:3px !important}
-@media (hover: none){ .filter-chip .chip-action{opacity:.85; max-width:24px; padding-left:3px !important; padding-right:3px !important} }
+/* `min-width` vince su `max-width`: senza il min-width:0 qui, i pulsanti nascosti
+   occuperebbero 24px ciascuno anche a riposo (erano 18) e la barra filtri andrebbe
+   a capo prima sui telefoni. */
+.filter-chip .chip-action{opacity:.0; max-width:0; min-width:0; padding-left:0 !important; padding-right:0 !important; overflow:hidden; transition:opacity .12s ease, max-width .12s ease, min-width .12s ease, padding .12s ease}
+.filter-chip:hover .chip-action, .filter-chip:focus-within .chip-action, .filter-chip.selected .chip-action{opacity:1; max-width:24px; min-width:24px; padding-left:3px !important; padding-right:3px !important}
+@media (hover: none){ .filter-chip .chip-action{opacity:.85; max-width:24px; min-width:24px; padding-left:3px !important; padding-right:3px !important} }
 
 /* ── TOKEN DEI TESTI E DELLE SUPERFICI ────────────────────────────────────
    I due temi erano gestiti con ternari `isLight ? … : …` dentro gli stili
@@ -888,12 +897,13 @@ html[data-theme="light"] textarea::placeholder{color:#94a3b8 !important}
   --sb-menu-border:rgba(var(--c-primary-rgb),.35);
   --sb-menu-shadow:0 12px 40px rgba(0,0,0,.6);
   --sb-primary-fg:#a5b4fc;
+  --sb-primary-solid:#4f46e5;
   --sb-primary-soft-bg:rgba(var(--c-primary-rgb),.18);
   --sb-primary-soft-border:rgba(var(--c-primary-rgb),.35);
   --sb-notifica-nonletta:#e0e7ff;
   --sb-warn-soft-bg:rgba(245,158,11,.12);
   --sb-warn-soft-border:rgba(245,158,11,.3);
-  --sb-danger-soft-bg:rgba(239,68,68,.2);
+  --sb-danger-soft-bg:rgba(239,68,68,.12);
   --sb-danger-soft-border:rgba(239,68,68,.3);
 }
 html[data-theme="light"]{
@@ -928,6 +938,7 @@ html[data-theme="light"]{
   --sb-menu-border:rgba(15,23,42,.12);
   --sb-menu-shadow:0 12px 32px rgba(15,23,42,.12);
   --sb-primary-fg:#4f46e5;
+  --sb-primary-solid:#4338ca;
   --sb-primary-soft-bg:rgba(79,70,229,.10);
   --sb-primary-soft-border:rgba(79,70,229,.20);
   --sb-notifica-nonletta:#312e81;

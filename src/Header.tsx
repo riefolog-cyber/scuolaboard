@@ -3,9 +3,9 @@ var SB = window.SB || {};
 
 function Header__({ $ }: any) {
   var isLight = !!$.isLight;
-  // Etichette del pulsante tema: anche qui si usa una lookup invece del ternario,
-  // così il file resta a zero e la guardia tema-token può sorvegliarlo davvero.
-  var prossimoTema = isLight === true ? 'scuro' : 'chiaro';
+  // Pura lookup (nessun ternario, nemmeno camuffato): la guardia tema-token
+  // cerca la forma con `?`, e un `isLight === true ? …` la aggirerebbe.
+  var prossimoTema = ['chiaro', 'scuro'][Number(isLight === true)];
   var toggleTheme = $.toggleTheme || function () {};
   return (
     <div
@@ -52,8 +52,8 @@ function Header__({ $ }: any) {
         <span
           className="header-chip"
           style={{
-            background: $.isProf ? 'rgba(var(--c-primary-rgb),.2)' : 'rgba(34,197,94,.15)',
-            color: $.isProf ? 'var(--sb-primary-fg)' : 'var(--c-success, #4ade80)',
+            background: $.isProf ? 'var(--sb-primary-soft-bg)' : 'rgba(34,197,94,.15)',
+            color: $.isProf ? 'var(--sb-primary-fg)' : 'var(--sb-success-fg, #4ade80)',
           }}
         >
           {$.user.photoURL && (
@@ -152,14 +152,14 @@ function Header__({ $ }: any) {
                 });
               }}
               style={{
-                background: 'rgba(var(--c-primary-rgb),.2)',
-                border: '1px solid rgba(var(--c-primary-rgb),.45)',
+                background: 'var(--sb-primary-soft-bg)',
+                border: '1px solid var(--sb-primary-soft-border)',
                 borderRadius: 20,
                 padding: '3px 13px',
                 cursor: 'pointer',
                 fontSize: 12,
                 fontWeight: 800,
-                color: '#c4b5fd',
+                color: 'var(--sb-primary-fg)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 5,
@@ -371,12 +371,12 @@ function Header__({ $ }: any) {
                   aria-label="Pulisci notifiche"
                   title="Pulisci notifiche"
                   style={{
-                    background: 'rgba(239,68,68,.12)',
-                    border: '1px solid rgba(239,68,68,.3)',
+                    background: 'var(--sb-danger-soft-bg)',
+                    border: '1px solid var(--sb-danger-soft-border)',
                     borderRadius: 6,
                     padding: '3px 8px',
                     fontSize: 11,
-                    color: 'var(--c-danger, #f87171)',
+                    color: 'var(--sb-danger-fg)',
                     cursor: 'pointer',
                     fontWeight: 700,
                   }}
@@ -606,7 +606,7 @@ function Header__({ $ }: any) {
                   padding: '4px 11px',
                   borderRadius: 7,
                   border: 'none',
-                  background: $.view === t.k ? 'var(--c-primary, #6366f1)' : 'transparent',
+                  background: $.view === t.k ? 'var(--sb-primary-solid)' : 'transparent',
                   color: $.view === t.k ? '#fff' : 'var(--sb-text-3)',
                   fontWeight: 700,
                   cursor: 'pointer',

@@ -1,6 +1,6 @@
 // e2e/a11y.spec.js — audit di accessibilità con axe, nei due temi.
 //
-// PERCHÉ SOLO CINQUE REGOLE: l'app è grande e un audit completo produce decine
+// PERCHÉ SOLO SEI REGOLE: l'app è grande e un audit completo produce decine
 // di segnalazioni (alcune giuste, molte da valutare). Queste sono quelle che
 // hanno già causato bug veri — testi invisibili nel tema chiaro
 // (color-contrast), bottoni senza nome accessibile — e devono restare a zero.
@@ -44,8 +44,14 @@ async function apri(page, tema) {
     Array.from(document.querySelectorAll('style')).some((s) => (s.textContent || '').includes('--sb-text-1'))
   );
   const destinazione = tema === 'light' ? 'Tema chiaro' : 'Tema scuro';
+  // Deve esserci UN solo pulsante tema: è sempre montato, cambia solo il titolo
+  // (la destinazione). Se sparisce, il selettore dell'audit non è più affidabile.
+  await expect(page.locator('[title^="Tema"]')).toHaveCount(1);
   const toggle = page.locator('[title="' + destinazione + '"]');
   if ((await toggle.count()) > 0) await toggle.first().click();
+  // Guardia della guardia: se la seed con scadenza sparisce, l'audit dei badge
+  // diventa cieco senza che nessun test lo dica.
+  await expect(page.locator('#card-cScad').getByText(/Oggi|Domani|Scaduta|⏰/).first()).toBeVisible();
   await expect(page.locator('.card-wrap').first()).toBeVisible();
 }
 
@@ -77,16 +83,25 @@ for (const tema of ['light', 'dark']) {
   });
 
   test('toast e badge scadenza senza violazioni (' + tema + ')', async ({ page }) => {
+    // Il badge con scadenza è auditato da `apri()` (che ne verifica la presenza).
+    // "Copia link" mostra un toast che si auto-rimuove dopo 2,4s: allunghiamo SOLO
+    // quel timer (non page.clock, che blocca axe) così l'audit lo vede davvero.
+    await page.addInitScript(function () {
+      var reale = window.setTimeout;
+      window.setTimeout = function (fn, ms) {
+        // Durata letta dalla config dell'app (useToast.ts): se cambia, il patch
+        // la segue invece di diventare un numero magico vuoto.
+        var durataToast = (window.SB_CONFIG && window.SB_CONFIG.TOAST_TIMEOUT_MS) || 2400;
+        var args = Array.prototype.slice.call(arguments, 2);
+        return reale.call(window, fn, ms === durataToast ? 60000 : ms, ...args);
+      };
+    });
     await apri(page, tema);
-    // Il badge con scadenza è nella seed con a11y=1: presente fin dall'inizio
-    // nella bacheca, quindi lo audit già il primo controllo del test qui sopra.
-    await expect(page.locator('#card-cScad').getByText(/Oggi|Domani|Scaduta|⏰/).first()).toBeVisible();
-
-    // "Copia link" è un percorso noto che mostra un toast: lo auditiamo mentre è
-    // visibile, così il contrasto del testo dei toast è coperto anche nel browser.
     await page.locator('#card-c1').getByRole('button', { name: 'Altre azioni' }).click();
     await page.locator('#card-c1').getByRole('button', { name: 'Copia link' }).click();
     await expect(page.locator('.toast').first()).toBeVisible();
     expect(await violazioni(page), 'toast (' + tema + ')').toEqual([]);
+    // Il toast deve essere ANCORA lì dopo l'audit: prova che è stato esaminato.
+    await expect(page.locator('.toast').first()).toBeVisible();
   });
 }

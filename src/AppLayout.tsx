@@ -486,7 +486,7 @@ function AppLayout(props: any) {
                         )}
                         {showFiltriToolbar && (
                           <>
-                            <div style={{ width: 1, height: 22, background: 'var(--sb-line)' }} />
+                            <div style={{ width: 1, height: 24, background: 'var(--sb-line)', alignSelf: 'center' }} />
                             <div style={{ display: 'inline-flex', gap: 3, flexWrap: 'wrap', alignItems: 'center' }}>
                               <Chip label="Note" n={counts.tipi.nota} active={qfTipo==='nota'} onClick={function(){ setQfTipo(qfTipo==='nota'?'tutti':'nota'); }} />
                               <Chip label="Domande" n={counts.tipi.domanda} active={qfTipo==='domanda'} onClick={function(){ setQfTipo(qfTipo==='domanda'?'tutti':'domanda'); }} />
@@ -511,35 +511,23 @@ function AppLayout(props: any) {
                           <button type="button" className={'view-toggle-btn' + (aula ? ' active' : '')} aria-pressed={aula} onClick={function () { var on = !(proiezione && altoContrasto); setProiezione(on); setAltoContrasto(on); }} title="Modalità Aula (proiezione + contrasto)">Aula</button>
                           <button type="button" className={'view-toggle-btn' + (proiezione && !aula ? ' active' : '')} aria-pressed={proiezione} onClick={function () { setProiezione(function (v: boolean) { return !v; }); }} title="Proiezione">P</button>
                           <button type="button" className={'view-toggle-btn' + (altoContrasto && !aula ? ' active' : '')} aria-pressed={altoContrasto} onClick={function () { setAltoContrasto(function (v: boolean) { return !v; }); }} title="Contrasto alto">C</button>
-                          <div className="accent-picker" aria-label="Colore accento" style={{ gap: 4 }}>
+                          <div className="accent-picker" aria-label="Colore accento">
                             {['indigo','violet','emerald','sky','amber','rose'].map(function (k) {
                               var colors: any = { indigo: '#6366f1', violet: '#a855f7', emerald: '#10b981', sky: '#0ea5e9', amber: '#f59e0b', rose: '#f43f5e' };
-                              // Il pallino resta 14px, ma l'area cliccabile è 24x24:
-                              // axe target-size segnalava i 14px come area troppo
-                              // piccola (e lo spazio fra vicini era solo 12px).
+                              // Geometria e bordo nel CSS: l'area cliccabile è 24px
+                              // (axe target-size) e il disco visivo resta 18px.
                               return (
                                 <button
                                   key={k}
                                   type="button"
                                   className={'accent-dot' + (accento === k ? ' active' : '')}
-                                  style={{
-                                    width: 24,
-                                    height: 24,
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    padding: 0,
-                                    border: 'none',
-                                    background: 'transparent',
-                                    cursor: 'pointer',
-                                  }}
                                   aria-label={'Accento ' + k}
                                   title={k}
                                   onClick={function () {
                                     setAccento(k);
                                   }}
                                 >
-                                  <span aria-hidden="true" style={{ width: 14, height: 14, borderRadius: '50%', background: colors[k] }} />
+                                  <span aria-hidden="true" style={{ background: colors[k] }} />
                                 </button>
                               );
                             })}
