@@ -34,11 +34,16 @@ export function senzaCommenti(css: string): string {
  * Per i sorgenti TS/TSX: toglie sia i commenti a blocco sia quelli di riga.
  * `senzaCommenti` da solo non basta: una riga commentata con `//` conterrebbe
  * ancora il token/pattern che le guardie statiche cercano (falso verde).
+ *
+ * Euristiche (non un parser): `//` preceduto da `:`, `(`, virgolette o `\` è
+ * trattato come URL/stringa/regex e preservato. Un commento vero è preceduto
+ * da spazio, `;` o inizio riga. I casi coperti sono congelati in
+ * `touch-target.test.ts`: se serve un parser completo, si sostituisca qui.
  */
 export function senzaCommentiCodice(src: string): string {
   return src
     .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/(^|[^:])\/\/.*$/gm, '$1');
+    .replace(/(^|[^:("'`\\])\/\/.*$/gm, '$1');
 }
 
 /** I selettori che definiscono variabili globali. */

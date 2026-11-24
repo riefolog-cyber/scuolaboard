@@ -107,7 +107,8 @@ for (const tema of ['light', 'dark']) {
         // Durata letta dalla config dell'app (useToast.ts): se cambia, il patch
         // la segue invece di diventare un numero magico vuoto.
         var cfg = window.SB_CONFIG;
-        var durataToast = cfg && typeof cfg.TOAST_TIMEOUT_MS === 'number' ? cfg.TOAST_TIMEOUT_MS : 2400;
+        var configurata = cfg && typeof cfg.TOAST_TIMEOUT_MS === 'number' ? cfg.TOAST_TIMEOUT_MS : 2400;
+        var durataToast = Number.isFinite(configurata) && configurata >= 0 ? configurata : 2400;
         var args = Array.prototype.slice.call(arguments, 2);
         // Con durata 0 non esiste un timer del toast: non allungare ogni
         // setTimeout(fn, 0) della pagina (focusTrap, debounce…).

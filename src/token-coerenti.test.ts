@@ -30,7 +30,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, it, expect } from 'vitest';
-import { senzaCommenti, variabiliGlobali } from './css-utils.ts';
+import { senzaCommenti, senzaCommentiCodice, variabiliGlobali } from './css-utils.ts';
 
 const CSS = senzaCommenti(fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8'));
 const scuro = variabiliGlobali(CSS);
@@ -52,7 +52,9 @@ function sorgenti(): { file: string; testo: string }[] {
         if (e.name === 'node_modules' || e.name === 'docs') continue;
         walk(p);
       } else if (/\.tsx?$/.test(e.name) && !/\.test\.tsx?$/.test(e.name)) {
-        fuori.push({ file: path.relative(__dirname, p), testo: senzaCommenti(fs.readFileSync(p, 'utf8')) });
+        // Sorgenti TS/TSX: vanno tolti anche i commenti `//`, altrimenti un
+        // esempio commentato conterebbe un fallback e farebbe arrossire il test.
+        fuori.push({ file: path.relative(__dirname, p), testo: senzaCommentiCodice(fs.readFileSync(p, 'utf8')) });
       }
     }
   };

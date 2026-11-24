@@ -50,6 +50,12 @@ describe('accessibilità · area minima dei controlli', function () {
     // I sorgenti TS usano `//`: la guardia deve ignorarli altrettanto.
     expect(senzaCommentiCodice('// minHeight: 22')).toBe('');
     expect(piccoli('// minHeight: 22\nvar a = { minHeight: 24 }')).toEqual([]);
+    // Congelare l'eccezione: una "semplificazione" a `/\/\/.*$/gm` tronchebbe
+    // l'URL/stringa e potrebbe nascondere un minHeight: 22 sulla stessa riga.
+    var conUrl = 'var u = "https://x/y"; // minHeight: 22';
+    expect(senzaCommentiCodice(conUrl)).toContain('https://x/y');
+    expect(senzaCommentiCodice(conUrl)).not.toContain('minHeight');
+    expect(senzaCommentiCodice('url(//cdn/x) // commento')).toContain('url(//cdn/x)');
   });
 
   it('nessun minHeight/minWidth sotto 24px (0 = layout flex, non un pulsante)', function () {

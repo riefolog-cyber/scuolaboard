@@ -17,7 +17,10 @@ function useToast() {
     // `0` significa "nessuna auto-chiusura": non si usa `||` (lo sostituiva con
     // 2400) e non si schedula alcun timer. NaN/Infinity cadono sul fallback.
     var configurata = cfg && typeof cfg.TOAST_TIMEOUT_MS === 'number' ? cfg.TOAST_TIMEOUT_MS : 2400;
-    var durata = Number.isFinite(configurata) ? configurata : 2400;
+    // Valori invalidi (NaN, Infinity, negativi) tornano al default: un negativo
+    // prima veniva clampato a 0 dal browser (chiusura immediata), ora diventerebbe
+    // "persistente" — meglio dichiararlo esplicitamente invalido.
+    var durata = Number.isFinite(configurata) && configurata >= 0 ? configurata : 2400;
     if (durata > 0) {
       setTimeout(function () {
         setToasts(function (p: Toast[]) {

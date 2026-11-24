@@ -12,7 +12,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, it, expect } from 'vitest';
-import { SELETTORE_TEMA_CHIARO, senzaCommenti, variabiliGlobali, variabiliIn } from './css-utils.ts';
+import {
+  SELETTORE_TEMA_CHIARO,
+  senzaCommenti,
+  senzaCommentiCodice,
+  variabiliGlobali,
+  variabiliIn,
+} from './css-utils.ts';
 
 const CSS = senzaCommenti(fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8'));
 // Anche i `--c-*` contano: un refuso in `var(--c-bg)` ha lo stesso effetto
@@ -41,7 +47,9 @@ describe('token CSS · i riferimenti esistono', function () {
   it('nessun var(--sb-…/--c-…) inventato nei sorgenti', function () {
     var usati: Record<string, string> = {};
     sorgenti(__dirname).forEach(function (f) {
-      var testo = fs.readFileSync(f, 'utf8');
+      // Commenti `//` inclusi: un token citato in un esempio commentato non è
+      // un uso vero e non deve far cadere la guardia.
+      var testo = senzaCommentiCodice(fs.readFileSync(f, 'utf8'));
       // Il file stesso è escluso (è un .test), quindi questo pattern non si conta.
       var re = /var\((--(?:sb|c)-[a-z0-9-]+)/g;
       var m;

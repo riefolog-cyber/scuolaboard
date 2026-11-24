@@ -10,10 +10,11 @@
 // Legge i file come testo con `?raw` (come rules-anni-consistency.test.ts):
 // nessuna API di Node, nessun @types/node da aggiungere.
 //
-// LIMITE CONOSCIUTO: il pattern copre `isLight ?`, `$.isLight ?` e i confronti
-// stretti `isLight === true ?` / `=== false ?`. Non copre `==`, `!==`, parentesi
-// o altre variabili (`tema === 'light' ?`). Se una entra nel codice si aggiorna
-// il pattern nello stesso commit insieme al caso sintetico.
+// LIMITE CONOSCIUTO: il pattern copre `isLight ?` (anche compatto), `$.isLight ?`,
+// le negazioni (`!isLight ?`) e i confronti stretti `=== true`/`=== false`.
+// Non copre `==`, `!==`, parentesi o altre variabili (`tema === 'light' ?`).
+// Se una entra nel codice si aggiorna il pattern nello stesso commit insieme al
+// caso sintetico.
 import { describe, it, expect } from 'vitest';
 
 // Pattern usato dal conteggio qui sotto: lo si congela con un caso sintetico,
@@ -87,6 +88,7 @@ describe('temi · nessun nuovo ternario isLight nei file migrati', function () {
     expect('isLight?: boolean'.match(TERNARIO)).toBeNull(); // proprietà TS opzionale
     expect(('x: isLight? 1 : 2'.match(TERNARIO) || []).length).toBe(1); // senza spazio
     expect(('x: isLight===true? 1 : 2'.match(TERNARIO) || []).length).toBe(1);
+    expect(('isLight ? {a:1} : {b:2}'.match(TERNARIO) || []).length).toBe(1); // il lookahead non confonde i ":" dell'oggetto
     expect(('!isLight ? 1 : 2'.match(TERNARIO) || []).length).toBe(1); // negazione comunque intercettata
     expect(('isLight === false ? 1 : 2'.match(TERNARIO) || []).length).toBe(1);
     expect('tema === "light" ? 1 : 2'.match(TERNARIO)).toBeNull();
