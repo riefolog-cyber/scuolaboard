@@ -25,6 +25,7 @@ import {
   variabiliIn,
   corpoDi,
   selettoriCheDichiara,
+  senzaCommentiCodice,
 } from './css-utils.ts';
 import { badgeStato } from './stato-card.ts';
 
@@ -176,14 +177,16 @@ describe.each(['dark', 'light'])('contrasto dei token · tema %s', function (tem
     expect(contrasto([255, 255, 255], parse(token['--sb-primary-solid'], token))).toBeGreaterThanOrEqual(AA);
     // Ancora il testo al sorgente: se Header cambia token, la coppia misurata
     // qui sopra diventerebbe un token orfano e la guardia resterebbe cieca.
-    // Sul sorgente senza commenti: una riga commentata non deve bastare.
-    var header = senzaCommenti(headerRaw);
-    expect(header).toMatch(/var\(--sb-primary-solid\)/);
-    expect(header).toMatch(/color:\s*'var\(--sb-danger-fg\)'/);
-    expect(header).toMatch(/color:\s*'var\(--sb-warn-fg\)'/);
-    expect(header).toMatch(/color:\s*'var\(--sb-primary-fg\)'/);
+    // Sul sorgente senza commenti (anche `//`, che Header usa): una riga
+    // commentata non deve bastare. Anchor all'espressione JSX del pulsante
+    // attivo, non al letterale `#fff` isolato (compare anche altrove).
+    var header = senzaCommentiCodice(headerRaw);
+    expect(header).toMatch(/background:\s*\$\.view === t\.k \? 'var\(--sb-primary-solid\)'/);
+    expect(header).toMatch(/color:\s*\$\.view === t\.k \? '#fff'/);
+    expect(header).toMatch(/color:\s*['"]var\(--sb-danger-fg\)['"]/);
+    expect(header).toMatch(/color:\s*['"]var\(--sb-warn-fg\)['"]/);
+    expect(header).toMatch(/color:\s*['"]var\(--sb-primary-fg\)['"]/);
     expect(header).toMatch(/var\(--sb-notifica-nonletta\)/);
-    expect(header).toMatch(/'#fff'/); // testo del pulsante vista attivo
   });
 });
 

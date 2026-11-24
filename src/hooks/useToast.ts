@@ -14,15 +14,19 @@ function useToast() {
     // Unica fonte di verità: `SB_CONFIG.TOAST_TIMEOUT_MS` (app-state.ts). Il
     // letterale 2400 resta solo come fallback nei test che non fanno il boot.
     var cfg: any = (window as any).SB_CONFIG;
-    // `0` è un valore legittimo (nessuna auto-chiusura), quindi non si usa `||`.
-    var durata = cfg && typeof cfg.TOAST_TIMEOUT_MS === 'number' ? cfg.TOAST_TIMEOUT_MS : 2400;
-    setTimeout(function () {
-      setToasts(function (p: Toast[]) {
-        return p.filter(function (t: Toast) {
-          return t.id !== id;
+    // `0` significa "nessuna auto-chiusura": non si usa `||` (lo sostituiva con
+    // 2400) e non si schedula alcun timer. NaN/Infinity cadono sul fallback.
+    var configurata = cfg && typeof cfg.TOAST_TIMEOUT_MS === 'number' ? cfg.TOAST_TIMEOUT_MS : 2400;
+    var durata = Number.isFinite(configurata) ? configurata : 2400;
+    if (durata > 0) {
+      setTimeout(function () {
+        setToasts(function (p: Toast[]) {
+          return p.filter(function (t: Toast) {
+            return t.id !== id;
+          });
         });
-      });
-    }, durata);
+      }, durata);
+    }
   }, []);
 
   // Espone il toast globalmente: fbSave/fbDel in app-utils lo usano come

@@ -26,9 +26,12 @@ async function violazioni(page, richiesto) {
     // non dimostra che il contrasto del toast sia stato misurato. `incomplete`
     // vale perché con lo sfondo a gradiente axe non decide (in quel caso il
     // contrasto è garantito dal test statico di contrasto-token.test.ts).
-    const analizzato = [...r.passes, ...r.incomplete]
+    const nome = richiesto.replace(/^\./, '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const analizzato = [...r.passes, ...r.incomplete, ...r.violations]
       .filter((p) => p.id === 'color-contrast')
-      .some((p) => p.nodes.some((n) => n.target.some((t) => new RegExp('(^|[\\s.])' + richiesto.replace(/^\./, '') + '(?!\\w)').test(t))));
+      .some((p) => p.nodes.some((n) => n.target.some((t) => new RegExp('(^|[\\s.])' + nome + '(?!\\w)').test(t))));
+    // Se il contrasto viola AA il nodo sta in `violations`: qui si passa e il
+    // messaggio vero arriva dall'assert sulle violazioni qui sotto.
     expect(analizzato, 'axe non ha analizzato ' + richiesto).toBe(true);
   }
   return r.violations.map((v) => ({
@@ -106,7 +109,10 @@ for (const tema of ['light', 'dark']) {
         var cfg = window.SB_CONFIG;
         var durataToast = cfg && typeof cfg.TOAST_TIMEOUT_MS === 'number' ? cfg.TOAST_TIMEOUT_MS : 2400;
         var args = Array.prototype.slice.call(arguments, 2);
-        return reale.call(window, fn, ms === durataToast ? 60000 : ms, ...args);
+        // Con durata 0 non esiste un timer del toast: non allungare ogni
+        // setTimeout(fn, 0) della pagina (focusTrap, debounce…).
+        var allunga = durataToast > 0 && ms === durataToast;
+        return reale.call(window, fn, allunga ? 60000 : ms, ...args);
       };
     });
     await apri(page, tema);

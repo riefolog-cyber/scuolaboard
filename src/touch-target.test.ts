@@ -8,10 +8,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, it, expect } from 'vitest';
-import { senzaCommenti } from './css-utils.ts';
+import { senzaCommenti, senzaCommentiCodice } from './css-utils.ts';
 import filterBarRaw from './FilterBar.tsx?raw';
 import appLayoutRaw from './AppLayout.tsx?raw';
 
+// Sul CSS si tolgono solo i blocchi: un `//` in `url(https://…)` tronchebbe
+// la dichiarazione e il test cadrebbe per un motivo che non c'entra coi 24px.
 const CSS = senzaCommenti(fs.readFileSync(path.join(__dirname, 'styles.css'), 'utf8'));
 
 var FILE: Record<string, string> = {
@@ -20,14 +22,10 @@ var FILE: Record<string, string> = {
 };
 var PICCOLO = /min(?:Height|Width):\s*['"]?(\d+(?:\.\d+)?)/g;
 
-function senzaCommenti(src: string): string {
-  return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
-}
-
 function piccoli(src: string): string[] {
   var trovati: string[] = [];
   var m: RegExpExecArray | null;
-  var testo = senzaCommenti(src);
+  var testo = senzaCommentiCodice(src);
   PICCOLO.lastIndex = 0;
   while ((m = PICCOLO.exec(testo)) !== null) {
     var n = Number(m[1]);
@@ -49,6 +47,9 @@ describe('accessibilità · area minima dei controlli', function () {
     expect(blocco, '.accent-dot con area 24px').toMatch(/height\s*:\s*24px/);
     // Guardia della guardia: una regola solo commentata non deve bastare.
     expect(senzaCommenti('/* .accent-dot{width:24px;height:24px} */')).toBe('');
+    // I sorgenti TS usano `//`: la guardia deve ignorarli altrettanto.
+    expect(senzaCommentiCodice('// minHeight: 22')).toBe('');
+    expect(piccoli('// minHeight: 22\nvar a = { minHeight: 24 }')).toEqual([]);
   });
 
   it('nessun minHeight/minWidth sotto 24px (0 = layout flex, non un pulsante)', function () {

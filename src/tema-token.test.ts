@@ -18,7 +18,9 @@ import { describe, it, expect } from 'vitest';
 
 // Pattern usato dal conteggio qui sotto: lo si congela con un caso sintetico,
 // altrimenti una regex sbagliata farebbe passare sempre il test principale.
-const TERNARIO = /\bisLight\b(?:\s*===\s*(?:true|false)\s*)?\s+\?/g;
+// `\s*` (non `\s+`) serve a vedere anche `isLight? 1 : 2`; il lookahead
+// esclude la proprietà TypeScript opzionale `isLight?: boolean`.
+const TERNARIO = /\bisLight\b(?:\s*===\s*(?:true|false)\s*)?\s*\?(?!\s*:)/g;
 import cardItemRaw from './CardItem.tsx?raw';
 import cardDetailRaw from './CardDetail.tsx?raw';
 import commentsRaw from './carddetail/CommentsSection.tsx?raw';
@@ -82,7 +84,9 @@ describe('temi · nessun nuovo ternario isLight nei file migrati', function () {
     expect(('a: isLight ? 1 : 2; b: $.isLight ? 3 : 4'.match(TERNARIO) || []).length).toBe(2);
     // Limiti noti congelati: se la regex si allargasse senza motivo, questi
     // casi diventerebbero rossi e costringerebbero a riconsiderare il pattern.
-    expect('x?: boolean'.match(TERNARIO)).toBeNull(); // proprietà TS opzionale
+    expect('isLight?: boolean'.match(TERNARIO)).toBeNull(); // proprietà TS opzionale
+    expect(('x: isLight? 1 : 2'.match(TERNARIO) || []).length).toBe(1); // senza spazio
+    expect(('x: isLight===true? 1 : 2'.match(TERNARIO) || []).length).toBe(1);
     expect(('!isLight ? 1 : 2'.match(TERNARIO) || []).length).toBe(1); // negazione comunque intercettata
     expect(('isLight === false ? 1 : 2'.match(TERNARIO) || []).length).toBe(1);
     expect('tema === "light" ? 1 : 2'.match(TERNARIO)).toBeNull();

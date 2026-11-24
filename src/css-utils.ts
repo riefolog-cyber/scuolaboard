@@ -30,6 +30,17 @@ export function senzaCommenti(css: string): string {
   return css.replace(/\/\*[\s\S]*?\*\//g, '');
 }
 
+/**
+ * Per i sorgenti TS/TSX: toglie sia i commenti a blocco sia quelli di riga.
+ * `senzaCommenti` da solo non basta: una riga commentata con `//` conterrebbe
+ * ancora il token/pattern che le guardie statiche cercano (falso verde).
+ */
+export function senzaCommentiCodice(src: string): string {
+  return src
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(^|[^:])\/\/.*$/gm, '$1');
+}
+
 /** I selettori che definiscono variabili globali. */
 const SELETTORI_ROOT = [':root'];
 

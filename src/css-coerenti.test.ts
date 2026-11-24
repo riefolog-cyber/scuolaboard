@@ -145,8 +145,14 @@ describe('css: hover dell\'header e pulsante vista attivo', () => {
   it('entrambe le regole hover escludono aria-pressed=true', () => {
     // L'hover ha !important: se una delle due regole perdesse il :not(), il
     // pulsante attivo (testo bianco) tornerebbe invisibile in quel tema.
-    const regole = CSS.match(/\.scuola-header button[^{]*:hover\s*\{[^}]*\}/g) || [];
-    expect(regole.length, 'regole hover dell\'header trovate').toBeGreaterThanOrEqual(2);
+    // Il selettore completo (con l'eventuale prefisso data-theme) serve per
+    // distinguere le due regole: partire da `.scuola-header` perderebbe il tema.
+    const regole = CSS.match(/[^{}]*\.scuola-header button[^{]*:hover\s*\{[^}]*\}/g) || [];
+    // Esattamente UNA per tema: se la regola light sparisse e venisse duplicata
+    // quella dark, un conteggio agglomerato resterebbe verde.
+    expect(regole).toHaveLength(2);
+    expect(regole.filter((r) => r.includes('data-theme="light"'))).toHaveLength(1);
+    expect(regole.filter((r) => !r.includes('data-theme="light"'))).toHaveLength(1);
     regole.forEach((r) => expect(r).toContain(':not([aria-pressed="true"])'));
   });
 });
