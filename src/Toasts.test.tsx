@@ -51,6 +51,16 @@ describe('Toasts', () => {
     expect(screen.getByText('↩ Annulla')).toBeInTheDocument();
   });
 
+  it('il toast con undo NON ha la ✕: l unica uscita è Annulla', () => {
+    // WCAG 2.2.1 chiede un modo per chiudere ciò che RESTA; questo toast lo
+    // chiude sempre il controllore dell'undo a 5s. Con la ✕ sarebbe un falso
+    // dilemma: chiuderlo senza annullare cancellerebbe la card senza più poterla
+    // revocare, e chiuderla annullando contraddirebbe il ✕ di ogni altro toast.
+    renderToasts({ toasts: [{ id: 1, msg: 'Card eliminata', type: 'warn', undo: true }] });
+    expect(screen.queryByRole('button', { name: 'Chiudi notifica' })).toBeNull();
+    expect(screen.getByRole('button', { name: '↩ Annulla' })).toBeInTheDocument();
+  });
+
   it('calls undoDeleteCard on undo click', () => {
     let undoCalled = false;
     renderToasts({

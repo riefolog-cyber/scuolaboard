@@ -1131,12 +1131,12 @@ function AppProvider({ children }: any) {
       elimina: function (cardId: any) {
         fbDel(cardId);
       },
+      // Toglie il toast passando dal hook, non con un `setToasts(filter)`
+      // locale: è il hook che tiene il timer di auto-chiusura e lo spegne (un
+      // filtro scritto qui lascerebbe il timer in volo, e il toast resta in
+      // memoria finché non scade).
       chiudiToast: function (toastId: number) {
-        setToasts(function (p: any[]) {
-          return p.filter(function (t: any) {
-            return t.id !== toastId;
-          });
-        });
+        toastHook.chiudiToast(toastId);
       },
       annullata: function (_cardId: any, toastId: number) {
         setUndoDelete(function (p: any) {
@@ -1187,13 +1187,14 @@ function AppProvider({ children }: any) {
     [cardsHook.cards, undoEliminazioni]
   );
 
-  // Chiude un toast senza toccare l'undo: ci passano il ✕ del toast e i timer.
+  // Chiude un toast: ci passa la ✕ (che oggi compare solo sui toast senza
+  // undo, perché quelli con undo li chiude il controllore a 5s). Se però
+  // quell'id ha ancora un'eliminazione in sospeso — una chiamata diretta, o
+  // una UI vecchia — chiudere e basta la farebbe partire in silenzio: la si
+  // annulla, così la card resta e il toast «Eliminazione annullata ✓» lo dice.
   function chiudiToast(toastId: any) {
-    setToasts(function (p: any[]) {
-      return p.filter(function (t: any) {
-        return t.id !== toastId;
-      });
-    });
+    if (undoEliminazioni.annulla(toastId)) return;
+    toastHook.chiudiToast(toastId);
   }
 
   function undoDeleteCard(toastId?: any) {

@@ -14,6 +14,10 @@ function Sonda() {
   return (
     <div>
       <button onClick={() => $.showToast('ciao')}>mostra</button>
+      {/* Chiude il PRIMO toast: serve a verificare che la chiusura manuale
+          fermi il timer di auto-chiusura (una ✕ che lascia il timer in volo
+          aggiornerebbe lo stato di un toast che non c'è più). */}
+      <button onClick={() => $.toasts.length && $.chiudiToast($.toasts[0].id)}>chiudi</button>
       <span data-testid="conteggio">{$.toasts.length}</span>
       <span data-testid="ids">{$.toasts.map((t) => t.id).join(',')}</span>
     </div>
@@ -86,6 +90,31 @@ describe('useToast · durata da SB_CONFIG.TOAST_TIMEOUT_MS', function () {
     var ids = (screen.getByTestId('ids').textContent || '').split(',');
     expect(ids).toHaveLength(2);
     expect(new Set(ids).size).toBe(2);
+  });
+
+  it('chiudiToast toglie il toast e spegne il suo timer', function () {
+    (window as any).SB_CONFIG = { TOAST_TIMEOUT_MS: 2400 };
+    render(<Sonda />);
+    // Conteggio RELATIVO: i timer interni di React non ci interessano, la
+    // differenza sì (uno in più per il toast, zero dopo la chiusura).
+    var prima = vi.getTimerCount();
+    fireEvent.click(screen.getByText('mostra'));
+    expect(vi.getTimerCount()).toBe(prima + 1);
+    fireEvent.click(screen.getByText('chiudi'));
+    expect(compteggio()).toBe('0');
+    expect(vi.getTimerCount()).toBe(prima);
+  });
+
+  it('smontando il componente i timer dei toast non restano appesi', function () {
+    // Il timer orfano aggiornava lo stato di un componente che non c'era più
+    // (logout, cambio account): senza errore, ma il residuo si somma.
+    (window as any).SB_CONFIG = { TOAST_TIMEOUT_MS: 2400 };
+    var r = render(<Sonda />);
+    var prima = vi.getTimerCount();
+    fireEvent.click(screen.getByText('mostra'));
+    expect(vi.getTimerCount()).toBe(prima + 1);
+    r.unmount();
+    expect(vi.getTimerCount()).toBe(prima);
   });
 
   it('oltre il tetto restano i più recenti (MAX_TOAST)', function () {

@@ -1,11 +1,31 @@
 // useToast.ts · ScuolaBoard · hook di dominio: toast globali
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { aggiungiToast, nuovoIdToast } from '../utils/toast.ts';
 
 type Toast = { id: number; msg: string; type: string; undo?: boolean };
 
 function useToast() {
   var [toasts, setToasts] = useState<Toast[]>([]);
+  // Un timer di auto-chiusura per toast, per POTERLO SPEGNERE. Prima il timer
+  // restava in volo anche su un toast già chiuso (la ✕) e, allo smontaggio
+  // dell'app (logout, cambio account), aggiornava lo stato di un componente
+  // che non c'era più. Il filtro per id rendeva il difetto invisibile, non
+  // inesistente: è il tipo di residuo che poi si somma.
+  var timers = useRef<Map<number, any>>(new Map());
+
+  /** Toglie un toast per id e ne ferma il timer: unico punto di rimozione. */
+  var chiudiToast = useCallback(function (id: number) {
+    var timer = timers.current.get(id);
+    if (timer != null) {
+      clearTimeout(timer);
+      timers.current.delete(id);
+    }
+    setToasts(function (p: Toast[]) {
+      return p.filter(function (t: Toast) {
+        return t.id !== id;
+      });
+    });
+  }, []);
 
   var showToast = useCallback(function (msg: string, type?: string) {
     // Id da un contatore, non `Date.now()`: due toast nello stesso millisecondo
@@ -29,14 +49,32 @@ function useToast() {
     // "persistente" — meglio dichiararlo esplicitamente invalido.
     var durata = Number.isFinite(configurata) && configurata >= 0 ? configurata : 2400;
     if (durata > 0) {
-      setTimeout(function () {
+      var timer = setTimeout(function () {
+        // Il timer ha finito: la voce esce dalla mappa. Se nel frattempo il toast
+        // è stato chiuso a mano, `chiudiToast` l'ha già tolta (e l'ha anche
+        // fermato, quindi qui non si passa).
+        timers.current.delete(id);
         setToasts(function (p: Toast[]) {
           return p.filter(function (t: Toast) {
             return t.id !== id;
           });
         });
       }, durata);
+      timers.current.set(id, timer);
     }
+  }, []);
+
+  // Smontaggio: nessun timer orfano, quindi nessun aggiornamento di stato su un
+  // componente che non esiste più. La mappa si svuota, non si "azzera il campo":
+  // il ref è la stessa istanza anche dopo un rimontaggio.
+  useEffect(function () {
+    var mappa = timers.current;
+    return function () {
+      mappa.forEach(function (timer) {
+        clearTimeout(timer);
+      });
+      mappa.clear();
+    };
   }, []);
 
   // Espone il toast globalmente: fbSave/fbDel in app-utils lo usano come
@@ -52,6 +90,7 @@ function useToast() {
     toasts: toasts,
     setToasts: setToasts,
     showToast: showToast,
+    chiudiToast: chiudiToast,
   };
 }
 export default useToast;

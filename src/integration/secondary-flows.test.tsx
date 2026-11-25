@@ -125,19 +125,22 @@ describe('Elimina card con undo (prof)', () => {
     expect(db._get('cards', 'c2')).toBeTruthy(); // ancora in sospeso, non toccata
   });
 
-  it('la ✕ chiude il toast senza annullare l eliminazione in corso', async () => {
-    const seed = { users: { prof1: PROF_DOC }, cards: { c1: mkCard('c1', { titolo: 'Da eliminare e chiudere' }) } };
+  it('il toast dell undo non ha la ✕: l unica via d uscita è Annulla', async () => {
+    const seed = { users: { prof1: PROF_DOC }, cards: { c1: mkCard('c1', { titolo: 'Da eliminare con undo' }) } };
     await renderApp({ seed, user: PROF });
-    await screen.findByText('Da eliminare e chiudere', {});
+    await screen.findByText('Da eliminare con undo', {});
 
     apriAltreAzioni();
     fireEvent.click(screen.getByRole('button', { name: 'Elimina' }));
     await screen.findByText(/Card eliminata/, {});
 
-    // La ✕ serve perché con TOAST_TIMEOUT_MS = 0 il toast non scade da solo;
-    // chiuderlo non annulla l'eliminazione (il pulsante per farlo è un altro).
-    fireEvent.click(screen.getByRole('button', { name: 'Chiudi notifica' }));
-    await waitFor(() => expect(screen.queryByText(/Card eliminata/)).toBeNull());
+    // Questo toast lo chiude sempre il controllore, dopo UNDO_ELIMINAZIONE_MS:
+    // non resta mai sullo schermo, quindi la ✕ di WCAG 2.2.1 non gli serve. Con
+    // la ✕ sarebbe un falso dilemma: chiuderlo senza annullare cancellerebbe la
+    // card senza più poterla revocare, chiuderlo annullando direbbe il contrario
+    // di quello che fa la ✕ di ogni altro toast.
+    expect(screen.queryByRole('button', { name: 'Chiudi notifica' })).toBeNull();
+    expect(screen.getByRole('button', { name: '↩ Annulla' })).toBeTruthy();
   });
   // Bug B4: il setTimeout da 5s della cancellazione era ORFANO — se il
   // componente smontava prima dello scadere (es. logout/refresh), il timer

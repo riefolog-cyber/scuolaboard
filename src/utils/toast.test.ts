@@ -47,11 +47,23 @@ describe('aggiungiToast', function () {
     expect(ids(fuori)).toEqual([2, 3, 4, 5, 6]);
   });
 
-  it('se sono tutti annullabili il tetto vale lo stesso (via il più vecchio)', function () {
+  it('non scarta MAI un toast annullabile, nemmeno oltre il tetto', function () {
+    // Con più di MAX eliminazioni in sospeso insieme non c'è niente da buttare
+    // senza perdere un'azione: la lista supera il tetto, e ogni voce muore
+    // comunque entro i 5s dell'undo. Prima qui si scartava il più vecchio, e
+    // quella card veniva cancellata senza che nessuno potesse più impedirlo.
     var lista = [t(1, true), t(2, true), t(3, true), t(4, true), t(5, true)];
     var fuori = aggiungiToast(lista, t(6, true));
-    expect(fuori).toHaveLength(MAX_TOAST);
-    expect(ids(fuori)).toEqual([2, 3, 4, 5, 6]);
+    expect(fuori).toHaveLength(MAX_TOAST + 1);
+    expect(ids(fuori)).toEqual([1, 2, 3, 4, 5, 6]);
+  });
+
+  it('il messaggio appena accodato non si scarta mai', function () {
+    // Anche a lista piena di undo: scartarlo farebbe sparire il messaggio appena
+    // mostrato, e chi lo ha chiesto crederebbe di averlo visto.
+    var lista = [t(1, true), t(2, true), t(3, true), t(4, true), t(5, true), t(6, true)];
+    var fuori = aggiungiToast(lista, t(7));
+    expect(ids(fuori)).toEqual([1, 2, 3, 4, 5, 6, 7]);
   });
 
   it('un toast informativo paga il posto al nuovo annullabile', function () {
