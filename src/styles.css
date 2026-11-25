@@ -108,6 +108,11 @@ textarea,input,select,button{font-family:inherit}
 .toast.err{background:linear-gradient(135deg, #991b1b, #b91c1c);border-color:rgba(254,202,202,.35)}
 .toast-action{background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.35);border-radius:8px;padding:4px 10px;cursor:pointer;font-size:11px;font-weight:800;color:#fff}
 .toast-action:hover{background:rgba(255,255,255,.3)}
+/* ✕ di chiusura: con TOAST_TIMEOUT_MS = 0 nessun timer toglie il toast, quindi
+   serve un comando (WCAG 2.2.1). 24x24 minimo (axe target-size) e colore
+   ereditato dal toast: il contrasto è quello già verificato su .toast. */
+.toast-close{display:flex;align-items:center;justify-content:center;min-width:24px;min-height:24px;padding:0;background:none;border:0;border-radius:8px;color:inherit;cursor:pointer;font-size:14px;line-height:1}
+.toast-close:hover{background:rgba(255,255,255,.18)}
 @keyframes toast-in{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
 @media (max-width: 480px){
   .toast-container{left:12px;right:12px;bottom:14px;max-width:none}

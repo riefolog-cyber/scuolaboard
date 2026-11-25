@@ -91,6 +91,54 @@ describe('Elimina card con undo (prof)', () => {
     });
   });
 
+  // Due eliminazioni ravvicinate: ogni toast annulla la SUA card. Prima lo
+  // stato dell'undo era uno solo, quindi "Annulla" sul primo toast riportava
+  // indietro la SECONDA card e la prima veniva cancellata comunque.
+  it('con due eliminazioni ravvicinate ogni "Annulla" agisce sulla sua card', async () => {
+    const seed = {
+      users: { prof1: PROF_DOC },
+      cards: {
+        c1: mkCard('c1', { titolo: 'Prima da eliminare' }),
+        c2: mkCard('c2', { titolo: 'Seconda da eliminare' }),
+      },
+    };
+    const { db } = await renderApp({ seed, user: PROF });
+    await screen.findByText('Prima da eliminare', {});
+    await screen.findByText('Seconda da eliminare', {});
+
+    function elimina(id: string) {
+      // Scoping alla card: con due card in bacheca ci sono due "Altre azioni".
+      const card = document.getElementById('card-' + id) as HTMLElement;
+      fireEvent.click(within(card).getByRole('button', { name: 'Altre azioni' }));
+      fireEvent.click(within(card).getByRole('button', { name: 'Elimina' }));
+    }
+
+    elimina('c1');
+    await waitFor(() => expect(screen.getAllByRole('button', { name: '↩ Annulla' })).toHaveLength(1));
+    elimina('c2');
+    await waitFor(() => expect(screen.getAllByRole('button', { name: '↩ Annulla' })).toHaveLength(2));
+
+    // Il PRIMO toast annulla la PRIMA card: la seconda resta in sospeso.
+    fireEvent.click(screen.getAllByRole('button', { name: '↩ Annulla' })[0]);
+    await waitFor(() => expect(screen.getAllByRole('button', { name: '↩ Annulla' })).toHaveLength(1));
+    expect(db._get('cards', 'c1')).toBeTruthy(); // tenuta: undo della sua card
+    expect(db._get('cards', 'c2')).toBeTruthy(); // ancora in sospeso, non toccata
+  });
+
+  it('la ✕ chiude il toast senza annullare l eliminazione in corso', async () => {
+    const seed = { users: { prof1: PROF_DOC }, cards: { c1: mkCard('c1', { titolo: 'Da eliminare e chiudere' }) } };
+    await renderApp({ seed, user: PROF });
+    await screen.findByText('Da eliminare e chiudere', {});
+
+    apriAltreAzioni();
+    fireEvent.click(screen.getByRole('button', { name: 'Elimina' }));
+    await screen.findByText(/Card eliminata/, {});
+
+    // La ✕ serve perché con TOAST_TIMEOUT_MS = 0 il toast non scade da solo;
+    // chiuderlo non annulla l'eliminazione (il pulsante per farlo è un altro).
+    fireEvent.click(screen.getByRole('button', { name: 'Chiudi notifica' }));
+    await waitFor(() => expect(screen.queryByText(/Card eliminata/)).toBeNull());
+  });
   // Bug B4: il setTimeout da 5s della cancellazione era ORFANO — se il
   // componente smontava prima dello scadere (es. logout/refresh), il timer
   // girava comunque e fbDel partiva DOPO lo smontaggio (cancellazione
@@ -104,8 +152,8 @@ describe('Elimina card con undo (prof)', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Elimina' }));
     await screen.findByText(/Card eliminata/, {});
 
-    // Smonta SUBITO (prima dello scadere dei 5s): il cleanup deve fare
-    // clearTimeout sul ref del timer di undo.
+    // Smonta SUBITO (prima dello scadere dei 5s): il cleanup deve fermare i
+    // timer dell'undo (`undoEliminazioni.ferma()` in AppProvider).
     unmount();
 
     // Aspetta PIÙ dei 5s del timer originale: senza il fix B4 fbDel

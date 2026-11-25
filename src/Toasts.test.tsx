@@ -12,6 +12,7 @@ describe('Toasts', () => {
     $ = {
       toasts: [],
       undoDeleteCard: () => {},
+      chiudiToast: () => {},
     };
   });
 
@@ -60,6 +61,34 @@ describe('Toasts', () => {
     });
     fireEvent.click(screen.getByText('↩ Annulla'));
     expect(undoCalled).toBe(true);
+  });
+
+  it('chiude il toast dal pulsante ✕ (con TOAST_TIMEOUT_MS = 0 è l unico modo)', () => {
+    const chiusi: number[] = [];
+    renderToasts({
+      toasts: [{ id: 42, msg: 'Errore di salvataggio', type: 'err' }],
+      chiudiToast: (id: number) => {
+        chiusi.push(id);
+      },
+    });
+    // Una ✕ senza nome accessibile sarebbe un bottone muto per lo screen reader.
+    fireEvent.click(screen.getByRole('button', { name: 'Chiudi notifica' }));
+    expect(chiusi).toEqual([42]);
+  });
+
+  it('il pulsante Annulla rimanda l id della SUA card', () => {
+    const annullati: number[] = [];
+    renderToasts({
+      toasts: [
+        { id: 7, msg: 'Card eliminata', type: 'warn', undo: true },
+        { id: 8, msg: 'Card eliminata', type: 'warn', undo: true },
+      ],
+      undoDeleteCard: (id: number) => {
+        annullati.push(id);
+      },
+    });
+    fireEvent.click(screen.getAllByRole('button', { name: '↩ Annulla' })[0]);
+    expect(annullati).toEqual([7]);
   });
 
   it('renders multiple toasts', () => {

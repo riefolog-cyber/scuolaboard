@@ -7,6 +7,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import React from 'react';
 import useToast from './hooks/useToast.ts';
+import { MAX_TOAST } from './utils/toast.ts';
 
 function Sonda() {
   var $ = useToast();
@@ -14,6 +15,7 @@ function Sonda() {
     <div>
       <button onClick={() => $.showToast('ciao')}>mostra</button>
       <span data-testid="conteggio">{$.toasts.length}</span>
+      <span data-testid="ids">{$.toasts.map((t) => t.id).join(',')}</span>
     </div>
   );
 }
@@ -71,5 +73,25 @@ describe('useToast · durata da SB_CONFIG.TOAST_TIMEOUT_MS', function () {
       expect(compteggio()).toBe('0');
       r.unmount();
     });
+  });
+
+  it('due toast nello stesso istante hanno id diversi', function () {
+    (window as any).SB_CONFIG = { TOAST_TIMEOUT_MS: 0 };
+    render(<Sonda />);
+    fireEvent.click(screen.getByText('mostra'));
+    fireEvent.click(screen.getByText('mostra'));
+    // I timer finti congelano anche `Date.now()`: è proprio il caso in cui due
+    // id presi da `Date.now()` coincidevano. Con lo stesso id React segnalava
+    // chiavi duplicate e la chiusura di uno portava via anche l'altro.
+    var ids = (screen.getByTestId('ids').textContent || '').split(',');
+    expect(ids).toHaveLength(2);
+    expect(new Set(ids).size).toBe(2);
+  });
+
+  it('oltre il tetto restano i più recenti (MAX_TOAST)', function () {
+    (window as any).SB_CONFIG = { TOAST_TIMEOUT_MS: 0 };
+    render(<Sonda />);
+    for (var i = 0; i < MAX_TOAST + 3; i++) fireEvent.click(screen.getByText('mostra'));
+    expect(compteggio()).toBe(String(MAX_TOAST));
   });
 });

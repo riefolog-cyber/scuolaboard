@@ -13,6 +13,8 @@ import useClassi from '../hooks/useClassi.ts';
 import useNotifiche from '../hooks/useNotifiche.ts';
 import useTheme from '../hooks/useTheme.ts';
 import { segnaApertura } from '../utils/apertura-card.ts';
+import { aggiungiToast, nuovoIdToast } from '../utils/toast.ts';
+import { creaUndoEliminazioni } from '../undo-eliminazione.ts';
 import useDragDrop from '../hooks/useDragDrop.ts';
 import { useAuth } from '../auth.ts';
 import { segna } from '../diagnostica.ts';
@@ -1114,65 +1116,92 @@ function AppProvider({ children }: any) {
     modals.setConfirmDel({ type: 'quiz_reset', cardId: cardId });
   }
 
-  // Ref del timer di undo: serve a fare clearTimeout anche se il componente
-  // smonta prima dello scadere dei 5s (timer orfano → fbDel post-smontaggio).
-  var undoDeleteTimerRef = useRef<any>(null);
+  // ── UNDO DELLE ELIMINAZIONI ──────────────────────────────────────────────
+  // Ogni eliminazione ha la sua voce, indicizzata per id del toast (il
+  // controllore sta in `undo-eliminazione.ts`, senza React e con i timer
+  // iniettabili). Prima lo stato era UNO solo: con due eliminazioni ravvicinate
+  // il pulsante "↩ Annulla" del primo toast annullava la SECONDA card, e la
+  // prima veniva cancellata comunque.
+  var undoEliminazioniRef = useRef<any>(null);
+  if (!undoEliminazioniRef.current) {
+    undoEliminazioniRef.current = creaUndoEliminazioni({
+      // La cascata sugli allegati (Firestore non la fa) vive DENTRO fbDel, che è
+      // l'unico punto di cancellazione delle card: così vale anche per i percorsi
+      // che non passano da qui (es. rifiuto di una proposta).
+      elimina: function (cardId: any) {
+        fbDel(cardId);
+      },
+      chiudiToast: function (toastId: number) {
+        setToasts(function (p: any[]) {
+          return p.filter(function (t: any) {
+            return t.id !== toastId;
+          });
+        });
+      },
+      annullata: function (_cardId: any, toastId: number) {
+        setUndoDelete(function (p: any) {
+          return p && p.toastId === toastId ? null : p;
+        });
+        showToast('Eliminazione annullata ✓', 'ok');
+      },
+      eliminata: function (_cardId: any, toastId: number) {
+        setUndoDelete(function (p: any) {
+          return p && p.toastId === toastId ? null : p;
+        });
+      },
+    });
+  }
+  var undoEliminazioni = undoEliminazioniRef.current;
+
+  // I timer dell'undo muoiono con il provider: nessuna cancellazione "spettrale"
+  // di una card che l'utente aveva deciso di tenere (bug B4).
   useEffect(
     function () {
       return function () {
-        if (undoDeleteTimerRef.current) {
-          clearTimeout(undoDeleteTimerRef.current);
-          undoDeleteTimerRef.current = null;
-        }
+        undoEliminazioni.ferma();
       };
     },
-    []
+    [undoEliminazioni]
   );
 
   var delCardWithUndo = useCallback(
     function (id: any) {
       // cardsHookRef.current, non `cardsHook`: i due possono divergere (il ref
-      // è aggiornato a ogni render). Con la copia chiusa l'array era vuoto e la
-      // cancellazione si fermava in silenzio — nessun toast, nessuna conferma,
+      // è aggiornato a ogni render). Con la copia chiusa l'array era vuoto e
+      // la cancellazione si fermava in silenzio — nessun toast, nessuna conferma,
       // nessun errore: il semplice fatto che la card non venga trovata.
       var card = cardsHookRef.current.cards.find(function (c: any) {
         return c.id === id;
       });
       if (!card) return;
       setShowCard(null);
-      var toastId = Date.now();
-      var timer = setTimeout(function () {
-        undoDeleteTimerRef.current = null;
-        // La cascata sugli allegati (Firestore non la fa) vive DENTRO fbDel, che è
-        // l'unico punto di cancellazione delle card: così vale anche per i percorsi
-        // che non passano da qui (es. rifiuto di una proposta).
-        fbDel(id);
-        setUndoDelete(null);
-        setToasts(function (p) {
-          return p.filter(function (t) {
-            return t.id !== toastId;
-          });
-        });
-      }, 5000);
-      undoDeleteTimerRef.current = timer;
-      setUndoDelete({ card: card, timer: timer, toastId: toastId });
-      setToasts(function (p) {
-        return p.concat([{ id: toastId, msg: 'Card eliminata', type: 'warn', undo: true }]);
+      // Un id unico (contatore, non `Date.now()`) lega toast e undo: è quello
+      // che il pulsante "↩ Annulla" rimanda indietro.
+      var toastId = nuovoIdToast();
+      undoEliminazioni.avvia(id, toastId);
+      setUndoDelete({ card: card, toastId: toastId });
+      setToasts(function (p: any[]) {
+        return aggiungiToast(p, { id: toastId, msg: 'Card eliminata', type: 'warn', undo: true });
       });
     },
-    [cardsHook.cards]
+    [cardsHook.cards, undoEliminazioni]
   );
 
-  function undoDeleteCard() {
-    if (!undoDelete) return;
-    clearTimeout(undoDelete.timer);
-    setToasts(function (p) {
-      return p.filter(function (t) {
-        return t.id !== undoDelete.toastId;
+  // Chiude un toast senza toccare l'undo: ci passano il ✕ del toast e i timer.
+  function chiudiToast(toastId: any) {
+    setToasts(function (p: any[]) {
+      return p.filter(function (t: any) {
+        return t.id !== toastId;
       });
     });
-    setUndoDelete(null);
-    showToast('Eliminazione annullata ✓', 'ok');
+  }
+
+  function undoDeleteCard(toastId?: any) {
+    // L'id arriva dal toast: è la SUA card. Senza id — vecchia firma — si
+    // annulla l'ultima eliminazione in sospeso.
+    var id = toastId != null ? toastId : undoDelete && undoDelete.toastId;
+    if (id == null) return;
+    undoEliminazioni.annulla(id);
   }
 
   // Decide se il gesto "Elimina" deve chiedere quale classe coinvolge: solo se
@@ -2172,6 +2201,7 @@ var cardsValue = useMemo(
         // Toast / Undo / Bulk
         toasts: toasts,
         setToasts: setToasts,
+        chiudiToast: chiudiToast,
         undoDelete: undoDelete,
         setUndoDelete: setUndoDelete,
         bulkMode: bulkMode,
