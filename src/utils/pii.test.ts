@@ -47,6 +47,19 @@ describe('mascheraPII: identificatori italiani', () => {
     const r = mascheraPII('IT60X0542811101000000123456');
     expect(r.txt).toBe('[IBAN_1]');
   });
+
+  it('maschera un IBAN scritto a gruppi di 4, come su un estratto conto', () => {
+    // La forma stampata dalle banche era scoperta: proprio la più facile da
+    // copiare incollando arrivava al modello in chiaro.
+    const r = mascheraPII('Bonifico su IT60 X054 2811 0100 0000 1234 56 grazie');
+    expect(r.txt).toBe('Bonifico su [IBAN_1] grazie');
+    expect(r.mappa['[IBAN_1]']).toBe('IT60 X054 2811 0100 0000 1234 56');
+  });
+
+  it('maschera le altre grafie a gruppi (trattini, minuscolo)', () => {
+    expect(mascheraPII('IT60-X054-2811-0100-0000-1234-56').txt).toBe('[IBAN_1]');
+    expect(mascheraPII('it60 x054 2811 0100 0000 1234 56').txt).toBe('[IBAN_1]');
+  });
 });
 
 describe('mascheraPII: telefoni', () => {
@@ -63,6 +76,14 @@ describe('mascheraPII: telefoni', () => {
   it('maschera il cellulare scritto attaccato', () => {
     const r = mascheraPII('scrivi al 3331234567');
     expect(r.txt).toBe('scrivi al [TEL_1]');
+  });
+
+  it('maschera il fisso scritto a gruppi, come su un avviso', () => {
+    // L'altra forma reale del fisso: prefisso + gruppi di cifre. Prima era
+    // coperta solo la forma con UN separatore (051/123456).
+    expect(mascheraPII('chiama il 06 1234 5678 domani').txt).toBe('chiama il [TEL_1] domani');
+    expect(mascheraPII('051 123 4567').txt).toBe('[TEL_1]');
+    expect(mascheraPII('tel. 06.1234.5678').txt).toBe('tel. [TEL_1]');
   });
 });
 
@@ -88,12 +109,35 @@ describe('mascheraPII: falsi positivi', () => {
     const testo = 'RSSMRA85H12F205 (senza lettera finale) non è un CF';
     expect(mascheraPII(testo).txt).toBe(testo);
   });
+
+  it('non scambia per telefono una data, un orario o un decimale', () => {
+    // Il ramo "fisso a gruppi" chiede 3-4 cifre, un separatore e 4 cifre: una
+    // data 05/12/2026 non ci arriva (le cifre del mese sono due) e i decimali
+    // non hanno il prefisso 0+numero.
+    const testo = 'il 05/12/2026 alle 08:30, 0.25 di punto e 0,5 di voto';
+    expect(mascheraPII(testo).txt).toBe(testo);
+  });
+
+  it('non scambia per IBAN due parole maiuscole corte', () => {
+    // Il ramo a gruppi pretende almeno 3 gruppi pieni (12 caratteri): senza
+    // questo vincolo "AB12 CD34" sarebbe diventato un IBAN.
+    const testo = 'AB12 CD34 e IT60 ROMA';
+    expect(mascheraPII(testo).txt).toBe(testo);
+  });
 });
 
 describe('ripristinaPII', () => {
   it('rimette i valori veri', () => {
     const r = mascheraPII('scrivi a a@b.it, CF RSSMRA85H12F205Y');
     expect(ripristinaPII(r.txt, r.mappa)).toBe('scrivi a a@b.it, CF RSSMRA85H12F205Y');
+  });
+
+  it('riporta al loro posto IBAN e telefono scritti a gruppi', () => {
+    // Andata e ritorno sulla forma a gruppi: il docente nella risposta deve
+    // rivedere la stringa identica a quella che ha scritto (spazi compresi).
+    const testo = 'IBAN IT60 X054 2811 0100 0000 1234 56 e telefono 06 1234 5678';
+    const r = mascheraPII(testo);
+    expect(ripristinaPII(r.txt, r.mappa)).toBe(testo);
   });
 
   it('gestisce i segnaposto con numeri a più cifre (EMAIL_10 prima di EMAIL_1)', () => {

@@ -11,6 +11,9 @@
 // nell'unico punto che parla con il Worker (chiamaAI in ai-services.ts), così
 // ogni chiamata — presente e futura — è coperta. I segnaposto sono tipizzati e
 // numerati; la mappa consente di ripristinare i valori veri nella risposta.
+// Le forme SCRITTE A GRUPPI valgono quanto quelle compatte: un IBAN
+// "IT60 X054 2811 …" e un fisso "06 1234 5678" sono la forma stampata su una
+// carta, non una variante rara. Senza le loro regole uscivano in chiaro.
 //
 // LIMITE DICHIARATO: i numeri FISSI scritti senza alcun separatore (es.
 // "051123456") non vengono riconosciuti. È una scelta deliberata: una regola
@@ -28,11 +31,11 @@ type Regola = { tipo: string; re: RegExp };
 function regolaTelefono(): RegExp {
   try {
     return new RegExp(
-      '(?<![\\p{L}\\p{N}])(?:\\+39[\\s./-]?)?(?:3\\d{2}[\\s./-]?\\d{3}[\\s./-]?\\d{3,4}|0\\d{1,3}[\\s./-]\\d{6,8})(?![\\p{L}\\p{N}])',
+      '(?<![\\p{L}\\p{N}])(?:\\+39[\\s./-]?)?(?:3\\d{2}[\\s./-]?\\d{3}[\\s./-]?\\d{3,4}|0\\d{1,3}[\\s./-]\\d{6,8}|0\\d{1,3}[\\s./-]\\d{3,4}[\\s./-]\\d{4})(?![\\p{L}\\p{N}])',
       'gu'
     );
   } catch (e) {
-    return /(?:\+39[\s./-]?)?(?:3\d{2}[\s./-]?\d{3}[\s./-]?\d{3,4}|0\d{1,3}[\s./-]\d{6,8})/g;
+    return /(?:\+39[\s./-]?)?(?:3\d{2}[\s./-]?\d{3}[\s./-]?\d{3,4}|0\d{1,3}[\s./-]\d{6,8}|0\d{1,3}[\s./-]\d{3,4}[\s./-]\d{4})/g;
   }
 }
 
@@ -44,13 +47,27 @@ var REGOLE: Regola[] = [
   { tipo: 'EMAIL', re: /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi },
   // IBAN italiano (27 caratteri: IT + 2 controllo + 1 CIN + 5 ABI + 5 CAB + 12)
   // e, più in generale, qualunque IBAN europeo plausibile.
-  { tipo: 'IBAN', re: /\b(?=[A-Z]{2}\d{2})[A-Z]{2}\d{2}[A-Z0-9]{11,30}\b/gi },
+  // DUE forme, non una: quella compatta (IT60X054…) e quella a gruppi di 4
+  // (IT60 X054 2811 0100 0000 1234 56), che è la forma stampata su un estratto
+  // conto e quella che si detta al telefono. La seconda era scoperta — proprio
+  // la più facile da copiare da una banca arrivava al modello in chiaro. Il
+  // ramo a gruppi chiede almeno 3 gruppi pieni (12 caratteri: un IBAN valido ne
+  // ha almeno 11 dopo i primi 4) e un solo separatore alla volta, così non
+  // scatta su due parole corte maiuscole separate da uno spazio.
+  {
+    tipo: 'IBAN',
+    re: /\b(?=[A-Z]{2}\d{2})[A-Z]{2}\d{2}(?:[A-Z0-9]{11,30}|(?:[ -]?[A-Z0-9]{4}){3,7}(?:[ -]?[A-Z0-9]{1,3})?)\b/gi,
+  },
   // Codice fiscale (16 caratteri): la struttura del CF è abbastanza rigida da
   // evitare falsi positivi senza dover calcolare il carattere di controllo.
   { tipo: 'CF', re: /\b[A-Z]{6}\d{2}[A-EHLMPRST]\d{2}[A-Z]\d{3}[A-Z]\b/gi },
-  // Telefoni: cellulari (con o senza separatori) e fissi con un separatore tra
-  // prefisso e numero (051/123456). Il fisso tutto attaccato è volutamente
-  // escluso (vedi limite dichiarato in testa al file).
+  // Telefoni: cellulari (con o senza separatori) e fissi scritti a gruppi.
+  // I fissi hanno DUE forme reali: prefisso + numero (051/123456) e prefisso +
+  // gruppi (06 1234 5678, 051 123 4567), che è come si scrive un numero di
+  // rete fissa su un avviso o una circolare. La seconda era scoperta e passava
+  // al modello in chiaro. Il fisso tutto attaccato (051123456) resta escluso
+  // di proposito (vedi limite dichiarato in testa al file): una regola che
+  // accetti qualunque sequenza di cifre mangerebbe i numeri delle lezioni.
   {
     tipo: 'TEL',
     re: regolaTelefono(),
