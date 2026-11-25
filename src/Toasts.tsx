@@ -26,6 +26,7 @@ function Toasts__({ $ }: any) {
               // eliminazione più recente non deve cambiare il bersaglio
               // (vedi src/undo-eliminazione.ts).
               <button
+                type="button"
                 className="toast-action"
                 onClick={function () {
                   $.undoDeleteCard(t.id);

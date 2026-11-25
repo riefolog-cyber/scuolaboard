@@ -58,7 +58,11 @@ describe('Toasts', () => {
     // revocare, e chiuderla annullando contraddirebbe il ✕ di ogni altro toast.
     renderToasts({ toasts: [{ id: 1, msg: 'Card eliminata', type: 'warn', undo: true }] });
     expect(screen.queryByRole('button', { name: 'Chiudi notifica' })).toBeNull();
-    expect(screen.getByRole('button', { name: '↩ Annulla' })).toBeInTheDocument();
+    const annulla = screen.getByRole('button', { name: '↩ Annulla' });
+    expect(annulla).toBeInTheDocument();
+    // Dentro un <form> (non oggi, ma domani) un bottone senza `type` invierebbe
+    // il form invece di annullare: la ✕ ce l'ha, questo no.
+    expect(annulla).toHaveAttribute('type', 'button');
   });
 
   it('calls undoDeleteCard on undo click', () => {

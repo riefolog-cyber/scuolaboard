@@ -22,7 +22,7 @@ import { leggiConsensoEntro } from '../consensi-servizio.ts';
 import { useCards } from '../cards.ts';
 import { useAI } from '../ai-services.ts';
 import { useModals } from '../modals.ts';
-import { createAppHandlers } from '../app-handlers.ts';
+import { createAppHandlers, anteprimaTesto } from '../app-handlers.ts';
 import { conEsclusione, eliminabileSoloDaClasse } from '../card-classi.ts';
 import {
   fbSave,
@@ -1149,6 +1149,13 @@ function AppProvider({ children }: any) {
           return p && p.toastId === toastId ? null : p;
         });
       },
+      // Guasto sincrono della cancellazione (db non inizializzato): `fbDel`
+      // non rigetta mai — mostra lui il toast d'errore — quindi una rejection
+      // non arriva qui. Senza questo messaggio l'unica traccia sarebbe il
+      // toast dell'undo che sparisce mentre la card è ancora in bacheca.
+      errore: function (_cardId: any, e: any) {
+        showToast('Non riesco a eliminare la card: ' + ((e && e.message) || 'errore sconosciuto'), 'err');
+      },
     });
   }
   var undoEliminazioni = undoEliminazioniRef.current;
@@ -1178,10 +1185,25 @@ function AppProvider({ children }: any) {
       // Un id unico (contatore, non `Date.now()`) lega toast e undo: è quello
       // che il pulsante "↩ Annulla" rimanda indietro.
       var toastId = nuovoIdToast();
-      undoEliminazioni.avvia(id, toastId);
+      // `false` = quella card ha già un'eliminazione in sospeso (doppio clic
+      // su "Elimina"): il suo toast è già sullo schermo. Un secondo toast
+      // direbbe "due eliminazioni" e il suo «Annulla», arrivando dopo il primo
+      // timer, risponderebbe «Eliminazione annullata ✓» per una card già
+      // cancellata.
+      if (!undoEliminazioni.avvia(id, toastId)) return;
+      // Il titolo, non solo "Card eliminata": con due eliminazioni ravvicinate
+      // i toast erano identici e l'unico modo per capire quale «Annulla»
+      // premere era la posizione. `anteprimaTesto` taglia al confine di parola,
+      // come per le notifiche dei commenti.
+      var titolo = anteprimaTesto(card.titolo, 60);
       setUndoDelete({ card: card, toastId: toastId });
       setToasts(function (p: any[]) {
-        return aggiungiToast(p, { id: toastId, msg: 'Card eliminata', type: 'warn', undo: true });
+        return aggiungiToast(p, {
+          id: toastId,
+          msg: titolo ? 'Card eliminata: ' + titolo : 'Card eliminata',
+          type: 'warn',
+          undo: true,
+        });
       });
     },
     [cardsHook.cards, undoEliminazioni]

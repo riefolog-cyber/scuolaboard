@@ -7,16 +7,21 @@
 import { describe, it, expect } from 'vitest';
 import { UNDO_ELIMINAZIONE_MS, creaUndoEliminazioni } from './undo-eliminazione.ts';
 
-function setup() {
+// `cancellaMale` simula il guasto SINCRONO della cancellazione (db non
+// inizializzato): `fbDel` non rigetta mai, quindi una rejection non arriva
+// al controllore e questo è l'unico canale d'errore vero.
+function setup(cancellaMale?: boolean) {
   var pianificati: Array<{ fn: () => void; ms: number }> = [];
   var annullati: any[] = [];
   var eliminati: any[] = [];
   var chiusi: number[] = [];
+  var errori: Array<{ cardId: any; e: any }> = [];
   var annullate: Array<{ cardId: any; toastId: number }> = [];
   var finite: Array<{ cardId: any; toastId: number }> = [];
 
   var ctrl = creaUndoEliminazioni({
     elimina: function (cardId: any) {
+      if (cancellaMale) throw new Error('db non pronto');
       eliminati.push(cardId);
     },
     chiudiToast: function (toastId: number) {
@@ -28,6 +33,9 @@ function setup() {
     eliminata: function (cardId: any, toastId: number) {
       finite.push({ cardId: cardId, toastId: toastId });
     },
+    errore: function (cardId: any, e: any) {
+      errori.push({ cardId: cardId, e: e });
+    },
     // Timer finti: si fanno scattare a mano, i test non aspettano 5s.
     pianifica: function (fn: () => void, ms: number) {
       pianificati.push({ fn: fn, ms: ms });
@@ -38,7 +46,16 @@ function setup() {
     },
   });
 
-  return { ctrl: ctrl, pianificati: pianificati, annullati: annullati, eliminati: eliminati, chiusi: chiusi, annullate: annullate, finite: finite };
+  return {
+    ctrl: ctrl,
+    pianificati: pianificati,
+    annullati: annullati,
+    eliminati: eliminati,
+    chiusi: chiusi,
+    annullate: annullate,
+    finite: finite,
+    errori: errori,
+  };
 }
 
 describe('creaUndoEliminazioni', function () {
@@ -104,6 +121,36 @@ describe('creaUndoEliminazioni', function () {
     expect(s.ctrl.avvia('c2', 5)).toBe(false);
     expect(s.ctrl.inCorso()).toBe(1);
     expect(s.pianificati).toHaveLength(1);
+  });
+
+  it('la stessa card non ha due eliminazioni in sospeso (doppio clic su Elimina)', function () {
+    var s = setup();
+    expect(s.ctrl.avvia('c1', 1)).toBe(true);
+    // Stessa card, id del toast nuovo: prima nasceva un SECONDO toast per la
+    // stessa card, il primo timer la cancellava e l'«Annulla» del secondo
+    // rispondeva «Eliminazione annullata ✓» per una card già sparita.
+    expect(s.ctrl.avvia('c1', 2)).toBe(false);
+    expect(s.ctrl.inCorso()).toBe(1);
+    expect(s.pianificati).toHaveLength(1);
+    // Il rifiuto non tocca la voce buona: il timer scatta e cancella una volta.
+    s.pianificati[0].fn();
+    expect(s.eliminati).toEqual(['c1']);
+  });
+
+  it('se la cancellazione solleva, il toast si chiude lo stesso e l errore si vede', function () {
+    var s = setup(true);
+    // Un toast con undo NON ha la ✕: se l'eccezione uscisse dal timer il toast
+    // resterebbe sullo schermo per sempre, senza modo di chiuderlo (è proprio
+    // il caso "db non pronto" dopo un logout).
+    expect(function () {
+      s.ctrl.avvia('c1', 7);
+      s.pianificati[0].fn();
+    }).not.toThrow();
+    expect(s.chiusi).toEqual([7]);
+    expect(s.errori).toHaveLength(1);
+    expect(s.errori[0].cardId).toBe('c1');
+    expect(s.finite).toEqual([{ cardId: 'c1', toastId: 7 }]);
+    expect(s.ctrl.inCorso()).toBe(0);
   });
 
   it('ferma (smontaggio del provider) non cancella nessuna card', function () {

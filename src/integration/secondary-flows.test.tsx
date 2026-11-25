@@ -82,8 +82,10 @@ describe('Elimina card con undo (prof)', () => {
 
     apriAltreAzioni();
     fireEvent.click(screen.getByRole('button', { name: 'Elimina' }));
-    // Il toast contiene icona + messaggio + bottone undo: match parziale
-    expect(await screen.findByText(/Card eliminata/, {})).toBeTruthy();
+    // Il toast contiene icona + messaggio + bottone undo: match parziale. E
+    // dice QUALE card: con due eliminazioni ravvicinate i messaggi erano
+    // identici e l'unico modo per scegliere l'«Annulla» giusto era la posizione.
+    expect(await screen.findByText(/Card eliminata: Da eliminare/, {})).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: '↩ Annulla' }));
     await waitFor(() => {
@@ -123,6 +125,37 @@ describe('Elimina card con undo (prof)', () => {
     await waitFor(() => expect(screen.getAllByRole('button', { name: '↩ Annulla' })).toHaveLength(1));
     expect(db._get('cards', 'c1')).toBeTruthy(); // tenuta: undo della sua card
     expect(db._get('cards', 'c2')).toBeTruthy(); // ancora in sospeso, non toccata
+  });
+
+  // Doppio clic su "Elimina" della STESSA card (o doppio tocco sul telefono):
+  // prima nascevano due toast identici e due voci in sospeso per la stessa card.
+  // Il primo timer la cancellava, e l'«Annulla» del secondo toast rispondeva
+  // «Eliminazione annullata ✓» per una card già sparita. Ora il secondo avvio
+  // è rifiutato dal controllore e non accoda niente.
+  it('un secondo Elimina sulla stessa card non accoda un altro toast', async () => {
+    const seed = { users: { prof1: PROF_DOC }, cards: { c1: mkCard('c1', { titolo: 'Clic due volte' }) } };
+    const { db } = await renderApp({ seed, user: PROF });
+    await screen.findByText('Clic due volte', {});
+
+    const card = document.getElementById('card-c1') as HTMLElement;
+    function elimina() {
+      // Il menu delle azioni può richiudersi dopo il primo "Elimina": si
+      // riapre solo se il bottone non è più nel DOM.
+      if (!within(card).queryByRole('button', { name: 'Elimina' })) {
+        fireEvent.click(within(card).getByRole('button', { name: 'Altre azioni' }));
+      }
+      fireEvent.click(within(card).getByRole('button', { name: 'Elimina' }));
+    }
+
+    elimina();
+    await waitFor(() => expect(screen.getAllByRole('button', { name: '↩ Annulla' })).toHaveLength(1));
+    elimina();
+    await waitFor(() => expect(screen.getAllByRole('button', { name: '↩ Annulla' })).toHaveLength(1));
+
+    // L'unico toast annulla la card: la seconda voce non esisteva proprio.
+    fireEvent.click(screen.getByRole('button', { name: '↩ Annulla' }));
+    await waitFor(() => expect(screen.queryAllByRole('button', { name: '↩ Annulla' })).toHaveLength(0));
+    expect(db._get('cards', 'c1')).toBeTruthy();
   });
 
   it('il toast dell undo non ha la ✕: l unica via d uscita è Annulla', async () => {

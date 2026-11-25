@@ -25,6 +25,13 @@ export function creaUndoEliminazioni(deps: {
   annullata: (_cardId: any, _toastId: number) => void;
   /** L'undo è scaduto e la card è stata cancellata. */
   eliminata: (_cardId: any, _toastId: number) => void;
+  /**
+   * La cancellazione è fallita PRIMA di diventare una promise (es. `db` non
+   * inizializzato): `fbDel` non rigetta mai, quindi una rejection non passa di
+   * qui. Serve perché l'unico altro esito sarebbe il toast che sparisce in
+   * silenzio mentre la card è ancora lì.
+   */
+  errore?: (_cardId: any, _e: any) => void;
   durataMs?: number;
   pianifica?: (_fn: () => void, _ms: number) => any;
   annullaTimer?: (_t: any) => void;
@@ -44,19 +51,39 @@ export function creaUndoEliminazioni(deps: {
 
   /**
    * Avvia l'undo di una card. `toastId` è l'id del toast appena accodato:
-   * ritornare `false` (id mancante o già in uso) vuol dire che qualcosa nel
-   * chiamante è sbagliato, non che si può procedere lo stesso.
+   * ritornare `false` vuol dire che chi chiama NON deve accodare il toast (id
+   * mancante o già in uso, oppure la card ha già una voce in sospeso).
    */
   function avvia(cardId: any, toastId: number): boolean {
     if (toastId == null || voci.has(toastId)) return false;
+    // UNA card, UNA eliminazione in sospeso. Il doppio clic su "Elimina" (o il
+    // doppio tocco sul telefono) accodava un SECONDO toast per la stessa card:
+    // il primo timer la cancellava, e il secondo toast restava lì con «↩ Annulla»
+    // che rispondeva «Eliminazione annullata ✓» per una card già cancellata —
+    // un messaggio falso, la specie di difetto che questo modulo esiste per
+    // impedire. Rifiutare il secondo avvio costa un toast in meno, non un'azione.
+    var doppia = false;
+    voci.forEach(function (voce) {
+      if (String(voce.cardId) === String(cardId)) doppia = true;
+    });
+    if (doppia) return false;
     var timer = pianifica(function () {
       // Può essere stata annullata nel frattempo: il timer è già stato fermato,
       // ma la guardia evita di cancellare una card che l'utente ha tenuto.
       if (!voci.has(toastId)) return;
       voci.delete(toastId);
-      deps.elimina(cardId);
-      deps.chiudiToast(toastId);
-      deps.eliminata(cardId, toastId);
+      try {
+        deps.elimina(cardId);
+      } catch (e) {
+        // Guasto sincrono, non una rejection di Firestore: senza questo canale
+        // l'errore resterebbe invisibile (il toast sparisce e la card è ancora lì).
+        if (deps.errore) deps.errore(cardId, e);
+      } finally {
+        // Il toast si chiude SEMPRE: un toast con undo non ha la ✕, quindi se
+        // un'eccezione uscisse da qui resterebbe sullo schermo per sempre.
+        deps.chiudiToast(toastId);
+        deps.eliminata(cardId, toastId);
+      }
     }, durata);
     voci.set(toastId, { cardId: cardId, timer: timer });
     return true;
