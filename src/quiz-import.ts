@@ -16,7 +16,8 @@
 // Campi riconosciuti per domanda: testo|question|domanda|testo_domanda, opzioni|options,
 // hint|suggerimento, rationale|motivo|spiegazione. Risposta corretta: opzione con
 // `isCorrect`/`corretta`/`correct` true, oppure campo `corretta`/`correctIndex` come
-// indice o come testo dell'opzione.
+// indice, come testo dell'opzione o come booleano (vero/falso). Una domanda senza
+// risposta dichiarata si scarta: la risposta non si indovina (vedi indiceDaCorretta).
 //
 // MODULO PURO: nessuna React, nessun DOM, nessun file. Il badge "🤖 Supporto IA" NON
 // viene messo: un quiz importato non è generato dall'IA, e dichiararlo sarebbe falso.
@@ -56,6 +57,39 @@ function etichettaOpzione(op: any): string {
   return '';
 }
 
+// Indice dell'opzione "Vero"/"Falso" che corrisponde a un booleano, o -1.
+// Accetta anche le etichette inglesi: i file dei quiz sono spesso
+// `options: ["true","false"]` con `correct: true`.
+function indiceVeroFalso(valore: boolean, opzioni: string[]): number {
+  var attesi = valore ? ['vero', 'true', 'v'] : ['falso', 'false', 'f'];
+  for (var i = 0; i < opzioni.length; i++) {
+    if (attesi.indexOf(String(opzioni[i]).trim().toLowerCase()) >= 0) return i;
+  }
+  return -1;
+}
+
+// Le forme con cui un file (o il modello) dichiara la risposta giusta → indice, -1 se
+// non ne dichiara nessuna. Il booleano era il caso che faceva danno: `String(true)` è
+// "true", che non è il testo di nessuna opzione, quindi la domanda restava senza
+// risposta e il ramo vero/falso "indovinava" la prima opzione — con `correct: false`
+// dava la risposta OPPOSTA a quella scritta nel file.
+function indiceDaCorretta(corr: any, opzioni: string[]): number {
+  if (typeof corr === 'boolean') return indiceVeroFalso(corr, opzioni);
+  if (typeof corr === 'number' || (typeof corr === 'string' && /^\d+$/.test(corr.trim()))) {
+    var n = parseInt(String(corr), 10);
+    if (n >= 0 && n < opzioni.length) return n;
+    if (n >= 1 && n <= opzioni.length) return n - 1;
+    return -1;
+  }
+  var testoCorr = String(corr).trim();
+  var trovato = opzioni.indexOf(testoCorr);
+  if (trovato >= 0) return trovato;
+  // "true"/"vero"/"falso"/"false" scritti come TESTO, non come booleano.
+  if (/^(true|vero|v)$/i.test(testoCorr)) return indiceVeroFalso(true, opzioni);
+  if (/^(false|falso|f)$/i.test(testoCorr)) return indiceVeroFalso(false, opzioni);
+  return -1;
+}
+
 /**
  * Normalizza UNA domanda nel formato dell'app, oppure restituisce il motivo dello
  * scarto. `multipla` → indice come stringa (è così che funziona QuizBuilder);
@@ -83,7 +117,8 @@ function normalizzaDomanda(grezza: any): { domanda?: any; motivo?: string } {
     });
   }
 
-  // Risposta corretta dichiarata a parte: può essere l'indice o il testo.
+  // Risposta corretta dichiarata a parte: può essere un INDICE, il TESTO di un'opzione
+  // o un BOOLEANO per un vero/falso (vedi indiceDaCorretta).
   //
   // L'indice è 0-based, come nel formato del generatore IA dell'app (`"corretta":"0"`
   // = prima opzione) e come nei quiz scritti a mano (QuizBuilder salva String(j) con j
@@ -93,15 +128,11 @@ function normalizzaDomanda(grezza: any): { domanda?: any; motivo?: string } {
   // 0-based perché sbagliare in quel modo sposterebbe la risposta giusta.
   var corr = primo(grezza, CAMPI_CORRETTA);
   if (corr !== undefined && opzioni.length) {
-    if (typeof corr === 'number' || (typeof corr === 'string' && /^\d+$/.test(corr.trim()))) {
-      var n = parseInt(String(corr), 10);
-      if (n >= 0 && n < opzioni.length) indiceCorretto = n;
-      else if (n >= 1 && n <= opzioni.length) indiceCorretto = n - 1;
-    } else {
-      var testoCorr = String(corr).trim();
-      var trovato = opzioni.indexOf(testoCorr);
-      if (trovato >= 0 && indiceCorretto < 0) indiceCorretto = trovato;
-    }
+    var numerico = typeof corr === 'number' || (typeof corr === 'string' && /^\d+$/.test(corr.trim()));
+    var idx = indiceDaCorretta(corr, opzioni);
+    // Un indice dichiarato vince sempre (è il formato canonico dell'app); un testo o un
+    // booleano riempie solo se nessuna opzione era già marcata `isCorrect`.
+    if (idx >= 0 && (numerico || indiceCorretto < 0)) indiceCorretto = idx;
   }
 
   var hint = testo(primo(grezza, ['hint', 'suggerimento', 'aiuto']));
@@ -134,13 +165,18 @@ function normalizzaDomanda(grezza: any): { domanda?: any; motivo?: string } {
       });
 
   if (vf) {
-    var idxVF = indiceCorretto >= 0 ? indiceCorretto : 0;
+    // Senza risposta dichiarata la domanda NON si importa: prima si sceglieva la PRIMA
+    // opzione (quasi sempre "Vero"), quindi il file diceva una cosa e la card ne salvava
+    // un'altra: chi rispondeva giusto risultava sbagliato su una domanda il cui esito
+    // nessuno aveva mai deciso. Stessa regola della multipla qui sotto — meglio scartare
+    // (e dirlo) che importare una domanda con la risposta inventata.
+    if (indiceCorretto < 0) return { motivo: 'nessuna opzione segnata come corretta' };
     return {
       domanda: {
         tipo: 'verofalso',
         testo: t,
         opzioni: opzioni,
-        corretta: opzioni[idxVF],
+        corretta: opzioni[indiceCorretto],
         hint: hint,
       },
     };

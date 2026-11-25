@@ -103,6 +103,16 @@ describe('indiceDi', () => {
     expect(indiceDi('Terza')).toBe(-1);
     expect(indiceDi(null)).toBe(-1);
   });
+
+  it('una stringa di soli spazi non e l opzione 0, e 2.5 non e un indice', () => {
+    // `Number(' ')` fa 0: senza il trim una risposta vuota diventava "ha scelto la
+    // prima opzione" e valeva un punto senza che nessuno avesse risposto. Nemmeno un
+    // indice non intero va bene, perché `opzioni[2.5]` è `undefined`.
+    expect(indiceDi(' ')).toBe(-1);
+    expect(indiceDi('   ')).toBe(-1);
+    expect(indiceDi('2.5')).toBe(-1);
+    expect(indiceDi(' 2 ')).toBe(2);
+  });
 });
 describe('quizTotale — il denominatore UNICO del punteggio', () => {
   // La divergenza-denominatore-e-unita-cos-e-il-punteggio. Prima quattro punti
@@ -134,6 +144,46 @@ describe('quizTotale — il denominatore UNICO del punteggio', () => {
     expect(quizTotale([{ tipo: 'multipla', opzioni: ['a', 'b'], corretta: '1' }])).toBe(1);
     // Per vero/falso la scala è il TESTO, quindi "Vero"/"Falso" va bene.
     expect(quizTotale([{ tipo: 'verofalso', opzioni: ['Vero', 'Falso'], corretta: 'Falso' }])).toBe(1);
+  });
+});
+
+describe('quizTotale e rispostaGiusta — lo stesso fatto, non due criteri', () => {
+  // Il denominatore non può contraddire il numeratore: se una domanda si può
+  // correggere giusta conta, se non si può non conta. Quando i due usavano criteri
+  // diversi (l'indice in scala contro il testo che coincide) lo studente leggeva un
+  // punteggio sopra il totale — «1/0» con la percentuale a 0.
+  it('una multipla con la risposta scritta come TESTO conta ed e correggibile', () => {
+    const q = { tipo: 'multipla', opzioni: ['Prima', 'Seconda', 'Terza'], corretta: 'Terza' };
+    expect(quizTotale([q])).toBe(1);
+    expect(rispostaGiusta(q, 2)).toBe(true);
+  });
+
+  it('un vero/falso con una risposta che non e fra le opzioni non conta', () => {
+    const q = { tipo: 'verofalso', opzioni: ['Giusto', 'Sbagliato'], corretta: 'Vero' };
+    // Nessuno dei due bottoni può essere giusto: contarla sarebbe un punto perso per
+    // tutti, e nessuno lo può recuperare.
+    expect(quizTotale([q])).toBe(0);
+    expect(rispostaGiusta(q, 0)).toBe(false);
+    expect(rispostaGiusta(q, 1)).toBe(false);
+  });
+
+  it('nessun quiz puo dare un punteggio sopra il totale', () => {
+    const domande = [
+      { tipo: 'multipla', opzioni: ['a', 'b'], corretta: '0' },
+      { tipo: 'multipla', opzioni: ['a', 'b'], corretta: '7' },
+      { tipo: 'verofalso', opzioni: ['Vero', 'Falso'], corretta: 'Falso' },
+      { tipo: 'verofalso', opzioni: ['Vero', 'Falso'], corretta: 'Mah' },
+      { tipo: 'aperta', testo: 'Aperta' },
+    ];
+    // Lo studente può solo cliccare un'opzione: la risposta è l'indice cliccato.
+    let score = 0;
+    domande.forEach((d: any) => {
+      (d.opzioni || []).forEach((_: string, j: number) => {
+        if (rispostaGiusta(d, j)) score += 1;
+      });
+    });
+    expect(quizTotale(domande)).toBe(2);
+    expect(score).toBe(2);
   });
 });
 

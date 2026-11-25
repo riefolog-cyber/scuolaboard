@@ -96,6 +96,33 @@ describe('import quiz — tipi riconosciuti', () => {
     expect(esito.domande[0].corretta).toBe('Falso');
   });
 
+  it('il booleano dice QUALE risposta e giusta, in qualunque ordine stiano le opzioni', () => {
+    // `correct: false` prima finiva in String(false) = "false", che non e il testo di
+    // nessuna opzione: la domanda restava senza risposta e il ramo vero/falso sceglieva
+    // la PRIMA opzione (quasi sempre "Vero") — cioè l'opposto di quello che diceva il file.
+    const falso = importaQuizDaTesto(JSON.stringify({ domande: [{ testo: 'Il cielo è verde?', opzioni: ['Vero', 'Falso'], correct: false }] }));
+    expect(falso.domande[0].tipo).toBe('verofalso');
+    expect(falso.domande[0].corretta).toBe('Falso');
+    const vero = importaQuizDaTesto(JSON.stringify({ domande: [{ testo: 'Il cielo è blu?', opzioni: ['Falso', 'Vero'], correct: true }] }));
+    expect(vero.domande[0].corretta).toBe('Vero');
+    const inglese = importaQuizDaTesto(JSON.stringify({ domande: [{ testo: 'Q', opzioni: ['true', 'false'], correct: true }] }));
+    expect(inglese.domande[0].corretta).toBe('true');
+  });
+
+  it('un vero/falso senza risposta dichiarata si scarta invece di indovinarla', () => {
+    const esito = importaQuizDaTesto(JSON.stringify({ domande: [{ testo: 'Senza chiave', opzioni: ['Vero', 'Falso'] }] }));
+    // Prima entrava in card con corretta = "Vero": chi rispondeva "Falso" risultava
+    // sbagliato su una domanda il cui esito nessuno aveva mai deciso.
+    expect(esito.domande).toEqual([]);
+    expect(esito.scartate[0].motivo).toMatch(/corretta/);
+  });
+
+  it('un booleano su una domanda multipla non inventa una risposta', () => {
+    const esito = importaQuizDaTesto(JSON.stringify({ domande: [{ testo: 'Q', opzioni: ['a', 'b'], corretta: true }] }));
+    expect(esito.domande).toEqual([]);
+    expect(esito.scartate[0].motivo).toMatch(/corretta/);
+  });
+
   it('senza opzioni diventa una domanda aperta (valutata dall\'IA)', () => {
     const esito = importaQuizDaTesto(JSON.stringify({ domande: [{ testo: 'Descrivi il fenomeno', rationale: 'spiegazione utile' }] }));
     expect(esito.domande[0].tipo).toBe('aperta');
