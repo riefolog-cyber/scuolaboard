@@ -1096,7 +1096,8 @@ function AppProvider({ children }: any) {
       .then(function () {
         // Il toast aspetta la PROMESSA, non il semplice avvio della scrittura:
         // Firestore può negare (rules, rete) e un "fatto" prima dell'esito
-        // would be a bug così (vedi regola 13: il toast di successo aspetta).
+        // sarebbe lo stesso difetto di prima (vedi regola 13: il toast di successo
+        // aspetta la promessa).
         showToast('Card tolta da ' + classe + ' ✓', 'ok');
         // Se la card aperta è proprio questa, il dettaglio mostrava ancora le
         // classi di prima: senza questo la modale mente fino al ricaricamento.

@@ -137,6 +137,27 @@ describe('CardGrid', () => {
     expect(screen.getByText('Mia Card')).toBeTruthy();
   });
 
+  // La destinazione nella vista elenco era una TERZA copia della regola: diceva
+  // «Tutte le classi» anche per una card tolta proprio alla classe selezionata,
+  // cioè il contrario di quello che la bacheca stava facendo.
+  it('vista elenco: la destinazione dichiara le esclusioni', () => {
+    var card = {
+      id: 'x1',
+      titolo: 'Compiti',
+      tipo: 'nota',
+      classi: ['TUTTE'],
+      classiEscluse: ['3AO'],
+      commenti: [],
+      likes: 0,
+      visibile: true,
+      data: new Date().toISOString(),
+      autore: 'Prof',
+    };
+    var $ = make$({ cards: [card], visible: [card], visibleSorted: [card], bachecaVista: 'elenco' });
+    var { container } = render(React.createElement(CardGrid, { $ }));
+    expect(container.textContent).toContain('Tutte le classi tranne 3AO');
+  });
+
   it('renders add first card button for professor in empty state', () => {
     var $ = make$({
       cards: [{ id: 1, titolo: 'Test', tipo: 'domanda', classi: ['TUTTE'], commenti: [], likes: 0 }],

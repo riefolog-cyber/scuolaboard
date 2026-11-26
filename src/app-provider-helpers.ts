@@ -1,4 +1,5 @@
 import { senzaAnnuncio } from './avvisi-classe.ts';
+import { escluseCoerenti } from './card-classi.ts';
 import type { Card, CardImmagine, CardLink, QuizDomanda } from './card-tipo.ts';
 
 // app-provider-helpers.ts · ScuolaBoard · Fase 7: helper PURI estratti da
@@ -112,7 +113,13 @@ export function buildEditCard(
     // Va scritto esplicitamente: `Object.assign` qui NON lo copierebbe dalla
     // card originale (l'`editMode`), quindi rimuovere un'esclusione nell'editor
     // non si salverebbe e la classe resterebbe esclusa per sempre.
-    classiEscluse: form.classiEscluse || [],
+    //
+    // `escluseCoerenti` chiude l'unica contraddizione possibile: una classe
+    // elencata ESPLICITAMENTE in `classi` non può restare anche fra le escluse.
+    // Senza questo, scegliendo solo la 3A su una card che era «tutte tranne 3A»
+    // il documento salvava entrambe le cose e la card spariva a tutti gli
+    // studenti: la bacheca non mostra niente e nessun errore lo dice.
+    classiEscluse: escluseCoerenti(form.classi, form.classiEscluse),
     immagini: immagini,
     copertina: form.copertina || null,
     copertinaThumb: form.copertinaThumb || null,

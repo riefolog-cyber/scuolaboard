@@ -91,4 +91,31 @@ describe('PrintModal', () => {
     expect(screen.getAllByText(/classe 3A/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/classe 3A/).length).toBe(2);
   });
+
+  // Il confronto era con 'TUTTE' maiuscolo mentre `filterClasse` vale 'tutte' /
+  // '_solo' / il nome della classe: il foglio stampava «classe tutte» e, nella
+  // vista solo prof, «classe _solo» — un identificatore interno su un documento
+  // che finisce in mano agli studenti.
+  it('«tutte le classi» si legge così, non come «classe tutte»', () => {
+    renderModal({ filterClasse: 'tutte' });
+    expect(screen.getAllByText(/tutte le classi/).length).toBeGreaterThan(0);
+    expect(document.body.textContent).not.toContain('classe tutte');
+  });
+
+  it('la vista solo prof non stampa l\'identificatore «_solo»', () => {
+    renderModal({ filterClasse: '_solo' });
+    expect(screen.getAllByText(/solo prof/).length).toBeGreaterThan(0);
+    expect(document.body.textContent).not.toContain('_solo');
+  });
+
+  it('la destinazione stampata mostra le esclusioni, non il segnaposto TUTTE', () => {
+    const cards = [
+      { id: 'e1', titolo: 'Gita', tipo: 'info', testo: 'x', classi: ['TUTTE'], classiEscluse: ['3AO'] },
+      { id: 'e2', titolo: 'Solo docenti', tipo: 'nota', testo: 'y', classi: [] },
+    ];
+    const { container } = renderModal({ visibleSorted: cards, filterClasse: '3AO' });
+    expect(container.textContent).toContain('Tutte le classi tranne 3AO');
+    expect(container.textContent).toContain('Solo prof');
+    expect(container.textContent).not.toContain('TUTTE');
+  });
 });

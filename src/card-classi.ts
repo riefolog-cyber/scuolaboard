@@ -119,3 +119,35 @@ export function eliminabileSoloDaClasse(card: Card, classe: string): boolean {
   return cc.indexOf(classe) >= 0;
 }
 
+// Un'esclusione è la risposta alla domanda «per chi è questa card»: se `classi`
+// elenca ESPLICITAMENTE la stessa classe, le due cose si contraddicono e
+// `visibileAClasse` risolve nel verso peggiore (l'esclusione vince), quindi la
+// card non arriva a NESSUNO fra gli studenti e nessuna schermata lo dice. La
+// scrittura tiene una sola delle due e vince l'elenco esplicito: chi scrive «3A»
+// vuole la 3A. `TUTTE` non è un elenco, quindi lì le esclusioni restano valide
+// («tutte tranne 3A» è uno stato legittimo, non una contraddizione).
+export function escluseCoerenti(classi: any, classiEscluse: any): string[] {
+  var cc = Array.isArray(classi) ? classi : ['TUTTE'];
+  var ex = (Array.isArray(classiEscluse) ? classiEscluse : []).filter(function (x: any) {
+    return typeof x === 'string' && x;
+  });
+  if (cc.indexOf('TUTTE') >= 0) return ex;
+  return ex.filter(function (x: string) {
+    return cc.indexOf(x) < 0;
+  });
+}
+
+// Come si LEGGE la destinazione di una card a schermo e sulla stampa. Sta qui
+// perché è lo stesso dato che decide `visibileAClasse`: quando l'etichetta era
+// scritta in tre punti (vista elenco, dettaglio, foglio stampato) ognuno diceva
+// una cosa diversa, e NESSUNO diceva `classiEscluse` — una card «tolta alla 3A»
+// continuava a presentarsi come «Tutte le classi» proprio al docente che l'aveva
+// tolta, e il foglio distribuito in classe confermava la cosa sbagliata (o
+// stampava il segnaposto `TUTTE`, o l'identificatore interno `_solo`).
+export function etichettaClassi(card: Card): string {
+  var cc = classiDi(card);
+  var ex = escluseDi(card);
+  var base = cc.length === 0 ? 'Solo prof' : cc.indexOf('TUTTE') >= 0 ? 'Tutte le classi' : cc.join(', ');
+  if (!ex.length) return base;
+  return base + ' tranne ' + ex.join(', ');
+}

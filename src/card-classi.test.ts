@@ -15,6 +15,8 @@ import {
   visibileAlProf,
   conEsclusione,
   eliminabileSoloDaClasse,
+  escluseCoerenti,
+  etichettaClassi,
 } from './card-classi.ts';
 
 const cardTutte = { id: 'c1', classi: ['TUTTE'] };
@@ -210,5 +212,63 @@ describe('card-classi: il caso segnalato', () => {
       }),
     });
     expect(visibileAClasse(ripristinata, '3A')).toBe(true);
+  });
+});
+
+// L'etichetta della destinazione è parte del criterio: se la bacheca dice una
+// cosa e `visibileAClasse` ne fa un'altra, il docente non ha modo di accorgersi
+// di aver tolto la card a una classe (lo stato è invisibile nella griglia).
+describe('card-classi: etichetta della destinazione', function () {
+  it('card per tutte le classi', function () {
+    expect(etichettaClassi({ classi: ['TUTTE'] })).toBe('Tutte le classi');
+  });
+
+  it('«tutte tranne 3A» non si presenta come «tutte le classi»', function () {
+    expect(etichettaClassi({ classi: ['TUTTE'], classiEscluse: ['3A'] })).toBe('Tutte le classi tranne 3A');
+  });
+
+  it('più esclusioni restano leggibili', function () {
+    expect(etichettaClassi({ classi: ['TUTTE'], classiEscluse: ['3A', '4B'] })).toBe(
+      'Tutte le classi tranne 3A, 4B'
+    );
+  });
+
+  it('elenco esplicito di classi', function () {
+    expect(etichettaClassi(cardDueClassi)).toBe('3A, 4B');
+  });
+
+  it('card senza classi: «Solo prof», non il vuoto', function () {
+    expect(etichettaClassi(cardSoloProf)).toBe('Solo prof');
+  });
+
+  it('card legacy senza il campo: vale per tutte', function () {
+    expect(etichettaClassi({ id: 'legacy' })).toBe('Tutte le classi');
+  });
+});
+
+// Scrivere una classe in `classi` e contemporaneamente fra le escluse era
+// possibile in tre click («togli dalla 3A», poi modifica e scegli SOLO la 3A):
+// il documento salvava entrambe le cose, `visibileAClasse` dava ragione
+// all'esclusione e la card spariva a tutti gli studenti, in silenzio.
+describe('card-classi: esclusioni coerenti alla scrittura', function () {
+  it('una classe elencata esplicitamente non resta anche esclusa', function () {
+    expect(escluseCoerenti(['3A'], ['3A'])).toEqual([]);
+  });
+
+  it('le altre esclusioni restano', function () {
+    expect(escluseCoerenti(['3A'], ['3A', '4B'])).toEqual(['4B']);
+  });
+
+  it('TUTTE non è un elenco: le esclusioni valgono tutte', function () {
+    expect(escluseCoerenti(['TUTTE'], ['3A'])).toEqual(['3A']);
+  });
+
+  it('campo classi assente (legacy) = TUTTE', function () {
+    expect(escluseCoerenti(undefined, ['3A'])).toEqual(['3A']);
+  });
+
+  it('valori sporchi vengono scartati, non salvati', function () {
+    const sporche = ['3A', 5, null, ''] as unknown as string[];
+    expect(escluseCoerenti(['4B'], sporche)).toEqual(['3A']);
   });
 });

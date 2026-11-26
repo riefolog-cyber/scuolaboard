@@ -355,6 +355,18 @@ describe('edit: le esclusioni di classe sono reversibili', () => {
     form.classiEscluse = ['3AO', '4BO'];
     expect(buildEditCard(cardEsclusa, form, [], [], null, null).classiEscluse).toEqual(['3AO', '4BO']);
   });
+
+  // La contraddizione raggiungibile in tre click: card «tutte tranne 3AO»,
+  // il docente modifica e sceglie SOLO la 3AO. Se il documento salvasse anche
+  // l'esclusione, `visibileAClasse` la farebbe vincere e la card sparirebbe a
+  // tutti gli studenti: nessun errore, solo una bacheca vuota.
+  it('una classe scelta esplicitamente non viene salvata anche come esclusa', () => {
+    const form = buildEditForm(cardEsclusa, () => []);
+    form.classi = ['3AO'];
+    const salvata = buildEditCard(cardEsclusa, form, [], [], null, null);
+    expect(salvata.classi).toEqual(['3AO']);
+    expect(salvata.classiEscluse).toEqual([]);
+  });
 });
 
 // NB: gli avvisi di classe (coda, fan-out, recupero, copie senza annuncio) sono

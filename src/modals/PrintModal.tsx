@@ -3,6 +3,7 @@
 // filtri classe/anno) e stampa con window.print(). I pulsanti e il backdrop
 // sono nascosti alla stampa dalla regola @media print (classe .print-area).
 import { useEffect } from 'react';
+import { etichettaClassi } from '../card-classi.ts';
 
 function fmtData(d: any) {
   try {
@@ -17,7 +18,15 @@ function PrintModal(props: any) {
   // numero di hook a ogni render). Il return null arriva DOPO tutti gli hook.
   var cards = props.visibleSorted || props.cards || [];
   var filtri: string[] = [];
-  if (props.filterClasse && props.filterClasse !== 'TUTTE') filtri.push('classe ' + props.filterClasse);
+  // `filterClasse` vale 'tutte', '_solo' o il nome della classe (minuscoli per i
+  // due segnaposto, vedi cards.ts). Il confronto era con 'TUTTE' MAIUSCOLO, quindi
+  // non scattava mai: il foglio annunciava «classe tutte» e, nella vista solo
+  // prof, perfino «classe _solo» — un identificatore interno stampato su un
+  // documento che finisce in mano agli studenti. Ora i due segnaposto hanno il
+  // loro testo leggibile e il resto resta «classe <nome>».
+  var fc = String(props.filterClasse || '');
+  if (fc === '_solo') filtri.push('solo prof');
+  else if (fc && fc !== 'tutte') filtri.push('classe ' + fc);
   if (props.isProf && !props.simulaSt && filtri.length === 0) filtri.push('tutte le classi');
 
   // Blocca lo scroll di sfondo mentre l'anteprima è aperta.
@@ -135,7 +144,9 @@ function PrintModal(props: any) {
           )}
 
           {cards.map(function (c: any, i: number) {
-            var cc = c.classi || ['TUTTE'];
+            // Stessa etichetta della bacheca: il foglio non deve dire «TUTTE» né
+            // nascondere che la card è stata tolta a una classe (card-classi.ts).
+            var cc = etichettaClassi(c);
             return (
               <div
                 key={c.id}
@@ -157,9 +168,7 @@ function PrintModal(props: any) {
                       <span style={{ fontWeight: 800, color: '#4f46e5' }}>
                         {(props.tipoIcon ? props.tipoIcon(c.tipo) : '') + ' ' + (c.tipo || '').toUpperCase()}
                       </span>
-                      {cc.length > 0 && (
-                        <span style={{ color: '#64748b' }}>{' · ' + cc.join(', ')}</span>
-                      )}
+                      <span style={{ color: '#64748b' }}>{' · ' + cc}</span>
                     </div>
                     {c.testo && (
                       <div style={{ fontSize: 12, color: '#334155', marginTop: 6, lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>

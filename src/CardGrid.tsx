@@ -3,6 +3,7 @@ import { useState } from 'react';
 import CardItem from './CardItem.tsx';
 import { FORM0 } from './app-utils.tsx';
 import { temaTipo, etichettaTipo } from './card-tipo-tema.ts';
+import { etichettaClassi } from './card-classi.ts';
 import { statoScadenza, labelScadenza, coloreScadenza } from './urgenza.ts';
 import { scrollInVista } from './utils/scroll.ts';
 import { testoSecondario } from './grafica-testi.ts';
@@ -45,8 +46,13 @@ function ListRow({ $, c }: any) {
   var metaParts: string[] = [];
   if (c.autore) metaParts.push(c.autore);
   if ($.timeAgo) metaParts.push($.timeAgo(c.data));
-  if (Array.isArray(c.classi) && c.classi.length && c.classi.indexOf('TUTTE') < 0) metaParts.push(c.classi.join(', '));
-  else if (Array.isArray(c.classi) && c.classi.indexOf('TUTTE') >= 0) metaParts.push('Tutte le classi');
+  // Destinazione dallo stesso modulo del criterio (card-classi.ts): qui c'era una
+  // terza copia della regola, che ignorava `classiEscluse` e annunciava «Tutte le
+  // classi» anche per una card tolta alla classe che il docente stava guardando.
+  // La dicitura generica resta FUORI dalla riga (era così anche prima, e ripeterla
+  // su ogni card è rumore): quello che deve sempre leggersi è l'eccezione.
+  var destinazione = etichettaClassi(c);
+  if (destinazione !== 'Tutte le classi') metaParts.push(destinazione);
   if (nCommenti) metaParts.push(nCommenti + ' commenti');
   if (c.tipo === 'sondaggio') metaParts.push(totV + ' voti');
   if ((c.tipo === 'quiz' || (c.quizDomande && c.quizDomande.length)) && c.quizDomande) metaParts.push(c.quizDomande.length + ' domande');

@@ -265,7 +265,17 @@ function NuovaCardModal(props: any) {
                                     return x !== cl;
                                   })
                                 : cur.concat([cl]);
-                            return Object.assign({}, f, { classi: next });
+                            // Selezionare una classe che era esclusa vale come «sì»:
+                            // tenere l'esclusione la renderebbe invisibile proprio alla
+                            // classe appena scelta, con la card che sparisce dalla bacheca
+                            // e nessun avviso (nel criterio l'esclusione vince).
+                            var escluse =
+                              idx >= 0
+                                ? f.classiEscluse || []
+                                : (f.classiEscluse || []).filter(function (x: any) {
+                                    return x !== cl;
+                                  });
+                            return Object.assign({}, f, { classi: next, classiEscluse: escluse });
                           });
                         }}
                         style={Object.assign({}, filterBtn(sel), { fontSize: 11, padding: '3px 9px' })}

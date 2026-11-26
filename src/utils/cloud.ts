@@ -195,7 +195,14 @@ function filterCardsForCloud(cards: any[], cardId: string) {
 // discussioni DI CLASSE, e il cloud della 3A non deve contenere quello che la 3B
 // ha scritto sulla stessa card — sarebbe una media fra due discussioni.
 function commentiDelTarget(commenti: any, classe: string | null): any[] {
-  if (classe === null) return Array.isArray(commenti) ? commenti : [];
+  if (!Array.isArray(commenti)) return [];
+  if (classe === null) {
+    // Il target 'tutte' restituisce la lista grezza (il docente vede tutte le
+    // discussioni), ma un elemento nullo — dato vecchio, scrittura sporca — qui
+    // arrivava fino a `cm.testo` e diventava un TypeError che si portava via la
+    // modale intera. Filtrare in QUESTO punto copre cloud e statistiche insieme.
+    return commenti.filter(Boolean);
+  }
   return commentiVisibili(commenti, classe);
 }
 
@@ -205,7 +212,9 @@ export function buildWordCloud(cards: any[], cardId: string) {
   filterCardsForCloud(cards, cardId).forEach(function (c) {
     commentiDelTarget(c.commenti, classe).forEach(function (cm: any) {
       testi.push(cm.testo);
-      if (cm.risposte)
+      // `risposte` può essere un valore sporco: senza il controllo sull'array
+      // il `.forEach` è l'altro punto in cui il cloud si spegneva del tutto.
+      if (Array.isArray(cm.risposte))
         cm.risposte.forEach(function (r: any) {
           testi.push(r.testo);
         });
@@ -248,7 +257,9 @@ export function collectCloudStats(cards: any[], cardId: string) {
     commentiDelTarget(c.commenti, classe).forEach(function (cm: any) {
       commentCount++;
       if (cm.autore) studentSet.add(cm.autore);
-      if (cm.risposte)
+      // `risposte` può essere un valore sporco: senza il controllo sull'array
+      // il `.forEach` è l'altro punto in cui il cloud si spegneva del tutto.
+      if (Array.isArray(cm.risposte))
         cm.risposte.forEach(function (r: any) {
           commentCount++;
           if (r.autore) studentSet.add(r.autore);

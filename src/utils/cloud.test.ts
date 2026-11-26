@@ -88,3 +88,19 @@ describe('cloud per classe · quali commenti contano', function () {
     });
   });
 });
+
+// Dato sporco: un elemento nullo in `commenti` non deve spegnere il riquadro
+// (prima `cm.testo` su null era un TypeError e la modale non si apriva più).
+describe('cloud · tolleranza ai dati sporchi', function () {
+  it('commento nullo ignorato, il resto conta', function () {
+    var card = {
+      id: 'z',
+      classi: ['TUTTE'],
+      commenti: [null, { classe: '3B', testo: 'bicicletta', risposte: 'sporche' }],
+    };
+    expect(function () {
+      buildWordCloud([card], 'tutte');
+    }).not.toThrow();
+    expect(collectCloudStats([card], 'tutte')).toEqual({ cardCount: 1, commentCount: 1, studentCount: 0 });
+  });
+});
