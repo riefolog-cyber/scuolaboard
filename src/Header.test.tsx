@@ -1,6 +1,6 @@
 // Header.test.jsx — Tests for Header component
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import React from 'react';
 
 import Header from './Header.tsx';
@@ -217,7 +217,10 @@ describe('Header', () => {
 
   it('clears all notifications after confirm, deleting the user doc', () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
-    const delMock = vi.fn();
+    // `delete()` di Firestore restituisce una promise: il fake deve fare lo stesso,
+    // altrimenti il `.catch` del componente esplode su `undefined` e il test
+    // passerebbe per il motivo sbagliato (senza cioè esercitare la gestione).
+    const delMock = vi.fn(() => Promise.resolve());
     const dbc = { collection: () => ({ doc: () => ({ delete: delMock }) }) };
     window.db = dbc as any;
     renderHeader({
@@ -229,6 +232,28 @@ describe('Header', () => {
     fireEvent.click(screen.getByTitle('Pulisci notifiche'));
     expect(confirmSpy).toHaveBeenCalled();
     expect(delMock).toHaveBeenCalled();
+    confirmSpy.mockRestore();
+  });
+
+  it('non lascia una rejection non gestita se Firestore nega la pulizia', async () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    // Con la sessione scaduta Firestore nega la cancellazione: prima la promise
+    // restava senza gestore e la ✕ sembrava non fare nulla (e vitest usciva con 1).
+    const delMock = vi.fn(() =>
+      Promise.reject(Object.assign(new Error('permesso negato'), { code: 'permission-denied' }))
+    );
+    window.db = { collection: () => ({ doc: () => ({ delete: delMock }) }) } as any;
+    renderHeader({
+      showNotifiche: true,
+      notifiche: [{ id: 'n1', tipo: 'ammonizione', titolo: 'A', msg: 'm', letta: false }],
+      user: { uid: 'u1' },
+    });
+    fireEvent.click(screen.getByTitle('Pulisci notifiche'));
+    await waitFor(() => expect(warnSpy).toHaveBeenCalled());
+    expect(String(warnSpy.mock.calls[0][0])).toContain('pulizia fallita');
+    expect(String(warnSpy.mock.calls[0][1])).toBe('permission-denied');
+    warnSpy.mockRestore();
     confirmSpy.mockRestore();
   });
 
