@@ -446,6 +446,48 @@ describe('executeDelReply / executeDelCom', () => {
     await handlers.executeDelCom('c1', 'cm1');
     expect(ctx.onOptimistic.mock.calls[0][1].commenti.map((c) => c.id)).toEqual(['cm2']);
   });
+
+  // Il commento eliminato è un OVERLAY: si pota solo quando lo snapshot converge
+  // ai valori del patch, e una scrittura negata non converge mai. Senza
+  // l'annullamento il commento restava sparito dalla card fino al reload, cioè una
+  // UI che dice "eliminato" per un'eliminazione che Firestore non ha.
+  it('executeDelCom: la scrittura negata annulla l overlay (il commento non resta sparito)', async () => {
+    clearServices();
+    const ctx = {
+      cards: [{ id: 'c1', commenti: [{ id: 'cm1' }, { id: 'cm2' }] }],
+      onOptimistic: vi.fn(),
+      fbSave: vi.fn().mockRejectedValue(new Error('denied')),
+    };
+    const handlers = createAppHandlers(ctx);
+    await expect(handlers.executeDelCom('c1', 'cm1')).resolves.toBe(false);
+    expect(ctx.onOptimistic).toHaveBeenCalledTimes(2);
+    expect(ctx.onOptimistic.mock.calls[1]).toEqual(['c1', null, []]);
+  });
+
+  it('executeDelReply: la scrittura negata annulla l overlay della risposta', async () => {
+    clearServices();
+    const ctx = {
+      cards: [{ id: 'c1', commenti: [{ id: 'cm1', risposte: [{ id: 'r1' }, { id: 'r2' }] }] }],
+      onOptimistic: vi.fn(),
+      fbSave: vi.fn().mockRejectedValue(Object.assign(new Error('negato'), { code: 'permission-denied' })),
+    };
+    const handlers = createAppHandlers(ctx);
+    await expect(handlers.executeDelReply('cm1', 'r1', 'c1')).resolves.toBe(false);
+    expect(ctx.onOptimistic).toHaveBeenCalledTimes(2);
+    expect(ctx.onOptimistic.mock.calls[1]).toEqual(['c1', null, []]);
+  });
+
+  it('una card senza commenti non fa esplodere l eliminazione', async () => {
+    clearServices();
+    const ctx = {
+      cards: [{ id: 'c1' }],
+      onOptimistic: vi.fn(),
+      fbSave: vi.fn().mockResolvedValue({}),
+    };
+    const handlers = createAppHandlers(ctx);
+    await expect(handlers.executeDelCom('c1', 'cm1')).resolves.toBe(true);
+    expect(ctx.onOptimistic.mock.calls[0][1].commenti).toEqual([]);
+  });
 });
 
 // ── ammonisci ──────────────────────────────────────────────────────────────

@@ -1,8 +1,8 @@
 // @ts-nocheck — regression: bottone ✏️ (editCard) e notifiche (segna letto singolo)
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { renderApp } from './harness';
-import { PROF, PROF_DOC, mkCard, setupTestEnv, teardownTestEnv } from './fixtures';
+import { PROF, PROF_DOC, mkCard, modalRoot, setupTestEnv, teardownTestEnv } from './fixtures';
 
 beforeEach(setupTestEnv);
 afterEach(teardownTestEnv);
@@ -118,6 +118,71 @@ describe('regression: editCard dal CardItem', () => {
     expect(ta.value).toBe('Domanda sulla lezione');
     // Nessun commento salvato.
     expect(db._get('cards', 'c1').commenti.length).toBe(0);
+  });
+
+  // L'eliminazione del commento è OTTIMISTICA (il commento sparisce subito). Se la
+  // scrittura viene negata l'overlay va annullato: si pota solo alla convergenza
+  // con lo snapshot, che per un patch rifiutato non arriva mai. Prima il commento
+  // restava invisibile fino al reload, e chi lo aveva eliminato credeva di averlo
+  // fatto mentre l'avviso rosso diceva il contrario.
+  it('se Firestore nega l eliminazione del commento, il commento torna visibile', async () => {
+    const seed = {
+      users: { prof1: PROF_DOC },
+      cards: {
+        c1: mkCard('c1', {
+          titolo: 'Card commentata',
+          commenti: [{ id: 1, autore: 'Prof', testo: 'Da non eliminare', data: '2026-09-01', risposte: [] }],
+        }),
+      },
+    };
+    const { db } = await renderApp({ seed, user: PROF });
+
+    fireEvent.click(await screen.findByText('Card commentata', {}));
+    await screen.findByText('Da non eliminare', {});
+    fireEvent.click(screen.getByRole('button', { name: 'Elimina commento' }));
+    await screen.findByText('Elimina commento', {});
+
+    db._failWrites('cards');
+    fireEvent.click(within(modalRoot('Elimina commento')).getByRole('button', { name: '🗑️ Elimina' }));
+
+    // Segnale POSITIVO del fallimento: il toast d'errore di fbSave.
+    await waitFor(() => expect(screen.getAllByText(/Permesso negato|Errore di salvataggio/).length).toBeGreaterThan(0));
+    // Il commento è tornato nella card e il documento non è cambiato.
+    await waitFor(() => expect(screen.queryByText('Da non eliminare')).not.toBeNull());
+    expect(db._get('cards', 'c1').commenti.length).toBe(1);
+  });
+
+  // La modifica del commento chiudeva l'editor in una riga SINCRONA dopo l'avvio
+  // della scrittura: con Firestore che nega, il testo appena digitato spariva
+  // insieme all'editor e il commento tornava quello vecchio (l'utente lo aveva
+  // perso). Ora l'editor si chiude solo a scrittura riuscita.
+  it('se Firestore nega la modifica del commento, il testo digitato resta nell editor', async () => {
+    const seed = {
+      users: { prof1: PROF_DOC },
+      cards: {
+        c1: mkCard('c1', {
+          titolo: 'Card da correggere',
+          commenti: [{ id: 1, autore: 'Prof', testo: 'Commento originale', data: '2026-09-01', risposte: [] }],
+        }),
+      },
+    };
+    const { db } = await renderApp({ seed, user: PROF });
+
+    fireEvent.click(await screen.findByText('Card da correggere', {}));
+    await screen.findByText('Commento originale', {});
+    fireEvent.click(screen.getByRole('button', { name: 'Modifica commento' }));
+    const ta = (await screen.findByDisplayValue('Commento originale')) as HTMLTextAreaElement;
+    fireEvent.input(ta, { target: { value: 'Testo che non va perso' } });
+
+    db._failWrites('cards');
+    fireEvent.click(screen.getByRole('button', { name: 'Salva commento' }));
+
+    await waitFor(() => expect(screen.getAllByText(/Permesso negato|Errore di salvataggio/).length).toBeGreaterThan(0));
+    // L'editor è ancora aperto e il testo digitato è ancora lì.
+    expect(screen.getByRole('button', { name: 'Salva commento' })).toBeTruthy();
+    expect(screen.getByDisplayValue('Testo che non va perso')).toBeTruthy();
+    // Il documento non è cambiato: il commento mostra ancora il testo vecchio.
+    expect(db._get('cards', 'c1').commenti[0].testo).toBe('Commento originale');
   });
 });
 

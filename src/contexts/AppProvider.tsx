@@ -1404,8 +1404,22 @@ function AppProvider({ children }: any) {
         return cm;
       });
     }
-    fbSave(Object.assign({}, card, { commenti: aggiornaLista(card.commenti) }));
-    setEditingCm(null);
+    var scrittura = fbSave(Object.assign({}, card, { commenti: aggiornaLista(card.commenti || []) }));
+    // L'editor si chiude SOLO quando la scrittura è riuscita. Prima `setEditingCm(null)`
+    // era una riga sincrona dopo l'avvio della scrittura: con Firestore che nega il
+    // testo appena digitato spariva insieme all'editor e il commento tornava quello
+    // vecchio — il caso "un errore non cancella dati già mostrati" applicato al testo
+    // dell'utente. Il secondo argomento di `.then` è il gestore: la promise resta
+    // gestita (una rejection non gestita fa uscire vitest con 1, AGENTS.md).
+    Promise.resolve(scrittura)
+      .then(function () {
+        setEditingCm(null);
+      })
+      // Solo l'errore arriva qui: l'editor resta aperto col testo digitato, così si
+      // può riprovare o annullare senza riscriverlo. fbSave ha già mostrato il
+      // toast; il catch serve anche a marcare la promise come gestita (una
+      // rejection non gestita fa uscire vitest con 1, AGENTS.md).
+      .catch(function () {});
   }
 
   function toggleReaction(cardId: any, cmId: any, emoji: any) {

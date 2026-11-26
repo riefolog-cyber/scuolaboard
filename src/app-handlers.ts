@@ -132,6 +132,14 @@ export function createAppHandlers(ctx: any) {
     return ctx.showCard;
   }
 
+  // `commenti` può mancare: una card scritta da una versione precedente, o un
+  // documento importato, non ha l'array. `undefined.filter` non è un errore da
+  // mostrare all'utente, è una card senza commenti: leggere il campo passa da qui
+  // in ENTRAMBI i gestori che lo riscrivono, altrimenti i due casi divergono.
+  function listaCommenti(card: any) {
+    return card && Array.isArray(card.commenti) ? card.commenti : [];
+  }
+
   // Fissa/sblocca una card in cima alla griglia (solo docente: `pinned` è fra i
   // campi che le rules negano allo studente). È una scrittura ottimistica come
   // like/voti, quindi ha gli stessi due obblighi. Sta QUI e non in AppProvider
@@ -858,9 +866,20 @@ export function createAppHandlers(ctx: any) {
           return item;
         });
       }
-      var ottimo = Object.assign({}, card, { commenti: rem(card.commenti) });
+      var ottimo = Object.assign({}, card, { commenti: rem(listaCommenti(card)) });
       if (ctx.onOptimistic) ctx.onOptimistic(cardId, ottimo, ['commenti']);
-      saveCard(ottimo);
+      // Cancellazione ottimistica: se Firestore nega, l'overlay va ANNULLATO. Si
+      // pota solo quando lo snapshot converge ai valori del patch, e un patch
+      // rifiutato non converge mai: senza questo il commento restava sparito
+      // dalla card fino al reload, cioè una UI che dice "eliminato" a torto.
+      return esitoOttimistico(
+        function () {
+          return saveCard(ottimo);
+        },
+        function () {
+          if (ctx.onOptimistic) ctx.onOptimistic(cardId, null, []);
+        }
+      );
     },
     executeDelCom: function (cid: any, cmid: any) {
       var card = getCards().find(function (c: any) {
@@ -868,12 +887,21 @@ export function createAppHandlers(ctx: any) {
       });
       if (!card) return;
       var ottimo = Object.assign({}, card, {
-        commenti: card.commenti.filter(function (cm: any) {
+        commenti: listaCommenti(card).filter(function (cm: any) {
           return String(cm.id) !== String(cmid);
         }),
       });
       if (ctx.onOptimistic) ctx.onOptimistic(cid, ottimo, ['commenti']);
-      saveCard(ottimo);
+      // Stessa regola di executeDelRisposta: la scrittura negata deve togliere
+      // l'overlay, altrimenti il commento eliminato resta invisibile per sempre.
+      return esitoOttimistico(
+        function () {
+          return saveCard(ottimo);
+        },
+        function () {
+          if (ctx.onOptimistic) ctx.onOptimistic(cid, null, []);
+        }
+      );
     },
     ammonisci: function (cardId: any, cmId: any, autore: any, motivazione: any) {
       if (!ctx.isProf) return;

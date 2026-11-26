@@ -29,7 +29,7 @@ import type { Card } from './card-tipo.ts';
 //    nasce una 4C, una card con `classi` riscritto a mano non la raggiungerebbe
 //    più, mentre con l'esclusione la 4C la vede. Il doc dice "tutte meno 3A",
 //    non "1A, 2B, 2C";
-//  - l'esclusione è reversibile e si vederebbe nello strumenti del docente.
+//  - l'esclusione è reversibile e si vedrebbe negli strumenti del docente.
 //
 // `classi: []` resta "solo prof" (il filtro `_solo`): non è un elenco vuoto di
 // destinatari, è una card senza classe. Per questo `classiVisibiliDi` non
