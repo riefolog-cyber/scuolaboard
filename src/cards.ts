@@ -325,9 +325,23 @@ export function useCards(user: any, annoScolastico: string) {
     },
     [rawAllCards]
   );
+  // Un patch VUOTO annulla l'overlay di quella card. Serve quando la scrittura
+  // ottimistica viene NEGATA (sessione scaduta, offline, rules): senza la
+  // rimozione la card resterebbe per sempre con lo stato ottimistico, perché
+  // l'overlay si pota solo quando lo snapshot del server converge ai valori del
+  // patch — e un patch rifiutato non converge mai. Il difetto è invisibile in
+  // console e visibile all'utente: un like, un voto o un fissaggio che Firestore
+  // non ha, finché non ricarica la pagina.
   function applyOptimistic(id: any, patch: any, fields: string[]) {
     setPending(function (prev) {
-      return Object.assign({}, prev, { [String(id)]: { patch: patch, fields: fields } });
+      var k = String(id);
+      if (!patch) {
+        if (!prev[k]) return prev;
+        var next: any = Object.assign({}, prev);
+        delete next[k];
+        return next;
+      }
+      return Object.assign({}, prev, { [k]: { patch: patch, fields: fields } });
     });
   }
   var cardsLoaded = snap.loaded === undefined ? true : snap.loaded;

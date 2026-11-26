@@ -17,6 +17,12 @@ function AiQuizGenModal(props: any) {
   // ne importa 1 (era la seconda metà del difetto: il conteggio arrivava tardi).
   var scartate = aqg.scartate || [];
   var importabili = Math.max(0, (aqg.anteprima ? aqg.anteprima.length : 0) - scartate.length);
+  // Se TUTTE le domande generate sono state scartate non c'è niente da importare:
+  // `aiConfirmaQuiz` rifiuta e mette un errore nella modale. Il pulsante però
+  // diceva «Aggiungi 0 domande al quiz» e restava premibile, cioè invitava a un
+  // gesto che non può riuscire (stessa regola del banner: non promettere quello
+  // che non succede).
+  var bloccato = aqg.regenIdx !== null || importabili === 0;
   return (
     <div
       style={{
@@ -542,23 +548,22 @@ function AiQuizGenModal(props: any) {
                   {
                     <button
                       onClick={props.aiConfirmaQuiz}
-                      disabled={aqg.regenIdx !== null}
+                      disabled={bloccato}
                       style={{
                         flex: 2,
                         padding: 11,
-                        background:
-                          aqg.regenIdx !== null ? 'rgba(255,255,255,.08)' : 'linear-gradient(135deg,#22c55e,#16a34a)',
-                        color: aqg.regenIdx !== null ? 'rgba(255,255,255,.40)' : '#fff',
+                        background: bloccato ? 'rgba(255,255,255,.08)' : 'linear-gradient(135deg,#22c55e,#16a34a)',
+                        color: bloccato ? 'rgba(255,255,255,.40)' : '#fff',
                         border: 'none',
                         borderRadius: 11,
                         fontSize: 14,
                         fontWeight: 800,
-                        cursor: aqg.regenIdx !== null ? 'not-allowed' : 'pointer',
+                        cursor: bloccato ? 'not-allowed' : 'pointer',
                       }}
                     >
-                      {'✅ Aggiungi ' +
-                        importabili +
-                        (importabili === 1 ? ' domanda al quiz' : ' domande al quiz')}
+                      {importabili === 0
+                        ? 'Nessuna domanda importabile'
+                        : '✅ Aggiungi ' + importabili + (importabili === 1 ? ' domanda al quiz' : ' domande al quiz')}
                     </button>
                   }
                 </div>

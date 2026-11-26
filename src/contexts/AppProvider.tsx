@@ -546,26 +546,16 @@ function AppProvider({ children }: any) {
   var eseguiRinomina = safeFn(__handlers.eseguiRinomina);
   var addClasseCustom = safeFn(__handlers.addClasseCustom);
   var removeClasseCustom = safeFn(__handlers.removeClasseCustom);
+  // `toggleVisibile`/`togglePin` scrivono su Firestore e sono OTTIMISTICHE: stanno
+  // in app-handlers.ts accanto a `esitoOttimistico`, perché il `try/catch` sincrono
+  // che c'era qui non prende una rejection — la promise restava senza gestore
+  // (vitest esce con 1) e la card restava fissata in cima anche quando Firestore
+  // aveva negato la scrittura, dato che l'overlay ottimistico si pota solo alla
+  // convergenza con lo snapshot (che per un patch rifiutato non arriva mai).
+  var toggleVisibile = safeFn(__handlers.toggleVisibile);
+  var togglePin = safeFn(__handlers.togglePin);
 
   // ── OPERAZIONI LOCALI ──
-  function toggleVisibile(card: any, e: any) {
-    e.stopPropagation();
-    fbSave(Object.assign({}, card, { visibile: card.visibile === false }));
-  }
-
-  // Fissa/sblocca una card in cima alla griglia (solo prof; il campo pinned è
-  // già bloccato dalle rules per gli studenti). Ottimistico come like/reazioni.
-  function togglePin(id: any) {
-    var card = cardsHook.cards.find(function (c: any) {
-      return String(c.id) === String(id);
-    });
-    if (!card) return;
-    var ottimo = Object.assign({}, card, { pinned: !card.pinned });
-    if (cardsHook.applyOptimistic) cardsHook.applyOptimistic(String(id), ottimo, ['pinned']);
-    try {
-      fbSave(ottimo);
-    } catch (e) {}
-  }
 
   function apriDuplica(card: any, e: any) {
     e.stopPropagation();

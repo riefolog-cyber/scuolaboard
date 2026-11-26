@@ -162,6 +162,24 @@ describe('updateCard: routing (via toggleLike)', () => {
     }
   );
 
+  it('toggleLike: la scrittura negata ANNULLA l overlay ottimistico (niente like fantasma)', async () => {
+    clearServices();
+    window.SB.db = {
+      collection: () => ({ doc: () => ({ update: vi.fn().mockRejectedValue(new Error('denied')) }) }),
+    };
+    const fbSave = vi.fn().mockRejectedValue(new Error('denied'));
+    const onOpt = vi.fn();
+    const handlers = createAppHandlers(likeCtx({ onOptimistic: onOpt, fbSave: fbSave }));
+    await expect(handlers.toggleLike('c1')).resolves.toBe(false);
+    // L'overlay si pota solo quando lo snapshot del server converge ai valori del
+    // patch: un patch negato non converge mai, quindi va tolto a mano. Prima
+    // restava per sempre e la card mostrava un like che Firestore non aveva.
+    expect(onOpt).toHaveBeenCalledTimes(2);
+    expect(onOpt.mock.calls[1][0]).toBe('c1');
+    expect(onOpt.mock.calls[1][1]).toBeNull();
+    expect(onOpt.mock.calls[1][2]).toEqual([]);
+  });
+
   it('update diretto OK → nessun fallback fbSave', async () => {
     clearServices();
     const fbSave = vi.fn().mockResolvedValue({ ok: true });
@@ -181,6 +199,69 @@ describe('updateCard: routing (via toggleLike)', () => {
     expect(onOpt).toHaveBeenCalledTimes(1);
     expect(onOpt.mock.calls[0][1].likes).toBe(-1); // ottimistico: 0 - 1
     expect(onOpt.mock.calls[0][1].likesBy).toEqual([]);
+  });
+});
+
+// ── togglePin / toggleVisibile: scritture ottimistiche chiuse e annullabili ──
+// Erano in AppProvider dentro `try { fbSave(...) } catch {}`: un try/catch
+// SINCRONO non prende una rejection, quindi la promise restava senza gestore
+// (vitest esce con 1) e la card restava fissata in cima anche quando Firestore
+// aveva negato la scrittura.
+describe('togglePin / toggleVisibile', () => {
+  function pinCtx(over = {}) {
+    return Object.assign(
+      {
+        cards: [{ id: 'c1', titolo: 'T', pinned: false, visibile: true }],
+        user: { uid: 'u1', role: 'prof' },
+        onOptimistic: vi.fn(),
+        showToast: vi.fn(),
+      },
+      over
+    );
+  }
+
+  it('togglePin: applica il fissaggio in modo ottimistico e attende la scrittura', async () => {
+    const fbSave = vi.fn().mockResolvedValue({ ok: true });
+    const onOpt = vi.fn();
+    const handlers = createAppHandlers(pinCtx({ fbSave: fbSave, onOptimistic: onOpt }));
+    await expect(handlers.togglePin('c1')).resolves.toBe(true);
+    expect(fbSave.mock.calls[0][0].pinned).toBe(true);
+    expect(onOpt).toHaveBeenCalledTimes(1);
+    expect(onOpt.mock.calls[0][1].pinned).toBe(true);
+    expect(onOpt.mock.calls[0][2]).toEqual(['pinned']);
+  });
+
+  it('togglePin: se Firestore nega, l overlay viene annullato e la promise risolve', async () => {
+    const fbSave = vi.fn().mockRejectedValue(Object.assign(new Error('negato'), { code: 'permission-denied' }));
+    const onOpt = vi.fn();
+    const handlers = createAppHandlers(pinCtx({ fbSave: fbSave, onOptimistic: onOpt }));
+    await expect(handlers.togglePin('c1')).resolves.toBe(false);
+    expect(onOpt).toHaveBeenCalledTimes(2);
+    expect(onOpt.mock.calls[1][0]).toBe('c1');
+    expect(onOpt.mock.calls[1][1]).toBeNull();
+  });
+
+  it('togglePin: una card inesistente non scrive niente', async () => {
+    const fbSave = vi.fn().mockResolvedValue({ ok: true });
+    const handlers = createAppHandlers(pinCtx({ cards: [], fbSave: fbSave }));
+    await expect(handlers.togglePin('c9')).resolves.toBe(false);
+    expect(fbSave).not.toHaveBeenCalled();
+  });
+
+  it('toggleVisibile: nasconde la card e ferma la propagazione del clic', async () => {
+    const fbSave = vi.fn().mockResolvedValue({ ok: true });
+    const handlers = createAppHandlers(pinCtx({ fbSave: fbSave }));
+    const e = { stopPropagation: vi.fn() };
+    await expect(handlers.toggleVisibile({ id: 'c1', visibile: true }, e)).resolves.toBe(true);
+    expect(e.stopPropagation).toHaveBeenCalledTimes(1);
+    expect(fbSave.mock.calls[0][0].visibile).toBe(false);
+  });
+
+  it('toggleVisibile: una scrittura negata risolve (nessuna rejection non gestita)', async () => {
+    const fbSave = vi.fn().mockRejectedValue(new Error('permission-denied'));
+    const handlers = createAppHandlers(pinCtx({ fbSave: fbSave }));
+    const e = { stopPropagation: vi.fn() };
+    await expect(handlers.toggleVisibile({ id: 'c1', visibile: true }, e)).resolves.toBe(false);
   });
 });
 
@@ -264,6 +345,28 @@ describe('vote / toggleReazione', () => {
       expect(ctx.showToast).not.toHaveBeenCalledWith('Voto registrato ✓', 'ok');
     }
   );
+
+  it('vote: la scrittura negata toglie il voto ottimistico (lo studente non resta con un voto fantasma)', async () => {
+    clearServices();
+    var ctx = {
+      cards: [{ id: 'c1', opzioni: [{ id: 'o1', voti: [] }, { id: 'o2', voti: [] }] }],
+      myLikes: { current: new Set() },
+      myName: () => 'Mario',
+      user: { uid: 'u1', role: 'studente' },
+      onOptimistic: vi.fn(),
+      showToast: vi.fn(),
+      setLikeAnimCard: vi.fn(),
+      fbSave: vi.fn().mockRejectedValue(new Error('denied')),
+    };
+    window.SB.db = {
+      collection: () => ({ doc: () => ({ update: vi.fn().mockRejectedValue(new Error('denied')) }) }),
+    };
+    const handlers = createAppHandlers(ctx);
+    await handlers.vote('c1', 'o1');
+    expect(ctx.showToast).not.toHaveBeenCalledWith('Voto registrato ✓', 'ok');
+    expect(ctx.onOptimistic).toHaveBeenCalledTimes(2);
+    expect(ctx.onOptimistic.mock.calls[1][1]).toBeNull();
+  });
 
   it('vote: senza getUser (logout) → no-op', async () => {
     clearServices();

@@ -83,24 +83,40 @@ export function createAppHandlers(ctx: any) {
     }
   }
 
-  // Una scrittura già applicata in modo OTTIMISTICO (like, reazione, voto) ha la UI
-  // aggiornata prima del round-trip: quello che non deve fare è mentire sull'esito
-  // né lasciare una rejection senza gestore. La promise restituita risolve sempre
+  // Una scrittura già applicata in modo OTTIMISTICO (like, reazione, voto,
+  // fissaggio) ha la UI aggiornata prima del round-trip: quello che non deve fare
+  // è mentire sull'esito, lasciare una rejection senza gestore o tenere la card in
+  // uno stato che Firestore non ha. La promise restituita risolve sempre
   // (`true`/`false`): i gestori di click non hanno un `.catch` e una rejection non
-  // gestita fa uscire `vitest` con 1 (AGENTS.md, «Il verde non basta»). `updateCard`
-  // ha già il suo fallback su `fbSave`, che mostra lui il toast d'errore.
-  function esitoOttimistico(esegui: any): Promise<boolean> {
+  // gestita fa uscire `vitest` con 1 (AGENTS.md, «Il verde non basta»).
+  // `updateCard` ha già il suo fallback su `fbSave`, che mostra lui il toast
+  // d'errore.
+  //
+  // `annulla` scatta quando la scrittura fallisce e deve TOGLIERE l'overlay
+  // ottimistico (`onOptimistic(id, null, [])`): l'overlay si pota solo quando lo
+  // snapshot del server converge ai valori del patch, e un patch rifiutato non
+  // converge mai — quindi senza questo la card continuerebbe a mostrare il
+  // like/il voto/il fissaggio che il server non ha, fino al reload.
+  function esitoOttimistico(esegui: any, annulla?: any): Promise<boolean> {
+    function annullaSePossibile() {
+      if (typeof annulla !== 'function') return;
+      try {
+        annulla();
+      } catch (e: any) {}
+    }
     var p: any;
     try {
       p = esegui();
     } catch (e: any) {
-      return Promise.resolve(false); // guasto sincrono: niente da salvare
+      annullaSePossibile(); // guasto sincrono: niente da salvare
+      return Promise.resolve(false);
     }
     return Promise.resolve(p).then(
       function () {
         return true;
       },
       function () {
+        annullaSePossibile();
         return false;
       }
     );
@@ -115,6 +131,45 @@ export function createAppHandlers(ctx: any) {
   function getShowCard() {
     return ctx.showCard;
   }
+
+  // Fissa/sblocca una card in cima alla griglia (solo docente: `pinned` è fra i
+  // campi che le rules negano allo studente). È una scrittura ottimistica come
+  // like/voti, quindi ha gli stessi due obblighi. Sta QUI e non in AppProvider
+  // perché lì c'era `try { fbSave(ottimo) } catch (e) {}`: un try/catch sincrono
+  // non prende una rejection, quindi la promise restava senza gestore (vitest esce
+  // con 1, in produzione «Uncaught (in promise)») e la card restava fissata in cima
+  // anche quando Firestore aveva negato — l'overlay non si sarebbe mai potato.
+  function togglePin(id: any) {
+    var card = getCards().find(function (c: any) {
+      return String(c.id) === String(id);
+    });
+    if (!card) return Promise.resolve(false);
+    var ottimo = Object.assign({}, card, { pinned: !card.pinned });
+    if (ctx.onOptimistic) ctx.onOptimistic(String(id), ottimo, ['pinned']);
+    return esitoOttimistico(
+      function () {
+        return fbSave ? fbSave(ottimo) : null;
+      },
+      function () {
+        if (ctx.onOptimistic) ctx.onOptimistic(String(id), null, []);
+      }
+    );
+  }
+
+  // Mostra/nasconde una card (solo docente). Qui non c'è overlay da annullare —
+  // lo stato arriva dallo snapshot — ma la promise di `fbSave` rigetta quando
+  // Firestore nega o la sessione è scaduta: senza un gestore resta non gestita
+  // (vitest esce con 1, in produzione «Uncaught (in promise)»). `fbSave` mostra già
+  // lui il toast d'errore, quindi l'esito non serve a nessuno: la promise va solo
+  // marcata come gestita.
+  function toggleVisibile(card: any, e: any) {
+    if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+    if (!card) return Promise.resolve(false);
+    return esitoOttimistico(function () {
+      return fbSave ? fbSave(Object.assign({}, card, { visibile: card.visibile === false })) : null;
+    });
+  }
+
   function getNc() {
     return ctx.nc || {};
   }
@@ -454,9 +509,15 @@ export function createAppHandlers(ctx: any) {
       if (ctx.onOptimistic) ctx.onOptimistic(cardId, ottimo, ['likes', 'likesBy']);
       // Restituisce la Promise in modo che i chiamanti possano fare await/then;
       // l'esito non rigetta mai (vedi `esitoOttimistico`).
-      return esitoOttimistico(function () {
-        return updateCard(cardId, { likes: ottimo.likes, likesBy: ottimo.likesBy }, ottimo);
-      });
+      return esitoOttimistico(
+        function () {
+          return updateCard(cardId, { likes: ottimo.likes, likesBy: ottimo.likesBy }, ottimo);
+        },
+        // Scrittura negata: togli il like ottimistico (vedi `esitoOttimistico`).
+        function () {
+          if (ctx.onOptimistic) ctx.onOptimistic(cardId, null, []);
+        }
+      );
     },
     toggleReazione: function (cardId: any, emoji: any) {
       if (!getUser()) return;
@@ -473,9 +534,14 @@ export function createAppHandlers(ctx: any) {
       reaz[emoji] = lista;
       var ottimo = Object.assign({}, card, { reazioni: reaz });
       if (ctx.onOptimistic) ctx.onOptimistic(cardId, ottimo, ['reazioni']);
-      return esitoOttimistico(function () {
-        return updateCard(cardId, { reazioni: reaz }, ottimo);
-      });
+      return esitoOttimistico(
+        function () {
+          return updateCard(cardId, { reazioni: reaz }, ottimo);
+        },
+        function () {
+          if (ctx.onOptimistic) ctx.onOptimistic(cardId, null, []);
+        }
+      );
     },
     vote: function (cid: any, oid: any) {
       if (!getUser()) return;
@@ -496,9 +562,17 @@ export function createAppHandlers(ctx: any) {
       });
       var ottimo = Object.assign({}, card, { opzioni: nuoveOpzioni });
       if (ctx.onOptimistic) ctx.onOptimistic(cid, ottimo, ['opzioni']);
-      return esitoOttimistico(function () {
-        return updateCard(cid, { opzioni: nuoveOpzioni }, ottimo);
-      }).then(function (ok) {
+      return esitoOttimistico(
+        function () {
+          return updateCard(cid, { opzioni: nuoveOpzioni }, ottimo);
+        },
+        // Il voto ottimistico non deve sopravvivere a una scrittura negata:
+        // altrimenti lo studente legge la sua scelta fatta, e il docente non la
+        // vede mai.
+        function () {
+          if (ctx.onOptimistic) ctx.onOptimistic(cid, null, []);
+        }
+      ).then(function (ok) {
         // Il toast ASPETTA l'esito: prima confermava «Voto registrato ✓» a
         // scrittura ancora in volo, quindi con la sessione scaduta o la rete giù
         // l'utente leggeva confermato un voto che Firestore non aveva (stessa
@@ -963,6 +1037,11 @@ export function createAppHandlers(ctx: any) {
           showToast('Caricamento allegati fallito', 'err');
         });
     },
+    // Scritture ottimistiche della card in bacheca: pubblicate qui perché
+    // condividono `esitoOttimistico` (annullamento dell'overlay quando Firestore
+    // nega) e perché così sono verificabili con i test unitari dei gestori.
+    togglePin: togglePin,
+    toggleVisibile: toggleVisibile,
     handleRimuoviAllegato: function (allegatoId: any, setForm: any) {
       setForm(function (p: any) {
         var allegati = p.allegati || [];

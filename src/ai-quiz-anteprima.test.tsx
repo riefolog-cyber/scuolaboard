@@ -62,4 +62,33 @@ describe('anteprima del quiz generato dall IA', function () {
     mostra(aqgCon({ anteprima: [{ tipo: 'aperta', testo: 'Domanda aperta' }] }));
     expect(screen.queryByRole('status')).toBeNull();
   });
+
+  it('se nessuna domanda è importabile il pulsante non promette l aggiunta', function () {
+    // Tutte le domande generate sono state scartate: il pulsante diceva «Aggiungi
+    // 0 domande al quiz» e restava premibile, cioè invitava a un gesto che
+    // `aiConfirmaQuiz` rifiuta (mette un errore e non chiude la modale). Il
+    // conteggio onesto non basta se poi il pulsante resta armato.
+    mostra(
+      aqgCon({
+        anteprima: [{ tipo: 'multipla', testo: 'Senza risposta', opzioni: ['A', 'B'] }],
+        scartate: [{ indice: 1, motivo: 'nessuna opzione segnata come corretta' }],
+      })
+    );
+    var bottone = screen.getByRole('button', { name: /Nessuna domanda importabile/ });
+    expect(bottone.hasAttribute('disabled')).toBe(true);
+  });
+
+  it('con una domanda importabile il pulsante dice quante ne entrano e resta attivo', function () {
+    mostra(
+      aqgCon({
+        anteprima: [
+          { tipo: 'multipla', testo: 'Valida', opzioni: ['A', 'B'], corretta: '0' },
+          { tipo: 'multipla', testo: 'Senza risposta', opzioni: ['A', 'B'] },
+        ],
+        scartate: [{ indice: 2, motivo: 'nessuna opzione segnata come corretta' }],
+      })
+    );
+    var bottone = screen.getByRole('button', { name: /Aggiungi 1 domanda al quiz/ });
+    expect(bottone.hasAttribute('disabled')).toBe(false);
+  });
 });
