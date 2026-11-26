@@ -206,9 +206,12 @@ describe('regression: editCard dal CardItem', () => {
     fireEvent.keyDown(campo, { key: 'Enter' });
 
     await waitFor(() => expect(screen.getAllByText(/Permesso negato|Errore di salvataggio/).length).toBeGreaterThan(0));
-    // Overlay annullato: la card torna allo stato vero (nessun commento)…
-    await waitFor(() => expect(screen.queryByText('Commento respinto')).toBeNull());
-    expect(screen.getByText(/Nessun commento\. Scrivi il primo!/)).toBeTruthy();
+    // Overlay annullato: la card torna allo stato vero (nessun commento). Il
+    // `selector` serve perché `queryByText` guarda anche il textContent della
+    // textarea, che qui contiene proprio le parole cercate: senza, il test
+    // fallisce accusando un commento rimasto che non c'è.
+    await waitFor(() => expect(screen.queryByText('Commento respinto', { selector: 'div' })).toBeNull());
+    expect(screen.getByText(/Nessun commento/)).toBeTruthy();
     // …e il testo digitato è ancora nel campo, pronto per un nuovo tentativo.
     expect((screen.getByLabelText('Scrivi un commento') as HTMLTextAreaElement).value).toBe('Commento respinto');
     expect(db._get('cards', 'c1').commenti.length).toBe(0);
