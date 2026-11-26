@@ -114,9 +114,17 @@ export function eliminabileSoloDaClasse(card: Card, classe: string): boolean {
   if (esclusa(card, classe)) return false;
   var cc = classiDi(card);
   if (cc.indexOf('TUTTE') >= 0) return true;
-  if (cc.length <= 1) return false;
+  // Contare le VOCI non basta: `classi: ['3A', '3A']` (dato importato o
+  // scritto a mano) sembrerebbe "due classi", ma togliere la 3A svuoterebbe
+  // l'elenco e la card diventerebbe «solo prof» — l'opposto del gesto chiesto,
+  // e per giunta in silenzio. Con una sola classe DISTINTA il gesto equivale
+  // a cancellarla.
+  var uniche = cc.filter(function (x: string, i: number) {
+    return cc.indexOf(x) === i;
+  });
+  if (uniche.length <= 1) return false;
   // Più classi in elenco: eliminare da una sola lascia le altre, quindi sì.
-  return cc.indexOf(classe) >= 0;
+  return uniche.indexOf(classe) >= 0;
 }
 
 // Un'esclusione è la risposta alla domanda «per chi è questa card»: se `classi`
@@ -148,7 +156,10 @@ export function etichettaClassi(card: Card): string {
   var cc = classiDi(card);
   var ex = escluseDi(card);
   var base = cc.length === 0 ? 'Solo prof' : cc.indexOf('TUTTE') >= 0 ? 'Tutte le classi' : cc.join(', ');
-  if (!ex.length) return base;
+  // Su una card «solo prof» le esclusioni non tolgono niente (`visibileAClasse`
+  // esce prima di guardarle): «Solo prof tranne 3A» descriverebbe una regola
+  // che non esiste, ed è il testo che finiva sul foglio stampato.
+  if (!ex.length || cc.length === 0) return base;
   return base + ' tranne ' + ex.join(', ');
 }
 
@@ -158,7 +169,10 @@ export function etichettaClassi(card: Card): string {
 // non deve controllare due volte lo stesso dato.
 export function etichettaEsclusioni(card: Card): string {
   var ex = escluseDi(card);
-  return ex.length ? 'tranne ' + ex.join(', ') : '';
+  // Stessa ragione di `etichettaClassi`: su una card senza classi destinatarie
+  // un chip «tranne 3A» farebbe credere a un'esclusione che non ha effetto.
+  if (!ex.length || classiDi(card).length === 0) return '';
+  return 'tranne ' + ex.join(', ');
 }
 
 // Scrittura del gesto «togli da questa classe» (la ✕ sulla card filtrata).

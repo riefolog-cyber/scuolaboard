@@ -2,6 +2,7 @@
 import { pseudonimizeComments, restoreNames, cleanAiMarkdown, cleanJsonStrings } from './utils/ai-text.ts';
 import { classiDi, visibileAClasse } from './card-classi.ts';
 import { mascheraPII, ripristinaPII } from './utils/pii.ts';
+import { attesaProssimaChiamata, INTERVALLO_AI_MS } from './ai-throttle.ts';
 
 var db: any = window.SB && SB.db;
 var CFG = window.SB_CONFIG || { AI_CACHE_TTL_MS: 15 * 60 * 1000 };
@@ -57,7 +58,9 @@ function cacheInvalidate() {
 }
 
 var _lastAiCall = 0;
-var AI_THROTTLE_MS = 5000; // 5 secondi tra chiamate
+// Unica fonte della finestra: ai-throttle.ts, che la usa anche per dire quanto
+// manca prima della prossima chiamata (analisi suddivisa, una per classe).
+var AI_THROTTLE_MS = INTERVALLO_AI_MS;
 // Timeout della singola richiesta al Worker. Senza, un Worker che non risponde
 // (o una rete che si blocca a metà) lascia il pannello AI in attesa per sempre:
 // nessun errore, solo lo spinner. 45s coprono una generazione lenta e restano
@@ -466,6 +469,19 @@ export function useAI(user: any) {
           return;
         }
         for (var i = 0; i < classiConCard.length; i++) {
+          if (i > 0) {
+            // Il throttle di `chiamaAI` è globale e sincrono: due analisi di fila
+            // nello stesso giro facevano rifiutare la seconda («Troppe richieste
+            // AI»), e `runAI` non salva risultati parziali — quindi con più classi
+            // la suddivisione falliva quasi sempre. Si attende il tempo che manca
+            // invece di farsela negare.
+            var pausa = attesaProssimaChiamata(_lastAiCall, Date.now(), AI_THROTTLE_MS);
+            if (pausa > 0) {
+              await new Promise<void>(function (resolve) {
+                setTimeout(resolve, pausa);
+              });
+            }
+          }
           var cl = classiConCard[i];
           var classCards = targetCards.filter(function (c: any) {
             // Stesso criterio della griglia (card-classi.ts): nella sezione di una

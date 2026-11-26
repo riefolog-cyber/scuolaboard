@@ -192,6 +192,13 @@ describe('card-classi: eliminabileSoloDaClasse (quando mostrare il bottone)', ()
   it('filtro classe che non riguarda la card → no', () => {
     expect(eliminabileSoloDaClasse(card3A, '5C')).toBe(false);
   });
+
+  it('elenco con la stessa classe ripetuta → no (svuoterebbe le classi: card «solo prof»)', () => {
+    // `classi: ['3A', '3A'] conta due voci ma una sola classe: togliere la 3A
+    // lascerebbe `classi: []`, cioè la card visibile al solo docente — un gesto
+    // che nessuno ha chiesto e che non si annulla dalla griglia.
+    expect(eliminabileSoloDaClasse({ classi: ['3A', '3A'] }, '3A')).toBe(false);
+  });
 });
 
 // Il caso che ha fatto scattare la segnalazione: eliminare da una classe
@@ -243,6 +250,10 @@ describe('card-classi: etichetta della destinazione', function () {
     expect(etichettaClassi(cardSoloProf)).toBe('Solo prof');
   });
 
+  it('«solo prof» con un\'esclusione: non annuncia «tranne 3A», che non toglie niente', function () {
+    expect(etichettaClassi({ classi: [], classiEscluse: ['3A'] })).toBe('Solo prof');
+  });
+
   it('card legacy senza il campo: vale per tutte', function () {
     expect(etichettaClassi({ id: 'legacy' })).toBe('Tutte le classi');
   });
@@ -288,6 +299,10 @@ describe('card-classi: etichetta breve delle esclusioni', function () {
 
   it('più classi, separate', function () {
     expect(etichettaEsclusioni({ classi: ['TUTTE'], classiEscluse: ['3A', '4B'] })).toBe('tranne 3A, 4B');
+  });
+
+  it('card «solo prof»: senza destinatari l\'esclusione non ha effetto, niente chip', function () {
+    expect(etichettaEsclusioni({ classi: [], classiEscluse: ['3A'] })).toBe('');
   });
 });
 

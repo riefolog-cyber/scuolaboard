@@ -529,6 +529,26 @@ describe('eseguiRinomina', () => {
       })
     );
   });
+
+  it('rinomina: non riscrive le card degli anni passati', () => {
+    window.SB.CLASSI_DEFAULT = ['1A', '1B'];
+    const ctx = rinCtx({
+      cards: [
+        // La 1A del 2025/26 non è la 1A del 2026/27: riscriverla falserebbe il
+        // record storico (e i suoi commenti si vedrebbero dalla classe sbagliata).
+        { id: 'old', classi: ['1A'], annoScolastico: '2025/2026' },
+        { id: 'cur', classi: ['1A'], annoScolastico: '2026/2027' },
+        // Card senza anno: legacy, `cards.ts` la mostra nell'anno corrente.
+        { id: 'legacy', classi: ['1A'] },
+      ],
+    });
+    window.SB.db = ctx._db;
+    createAppHandlers(ctx).eseguiRinomina();
+    expect(ctx.fbSave).toHaveBeenCalledTimes(2);
+    expect(ctx.fbSave).not.toHaveBeenCalledWith(expect.objectContaining({ id: 'old' }));
+    expect(ctx.fbSave).toHaveBeenCalledWith(expect.objectContaining({ id: 'cur', classi: ['1AX'] }));
+    expect(ctx.fbSave).toHaveBeenCalledWith(expect.objectContaining({ id: 'legacy', classi: ['1AX'] }));
+  });
 });
 
 // ── togglePreferito ────────────────────────────────────────────────────────

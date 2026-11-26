@@ -269,7 +269,17 @@ export function createAppHandlers(ctx: any) {
           return x === oldN ? newN : x;
         });
       };
+      // La classe di una card è quella dell'ANNO della card: la 3A del 2025/26 non
+      // è la 3A del 2026/27 (stessi nomi, persone diverse). Riscrivere anche le
+      // card degli anni passati falserebbe il record storico — e le loro
+      // esclusioni tornerebbero a valere per un gruppo che non è quello di allora.
+      // È la stessa scelta già fatta per `classiPerAnno` degli studenti (poche
+      // righe sotto): solo l'anno corrente. Le card senza `annoScolastico` sono
+      // legacy e `cards.ts` le mostra nell'anno corrente, quindi seguono la
+      // rinomina.
+      var annoRinomina = ctx.annoScolastico;
       var toUpdate = (getCards() || []).filter(function (c: any) {
+        if (annoRinomina && c.annoScolastico && c.annoScolastico !== annoRinomina) return false;
         return (
           (Array.isArray(c.classi) && c.classi.indexOf(oldN) >= 0) ||
           (Array.isArray(c.classiEscluse) && c.classiEscluse.indexOf(oldN) >= 0) ||
