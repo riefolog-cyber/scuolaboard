@@ -294,4 +294,16 @@ describe('CardItem', () => {
     });
     expect(screen.getByText(/2 domande/)).toBeInTheDocument();
   });
+
+  // La card tolta a una classe non deve presentarsi come «per tutti»: il chip
+  // dice l'esclusione anche quando `classi` è il segnaposto TUTTE (card-classi.ts).
+  it('mostra «tranne …» per una card tolta a una classe', () => {
+    renderCard({ classi: ['TUTTE'], classiEscluse: ['3AO'] });
+    expect(screen.getByText('tranne 3AO')).toBeInTheDocument();
+  });
+
+  it("senza esclusioni non c'è nessun chip «tranne»", () => {
+    renderCard({ classi: ['TUTTE'] });
+    expect(screen.queryByText(/^tranne /)).toBeNull();
+  });
 });

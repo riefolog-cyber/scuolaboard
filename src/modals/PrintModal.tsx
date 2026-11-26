@@ -16,7 +16,16 @@ function fmtData(d: any) {
 function PrintModal(props: any) {
   // ATTENZIONE: nessun early-return prima degli hook (regola React: stesso
   // numero di hook a ogni render). Il return null arriva DOPO tutti gli hook.
-  var cards = props.visibleSorted || props.cards || [];
+  // Il foglio è un documento che finisce in classe: proposte non ancora
+  // approvate e card nascoste restano fuori. `visibleSorted` è già filtrato per
+  // anno/classe, ma NON per lo stato di pubblicazione: il prof con filtro 'tutte'
+  // ci trova dentro anche le proposte e le card che ha nascosto (`visibileAlProf`
+  // gliele mostra apposta, per poterle gestire) — prima finivano sul foglio.
+  var tutte = props.visibleSorted || props.cards || [];
+  var cards = tutte.filter(function (c: any) {
+    return c && !c.proposta && c.visibile !== false;
+  });
+  var fuori = tutte.length - cards.length;
   var filtri: string[] = [];
   // `filterClasse` vale 'tutte', '_solo' o il nome della classe (minuscoli per i
   // due segnaposto, vedi cards.ts). Il confronto era con 'TUTTE' MAIUSCOLO, quindi
@@ -136,6 +145,14 @@ function PrintModal(props: any) {
           >
             {filtri.length > 0 ? filtri.join(', ') : 'Tutte le card visibili'}
           </div>
+          {fuori > 0 && (
+            <div
+              className="print-hide"
+              style={{ fontSize: 11, color: '#64748b', marginTop: -10, marginBottom: 16 }}
+            >
+              {fuori + ' card fuori dal foglio (proposte non approvate o nascoste).'}
+            </div>
+          )}
 
           {cards.length === 0 && (
             <div style={{ fontSize: 13, color: '#475569', textAlign: 'center', padding: '30px 0' }}>

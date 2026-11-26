@@ -11,6 +11,7 @@ import BadgeAi from './BadgeAi.tsx';
 import FormContext from './contexts/FormContext.tsx';
 import { useCountdown, countdownStr } from './Countdown.tsx';
 import { temaTipo, etichettaTipo } from './card-tipo-tema.ts';
+import { etichettaEsclusioni } from './card-classi.ts';
 
 // Import STATICI di proposito: il `lazy` è stato provato e scartato. Questi
 // quattro pannelli sono sempre nell'albero (la condizione quiz/prof è DENTRO il
@@ -212,6 +213,9 @@ function CardDetail__({ $: props$ }: any) {
   // gli permettono di riscrivere una card e il salvataggio falliva in silenzio.
   var cardLinks = normalizeLinks ? normalizeLinks(c) : [];
   var nascosta = c.visibile === false;
+  // Stessa lettura della bacheca: il dettaglio è il posto dove il docente
+  // decide, e deve VEDERE che la card è tolta a una classe (card-classi.ts).
+  var chipEsclusioni = etichettaEsclusioni(c);
   var cc = c.classi || ['TUTTE'];
 
   return (
@@ -428,6 +432,18 @@ function CardDetail__({ $: props$ }: any) {
                   );
                 })}
                 {cc.length > 3 && '…'}
+              </span>
+            )}
+            {$.isProf && chipEsclusioni !== '' && (
+              <span
+                className="badge-chip"
+                style={{
+                  background: 'var(--sb-warn-soft-bg)',
+                  color: 'var(--sb-warn-fg)',
+                  padding: '2px 6px',
+                }}
+              >
+                {chipEsclusioni}
               </span>
             )}
             {nascosta && $.isProf && (

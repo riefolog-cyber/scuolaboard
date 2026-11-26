@@ -23,7 +23,7 @@ import { useCards } from '../cards.ts';
 import { useAI } from '../ai-services.ts';
 import { useModals } from '../modals.ts';
 import { createAppHandlers, anteprimaTesto } from '../app-handlers.ts';
-import { conEsclusione, eliminabileSoloDaClasse, visibileAClasse } from '../card-classi.ts';
+import { eliminabileSoloDaClasse, senzaClasse, visibileAClasse } from '../card-classi.ts';
 import {
   fbSave,
   fbDel,
@@ -1090,8 +1090,11 @@ function AppProvider({ children }: any) {
       return String(c.id) === String(id);
     });
     if (!card || !classe) return;
-    var escluse = conEsclusione(card, classe);
-    var patch: any = { classiEscluse: escluse };
+    // Scrittura coerente (card-classi.ts): con una classe ESPLICITA la si toglie
+    // dall'elenco, altrimenti (TUTTE) si registra l'esclusione. Prima si
+    // aggiungeva sempre l'esclusione, quindi la card restava scritta «3A, 4B»
+    // e l'editor, risalvando, annullava il gesto in silenzio.
+    var patch: any = senzaClasse(card, classe);
     fbSave(Object.assign({}, card, patch))
       .then(function () {
         // Il toast aspetta la PROMESSA, non il semplice avvio della scrittura:
@@ -2019,7 +2022,10 @@ var cardsValue = useMemo(
               return visibileAClasse(c, ai.aiTarget);
             });
           }
-          ai.runAI(cards);
+          // Le classi dell'istituto servono alla suddivisione: una bacheca di sole
+          // card per TUTTE non nomina nessuna classe, e l'analisi per classe
+          // restava senza sezioni (ai-services.ts).
+          ai.runAI(cards, CLASSI_LIST);
         },
         runCardAI: function (card: any, _e: any) {
           if (!isProf || simulaSt) return;
@@ -2078,6 +2084,7 @@ var cardsValue = useMemo(
       ai.sondaggioAiLoading,
       showCard,
       cardsHook.cards,
+      CLASSI_LIST,
       isProf,
       simulaSt,
     ]

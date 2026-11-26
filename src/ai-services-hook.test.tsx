@@ -148,6 +148,17 @@ describe('useAI — flussi di analisi', () => {
     await waitFor(() => expect(apiRef.aiResult && apiRef.aiResult['1A']).toBeTruthy());
     expect(apiRef.aiResult['1B'].riepilogo).toBe('1B');
   });
+
+  it('runAI: suddivisa con sole card per TUTTE → una sezione per classe dell\'istituto', async () => {
+    apiRef.setAiTarget('suddivisa');
+    await waitFor(() => expect(apiRef.aiTarget).toBe('suddivisa'));
+    mockJson({ riepilogo: 'ok' });
+    // L'universo non può venire dalle sole card: nessuna nomina le classi.
+    apiRef.runAI([mkCard('c1', { classi: ['TUTTE'] })], ['1A', '1B']);
+    await waitFor(() => expect(apiRef.aiResult && apiRef.aiResult['1A']).toBeTruthy());
+    expect(Object.keys(apiRef.aiResult).sort()).toEqual(['1A', '1B']);
+    expect(apiRef.aiResult['1B'].riepilogo).toBe('ok');
+  });
 });
 
 describe('useAI — card AI e domande libere', () => {

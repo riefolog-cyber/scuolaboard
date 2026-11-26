@@ -1,6 +1,6 @@
 // ai-services.ts  ·  ScuolaBoard  ·  AI Groq via Cloudflare Worker (pattern UMD)
 import { pseudonimizeComments, restoreNames, cleanAiMarkdown, cleanJsonStrings } from './utils/ai-text.ts';
-import { visibileAClasse } from './card-classi.ts';
+import { classiDi, visibileAClasse } from './card-classi.ts';
 import { mascheraPII, ripristinaPII } from './utils/pii.ts';
 
 var db: any = window.SB && SB.db;
@@ -427,7 +427,12 @@ export function useAI(user: any) {
   }
 
   // 1. Analisi didattica generale della classe
-  async function runAI(targetCards: any) {
+  // `classiIstituto` è l'elenco ufficiale delle classi (CLASSI_LIST): senza,
+  // l'universo della suddivisione erano solo le classi NOMINATE dalle card.
+  // Una bacheca di card per TUTTE (o legacy, senza `classi`) non ne nomina
+  // nessuna, quindi `results` restava `{}`: il docente premeva "Avvia" e non
+  // otteneva nessuna sezione, senza un messaggio che dicesse perché.
+  async function runAI(targetCards: any, classiIstituto?: any) {
     if (!targetCards.length) {
       setAiErr('Nessuna card trovata.');
       notifyUser("Nessuna card trovata per l'analisi.", 'warn');
@@ -440,26 +445,35 @@ export function useAI(user: any) {
     try {
       if (aiTarget === 'suddivisa') {
         var results: any = {};
-        var allClassi: any[] = [];
+        var universe: string[] = (Array.isArray(classiIstituto) ? classiIstituto : []).filter(function (cl: any) {
+          return typeof cl === 'string' && cl;
+        });
         targetCards.forEach(function (c: any) {
-          (c.classi || []).forEach(function (cl: any) {
-            if (cl !== 'TUTTE') allClassi.push(cl);
+          // `classiDi` (card-classi.ts) conosce anche le card legacy senza
+          // `classi` (valgono per tutti) e il segnaposto TUTTE.
+          classiDi(c).forEach(function (cl: any) {
+            if (cl && cl !== 'TUTTE' && universe.indexOf(cl) < 0) universe.push(cl);
           });
         });
-        var uniqueClassi = [...new Set(allClassi)];
-
-        for (var i = 0; i < uniqueClassi.length; i++) {
-          var cl = uniqueClassi[i];
-          var classCards = targetCards.filter(function (c: any) {
-            // Stesso criterio della griglia (card-classi.ts): nella sezione di una
-            // classe entrano le card che QUELLA classe vede — anche quelle per TUTTE,
-            // che prima non comparivano in nessuna sezione — e non quelle che il
-            // docente le ha tolto (classiEscluse).
+        var classiConCard = universe.filter(function (cl: any) {
+          return targetCards.some(function (c: any) {
             return visibileAClasse(c, cl);
           });
-          if (classCards.length > 0) {
-            results[cl] = await performAnalysis(classCards);
-          }
+        });
+        if (!classiConCard.length) {
+          setAiErr('Nessuna classe con card da analizzare.');
+          notifyUser('Nessuna classe con card da analizzare.', 'warn');
+          return;
+        }
+        for (var i = 0; i < classiConCard.length; i++) {
+          var cl = classiConCard[i];
+          var classCards = targetCards.filter(function (c: any) {
+            // Stesso criterio della griglia (card-classi.ts): nella sezione di una
+            // classe entrano le card che QUELLA classe vede — anche quelle per TUTTE
+            // — e non quelle che il docente le ha tolto (classiEscluse).
+            return visibileAClasse(c, cl);
+          });
+          results[cl] = await performAnalysis(classCards);
         }
         setAiResult(results);
       } else {

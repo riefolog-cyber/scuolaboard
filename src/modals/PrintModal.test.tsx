@@ -118,4 +118,18 @@ describe('PrintModal', () => {
     expect(container.textContent).toContain('Solo prof');
     expect(container.textContent).not.toContain('TUTTE');
   });
+
+  // Il foglio finisce in classe: le proposte non approvate e le card nascoste
+  // sono proprio quelle che l'app non mostra agli studenti.
+  it('proposte e card nascoste restano fuori dal foglio', () => {
+    const cards = [
+      { id: 'p1', titolo: 'Card pubblicata', tipo: 'nota', testo: 'x', classi: ['TUTTE'] },
+      { id: 'p2', titolo: 'Proposta in attesa', tipo: 'domanda', testo: 'y', classi: ['TUTTE'], proposta: true },
+      { id: 'p3', titolo: 'Card nascosta', tipo: 'nota', testo: 'z', classi: ['TUTTE'], visibile: false },
+    ];
+    const { container } = renderModal({ visibleSorted: cards, filterClasse: 'tutte' });
+    expect(container.textContent).not.toContain('Proposta in attesa');
+    expect(container.textContent).not.toContain('Card nascosta');
+    expect(container.textContent).toContain('2 card fuori dal foglio');
+  });
 });

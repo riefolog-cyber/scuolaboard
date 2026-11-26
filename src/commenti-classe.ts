@@ -101,3 +101,32 @@ export function trovaCommento(lista: any, cmId: any): any {
   })(lista);
   return trovato;
 }
+
+// La rinomina di una classe deve seguire anche i COMMENTI. Ogni discussione
+// porta il nome della classe in `cm.classe` (e le risposte lo ereditano): se
+// restasse il vecchio nome, la classe rinominata non vedrebbe più i propri
+// commenti — il filtro confronta il nome — e una futura classe omonima li
+// erediterebbe. Ricorsiva sulle risposte; se non cambia nulla restituisce la
+// STESSA lista, così chi la usa non crea re-render inutili.
+export function rinominaClasseCommenti(commenti: any, da: string, a: string): any[] {
+  if (!Array.isArray(commenti) || !da || !a || da === a) return commenti;
+  var cambiato = false;
+  var out = commenti.map(function (cm: any) {
+    if (!cm) return cm;
+    var next = cm;
+    if (typeof cm.classe === 'string' && cm.classe === da) {
+      next = Object.assign({}, cm, { classe: a });
+      cambiato = true;
+    }
+    if (Array.isArray(cm.risposte) && cm.risposte.length) {
+      var rp = rinominaClasseCommenti(cm.risposte, da, a);
+      if (rp !== cm.risposte) {
+        if (next === cm) next = Object.assign({}, cm);
+        next.risposte = rp;
+        cambiato = true;
+      }
+    }
+    return next;
+  });
+  return cambiato ? out : commenti;
+}

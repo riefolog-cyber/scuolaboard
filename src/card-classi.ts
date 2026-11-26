@@ -151,3 +151,37 @@ export function etichettaClassi(card: Card): string {
   if (!ex.length) return base;
   return base + ' tranne ' + ex.join(', ');
 }
+
+// Le esclusioni in forma breve, per i chip della card e del dettaglio:
+// `etichettaClassi` è la frase intera («Tutte le classi tranne 3A»), che in un
+// badge non sta. Stringa vuota quando non c'è nulla da dire, così chi la usa
+// non deve controllare due volte lo stesso dato.
+export function etichettaEsclusioni(card: Card): string {
+  var ex = escluseDi(card);
+  return ex.length ? 'tranne ' + ex.join(', ') : '';
+}
+
+// Scrittura del gesto «togli da questa classe» (la ✕ sulla card filtrata).
+// Se la classe è ESPLICITA in `classi` non va anche in `classiEscluse`: le due
+// cose si contraddicono, e `visibileAClasse` fa vincere l'esclusione. Prima
+// qui si aggiungeva sempre l'esclusione, quindi su una card «3A, 4B» il gesto
+// lasciava scritto che la 3A è destinataria proprio mentre la si escludeva (e
+// l'editor, risalvando con `escluseCoerenti`, annullava il gesto in silenzio).
+// Con TUTTE (un segnaposto, non un elenco) l'esclusione è invece il gesto
+// giusto: la card resta per tutte le altre classi.
+export function senzaClasse(card: Card, classe: string): { classi: string[]; classiEscluse: string[] } {
+  var cc = classiDi(card);
+  var ex = escluseDi(card);
+  if (!classe) return { classi: cc, classiEscluse: ex };
+  if (cc.indexOf('TUTTE') < 0 && cc.indexOf(classe) >= 0) {
+    return {
+      classi: cc.filter(function (x) {
+        return x !== classe;
+      }),
+      classiEscluse: ex.filter(function (x) {
+        return x !== classe;
+      }),
+    };
+  }
+  return { classi: cc, classiEscluse: escluseCoerenti(cc, conEsclusione(card, classe)) };
+}

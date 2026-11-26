@@ -1,6 +1,7 @@
 import { memo, useState } from 'react';
 import { normalizeLinks } from './app-utils.tsx';
 import { avvisoInSospeso, dettaglioMancanti, etichettaAvviso } from './avvisi-classe.ts';
+import { etichettaEsclusioni } from './card-classi.ts';
 import { classeContestoCommenti, commentiVisibili, mostraTuttiCommenti } from './commenti-classe.ts';
 import Countdown from './Countdown.tsx';
 import { temaTipo, etichettaTipo } from './card-tipo-tema.ts';
@@ -56,6 +57,9 @@ function CardItem__({ $, c, idx }: any) {
   var avviso = $.isProf && !$.simulaSt && avvisoInSospeso(c, Date.now());
   var mancantiTxt = avviso ? dettaglioMancanti(c) : '';
   var cc = c.classi || ['TUTTE'];
+  // Le esclusioni sono una scrittura del docente: senza un chip la card tolta
+  // alla 3A si presenta in bacheca come se fosse per tutti (card-classi.ts).
+  var chipEsclusioni = etichettaEsclusioni(c);
   var tema = temaTipo(c.tipo);
   var tipoCol = tema.color;
 
@@ -382,6 +386,17 @@ function CardItem__({ $, c, idx }: any) {
                           }}
                         >
                           Solo prof
+                        </span>
+                      )}
+                      {$.isProf && chipEsclusioni !== '' && (
+                        <span
+                          className="badge-chip card-badge-extra"
+                          style={{
+                            background: 'var(--sb-warn-soft-bg)',
+                            color: 'var(--sb-warn-fg)',
+                          }}
+                        >
+                          {chipEsclusioni}
                         </span>
                       )}
                     </div>

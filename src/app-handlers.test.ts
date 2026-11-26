@@ -489,25 +489,44 @@ describe('eseguiRinomina', () => {
     expect(ctx.setClassiCustom).toHaveBeenCalledWith(['1BZ']);
   });
 
-  it('rinomina: `classiEscluse` segue il nuovo nome come `classi`', () => {
+  it('rinomina: `classiEscluse` e i commenti seguono il nuovo nome come `classi`', () => {
     window.SB.CLASSI_DEFAULT = ['1A', '1B'];
     const ctx = rinCtx({
       cards: [
         { id: 'c1', classi: ['1A'] },
         { id: 'c2', classi: ['TUTTE'], classiEscluse: ['1A'] },
         { id: 'c3', classi: ['1B'], classiEscluse: ['2A'] },
+        {
+          id: 'c4',
+          classi: ['TUTTE'],
+          commenti: [
+            { id: 'm1', classe: '1A', risposte: [{ id: 'r1', classe: '1A' }] },
+            { id: 'm2', classe: '1B' },
+          ],
+        },
       ],
     });
     window.SB.db = ctx._db;
     createAppHandlers(ctx).eseguiRinomina();
     // Solo le card che nominano la vecchia classe vengono riscritte.
-    expect(ctx.fbSave).toHaveBeenCalledTimes(2);
+    expect(ctx.fbSave).toHaveBeenCalledTimes(3);
     expect(ctx.fbSave).toHaveBeenCalledWith(expect.objectContaining({ id: 'c1', classi: ['1AX'] }));
     // La card resta per TUTTE, ma l'esclusione non deve più nominare 1A: dopo la
     // rinomina quella classe non esiste, e l'esclusione tornerebbe a valere per gli
     // stessi studenti (ora 1AX) o per una futura 1A ricreata.
     expect(ctx.fbSave).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'c2', classi: ['TUTTE'], classiEscluse: ['1AX'] })
+    );
+    // Anche le discussioni: la 1AX deve continuare a vedere i propri commenti, e
+    // le risposte (che ereditano la classe del padre) seguono il padre.
+    expect(ctx.fbSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'c4',
+        commenti: [
+          { id: 'm1', classe: '1AX', risposte: [{ id: 'r1', classe: '1AX' }] },
+          { id: 'm2', classe: '1B' },
+        ],
+      })
     );
   });
 });

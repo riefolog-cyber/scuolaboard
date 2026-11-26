@@ -17,6 +17,8 @@ import {
   eliminabileSoloDaClasse,
   escluseCoerenti,
   etichettaClassi,
+  etichettaEsclusioni,
+  senzaClasse,
 } from './card-classi.ts';
 
 const cardTutte = { id: 'c1', classi: ['TUTTE'] };
@@ -270,5 +272,51 @@ describe('card-classi: esclusioni coerenti alla scrittura', function () {
   it('valori sporchi vengono scartati, non salvati', function () {
     const sporche = ['3A', 5, null, ''] as unknown as string[];
     expect(escluseCoerenti(['4B'], sporche)).toEqual(['3A']);
+  });
+});
+
+// Il chip della bacheca non può portare la frase intera: qui la forma breve,
+// così card e dettaglio dicono esattamente lo stesso «tranne …».
+describe('card-classi: etichetta breve delle esclusioni', function () {
+  it('senza esclusioni è vuota, non «tranne »', function () {
+    expect(etichettaEsclusioni(cardTutte)).toBe('');
+  });
+
+  it('elenca le classi tolte', function () {
+    expect(etichettaEsclusioni({ classi: ['TUTTE'], classiEscluse: ['3A'] })).toBe('tranne 3A');
+  });
+
+  it('più classi, separate', function () {
+    expect(etichettaEsclusioni({ classi: ['TUTTE'], classiEscluse: ['3A', '4B'] })).toBe('tranne 3A, 4B');
+  });
+});
+
+// Scrittura del gesto «togli da questa classe»: con una classe ESPLICITA si
+// toglie dall'elenco (altrimenti il documento direbbe «3A, 4B tranne 3A» e
+// l'editor, risalvando, applicherebbe escluseCoerenti annullando il gesto).
+describe('card-classi: scrittura «togli da questa classe»', function () {
+  it("card per TUTTE: l'esclusione è il gesto giusto", function () {
+    expect(senzaClasse(cardTutte, '3A')).toEqual({ classi: ['TUTTE'], classiEscluse: ['3A'] });
+  });
+
+  it('le esclusioni già presenti restano, senza duplicati', function () {
+    expect(senzaClasse({ classi: ['TUTTE'], classiEscluse: ['4B'] }, '3A')).toEqual({
+      classi: ['TUTTE'],
+      classiEscluse: ['4B', '3A'],
+    });
+    expect(senzaClasse({ classi: ['TUTTE'], classiEscluse: ['3A'] }, '3A')).toEqual({
+      classi: ['TUTTE'],
+      classiEscluse: ['3A'],
+    });
+  });
+
+  it("classe esplicita: esce dall'elenco e NON entra nelle escluse", function () {
+    expect(senzaClasse(cardDueClassi, '3A')).toEqual({ classi: ['4B'], classiEscluse: [] });
+  });
+
+  it('non muta la card originale', function () {
+    const card = { classi: ['3A', '4B'] };
+    senzaClasse(card, '3A');
+    expect(card.classi).toEqual(['3A', '4B']);
   });
 });

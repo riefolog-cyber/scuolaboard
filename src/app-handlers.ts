@@ -6,6 +6,7 @@ import {
   classeContestoCommenti,
   classePerNuovaRisposta,
   classePerNuovoCommento,
+  rinominaClasseCommenti,
   trovaCommento,
 } from './commenti-classe.ts';
 import {
@@ -271,7 +272,12 @@ export function createAppHandlers(ctx: any) {
       var toUpdate = (getCards() || []).filter(function (c: any) {
         return (
           (Array.isArray(c.classi) && c.classi.indexOf(oldN) >= 0) ||
-          (Array.isArray(c.classiEscluse) && c.classiEscluse.indexOf(oldN) >= 0)
+          (Array.isArray(c.classiEscluse) && c.classiEscluse.indexOf(oldN) >= 0) ||
+          // I commenti sono discussioni firmate con il nome della classe: se
+          // restassero «3A» dopo la rinomina, la 3B non vedrebbe più i propri
+          // commenti (commentiVisibili confronta il nome) e una futura 3A li
+          // erediterebbe. La riscrittura è ricorsiva sulle risposte.
+          rinominaClasseCommenti(c.commenti, oldN, newN) !== c.commenti
         );
       });
       toUpdate.forEach(function (c: any) {
@@ -279,6 +285,8 @@ export function createAppHandlers(ctx: any) {
         if (Array.isArray(c.classi) && c.classi.indexOf(oldN) >= 0) patch.classi = rinomina(c.classi);
         if (Array.isArray(c.classiEscluse) && c.classiEscluse.indexOf(oldN) >= 0)
           patch.classiEscluse = rinomina(c.classiEscluse);
+        var commenti = rinominaClasseCommenti(c.commenti, oldN, newN);
+        if (commenti !== c.commenti) patch.commenti = commenti;
         if (fbSave)
           try {
             fbSave(Object.assign({}, c, patch));

@@ -8,6 +8,7 @@ import {
   classePerNuovoCommento,
   commentiVisibili,
   mostraTuttiCommenti,
+  rinominaClasseCommenti,
   trovaCommento,
 } from './commenti-classe.ts';
 
@@ -76,5 +77,34 @@ describe('scrittura: classe del nuovo commento/risposta', () => {
     var lista = [{ id: 'x', risposte: [{ id: 'y', classe: '3A' }] }];
     expect(trovaCommento(lista, 'y')).toEqual({ id: 'y', classe: '3A' });
     expect(trovaCommento(lista, 'zzz')).toBe(null);
+  });
+});
+
+// La rinomina di una classe non può lasciare indietro le discussioni: ogni
+// commento porta il nome della classe, e dopo «3A → 3B» la 3B deve continuare
+// a vedere i propri commenti (e una futura 3A non deve ereditarli).
+describe('rinominaClasseCommenti', function () {
+  it('riscrive commenti e risposte della classe rinominata', function () {
+    const commenti = [
+      { id: 'm1', classe: '3A', risposte: [{ id: 'r1', classe: '3A' }, { id: 'r2', classe: '3B' }] },
+      { id: 'm2', classe: '3B' },
+      { id: 'm3' },
+    ];
+    expect(rinominaClasseCommenti(commenti, '3A', '3C')).toEqual([
+      { id: 'm1', classe: '3C', risposte: [{ id: 'r1', classe: '3C' }, { id: 'r2', classe: '3B' }] },
+      { id: 'm2', classe: '3B' },
+      { id: 'm3' },
+    ]);
+  });
+
+  it("se non c'è niente da rinominare restituisce la stessa lista (niente re-render)", function () {
+    const commenti = [{ id: 'm1', classe: '3B' }];
+    expect(rinominaClasseCommenti(commenti, '3A', '3C')).toBe(commenti);
+  });
+
+  it('input non-array o nomi vuoti: nessun errore', function () {
+    expect(rinominaClasseCommenti(undefined, '3A', '3B')).toBe(undefined);
+    const commenti = [{ id: 'm1', classe: '3A' }];
+    expect(rinominaClasseCommenti(commenti, '3A', '')).toBe(commenti);
   });
 });
