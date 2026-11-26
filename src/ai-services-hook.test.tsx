@@ -159,6 +159,35 @@ describe('useAI — flussi di analisi', () => {
     expect(Object.keys(apiRef.aiResult).sort()).toEqual(['1A', '1B']);
     expect(apiRef.aiResult['1B'].riepilogo).toBe('ok');
   });
+
+  // Una classe fallita non si porta via le altre: l'analisi costa una chiamata
+  // AI (e 5s di throttle) per classe, e prima un 429 alla terza classe buttava
+  // le prime due. Il pannello mostra le sezioni riuscite accanto all'errore,
+  // che dichiara esplicitamente l'analisi parziale.
+  it('runAI: suddivisa interrotta a metà → le classi già analizzate restano', async () => {
+    apiRef.setAiTarget('suddivisa');
+    await waitFor(() => expect(apiRef.aiTarget).toBe('suddivisa'));
+    window.fetch = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        clone: () => ({ json: async () => ({}) }),
+        json: async () => ({ success: true, data: { content: JSON.stringify({ riepilogo: '1A' }) } }),
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 503,
+        clone: () => ({ json: async () => ({ error: 'Servizio momentaneamente non disponibile' }) }),
+        json: async () => ({ error: 'Servizio momentaneamente non disponibile' }),
+      });
+    apiRef.runAI([mkCard('c1', { classi: ['1A'] }), mkCard('c2', { classi: ['1B'] })], ['1A', '1B']);
+    await waitFor(() => expect(apiRef.aiErr).toContain('non disponibile'));
+    expect(apiRef.aiErr).toContain('parziale');
+    expect(apiRef.aiResult['1A'].riepilogo).toBe('1A');
+    expect(apiRef.aiResult['1B']).toBeUndefined();
+    expect(apiRef.aiRunning).toBe(false);
+  });
 });
 
 describe('useAI — card AI e domande libere', () => {

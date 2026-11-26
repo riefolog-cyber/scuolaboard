@@ -19,5 +19,9 @@ export var INTERVALLO_AI_MS = 5000;
 export function attesaProssimaChiamata(ultima: number, ora: number, minimo: number = INTERVALLO_AI_MS): number {
   if (!minimo || !ultima) return 0;
   var mancano = minimo - (ora - ultima);
+  // Orologio all'indietro (sincronizzazione di sistema, cambio manuale): senza
+  // tetto `mancano` supera la finestra, e il pannello resterebbe fermo su
+  // «Analisi in corso…» per minuti. Il massimo utile è la finestra stessa.
+  if (mancano > minimo) return minimo;
   return mancano > 0 ? mancano : 0;
 }

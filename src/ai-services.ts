@@ -98,6 +98,14 @@ async function chiamaAI(type: any, content: any, options: any) {
   // bruciava 5 secondi di throttle a tutti, e il secondo tentativo corretto
   // veniva rifiutato con «Troppe richieste AI» invece che eseguito.
   if (!type || !content) throw new Error('Parametri chiamata AI mancanti (type=' + type + ')');
+  // Anche il login è una VALIDAZIONE, quindi viene prima del throttle:
+  // chiamare da sloggati non deve bruciare la finestra, altrimenti dopo il
+  // login il tentativo corretto viene respinto con «Troppe richieste AI» e
+  // sembra un problema di rete invece di una sessione scaduta.
+  var currentUser = window.SB && window.SB.auth && window.SB.auth.currentUser;
+  if (!currentUser || typeof currentUser.getIdToken !== 'function') {
+    throw new Error("Devi effettuare il login per usare l'AI");
+  }
   var now = Date.now();
   if (now - _lastAiCall < AI_THROTTLE_MS) {
     throw new Error(
@@ -132,12 +140,6 @@ async function chiamaAI(type: any, content: any, options: any) {
     options: options,
     role: userRole,
   });
-
-  // Recupera il token Firebase ID per autenticare la richiesta al Worker
-  var currentUser = window.SB && window.SB.auth && window.SB.auth.currentUser;
-  if (!currentUser || typeof currentUser.getIdToken !== 'function') {
-    throw new Error("Devi effettuare il login per usare l'AI");
-  }
 
   async function doFetch(forceRefresh: any) {
     var idToken = await currentUser.getIdToken(forceRefresh);
@@ -458,6 +460,11 @@ export function useAI(user: any) {
     setAiRunning(true);
     setAiResult(null);
     setAiErr('');
+    // Se una classe fallisce a metà, le sezioni già calcolate vanno CONSERVATE:
+    // ogni classe costa una chiamata AI (e 5s di throttle) e buttarle obbliga a
+    // rifare tutto. Il pannello mostra le classi riuscite accanto al messaggio
+    // d'errore, e `parziale` serve a dire che il risultato non è completo.
+    var parziale = false;
 
     try {
       if (aiTarget === 'suddivisa') {
@@ -482,26 +489,37 @@ export function useAI(user: any) {
           notifyUser('Nessuna classe con card da analizzare.', 'warn');
           return;
         }
-        for (var i = 0; i < classiConCard.length; i++) {
-          // Anche la PRIMA classe, non solo dalla seconda: chi avvia l'analisi può
-          // aver appena usato un altro flusso AI (un riassunto, la generazione di
-          // un quiz) e la finestra del throttle vale per tutte le chiamate. Il
-          // throttle è globale e sincrono, `runAI` non salva risultati parziali:
-          // farsi rifiutare brucia l'intera analisi, aspettare costa al massimo 5s.
-          var pausa = attesaProssimaAI();
-          if (pausa > 0) {
-            await new Promise<void>(function (resolve) {
-              setTimeout(resolve, pausa);
+        // Se una classe fallisce (429, 403, rete) le sezioni già calcolate non
+        // si buttano: l'analisi costa una chiamata AI per classe, e il docente
+        // rifarebbe da capo tutto. L'errore resta, ma parziale e dichiarato.
+        try {
+          for (var i = 0; i < classiConCard.length; i++) {
+            // Anche la PRIMA classe, non solo dalla seconda: chi avvia l'analisi può
+            // aver appena usato un altro flusso AI (un riassunto, la generazione di
+            // un quiz) e la finestra del throttle vale per tutte le chiamate.
+            // Farsi rifiutare costa comunque una classe (e un'attesa a vuoto):
+            // aspettare qui costa al massimo 5s.
+            var pausa = attesaProssimaAI();
+            if (pausa > 0) {
+              await new Promise<void>(function (resolve) {
+                setTimeout(resolve, pausa);
+              });
+            }
+            var cl = classiConCard[i];
+            var classCards = targetCards.filter(function (c: any) {
+              // Stesso criterio della griglia (card-classi.ts): nella sezione di una
+              // classe entrano le card che QUELLA classe vede — anche quelle per TUTTE
+              // — e non quelle che il docente le ha tolto (classiEscluse).
+              return visibileAClasse(c, cl);
             });
+            results[cl] = await performAnalysis(classCards);
           }
-          var cl = classiConCard[i];
-          var classCards = targetCards.filter(function (c: any) {
-            // Stesso criterio della griglia (card-classi.ts): nella sezione di una
-            // classe entrano le card che QUELLA classe vede — anche quelle per TUTTE
-            // — e non quelle che il docente le ha tolto (classiEscluse).
-            return visibileAClasse(c, cl);
-          });
-          results[cl] = await performAnalysis(classCards);
+        } catch (e) {
+          if (Object.keys(results).length) {
+            parziale = true;
+            setAiResult(results);
+          }
+          throw e;
         }
         setAiResult(results);
       } else {
@@ -510,7 +528,7 @@ export function useAI(user: any) {
       }
     } catch (e) {
       var friendly = getFriendlyAIError(e);
-      setAiErr(friendly);
+      setAiErr(parziale ? friendly + ' Analisi parziale: le classi già analizzate restano qui sotto.' : friendly);
       notifyUser(friendly, 'err');
     } finally {
       setAiRunning(false);

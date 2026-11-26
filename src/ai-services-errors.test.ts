@@ -157,12 +157,19 @@ describe('chiamaAI: rami di errore', () => {
     expect(window.fetch).toHaveBeenCalledTimes(1);
   });
 
-  it('senza currentUser (logout) → errore login richiesto', async () => {
+  it('senza currentUser (logout) → errore login richiesto, finestra non consumata', async () => {
     window.SB.user = { role: 'prof' };
     window.SB.auth = { currentUser: null };
     window.fetch = vi.fn();
     await expect(window.SB.callGroqText(null, 'prompt')).rejects.toThrow(/login/);
     expect(window.fetch).not.toHaveBeenCalled();
+    // Il login è una VALIDAZIONE, quindi non consuma il throttle: chi si è
+    // appena riautenticato non deve vedersi respinta la prima chiamata con
+    // «Troppe richieste AI» (messaggio che sembra un problema di rete).
+    authMock();
+    window.fetch = vi.fn().mockResolvedValue(okResponse('ok'));
+    await expect(window.SB.callGroqText(null, 'prompt')).resolves.toBe('ok');
+    expect(window.fetch).toHaveBeenCalledTimes(1);
   });
 
   it('successo: ritorna il contenuto pulito', async () => {

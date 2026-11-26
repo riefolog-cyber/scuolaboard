@@ -37,9 +37,16 @@ import type { Card } from './card-tipo.ts';
 
 // Classi della card: default TUTTE quando il campo manca (le card legacy non
 // hanno `classi`), mai `undefined` — i chiamanti ci fanno `.indexOf`.
+// Le voci non-stringa o vuote si scartano, come già fa `escluseDi`: un array
+// sporco (`['3A', null]`) faceva stampare «3A, » con la virgola appesa, e con
+// sole voci invalide l'etichetta restava VUOTA mentre la card non era visibile
+// a nessuno: due affermazioni sbagliate, entrambe senza un errore.
 export function classiDi(card: Card): string[] {
   var cc = card && card.classi;
-  return Array.isArray(cc) ? cc : ['TUTTE'];
+  if (!Array.isArray(cc)) return ['TUTTE'];
+  return cc.filter(function (x: any) {
+    return typeof x === 'string' && x;
+  });
 }
 
 // Esclusioni già presenti sul documento: default lista vuota. Tolgo i valori
@@ -145,9 +152,14 @@ export function eliminabileSoloDaClasse(card: Card, classe: string): boolean {
 // («tutte tranne 3A» è uno stato legittimo, non una contraddizione).
 export function escluseCoerenti(classi: any, classiEscluse: any): string[] {
   var cc = Array.isArray(classi) ? classi : ['TUTTE'];
-  var ex = (Array.isArray(classiEscluse) ? classiEscluse : []).filter(function (x: any) {
-    return typeof x === 'string' && x;
-  });
+  // `classiUniche`: la stessa esclusione scritta due volte (import, doppio
+  // clic) è UNA esclusione; salvarla doppia sporcava il documento e il chip,
+  // che ora la mostra una volta sola, la contava due.
+  var ex = classiUniche(
+    (Array.isArray(classiEscluse) ? classiEscluse : []).filter(function (x: any) {
+      return typeof x === 'string' && x;
+    })
+  );
   if (cc.indexOf('TUTTE') >= 0) return ex;
   return ex.filter(function (x: string) {
     return cc.indexOf(x) < 0;

@@ -28,6 +28,13 @@ describe('ai-throttle: attesa prima della prossima chiamata', function () {
     expect(attesaProssimaChiamata(1000, 9000)).toBe(0);
   });
 
+  it("orologio all'indietro: si attende al massimo la finestra", function () {
+    // Un orologio risincronizzato all'indietro faceva sembrare la chiamata
+    // avvenuta nel futuro: l'attesa diventava di un'ora e il pannello restava
+    // fermo su «Analisi in corso…». Il tetto è la finestra.
+    expect(attesaProssimaChiamata(10000, 5000)).toBe(5000);
+  });
+
   it('senza una chiamata precedente non si attende', function () {
     expect(attesaProssimaChiamata(0, 12345)).toBe(0);
   });

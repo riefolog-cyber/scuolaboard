@@ -270,6 +270,24 @@ describe('card-classi: etichetta della destinazione', function () {
       'Tutte le classi tranne 3A'
     );
   });
+
+  // `classi` sporco (import o scrittura a mano): le voci non-stringa o vuote
+  // facevano stampare «3A, » con la virgola appesa, e un elenco di sole voci
+  // invalide lasciava l'etichetta VUOTA mentre la card non era visibile a
+  // nessuno. Ora si scartano, come già fa `escluseDi`.
+  it('voci non-stringa o vuote: scartate, etichetta pulita', function () {
+    const sporche = ['3A', null, '', 5] as unknown as string[];
+    expect(classiDi({ classi: sporche })).toEqual(['3A']);
+    expect(etichettaClassi({ classi: sporche })).toBe('3A');
+  });
+
+  it('solo voci invalide: nessuna classe destinataria, etichetta «Solo prof»', function () {
+    const sporche = [null, ''] as unknown as string[];
+    expect(classiDi({ classi: sporche })).toEqual([]);
+    expect(etichettaClassi({ classi: sporche })).toBe('Solo prof');
+    expect(visibileAlProf({ classi: sporche }, '_solo')).toBe(true);
+    expect(visibileAClasse({ classi: sporche }, '3A')).toBe(false);
+  });
 });
 
 // Scrivere una classe in `classi` e contemporaneamente fra le escluse era
@@ -296,6 +314,10 @@ describe('card-classi: esclusioni coerenti alla scrittura', function () {
   it('valori sporchi vengono scartati, non salvati', function () {
     const sporche = ['3A', 5, null, ''] as unknown as string[];
     expect(escluseCoerenti(['4B'], sporche)).toEqual(['3A']);
+  });
+
+  it('la stessa esclusione ripetuta si salva una volta sola', function () {
+    expect(escluseCoerenti(['TUTTE'], ['3A', '3A'])).toEqual(['3A']);
   });
 });
 
