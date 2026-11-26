@@ -127,6 +127,13 @@ Regola pratica:
     - **La cancellazione non può lasciare un toast orfano**: se `elimina` solleva (guasto sincrono, es. `db` non inizializzato — `fbDel` non rigetta mai, quindi una rejection non arriva qui), il timer chiude comunque il toast e segnala l'errore con il canale `errore` (in `AppProvider`: «Non riesco a eliminare la card»). Senza il `finally` un'eccezione uscita dal timer lascerebbe sullo schermo un toast con undo, che non ha la ✕, per sempre.
     - **`TOAST_TIMEOUT_MS` (`src/app-state.ts`) è l'unica fonte della durata**: `0` = persistente (nessun timer), valori invalidi (`NaN`, `Infinity`, negativi) tornano a 2400. `src/useToast.test.tsx` e `src/utils/toast.test.ts` congelano queste regole; `src/undo-eliminazione.test.ts` congela l'indipendenza delle eliminazioni.
 
+
+16. **Visibilità per classe: un criterio solo** (leggere prima di filtrare le card per classe):
+    - `visibileAClasse(card, classe)` in `src/card-classi.ts` è l'**unica** risposta a "questo studente vede questa card?". Conosce le tre cose che un `classi.indexOf` non conosce: il segnaposto `TUTTE` (card per tutti, presente in `classi` e non in ogni lista), le **esclusioni** (`classiEscluse: ['3A']`, la card tolta a quella classe) e le card legacy senza `classi` (valgono per tutti). `classi: []` = solo docente.
+    - Non riscrivere il criterio: è successo tre volte in un solo giro di review (cloud del docente, analisi AI per classe e "suddivisa") e ogni volta sbagliava in silenzio — una card per TUTTE spariva da ogni classe, una card tolta alla 3A continuava a contare come 3A. `src/classi-criterio.test.ts` fallisce se ricompare `(x.classi || []).indexOf/includes`; per un confronto con un nome **letterale** (la rinomina) si dichiara il perché nel codice.
+    - Il **word cloud di una classe** filtra anche i commenti con `commentiVisibili` (`commenti-classe.ts`): i commenti sono discussioni di classe, e il cloud della 3A non deve contenere quello scritto dalla 3B sulla stessa card.
+    - **Rinominare una classe** (`eseguiRinomina`) riscrive `classi` **e** `classiEscluse`: un'esclusione rimasta col vecchio nome torna a valere per gli stessi studenti col nome nuovo (e una futura classe omonima la erediterebbe). Stessa logica di `classiPerAnno` degli studenti.
+
 ## Test
 
 - Unit/integrazione: `src/**/*.test.{ts,tsx}` (jsdom, `globals: true`, setup `src/test-setup.js`). I test di integrazione in `src/integration/` usano il fake Firestore e hanno timeout 15s: non sono flaky per caso, prima di allungarli verifica che non sia un deadlock.

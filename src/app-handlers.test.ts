@@ -488,6 +488,28 @@ describe('eseguiRinomina', () => {
     handlers.eseguiRinomina();
     expect(ctx.setClassiCustom).toHaveBeenCalledWith(['1BZ']);
   });
+
+  it('rinomina: `classiEscluse` segue il nuovo nome come `classi`', () => {
+    window.SB.CLASSI_DEFAULT = ['1A', '1B'];
+    const ctx = rinCtx({
+      cards: [
+        { id: 'c1', classi: ['1A'] },
+        { id: 'c2', classi: ['TUTTE'], classiEscluse: ['1A'] },
+        { id: 'c3', classi: ['1B'], classiEscluse: ['2A'] },
+      ],
+    });
+    window.SB.db = ctx._db;
+    createAppHandlers(ctx).eseguiRinomina();
+    // Solo le card che nominano la vecchia classe vengono riscritte.
+    expect(ctx.fbSave).toHaveBeenCalledTimes(2);
+    expect(ctx.fbSave).toHaveBeenCalledWith(expect.objectContaining({ id: 'c1', classi: ['1AX'] }));
+    // La card resta per TUTTE, ma l'esclusione non deve più nominare 1A: dopo la
+    // rinomina quella classe non esiste, e l'esclusione tornerebbe a valere per gli
+    // stessi studenti (ora 1AX) o per una futura 1A ricreata.
+    expect(ctx.fbSave).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'c2', classi: ['TUTTE'], classiEscluse: ['1AX'] })
+    );
+  });
 });
 
 // ── togglePreferito ────────────────────────────────────────────────────────
