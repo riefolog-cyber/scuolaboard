@@ -280,6 +280,48 @@ describe('useAI — quiz generato', () => {
     expect(conManuali.quizDomande[0].ai).toBeUndefined();
     expect(conManuali.quizDomande[1].ai).toBe(true);
   });
+
+  // Il docente importa il quiz e la modale si chiude: se il numero di domande
+  // scartate si scopre solo dopo, non lo scopre più nessuno. Prima il conteggio
+  // veniva letto da `aqg.scartate` dentro `aiConfirmaQuiz` (cioè dal render
+  // precedente, sempre vuoto) e finiva in `aqg.avviso`, un campo che nessun
+  // componente mostrava: il messaggio non è mai comparso.
+  it('aiGenerateQuiz: gli scarti sono noti SUBITO, prima della conferma', async () => {
+    mockJson({
+      domande: [
+        { testo: 'buona', opzioni: ['a', 'b'], corretta: '0' },
+        { testo: 'rotta', opzioni: ['a'] },
+      ],
+    });
+    apiRef.setAqg((p: any) => ({ ...p, testo: 'testo', numDom: 2, tipo: 'multipla' }));
+    await waitFor(() => expect(apiRef.aqg.testo).toBe('testo'));
+    apiRef.aiGenerateQuiz();
+    await waitFor(() => expect(apiRef.aqg.anteprima).toHaveLength(2));
+    // L'anteprima mostra TUTTO quello che l'IA ha scritto (anche ciò che non si
+    // potrà importare): scartare qui significherebbe decidere al posto del docente.
+    expect(apiRef.aqg.anteprima.map((d: any) => d.testo)).toEqual(['buona', 'rotta']);
+    await waitFor(() => expect(apiRef.aqg.scartate).toHaveLength(1));
+    expect(apiRef.aqg.scartate[0].motivo).toContain('una sola opzione');
+  });
+
+  it('aiConfirmaQuiz: importa solo le domande utilizzabili e azzera gli scarti', async () => {
+    apiRef.setAqg((p: any) => ({
+      ...p,
+      anteprima: [
+        { testo: 'buona', opzioni: ['a', 'b'], corretta: '0' },
+        { testo: 'rotta', opzioni: ['a'] },
+      ],
+      scartate: [{ indice: 2, motivo: 'ha una sola opzione: serve almeno 2 per una multipla' }],
+    }));
+    await waitFor(() => expect(apiRef.aqg.anteprima).toHaveLength(2));
+    const setForm = vi.fn();
+    apiRef.aiConfirmaQuiz(setForm);
+    const next = setForm.mock.calls[0][0]({ quizDomande: [] });
+    expect(next.quizDomande).toHaveLength(1);
+    // Lo stato si azzera: la generazione successiva non eredita gli scarti di
+    // questa (prima restava `scartate` del giro precedente e non veniva mai pulito).
+    await waitFor(() => expect(apiRef.aqg.scartate).toEqual([]));
+  });
 });
 
 describe('useAI — sommario e sondaggio', () => {

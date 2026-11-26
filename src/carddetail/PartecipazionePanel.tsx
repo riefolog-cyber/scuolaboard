@@ -1,5 +1,6 @@
 // PartecipazionePanel.tsx · ScuolaBoard · pannello estratto da CardDetail
 import { classeContestoCommenti, commentiVisibili, mostraTuttiCommenti } from '../commenti-classe.ts';
+import { votantiDi } from '../sondaggi.ts';
 
 function PartecipazionePanel({ $, c }: any) {
   return (function () {
@@ -22,15 +23,11 @@ function PartecipazionePanel({ $, c }: any) {
     ].filter(function (n) {
       return n && n !== 'Prof';
     });
-    var votanti = c.opzioni
-      ? [
-          ...new Set(
-            c.opzioni.flatMap(function (o: any) {
-              return o.voti;
-            })
-          ),
-        ]
-      : [];
+    // `votantiDi` (sondaggi.ts): con un'opzione senza `voti` questo `flatMap`
+    // inseriva `undefined` nell'insieme, quindi il pannello contava un
+    // partecipante in più che non sapeva nominare (nessun errore: solo un numero
+    // sbagliato accanto a un elenco di nomi più corto).
+    var votanti = votantiDi(c);
     var likers = c.likesBy || [];
     var totPart = [...new Set(commentatori.concat(votanti).concat(likers))];
     return (

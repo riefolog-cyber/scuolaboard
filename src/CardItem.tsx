@@ -8,6 +8,7 @@ import { temaTipo, etichettaTipo } from './card-tipo-tema.ts';
 import { statoScadenza, labelScadenza, coloreScadenza } from './urgenza.ts';
 import { testoSecondario } from './grafica-testi.ts';
 import { badgeStato } from './stato-card.ts';
+import { totaleVoti, votiDi } from './sondaggi.ts';
 // CardItem.jsx · ScuolaBoard
 
 function CardItem__({ $, c, idx }: any) {
@@ -29,11 +30,7 @@ function CardItem__({ $, c, idx }: any) {
     classeContestoCommenti(contestoPerCommenti),
     mostraTuttiCommenti(contestoPerCommenti)
   ).length;
-  var totV = c.opzioni
-    ? c.opzioni.reduce(function (a: any, o: any) {
-        return a + (o.voti || []).length;
-      }, 0)
-    : 0;
+  var totV = totaleVoti(c);
   var liked = $.myLikes.current.has(String(c.id));
   var aiD = ($.aiMap && $.aiMap[String(c.id)]) || {};
   var cRes = c.aiAnalisi || (aiD && aiD.analisi);
@@ -522,7 +519,7 @@ function CardItem__({ $, c, idx }: any) {
                 <div style={{ marginTop: 8 }}>
                   {c.opzioni
                     .map(function (o: any) {
-                      var pct = totV > 0 ? Math.round(((o.voti || []).length / totV) * 100) : 0;
+                      var pct = totV > 0 ? Math.round((votiDi(o).length / totV) * 100) : 0;
                       return (
                         <div key={o.id} style={{ marginBottom: 4 }}>
                           {

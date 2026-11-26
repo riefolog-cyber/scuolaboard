@@ -3,6 +3,7 @@ import { pseudonimizeComments, restoreNames, cleanAiMarkdown, cleanJsonStrings }
 import { classiDi, visibileAClasse } from './card-classi.ts';
 import { mascheraPII, ripristinaPII } from './utils/pii.ts';
 import { attesaProssimaChiamata, INTERVALLO_AI_MS } from './ai-throttle.ts';
+import { totaleVoti, votiDi } from './sondaggi.ts';
 
 var db: any = window.SB && SB.db;
 var CFG = window.SB_CONFIG || { AI_CACHE_TTL_MS: 15 * 60 * 1000 };
@@ -353,7 +354,7 @@ export function useAI(user: any) {
   var [aiMap, setAiMap] = useState<any>({});
 
   // Quiz AI States
-  var AQG0 = { testo: '', loading: false, err: '', numDom: 4, tipo: 'multipla', anteprima: null, regenIdx: null, scartate: [] as any[], avviso: '' };
+  var AQG0 = { testo: '', loading: false, err: '', numDom: 4, tipo: 'multipla', anteprima: null, regenIdx: null, scartate: [] as any[] };
   var [aqg, setAqg] = useState(AQG0);
   var [showAiQuizGen, setShowAiQuizGen] = useState(false);
 
@@ -708,8 +709,14 @@ export function useAI(user: any) {
     try {
       var r = await _callGroqJSON(null, prompt, 1800);
       if (r && Array.isArray(r.domande) && r.domande.length) {
+        // Gli scarti si calcolano SUBITO, insieme all'anteprima: il docente deve
+        // sapere quante domande perderà PRIMA di confermare. Prima si leggeva
+        // `aqg.scartate` dentro `aiConfirmaQuiz`, cioè lo stato del render
+        // precedente (sempre vuoto), e il messaggio finiva in un campo che la
+        // modale non mostrava: il conteggio era sempre 0 e non si vedeva mai.
+        var scartate = normalizzaDomandeIA(r.domande).scartate;
         setAqg(function (p) {
-          return Object.assign({}, p, { anteprima: r.domande, loading: false });
+          return Object.assign({}, p, { anteprima: r.domande, scartate: scartate, loading: false });
         });
       } else {
         setAqg(function (p) {
@@ -739,10 +746,13 @@ export function useAI(user: any) {
     try {
       var r = await _callGroqJSON(null, prompt, 600);
       if (r && Array.isArray(r.domande) && r.domande.length) {
+        var nuova = r.domande[0];
         setAqg(function (p: any) {
           var a = p.anteprima.slice();
-          a[idx] = r.domande[0];
-          return Object.assign({}, p, { anteprima: a });
+          a[idx] = nuova;
+          // Ricalcolo degli scarti: la domanda sostituita può essere utilizzabile
+          // (il conteggio scende) o no (sale), e il banner deve restare vero.
+          return Object.assign({}, p, { anteprima: a, scartate: normalizzaDomandeIA(a).scartate });
         });
       }
     } catch (e: any) {}
@@ -771,14 +781,19 @@ export function useAI(user: any) {
     // aperta con opzioni mostrava bottoni E textarea sulla stessa domanda, con i due
     // controlli che si sovrascrivevano. Riusiamo lo stesso validatore
     // dell'import (src/quiz-import.ts): una sola definizione di "che domanda è".
-    var normalizzate = normalizzaDomandeIA(aqg.anteprima);
-    if (!normalizzate.length) {
+    var esito = normalizzaDomandeIA(aqg.anteprima);
+    if (!esito.domande.length) {
       setAqg(function (p: any) {
-        return Object.assign({}, p, { err: 'Nessuna domanda generata è utilizzabile: correggi e riprova.' });
+        return Object.assign({}, p, {
+          err:
+            'Nessuna domanda generata è utilizzabile' +
+            (esito.scartate.length ? ': ' + esito.scartate[0].motivo : '') +
+            '. Correggi e riprova.',
+        });
       });
       return;
     }
-    var marcate = normalizzate.map(function (d: any) {
+    var marcate = esito.domande.map(function (d: any) {
       return Object.assign({}, d, { ai: true });
     });
     setForm(function (p: any) {
@@ -787,27 +802,28 @@ export function useAI(user: any) {
         quizDomande: (p.quizDomande || []).concat(marcate),
       });
     });
-    // Niente scarti silenziosi: il docente deve sapere se ha perso qualcosa.
-    var scartate = (aqg.scartate || []).length;
+    // Niente scarti silenziosi: `esito.scartate` è già stato mostrato
+    // nell'anteprima (banner in AiQuizGenModal). Lo stato si azzera per intero,
+    // così la prossima generazione non eredita gli scarti della precedente
+    // (era l'altra metà del difetto: il conteggio veniva letto da qui, cioè dal
+    // render PRIMA della normalizzazione).
     setShowAiQuizGen(false);
-    setAqg(
-      Object.assign({}, AQG0, {
-        avviso: scartate ? scartate + ' domande non utilizzabili scartate: la prima non aveva una risposta giusta valida.' : '',
-      })
-    );
+    setAqg(Object.assign({}, AQG0));
   }
 
   // Normalizza l'output del generatore usando lo stesso validatore dell'import da
   // file. `misto` non è un tipo gestito da QuizBuilder/QuizPanel: si risolve sul
   // contenuto (2 opzioni Vero/Falso → verofalso, opzioni coerenti → multipla, nessuna
   // opzione → aperta). Una domanda APERTA viene ripulita da opzioni e `corretta`.
-  function normalizzaDomandeIA(lista: any[]): any[] {
+  //
+  // Funzione PURA (non tocca lo stato): l'esito serve a DUE chiamanti con
+  // esigenze opposte — l'anteprima vuole sapere subito quante domande andranno
+  // perse, la conferma vuole il testo normalizzato da importare. Quando la
+  // normalizzazione scriveva `scartate` nello stato, chi la chiamava subito dopo
+  // leggeva il valore del render precedente: sempre vuoto.
+  function normalizzaDomandeIA(lista: any[]): { domande: any[]; scartate: any[] } {
     var esito = importaQuizDaTesto(JSON.stringify({ domande: lista }));
-    // Lo stato mette in mostra gli scarti così il docente li vede dopo la conferma.
-    setAqg(function (p: any) {
-      return Object.assign({}, p, { scartate: esito.scartate });
-    });
-    return esito.domande || [];
+    return { domande: esito.domande || [], scartate: esito.scartate || [] };
   }
 
   // 7. Riassunto discussione commenti (pseudonimizzato)
@@ -881,9 +897,10 @@ export function useAI(user: any) {
   async function aiAnalisiSondaggio(card: any) {
     if (!card.opzioni || !card.opzioni.length) return;
     setSondaggioAiLoading(card.id);
-    var totV = card.opzioni.reduce(function (a: any, o: any) {
-      return a + o.voti.length;
-    }, 0);
+    // `totaleVoti` (sondaggi.ts) e non `.voti.length` a mano: su un'opzione
+    // senza il campo questa riga lanciava DOPO `setSondaggioAiLoading(card.id)`,
+    // quindi lo spinner dell'analisi restava acceso per sempre.
+    var totV = totaleVoti(card);
     if (totV === 0) {
       setSondaggioAiResult(function (p: any) {
         return Object.assign({}, p, { [card.id]: 'Nessun voto registrato.' });
@@ -893,7 +910,7 @@ export function useAI(user: any) {
     }
     var votiTxt = card.opzioni
       .map(function (o: any) {
-        return SB.escapeForPrompt(o.testo) + ': ' + o.voti.length + ' voti';
+        return SB.escapeForPrompt(o.testo) + ': ' + votiDi(o).length + ' voti';
       })
       .join(', ');
     var prompt =

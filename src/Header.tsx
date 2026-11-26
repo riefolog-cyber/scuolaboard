@@ -366,7 +366,17 @@ function Header__({ $ }: any) {
                   onClick={function () {
                     if (confirm('Eliminare tutte le notifiche?')) {
                       var dbc: any = (window as any).db;
-                      if (dbc) dbc.collection('notifiche').doc($.user.uid).delete();
+                      // Le rules ammettono la cancellazione del PROPRIO doc, ma con
+                      // la sessione scaduta Firestore la nega: senza `.catch` la
+                      // promise restava rifiutata e la ✕ sembrava non fare nulla.
+                      if (dbc)
+                        dbc
+                          .collection('notifiche')
+                          .doc($.user.uid)
+                          .delete()
+                          .catch(function (err: any) {
+                            console.warn('[notifiche] pulizia fallita', err && err.code);
+                          });
                     }
                   }}
                   aria-label="Pulisci notifiche"

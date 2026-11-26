@@ -4,6 +4,7 @@ import CardItem from './CardItem.tsx';
 import { FORM0 } from './app-utils.tsx';
 import { temaTipo, etichettaTipo } from './card-tipo-tema.ts';
 import { etichettaClassi } from './card-classi.ts';
+import { totaleVoti } from './sondaggi.ts';
 import { statoScadenza, labelScadenza, coloreScadenza } from './urgenza.ts';
 import { scrollInVista } from './utils/scroll.ts';
 import { testoSecondario } from './grafica-testi.ts';
@@ -42,7 +43,7 @@ function ListRow({ $, c }: any) {
   var nuova = !($.seenRef && $.seenRef.current && $.seenRef.current.has(String(c.id)));
   var nascosta = c.visibile === false;
   var nCommenti = (c.commenti || []).length;
-  var totV = c.opzioni ? c.opzioni.reduce(function (a: any, o: any) { return a + (o.voti || []).length; }, 0) : 0;
+  var totV = totaleVoti(c);
   var metaParts: string[] = [];
   if (c.autore) metaParts.push(c.autore);
   if ($.timeAgo) metaParts.push($.timeAgo(c.data));

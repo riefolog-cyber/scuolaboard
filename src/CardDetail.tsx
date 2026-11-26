@@ -12,6 +12,7 @@ import FormContext from './contexts/FormContext.tsx';
 import { useCountdown, countdownStr } from './Countdown.tsx';
 import { temaTipo, etichettaTipo } from './card-tipo-tema.ts';
 import { classiDi, etichettaEsclusioni } from './card-classi.ts';
+import { haVotato, totaleVoti, votiDi } from './sondaggi.ts';
 
 // Import STATICI di proposito: il `lazy` è stato provato e scartato. Questi
 // quattro pannelli sono sempre nell'albero (la condizione quiz/prof è DENTRO il
@@ -203,11 +204,7 @@ function CardDetail__({ $: props$ }: any) {
   if (!c) return null;
   var isLight = !!$.isLight;
   var tema = temaTipo(c.tipo);
-  var totV = c.opzioni
-    ? c.opzioni.reduce(function (a: any, o: any) {
-        return a + (o.voti || []).length;
-      }, 0)
-    : 0;
+  var totV = totaleVoti(c);
   var liked = $.myLikes.current.has(String(c.id));
   // Cfr. la nota in CardItem: nessun "isOwner" per lo studente, perché le Rules non
   // gli permettono di riscrivere una card e il salvataggio falliva in silenzio.
@@ -762,8 +759,8 @@ if (isHtmlAllegato(al)) {
                 🗳️ SONDAGGIO · {totV} voti
               </div>
               {c.opzioni.map(function (o: any) {
-                var pct = totV > 0 ? Math.round(((o.voti || []).length / totV) * 100) : 0;
-                var hasVoted = (o.voti || []).indexOf($.myName($.user)) >= 0;
+                var pct = totV > 0 ? Math.round((votiDi(o).length / totV) * 100) : 0;
+                var hasVoted = haVotato(o, $.myName($.user));
                 return (
                   <div key={o.id} style={{ marginBottom: 8 }}>
                     <div

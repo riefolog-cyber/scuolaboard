@@ -3,6 +3,7 @@
 // da AppProvider al momento della creazione.
 import { classeCorrenteOf, ANNO_LEGACY } from './app-provider-helpers.ts';
 import { classiDi } from './card-classi.ts';
+import { votiDi } from './sondaggi.ts';
 import {
   classeContestoCommenti,
   classePerNuovaRisposta,
@@ -484,7 +485,10 @@ export function createAppHandlers(ctx: any) {
       if (!card) return;
       var vn = getMyName()(getUser());
       var nuoveOpzioni = card.opzioni.map(function (o: any) {
-        var voti = o.voti.filter(function (v: any) {
+        // `votiDi` (sondaggi.ts) e non `.voti.filter`: il campo è opzionale e
+        // su un'opzione legacy questo `filter` lanciava dentro l'onClick, quindi
+        // il voto non veniva salvato e nessun toast lo diceva.
+        var voti = votiDi(o).filter(function (v: any) {
           return v !== vn;
         });
         if (o.id === oid) voti = voti.concat([vn]);

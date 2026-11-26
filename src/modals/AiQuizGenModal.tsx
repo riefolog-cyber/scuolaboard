@@ -12,6 +12,11 @@ function AiQuizGenModal(props: any) {
       return Object.assign({}, p, patch);
     });
   }
+  // Le domande scartate sono già note quando l'anteprima arriva: il pulsante
+  // deve dire quante ne entreranno DAVVERO, altrimenti promette «Aggiungi 2» e
+  // ne importa 1 (era la seconda metà del difetto: il conteggio arrivava tardi).
+  var scartate = aqg.scartate || [];
+  var importabili = Math.max(0, (aqg.anteprima ? aqg.anteprima.length : 0) - scartate.length);
   return (
     <div
       style={{
@@ -313,6 +318,31 @@ function AiQuizGenModal(props: any) {
                   domande, poi conferma.
                 </div>
               }
+              {scartate.length > 0 && (
+                <div
+                  role="status"
+                  style={{
+                    background: 'rgba(245,158,11,.1)',
+                    border: '1px solid rgba(245,158,11,.35)',
+                    borderRadius: 9,
+                    padding: '8px 12px',
+                    marginBottom: 12,
+                    fontSize: 12,
+                    color: '#fbbf24',
+                  }}
+                >
+                  {'⚠️ ' +
+                    (scartate.length === 1
+                      ? '1 domanda non sarà importata'
+                      : scartate.length + ' domande non saranno importate') +
+                    ': ' +
+                    scartate
+                      .map(function (s: any) {
+                        return 'domanda ' + s.indice + ' — ' + s.motivo;
+                      })
+                      .join(' · ')}
+                </div>
+              )}
               {aqg.anteprima.map(function (d: any, i: number) {
                 var isRegen = aqg.regenIdx === i;
                 var tipoBadgeBg = d.tipo === 'multipla' ? 'var(--c-primary, #6366f1)' : d.tipo === 'verofalso' ? '#22c55e' : '#f59e0b';
@@ -404,7 +434,7 @@ function AiQuizGenModal(props: any) {
                     }
                     {d.tipo === 'multipla' && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        {d.opzioni.map(function (op: any, j: number) {
+                        {(d.opzioni || []).map(function (op: any, j: number) {
                           var isCorr = String(d.corretta) === String(j);
                           return (
                             <div
@@ -526,7 +556,9 @@ function AiQuizGenModal(props: any) {
                         cursor: aqg.regenIdx !== null ? 'not-allowed' : 'pointer',
                       }}
                     >
-                      {'✅ Aggiungi ' + (aqg.anteprima ? aqg.anteprima.length : 0) + ' domande al quiz'}
+                      {'✅ Aggiungi ' +
+                        importabili +
+                        (importabili === 1 ? ' domanda al quiz' : ' domande al quiz')}
                     </button>
                   }
                 </div>

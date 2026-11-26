@@ -1,4 +1,5 @@
 // ProfiloModal.tsx  ·  estratto da Modals.tsx (split Fase 2a)
+import { haVotato } from '../sondaggi.ts';
 
 function ProfiloModal(props: any) {
   if (!props.showProfilo || props.isProf) return null;
@@ -27,10 +28,13 @@ function ProfiloModal(props: any) {
     return (c.likesBy || []).indexOf(vn) >= 0;
   }).length;
   var meiVoti = mieCard.filter(function (c: any) {
+    // `haVotato` (sondaggi.ts): con un'opzione senza `voti` questa `some`
+    // lanciava al RENDER, quindi il profilo non si apriva e l'ErrorBoundary
+    // mostrava «Qualcosa è andato storto» al posto dell'intera app.
     return (
-      c.opzioni &&
+      Array.isArray(c.opzioni) &&
       c.opzioni.some(function (o: any) {
-        return o.voti.indexOf(vn) >= 0;
+        return haVotato(o, vn);
       })
     );
   }).length;
