@@ -396,9 +396,14 @@ test('Stampa bacheca: 🖨️ apre l\'anteprima con le card e stampa (window.pri
   await page.getByRole('button', { name: 'Stampa bacheca' }).click();
   const preview = page.getByText('ANTEPRIMA STAMPA').first();
   await expect(preview).toBeVisible({ timeout: 5000 });
-  await expect(page.getByText(/3 card/).first()).toBeVisible();
+  // Il foglio conta SOLO le card stampabili: la proposta di Luca non è approvata
+  // e non deve finire in un documento che va in classe (PrintModal filtra).
+  await expect(page.getByText(/2 card/).first()).toBeVisible();
   await expect(page.getByText('Lezione su X').first()).toBeVisible();
   await expect(page.getByText('Quiz sulle frazioni').first()).toBeVisible();
+  const foglio = page.locator('.print-area');
+  await expect(foglio.getByText('Proposta di Luca')).toHaveCount(0);
+  await expect(foglio.getByText(/1 card fuori dal foglio/)).toBeVisible();
 
   // Il pulsante di stampa c'è e la chiusura funziona
   await expect(page.getByRole('button', { name: /Stampa \/ Salva PDF/ })).toBeVisible();
