@@ -1,5 +1,6 @@
 // ai-services.ts  ·  ScuolaBoard  ·  AI Groq via Cloudflare Worker (pattern UMD)
 import { pseudonimizeComments, restoreNames, cleanAiMarkdown, cleanJsonStrings } from './utils/ai-text.ts';
+import { visibileAClasse } from './card-classi.ts';
 import { mascheraPII, ripristinaPII } from './utils/pii.ts';
 
 var db: any = window.SB && SB.db;
@@ -450,7 +451,11 @@ export function useAI(user: any) {
         for (var i = 0; i < uniqueClassi.length; i++) {
           var cl = uniqueClassi[i];
           var classCards = targetCards.filter(function (c: any) {
-            return (c.classi || []).indexOf(cl) >= 0;
+            // Stesso criterio della griglia (card-classi.ts): nella sezione di una
+            // classe entrano le card che QUELLA classe vede — anche quelle per TUTTE,
+            // che prima non comparivano in nessuna sezione — e non quelle che il
+            // docente le ha tolto (classiEscluse).
+            return visibileAClasse(c, cl);
           });
           if (classCards.length > 0) {
             results[cl] = await performAnalysis(classCards);

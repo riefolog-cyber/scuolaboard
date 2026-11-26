@@ -23,7 +23,7 @@ import { useCards } from '../cards.ts';
 import { useAI } from '../ai-services.ts';
 import { useModals } from '../modals.ts';
 import { createAppHandlers, anteprimaTesto } from '../app-handlers.ts';
-import { conEsclusione, eliminabileSoloDaClasse } from '../card-classi.ts';
+import { conEsclusione, eliminabileSoloDaClasse, visibileAClasse } from '../card-classi.ts';
 import {
   fbSave,
   fbDel,
@@ -2012,7 +2012,10 @@ var cardsValue = useMemo(
           // Se aiTarget è una classe specifica (non 'tutte' o 'suddivisa'), filtra le card
           if (ai.aiTarget && ai.aiTarget !== 'tutte' && ai.aiTarget !== 'suddivisa') {
             cards = cards.filter(function (c: any) {
-              return (c.classi || []).indexOf(ai.aiTarget) >= 0;
+              // Criterio unico (card-classi.ts): una card per TUTTE la vede anche la
+              // 3A e va analizzata; una card tolta alla 3A non è materiale della 3A e
+              // non deve comparire nel suo riepilogo.
+              return visibileAClasse(c, ai.aiTarget);
             });
           }
           ai.runAI(cards);

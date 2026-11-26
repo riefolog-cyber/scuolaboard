@@ -1,6 +1,9 @@
 // src/utils/cloud.ts — word cloud e statistiche pure
 // Estratto da app-utils.ts (Fase 2d): nessuna dipendenza da Firestore/React.
 
+import { visibileAClasse } from '../card-classi.ts';
+import { commentiVisibili } from '../commenti-classe.ts';
+
 var STOP_IT = new Set([
   'il',
   'la',
@@ -160,24 +163,47 @@ var STOP_IT = new Set([
   'lì',
   'ora',
 ]);
+// Il nome della classe dentro un target 'classe_<nome>': null per 'tutte' e per
+// qualunque altra cosa (un target vuoto non è una classe).
+function classeDelTarget(cardId: any): string | null {
+  var s = String(cardId || '');
+  if (s.indexOf('classe_') !== 0) return null;
+  var nome = s.slice(7).trim();
+  return nome ? nome : null;
+}
+
 // Filtra le card per il target del word cloud: 'tutte' oppure 'classe_<nome>'.
 // Condiviso da buildWordCloud e collectCloudStats (stessa logica, niente duplicazione).
+//
+// Per la classe si usa `visibileAClasse` (card-classi.ts), non un `classi.indexOf`
+// riscritto qui: il confronto grezzo sbagliava in tre casi, tutti reali — una card
+// per TUTTE non entrava in NESSUN cloud di classe, una card tolta alla 3A
+// (`classiEscluse`) continuava a contare come roba della 3A, e una card legacy
+// senza `classi` (che vale per tutte) spariva. Il cloud di una classe è "quello
+// che quella classe vede e scrive": il criterio è per forza lo stesso.
 function filterCardsForCloud(cards: any[], cardId: string) {
-  return cards.filter(function (c) {
-    if (c.proposta) return false;
-    if (cardId === 'tutte') return true;
-    if (String(cardId).indexOf('classe_') === 0) {
-      var classeName = cardId.slice(7);
-      return (c.classi || []).includes(classeName);
-    }
-    return false;
+  var classe = classeDelTarget(cardId);
+  return (Array.isArray(cards) ? cards : []).filter(function (c: any) {
+    if (!c || c.proposta) return false;
+    if (classe === null) return String(cardId) === 'tutte';
+    return visibileAClasse(c, classe);
   });
+}
+
+// I commenti che contano per il target. Con una classe vale la regola di
+// commenti-classe.ts (i suoi commenti + i legacy senza classe): i commenti sono
+// discussioni DI CLASSE, e il cloud della 3A non deve contenere quello che la 3B
+// ha scritto sulla stessa card — sarebbe una media fra due discussioni.
+function commentiDelTarget(commenti: any, classe: string | null): any[] {
+  if (classe === null) return Array.isArray(commenti) ? commenti : [];
+  return commentiVisibili(commenti, classe);
 }
 
 export function buildWordCloud(cards: any[], cardId: string) {
   var testi: string[] = [];
+  var classe = classeDelTarget(cardId);
   filterCardsForCloud(cards, cardId).forEach(function (c) {
-    (c.commenti || []).forEach(function (cm: any) {
+    commentiDelTarget(c.commenti, classe).forEach(function (cm: any) {
       testi.push(cm.testo);
       if (cm.risposte)
         cm.risposte.forEach(function (r: any) {
@@ -215,10 +241,11 @@ export function buildWordCloud(cards: any[], cardId: string) {
 }
 export function collectCloudStats(cards: any[], cardId: string) {
   var filtered = filterCardsForCloud(cards, cardId);
+  var classe = classeDelTarget(cardId);
   var commentCount = 0;
   var studentSet = new Set<string>();
   filtered.forEach(function (c) {
-    (c.commenti || []).forEach(function (cm: any) {
+    commentiDelTarget(c.commenti, classe).forEach(function (cm: any) {
       commentCount++;
       if (cm.autore) studentSet.add(cm.autore);
       if (cm.risposte)

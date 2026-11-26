@@ -257,19 +257,31 @@ export function createAppHandlers(ctx: any) {
         }
       }
 
+      // `classiEscluse` segue la rinomina come `classi`: se la 3A diventa 3B e
+      // l'esclusione restasse scritta "3A", la card tolta a quel gruppo tornerebbe
+      // visibile agli stessi studenti (ora 3B); e se un giorno nascesse una nuova
+      // 3A, erediterebbe un'esclusione che nessuno le ha chiesto. Un'esclusione è
+      // un dato della classe, quindi cambia nome con lei — come `classiPerAnno`
+      // degli studenti, poche righe sotto.
+      var rinomina = function (lista: any) {
+        return lista.map(function (x: any) {
+          return x === oldN ? newN : x;
+        });
+      };
       var toUpdate = (getCards() || []).filter(function (c: any) {
-        return (c.classi || []).indexOf(oldN) >= 0;
+        return (
+          (Array.isArray(c.classi) && c.classi.indexOf(oldN) >= 0) ||
+          (Array.isArray(c.classiEscluse) && c.classiEscluse.indexOf(oldN) >= 0)
+        );
       });
       toUpdate.forEach(function (c: any) {
+        var patch: any = {};
+        if (Array.isArray(c.classi) && c.classi.indexOf(oldN) >= 0) patch.classi = rinomina(c.classi);
+        if (Array.isArray(c.classiEscluse) && c.classiEscluse.indexOf(oldN) >= 0)
+          patch.classiEscluse = rinomina(c.classiEscluse);
         if (fbSave)
           try {
-            fbSave(
-              Object.assign({}, c, {
-                classi: c.classi.map(function (x: any) {
-                  return x === oldN ? newN : x;
-                }),
-              })
-            );
+            fbSave(Object.assign({}, c, patch));
           } catch (e: any) {}
       });
       try {
