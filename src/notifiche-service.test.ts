@@ -74,7 +74,7 @@ function setupWindow(db: any) {
 }
 
 const STUDENTI: Studente[] = [
-  { uid: 's1', nome: 'Anna', cognome: 'Verdi', classe: '3AI' },
+  { uid: 's1', nome: 'Anna', cognome: 'Verdi', classiPerAnno: { '2026/2027': '3AI' } },
   { uid: 's2', displayName: 'Luca Bianchi', classiPerAnno: { '2026/2027': '3AI' } },
   { uid: 's3', nome: 'Ivo', cognome: 'Rossi', classe: '4BO' },
 ];
@@ -190,6 +190,50 @@ describe('notifyClasse: esito del fan-out', () => {
     await expect(
       notifyClasse({ classi: ['3AI'], annoScolastico: '2026/2027', cardId: 'c1', titolo: 'X', msg: 'Y' })
     ).resolves.toEqual({ ok: false, avvisati: 0, totale: 0, mancanti: [] });
+  });
+});
+describe('notifyClasse: la classe corrente viene da una sola formula', () => {
+  it('il campo piatto classe NON vale per un anno nuovo', async () => {
+    // Il vecchio sistema scriveva solo il campo piatto (epoca legacy). Per gli anni
+    // nuovi quel campo non significa niente: usarlo faceva arrivare avvisi di una
+    // classe che la bacheca non mostra (le card si filtrano con classeCorrenteOf).
+    setupWindow(fakeDb([{ uid: 's1', classe: '3AI' }]));
+    const esito = await notifyClasse({
+      classi: ['3AI'],
+      annoScolastico: '2026/2027',
+      cardId: 'c1',
+      titolo: 'X',
+      msg: 'Y',
+    });
+    expect(esito).toEqual({ ok: true, avvisati: 0, totale: 0, mancanti: [] });
+  });
+
+  it("per l'anno legacy il campo piatto vale ancora", async () => {
+    setupWindow(fakeDb([{ uid: 's1', classe: '3AI' }]));
+    const esito = await notifyClasse({
+      classi: ['3AI'],
+      annoScolastico: '2025/2026',
+      cardId: 'c1',
+      titolo: 'X',
+      msg: 'Y',
+    });
+    expect(esito).toEqual({ ok: true, avvisati: 1, totale: 1, mancanti: [] });
+  });
+
+  it('una chiave null esplicita non fa riemergere la classe legacy', async () => {
+    // "Nessuna classe" per l'anno corrente non e' "la classe dell'anno scorso": chi
+    // non ha scelto la classe vede le card per TUTTE, quindi deve ricevere l'avviso
+    // anche quando quella card esclude la sua vecchia classe.
+    setupWindow(fakeDb([{ uid: 's1', classe: '3AI', classiPerAnno: { '2026/2027': null } as any }]));
+    const esito = await notifyClasse({
+      classi: ['TUTTE'],
+      classiEscluse: ['3AI'],
+      annoScolastico: '2026/2027',
+      cardId: 'c1',
+      titolo: 'X',
+      msg: 'Y',
+    });
+    expect(esito).toEqual({ ok: true, avvisati: 1, totale: 1, mancanti: [] });
   });
 });
 

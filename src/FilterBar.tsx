@@ -2,6 +2,7 @@
 import { useContext } from 'react';
 import FormContext from './contexts/FormContext.tsx';
 import filterBtn from './modals/filterBtn.ts';
+import { citaClasse } from './card-classi.ts';
 
 function FilterBar__({ $: props$ }: any) {
   // Merge del FormContext (split di UIContext): rinominaClasse/Input/Conferma
@@ -111,8 +112,11 @@ function FilterBar__({ $: props$ }: any) {
                   className="chip-action"
                   onClick={function (e: any) {
                     e.stopPropagation();
+                    // `citaClasse` (card-classi) e non `c.classi.indexOf`: il conteggio
+                    // deve nominare anche le card escluse da questa classe, altrimenti il
+                    // messaggio non avverte dell'esclusione che resterebbe orfana.
                     var cardsConClasse = ($.cards || []).filter(function (c: any) {
-                      return Array.isArray(c && c.classi) && c.classi.indexOf(cl) >= 0;
+                      return citaClasse(c, cl);
                     }).length;
                     if (
                       confirm(

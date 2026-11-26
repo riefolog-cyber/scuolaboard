@@ -19,6 +19,7 @@ import {
   etichettaClassi,
   etichettaEsclusioni,
   senzaClasse,
+  citaClasse,
 } from './card-classi.ts';
 
 const cardTutte = { id: 'c1', classi: ['TUTTE'] };
@@ -399,5 +400,24 @@ describe('card-classi: scrittura «togli da questa classe»', function () {
     const card = { classi: ['3A', '4B'] };
     senzaClasse(card, '3A');
     expect(card.classi).toEqual(['3A', '4B']);
+  });
+});
+describe('citaClasse', function () {
+  it("conta la classe presente nell'elenco esplicito", function () {
+    expect(citaClasse({ classi: ['3A', '4B'] }, '3A')).toBe(true);
+  });
+
+  it('conta anche la classe ESCLUSA: il nome resta nel documento, e senza contarlo sparirebbe senza avviso', function () {
+    expect(citaClasse(cardTutte, '3A')).toBe(false);
+    expect(citaClasse({ classi: ['TUTTE'], classiEscluse: ['3A'] }, '3A')).toBe(true);
+  });
+
+  it('non conta le altre classi ne le card legacy senza classi', function () {
+    expect(citaClasse({ classi: ['3A'] }, '4B')).toBe(false);
+    expect(citaClasse({ id: 'legacy' }, '3A')).toBe(false);
+  });
+
+  it('una classe vuota non corrisponde a niente', function () {
+    expect(citaClasse({ classi: ['3A'] }, '')).toBe(false);
   });
 });

@@ -187,8 +187,25 @@ describe('regression: notifiche segna letto singolo', () => {
 
     await waitFor(() => {
       const doc = db._get('notifiche', 'prof1');
-      expect(doc.lista.find((x: any) => x.id === 'n1').letta).toBe(true);
-      expect(doc.lista.find((x: any) => x.id === 'n2').letta).toBe(false);
+      // Lo stato "letta" vive in `letta` (elenco di id), non riscritto dentro le voci:
+      // è l'unica forma che le rules ammettono per il proprietario, e non tocca la
+      // lista (che il fan-out aggiorna con arrayUnion).
+      expect(doc.letta).toEqual(['n1']);
+      expect(doc.lista.map((x: any) => x.id)).toEqual(['n1', 'n2']);
     });
+    // Il badge si spegne davvero: la non letta rimasta è una sola.
+    expect(await screen.findByTitle('1 notifiche non lette', {})).toBeTruthy();
+  });
+
+  it('una voce letta dal vecchio client resta letta (compatibilità)', async () => {
+    const vecchia = Object.assign({}, notif, { letta: true });
+    const n2 = Object.assign({}, notif, { id: 'n2', titolo: 'Altra card', msg: 'Altro messaggio' });
+    const seed = {
+      users: { prof1: PROF_DOC },
+      // Documento scritto prima di `letta`: il flag stava sulla voce.
+      notifiche: { prof1: { lista: [vecchia, n2], aggiornato: new Date().toISOString() } },
+    };
+    await renderApp({ seed, user: PROF });
+    expect(await screen.findByTitle('1 notifiche non lette', {})).toBeTruthy();
   });
 });

@@ -234,3 +234,14 @@ export function senzaClasse(card: Card, classe: string): { classi: string[]; cla
   }
   return { classi: cc, classiEscluse: escluseCoerenti(cc, conEsclusione(card, classe)) };
 }
+// La classe compare da qualche parte nella card (elenco esplicito o esclusione)?
+//
+// Serve al messaggio di conferma quando si elimina una classe: il conteggio deve
+// nominare anche le card TOLTE a quella classe, altrimenti non avverte che
+// rimarrà un'esclusione col nome di una classe che non esiste più — e una
+// futura classe omonima la erediterebbe (vedi AGENTS.md). Non è un criterio di
+// visibilità: `visibileAClasse` resta l'unico per quello.
+export function citaClasse(card: any, classe: string): boolean {
+  if (!classe) return false;
+  return classiDi(card).indexOf(classe) >= 0 || escluseDi(card).indexOf(classe) >= 0;
+}

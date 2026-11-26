@@ -63,6 +63,10 @@ Regola pratica:
    - `CFG.ANNO_DEFAULT` = anno "ufficiale": è l'**unico** per cui la scelta classe è obbligatoria (`AppProvider` → effect su `annoScolastico`).
    - `ANNO_LEGACY` (`src/app-provider-helpers.ts`) = anno dell'epoca in cui il vecchio sistema scriveva il campo piatto `classe`. **Non** usare `ANNI_DISPONIBILI[0]`.
    - La classe dello studente per un anno si calcola **solo** con `classeCorrenteOf(user, anno, ANNO_LEGACY)` (UI, filtro card, elenco studenti, rinomina classe): niente copie locali della formula.
+   - Anche il **fan-out delle notifiche** (`notifiche-service.ts`) usa quella funzione: la copia
+     locale che aveva applicava il campo piatto `classe` a QUALSIASI anno, quindi uno studente
+     senza classe per l'anno corrente riceveva avvisi di una classe che la bacheca non gli
+     mostrava (le card si filtrano con la stessa formula). `src/notifiche-service.test.ts` lo fissa.
    - La scelta classe dello studente è **irreversibile** lato rules per un anno già valorizzato: nessun flusso deve poter far scegliere una classe "per sbaglio" (l'anno legacy è l'unica eccezione, via `classe` piatto).
 
 8. **Ordine della griglia** (leggere prima di toccarlo): `compareCards()` in `src/cards.ts` è l'unico punto che lo decide, con questa gerarchia di **priorità**:
@@ -85,6 +89,16 @@ Regola pratica:
     - Le card del docente entrano in coda **al momento della pubblicazione** (`addCard`), non dentro `buildNewCard`: se aggiungi un altro percorso che pubblica qualcosa, chiama `conAnnuncioInCoda` lì.
     - Anche **approvare una proposta** (`appCard`) è una pubblicazione. `avvisiDaMs` serve proprio a questo: la proposta può essere stata creata giorni prima, e senza quell'istante di annuncio il recupero la considererebbe fuori finestra.
     - Gli id delle notifiche di una card sono **deterministici** (`nuova_card_<cardId>`, vedi `notifiche-service.ts`) e `useNotifiche` fa **dedupe per id** in lettura: è così che una riannuncio non produce un doppio avviso. Non tornare a id casuali per `nuova_card`.
+    - **Lo stato «letta» sta in `letta` (ELENCO DI ID), non dentro le voci della lista**: è
+      l'unica scrittura che `aggiornaNotifica` permette al proprietario (`hasOnly(['letta',
+      'aggiornato'])`). Riscrivere la lista con `letta: true` sulla voce veniva negato **due
+      volte** — il ramo proprietario non ammette `lista`, quello studente pretende `hasAll` sulle
+      voci precedenti, che una voce modificata non soddisfa — senza alcun errore visibile: per lo
+      studente il badge restava acceso per sempre (il prof passava perché `isProf()` lascia tutto).
+      `useNotifiche` scrive solo `letta`+`aggiornato`, non tocca la lista (la aggiorna il fan-out
+      con `arrayUnion`), legge anche il flag legacy sulla voce e scarta gli id senza più voce.
+      `src/rules-notifiche-consistency.test.ts` verifica che regola e client descrivano la STESSA
+      scrittura: se cambia una delle due, il test cade.
     - **Commenti e risposte** (addCom/addReply in `app-handlers.ts`): oltre agli avvisi dedicati (prof, autore del commento parent) fanno il **fan-out alla classe della card** con `tipo: 'risposta'` e `cmId` del nuovo intervento → l'id deterministico diventa `risposta_<cardId>_<cmId>`. Ogni commento è un avviso **distinto**: NON riutilizzare mai `nuova_card_<cardId>` per un commento — collide con l'annuncio della pubblicazione e la dedupe in lettura lo nasconde ai compagni (è stato un bug reale). L'autore del commento è escluso dal fan-out (`excludeUid`). Il **messaggio** porta l'anteprima del testo (`msgConAnteprima` in `app-handlers.ts`, ≤60 caratteri al confine di parola + «…», whitespace unificato): serve a chi riceve a capire se vale l'apertura. In `addCom` il testo va catturato in modo **sincrono** prima di `saveCard`: nel `.then` `ctx.nc` è già svuotato.
     - Un secondo client docente può completare il fan-out di una card pubblicata da un altro: è voluto (chi apre per primo l'app recupera).
     - **Esito e conferma al docente**: `SB.notifyClasse` risolve `{ ok, avvisati }` (`ok: false` = invio non partito o **solo parziale**; non rifiuta mai, i chiamanti storici non hanno `.catch`). `annunciaClasse` condivide **una sola promessa per card e per sessione** (una `Map`, non un flag): recupero e pubblicazione possono partire quasi insieme e chiunque chieda l'annuncio riceve lo stesso esito — senza questo il secondo chiamante riceverebbe 0 e il docente non vedrebbe mai la conferma. `confermaAnnuncio(esito)` traduce l'esito nel toast (`🔔 N studenti avvisati`, oppure l'avviso se non è partito; `null` se non c'è nessuno da avvisare). Il toast lo mostra `mostraEsitoAnnuncio` in `AppProvider` **solo** per pubblicazione e approvazione: il recupero resta silenzioso di proposito. Se un invio non è riuscito il flag NON si chiude, quindi `avvisiPendenti: false` significa davvero "annuncio concluso".

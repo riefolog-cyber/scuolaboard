@@ -1,3 +1,4 @@
+// @ts-nocheck — legge un sorgente dal filesystem, come `classi-criterio.test.ts`.
 // Test statico sulle Firestore Rules per /notifiche.
 //
 // Non è un test di eleganza: blocca due errori che hanno già prodotto buchi reali e
@@ -5,6 +6,8 @@
 // IGNORA le regole.
 import { describe, it, expect } from 'vitest';
 import { RULES_SGRUPPATE, corpoFunzione, bloccoNotifiche } from './rules-utils';
+import fs from 'node:fs';
+import path from 'node:path';
 
 describe('Rules /notifiche', () => {
   it('nessun autenticato qualsiasi può scrivere sulla lista di un altro', () => {
@@ -79,5 +82,22 @@ it('il create non riusa la funzione condivisa con update', () => {
     expect(aperte).toBeGreaterThan(0);
     expect(chiuse).toBeGreaterThan(0);
     expect(RULES_SGRUPPATE).not.toMatch(/allow \w+: (?!if)/);
+  });
+  it('il proprietario marca letto SOLO con letta + aggiornato', () => {
+    // Il client scrive { letta: [id...], aggiornato } (useNotifiche): un elenco di id,
+    // non la lista riscritta. Allargare o restringere questo ramo senza guardare il
+    // client spegne il badge degli studenti in silenzio (nessun errore, nessun test
+    // funzionale: il Firestore finto ignora le rules).
+    expect(corpoFunzione('aggiornaNotifica')).toMatch(/hasOnly\(\['letta', 'aggiornato'\]\)/);
+  });
+
+  it('il client marca letto scrivendo letta, non riscrivendo lista', () => {
+    // Regola e client devono descrivere la STESSA scrittura. Riscrivere la lista con
+    // le voci `letta: true` viene negato due volte: il ramo proprietario non ammette
+    // `lista`, e quello studente pretende `hasAll` sulle voci precedenti, che una voce
+    // modificata non soddisfa.
+    const src = fs.readFileSync(path.join(__dirname, 'hooks', 'useNotifiche.ts'), 'utf8');
+    expect(src).toMatch(/\.set\(\{\s*letta:/);
+    expect(src).not.toMatch(/\.set\(\{\s*lista:/);
   });
 });

@@ -343,7 +343,12 @@ service cloud.firestore {
     }
 
     // ── NOTIFICHE (in-app, solo app aperta) ──
-    // Doc per utente: notifiche/{uid} { lista: [...], aggiornato: ISO }
+    // Doc per utente: notifiche/{uid} { lista: [...], letta: ["<id>", ...], aggiornato: ISO }
+    // `letta` è l'ELENCO DEGLI ID già letti, non un flag per voce: il client deve poter
+    // marcare una notifica senza riscrivere `lista`. Prima riscriveva l'intera lista con
+    // `letta: true` sulla voce, e questo ramo (hasOnly([letta, aggiornato])) lo negava
+    // allo studente; quello sotto (che ammette `lista`) lo negava comunque perché
+    // `hasAll` non riconosce una voce modificata. Il badge restava acceso per sempre.
     // Scritture ammesse, e SOLO queste:
     // - il prof su qualsiasi doc (fan-out di classe e di risposta);
     // - lo studente che ACCODA UNA voce sul doc di chiunque (prof o compagno: autore
@@ -368,7 +373,8 @@ service cloud.firestore {
     function aggiornaNotifica(targetUid) {
       return isProf()
         || (
-          // marcatore letta sul proprio doc
+          // marcatore letta sul proprio doc: `letta` è l'elenco degli id già letti
+          // (array di stringhe), aggiornato in SOLA aggiunta dal client (useNotifiche)
           request.auth.uid == targetUid
           && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(['letta', 'aggiornato'])

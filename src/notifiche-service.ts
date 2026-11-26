@@ -1,4 +1,5 @@
-import { classiDi } from './card-classi.ts';
+import { escluseDi, classiDi } from './card-classi.ts';
+import { classeCorrenteOf, ANNO_LEGACY } from './app-provider-helpers.ts';
 // notifiche-service.ts · ScuolaBoard · fan-out notifiche in-app (solo app aperta)
 // Usato dagli handler dopo fbSave riuscito. Nessuna email/push.
 
@@ -152,6 +153,9 @@ async function notifyClasse(opts: {
   // Stesso accessore del criterio: una voce non-stringa o vuota non è una
   // classe e non deve entrare nel fan-out (una card legacy vale per TUTTE).
   var classi = classiDi(opts as any);
+  // Accessore unico anche per le esclusioni: `opts.classiEscluse` dal chiamante può
+  // essere sporco, e `escluseDi` scarta le voci non-stringa.
+  var escluse: string[] = escluseDi(opts);
   var anno = opts.annoScolastico;
   var tipo = opts.tipo || 'nuova_card';
   var solo: string[] | null = opts.soloUid && opts.soloUid.length ? opts.soloUid.map(String) : null;
@@ -168,12 +172,18 @@ async function notifyClasse(opts: {
           // frattempo la classe è cambiata (l'avviso gli era dovuto).
           if (solo.indexOf(String(d.id)) < 0) return;
         } else {
-          var classeStud = (u.classiPerAnno && u.classiPerAnno[anno]) || u.classe || null;
-          var escluse: string[] = opts.classiEscluse || [];
+          // STESSA formula di UI, filtro card ed elenco studenti (classeCorrenteOf):
+          // la copia locale che stava qui applicava il campo piatto `classe` a
+          // QUALSIASI anno, ma quel campo è la classe dell'anno LEGACY. Uno studente
+          // che non ha ancora scelto la classe per l'anno corrente riceveva così gli
+          // avvisi di una classe che la bacheca non gli mostra (le card si filtrano
+          // con la stessa funzione); una chiave `null` esplicita non deve nemmeno far
+          // riemergere la classe legacy.
+          var classeStud = classeCorrenteOf(u, anno, ANNO_LEGACY);
           // La classe esclusa è fuori dal fan-out anche se la card è per TUTTE:
           // l'avviso deve raggiungere chi può davvero aprire la card.
           if (classeStud && escluse.indexOf(classeStud) >= 0) return;
-          var match = classi.indexOf('TUTTE') >= 0 || (classeStud && classi.indexOf(classeStud) >= 0) || !classeStud;
+          var match = classi.indexOf('TUTTE') >= 0 || (classeStud && classi.indexOf(classeStud) >= 0);
           // se studente senza classe, riceve solo TUTTE (come visible in cards.ts:218)
           if (classi.indexOf('TUTTE') < 0 && !classeStud) return;
           if (!match) return;
