@@ -1,7 +1,7 @@
 import { memo, useState } from 'react';
 import { normalizeLinks } from './app-utils.tsx';
 import { avvisoInSospeso, dettaglioMancanti, etichettaAvviso } from './avvisi-classe.ts';
-import { etichettaEsclusioni } from './card-classi.ts';
+import { classiDi, etichettaEsclusioni } from './card-classi.ts';
 import { classeContestoCommenti, commentiVisibili, mostraTuttiCommenti } from './commenti-classe.ts';
 import Countdown from './Countdown.tsx';
 import { temaTipo, etichettaTipo } from './card-tipo-tema.ts';
@@ -56,7 +56,11 @@ function CardItem__({ $, c, idx }: any) {
   // (che Firestore ricrea a ogni snapshot e azzererebbe l'ottimizzazione).
   var avviso = $.isProf && !$.simulaSt && avvisoInSospeso(c, Date.now());
   var mancantiTxt = avviso ? dettaglioMancanti(c) : '';
-  var cc = c.classi || ['TUTTE'];
+  // I nomi delle classi si leggono con lo STESSO accessore del criterio
+  // (card-classi.ts): con un elenco sporco (`['3A', null]`) questa riga
+  // stampava «3A, » — la virgola appesa che `classiDi` ha appena smesso di
+  // produrre, perché il default e il filtro non si riscrivono in due punti.
+  var cc = classiDi(c);
   // Le esclusioni sono una scrittura del docente: senza un chip la card tolta
   // alla 3A si presenta in bacheca come se fosse per tutti (card-classi.ts).
   var chipEsclusioni = etichettaEsclusioni(c);

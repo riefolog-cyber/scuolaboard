@@ -29,7 +29,7 @@
 // ri-annunciare card vecchie se la marcatura finale non è mai riuscita (profilo
 // rimasto offline per giorni). Le card pubblicate PRIMA dell'introduzione del
 // flag non lo hanno, quindi non vengono mai toccate: nessuna data di "attivazione".
-import { escluseDi } from './card-classi.ts';
+import { classiDi, escluseDi } from './card-classi.ts';
 
 export var AVVISI_RECUPERO_MS = 72 * 60 * 60 * 1000;
 
@@ -414,7 +414,7 @@ export function annunciaClasse(opts: {
   var chiamata: any;
   try {
     chiamata = SBw.notifyClasse({
-      classi: card.classi || ['TUTTE'],
+      classi: classiDi(card),
       // Le classi a cui il docente ha tolto la card non vanno avvisate: la
       // notifica è un invito ad aprire qualcosa che lì non esiste più.
       classiEscluse: escluseDi(card),

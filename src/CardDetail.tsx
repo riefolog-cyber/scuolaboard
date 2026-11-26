@@ -11,7 +11,7 @@ import BadgeAi from './BadgeAi.tsx';
 import FormContext from './contexts/FormContext.tsx';
 import { useCountdown, countdownStr } from './Countdown.tsx';
 import { temaTipo, etichettaTipo } from './card-tipo-tema.ts';
-import { etichettaEsclusioni } from './card-classi.ts';
+import { classiDi, etichettaEsclusioni } from './card-classi.ts';
 
 // Import STATICI di proposito: il `lazy` è stato provato e scartato. Questi
 // quattro pannelli sono sempre nell'albero (la condizione quiz/prof è DENTRO il
@@ -216,7 +216,7 @@ function CardDetail__({ $: props$ }: any) {
   // Stessa lettura della bacheca: il dettaglio è il posto dove il docente
   // decide, e deve VEDERE che la card è tolta a una classe (card-classi.ts).
   var chipEsclusioni = etichettaEsclusioni(c);
-  var cc = c.classi || ['TUTTE'];
+  var cc = classiDi(c); // cfr. CardItem: un accessore solo, non due default
 
   return (
     <div

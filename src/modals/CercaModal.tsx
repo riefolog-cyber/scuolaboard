@@ -6,7 +6,7 @@
 // classe (mai "Solo prof", proposte o card nascoste), nell'anno in bacheca.
 import { useState, useEffect, useMemo, createElement } from 'react';
 import { norm, hilite } from '../utils/search.ts';
-import { visibileAClasse } from '../card-classi.ts';
+import { classiDi, etichettaClassi, visibileAClasse } from '../card-classi.ts';
 import { commentiVisibili } from '../commenti-classe.ts';
 
 function CercaModal(props: any) {
@@ -687,8 +687,8 @@ function CercaModal(props: any) {
                 </div>
               )}
               {results.map(function (c: any) {
-                var cc = c.classi || [];
-                var senzaClasse = cc.length === 0;
+                var cc = classiDi(c);
+                var destinazione = etichettaClassi(c);
                 var nascosta = c.visibile === false;
                 var snip = matchedSnippet(c, normTerms);
                 return (
@@ -730,41 +730,19 @@ function CercaModal(props: any) {
                             {(props.tipoIcon ? props.tipoIcon(c.tipo) : '') + ' ' + (c.tipo || '').toUpperCase()}
                           </span>
                         }
-                        {senzaClasse ? (
-                          <span
-                            className="badge-chip"
-                            style={{
-                              background: 'rgba(239,68,68,.2)',
-                              color: 'var(--c-danger, #f87171)',
-                              padding: '2px 7px',
-                              fontSize: 10,
-                              fontWeight: 800,
-                            }}
-                          >
-                            Solo prof
-                          </span>
-                        ) : (
-                          cc.slice(0, 3).map(function (cl: string, i: number) {
-                            return (
-                              <span
-                                key={i}
-                                className="badge-chip"
-                                style={{
-                                  background: 'rgba(255,255,255,.07)',
-                                  color: 'rgba(255,255,255,.7)',
-                                  padding: '2px 7px',
-                                  fontSize: 10,
-                                  fontWeight: 700,
-                                }}
-                              >
-                                {cl}
-                              </span>
-                            );
-                          })
-                        )}
-                        {cc.length > 3 && (
-                          <span style={{ fontSize: 10, color: 'rgba(255,255,255,.4)' }}>+{cc.length - 3}</span>
-                        )}
+                        <span
+                          className="badge-chip"
+                          title={destinazione}
+                          style={{
+                            background: cc.length === 0 ? 'rgba(239,68,68,.2)' : 'rgba(255,255,255,.07)',
+                            color: cc.length === 0 ? 'var(--c-danger, #f87171)' : 'rgba(255,255,255,.7)',
+                            padding: '2px 7px',
+                            fontSize: 10,
+                            fontWeight: 800,
+                          }}
+                        >
+                          {destinazione}
+                        </span>
                         {needsAll && c.annoScolastico && (
                           <span
                             className="badge-chip"

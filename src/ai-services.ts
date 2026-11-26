@@ -413,7 +413,7 @@ export function useAI(user: any) {
           SB.escapeForPrompt(c.tipo) +
           ')\n' +
           'Classi: ' +
-          (c.classi || []).map(function (k: any) { return SB.escapeForPrompt(k); }).join(', ') +
+          classiDi(c).map(function (k: any) { return SB.escapeForPrompt(k); }).join(', ') +
           '\n' +
           'Commenti: ' +
           (c.commenti || []).length +

@@ -51,8 +51,34 @@ describe('visibilità per classe · un criterio solo', function () {
       }
     });
     expect(trovate, 'criterio di visibilità duplicato: usa visibileAClasse (card-classi.ts)').toEqual([]);
+    expect(file.length).toBeGreaterThan(80);
     // Guardia sulla guardia: se il raccoglitore si rompe, il test sopra passerebbe
     // sempre su una lista vuota.
-    expect(file.length).toBeGreaterThan(80);
+  });
+
+  it('il default di `classi` non si riscrive fuori da card-classi.ts', function () {
+    // La SECONDA copia della stessa regola: `var cc = c.classi || ['TUTTE']`.
+    // Non decide la visibilità, ma mostra o copia la destinazione, e per questo
+    // nessuna guardia la vedeva: con `classi: ['3A', null]` continuava a
+    // stampare «3A, » nella ricerca, e una card legacy senza `classi` finiva
+    // etichettata «Solo prof» proprio nella schermata che serve al docente per
+    // verificare chi vede cosa. `classiDi` (card-classi.ts) è l'unico punto in
+    // cui vivono il default TUTTE e il filtro delle voci sporche.
+    //
+    // Eccezioni dichiarate: i FORM leggono `form.classi`/`f.classi` (stato
+    // dell'editor, non una card) e lì `[]`/`['TUTTE']` sono valori del form.
+    var AMMESSI = ['modals/NuovaCardModal.tsx', 'contexts/AppProvider.tsx'];
+    var trovate: string[] = [];
+    sorgenti(__dirname).forEach(function (f) {
+      var rel = path.relative(__dirname, f).split(path.sep).join('/');
+      if (rel === 'card-classi.ts' || AMMESSI.indexOf(rel) >= 0) return;
+      var testo = sanitizza(fs.readFileSync(f, 'utf8'));
+      var re = /\.classi\s*\|\|/g;
+      var m;
+      while ((m = re.exec(testo)) !== null) {
+        trovate.push(rel + ': ' + m[0].replace(/\s+/g, ' '));
+      }
+    });
+    expect(trovate, 'default di `classi` duplicato: usa classiDi (card-classi.ts)').toEqual([]);
   });
 });

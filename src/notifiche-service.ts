@@ -1,3 +1,4 @@
+import { classiDi } from './card-classi.ts';
 // notifiche-service.ts · ScuolaBoard · fan-out notifiche in-app (solo app aperta)
 // Usato dagli handler dopo fbSave riuscito. Nessuna email/push.
 
@@ -148,7 +149,9 @@ async function notifyClasse(opts: {
 }): Promise<EsitoFanout> {
   var dbNS: any = getDbNS();
   if (!dbNS) return { ok: false, avvisati: 0, totale: 0, mancanti: [] };
-  var classi = opts.classi || ['TUTTE'];
+  // Stesso accessore del criterio: una voce non-stringa o vuota non è una
+  // classe e non deve entrare nel fan-out (una card legacy vale per TUTTE).
+  var classi = classiDi(opts as any);
   var anno = opts.annoScolastico;
   var tipo = opts.tipo || 'nuova_card';
   var solo: string[] | null = opts.soloUid && opts.soloUid.length ? opts.soloUid.map(String) : null;

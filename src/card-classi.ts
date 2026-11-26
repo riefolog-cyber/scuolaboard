@@ -212,13 +212,24 @@ export function senzaClasse(card: Card, classe: string): { classi: string[]; cla
   var ex = escluseDi(card);
   if (!classe) return { classi: cc, classiEscluse: ex };
   if (cc.indexOf('TUTTE') < 0 && cc.indexOf(classe) >= 0) {
+    var rimaste = cc.filter(function (x) {
+      return x !== classe;
+    });
     return {
-      classi: cc.filter(function (x) {
-        return x !== classe;
-      }),
-      classiEscluse: ex.filter(function (x) {
-        return x !== classe;
-      }),
+      classi: rimaste,
+      // Anche le esclusioni vanno riallineate a ogni scrittura: un documento
+      // della versione precedente di questa funzione può avere `classiEscluse:
+      // ['3A']` accanto a `classi: ['3A','4B']`. Togliendo la 4B resterebbe «3A
+      // tranne 3A»: la card non la vede più NESSUNO e nessuna schermata lo dice
+      // (l'esclusione vince, vedi `visibileAClasse`). Vince l'elenco, quindi le
+      // esclusioni residue passano da `escluseCoerenti` invece di fidarsi del
+      // documento com'era scritto.
+      classiEscluse: escluseCoerenti(
+        rimaste,
+        ex.filter(function (x) {
+          return x !== classe;
+        })
+      ),
     };
   }
   return { classi: cc, classiEscluse: escluseCoerenti(cc, conEsclusione(card, classe)) };

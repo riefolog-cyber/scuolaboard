@@ -301,4 +301,32 @@ describe('CercaModal', () => {
     fireEvent.input(screen.getByLabelText('Cerca card'), { target: { value: 'zebrino' } });
     expect(screen.getByRole('button', { name: /Nobel per la pace/ })).toBeTruthy();
   });
+
+  it('card legacy senza `classi`: «Tutte le classi», non «Solo prof»', () => {
+    // Una card scritta prima del campo `classi` vale per TUTTI: senza accessore
+    // condiviso la ricerca la etichettava «Solo prof», cioè il contrario.
+    var legacy = {
+      id: 'lg',
+      tipo: 'nota',
+      titolo: 'Pagina storica',
+      testo: '',
+      commenti: [],
+      ordine: 9,
+      annoScolastico: '2026/2027',
+    };
+    // Sia `cards` (anno in bacheca) sia `allCards` (tutti gli anni): la ricerca
+    // sceglie la fonte in base al filtro anni, e il test non deve dipendere da quello.
+    var conLegacy = cards.concat([legacy]);
+    renderModal({ cards: conLegacy, allCards: conLegacy });
+    fireEvent.input(screen.getByLabelText('Cerca card'), { target: { value: 'storica' } });
+    expect(screen.getByText('Tutte le classi')).toBeTruthy();
+    expect(screen.queryByText('Solo prof')).toBeNull();
+  });
+
+  it('card per TUTTE: chip «Tutte le classi», non il segnaposto interno', () => {
+    renderModal();
+    fireEvent.input(screen.getByLabelText('Cerca card'), { target: { value: 'algebra' } });
+    expect(screen.getByText('Tutte le classi')).toBeTruthy();
+    expect(screen.queryByText('TUTTE')).toBeNull();
+  });
 });

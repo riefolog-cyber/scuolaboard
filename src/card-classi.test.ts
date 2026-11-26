@@ -368,6 +368,33 @@ describe('card-classi: scrittura «togli da questa classe»', function () {
     expect(senzaClasse(cardDueClassi, '3A')).toEqual({ classi: ['4B'], classiEscluse: [] });
   });
 
+  it(
+    "documento legacy incoerente (3A sia in elenco sia esclusa): dopo il gesto l'esclusione sparisce",
+    function () {
+      // Scritto dalla versione precedente di `senzaClasse`: l'esclusione nomina una
+      // classe che sta ANCHE nell'elenco esplicito. Togliendo la 4B resterebbe
+      // «3A tranne 3A» e `visibileAClasse` farebbe vincere l'esclusione: la card
+      // non la vedrebbe più NESSUNO, senza errore e senza che nessuna schermata
+      // lo dica. La scrittura riallinea, non eredita la contraddizione.
+      expect(senzaClasse({ classi: ['3A', '4B'], classiEscluse: ['3A'] }, '4B')).toEqual({
+        classi: ['3A'],
+        classiEscluse: [],
+      });
+    }
+  );
+
+  it("le esclusioni che non toccano l'elenco restano", function () {
+    expect(senzaClasse({ classi: ['3A', '4B'], classiEscluse: ['5C'] }, '4B')).toEqual({
+      classi: ['3A'],
+      classiEscluse: ['5C'],
+    });
+    // Esclusione che nomina l'altra classe rimasta: vince l'elenco anche lei.
+    expect(senzaClasse({ classi: ['3A', '4B'], classiEscluse: ['3A', '4B'] }, '3A')).toEqual({
+      classi: ['4B'],
+      classiEscluse: [],
+    });
+  });
+
   it('non muta la card originale', function () {
     const card = { classi: ['3A', '4B'] };
     senzaClasse(card, '3A');

@@ -1,5 +1,5 @@
 import { senzaAnnuncio } from './avvisi-classe.ts';
-import { escluseCoerenti } from './card-classi.ts';
+import { classiDi, escluseCoerenti } from './card-classi.ts';
 import type { Card, CardImmagine, CardLink, QuizDomanda } from './card-tipo.ts';
 
 // app-provider-helpers.ts · ScuolaBoard · Fase 7: helper PURI estratti da
@@ -215,7 +215,7 @@ export function buildEditForm(card: any, normalizeLinks: (_c: any) => any[]): an
         })
       : ['', ''],
     links: links.length ? links : [{ url: '', label: '' }],
-    classi: card.classi || ['TUTTE'],
+    classi: classiDi(card),
     // Le esclusioni entrano nel form perché devono essere RIMUOVIBILI: se il
     // docente esclude una classe per errore e poi modifica la card, senza questo
     // campo l'editor non le mostrerebbe e l'esclusione diventerebbe definitiva

@@ -147,6 +147,21 @@ describe('updateCard: routing (via toggleLike)', () => {
     expect(fbSave.mock.calls[0][0].likesBy).toEqual(['Prof Test']);
   });
 
+  it(
+    "toggleLike: se anche il fallback `fbSave` fallisce la promise risolve (rejection gestita, non unhandled)",
+    async () => {
+      clearServices();
+      window.SB.db = {
+        collection: () => ({ doc: () => ({ update: vi.fn().mockRejectedValue(new Error('denied')) }) }),
+      };
+      const fbSave = vi.fn().mockRejectedValue(new Error('denied'));
+      const handlers = createAppHandlers(likeCtx({ fbSave: fbSave }));
+      // Nessun `.catch` nei gestori di click: la promise deve risolvere, non rigettare.
+      await expect(handlers.toggleLike('c1')).resolves.toBe(false);
+      expect(fbSave).toHaveBeenCalled();
+    }
+  );
+
   it('update diretto OK → nessun fallback fbSave', async () => {
     clearServices();
     const fbSave = vi.fn().mockResolvedValue({ ok: true });
@@ -197,6 +212,58 @@ describe('vote / toggleReazione', () => {
     // o1: 'Altro' resta (utente diverso), Mario viene aggiunto
     expect(ctx.onOptimistic.mock.calls[0][1].opzioni[0].voti).toEqual(['Altro', 'Mario']);
   });
+
+  it(
+    "vote: il toast non compare prima che la scrittura sia confermata (niente conferme a vuoto)",
+    async () => {
+      clearServices();
+      var risolvi: any;
+      var update = vi.fn().mockReturnValue(
+        new Promise(function (r) {
+          risolvi = r;
+        })
+      );
+      var ctx = {
+        cards: [{ id: 'c1', opzioni: [{ id: 'o1', voti: [] }, { id: 'o2', voti: [] }] }],
+        myLikes: { current: new Set() },
+        myName: () => 'Mario',
+        user: { uid: 'u1', role: 'studente' },
+        onOptimistic: vi.fn(),
+        showToast: vi.fn(),
+        setLikeAnimCard: vi.fn(),
+      };
+      window.SB.db = { collection: () => ({ doc: () => ({ update: update }) }) };
+      const handlers = createAppHandlers(ctx);
+      var p = handlers.vote('c1', 'o1');
+      expect(ctx.showToast).not.toHaveBeenCalledWith('Voto registrato ✓', 'ok');
+      risolvi({});
+      await p;
+      expect(ctx.showToast).toHaveBeenCalledWith('Voto registrato ✓', 'ok');
+    }
+  );
+
+  it(
+    "vote: scrittura negata → nessun «Voto registrato ✓» e nessuna rejection",
+    async () => {
+      clearServices();
+      var ctx = {
+        cards: [{ id: 'c1', opzioni: [{ id: 'o1', voti: [] }] }],
+        myLikes: { current: new Set() },
+        myName: () => 'Mario',
+        user: { uid: 'u1', role: 'studente' },
+        onOptimistic: vi.fn(),
+        showToast: vi.fn(),
+        setLikeAnimCard: vi.fn(),
+        fbSave: vi.fn().mockRejectedValue(new Error('denied')),
+      };
+      window.SB.db = {
+        collection: () => ({ doc: () => ({ update: vi.fn().mockRejectedValue(new Error('denied')) }) }),
+      };
+      const handlers = createAppHandlers(ctx);
+      await expect(handlers.vote('c1', 'o1')).resolves.toBeUndefined();
+      expect(ctx.showToast).not.toHaveBeenCalledWith('Voto registrato ✓', 'ok');
+    }
+  );
 
   it('vote: senza getUser (logout) → no-op', async () => {
     clearServices();
@@ -549,6 +616,24 @@ describe('eseguiRinomina', () => {
     expect(ctx.fbSave).toHaveBeenCalledWith(expect.objectContaining({ id: 'cur', classi: ['1AX'] }));
     expect(ctx.fbSave).toHaveBeenCalledWith(expect.objectContaining({ id: 'legacy', classi: ['1AX'] }));
   });
+
+  it(
+    "card non salvata: la promise rifiutata di `fbSave` è gestita (in test: nessuna unhandled)",
+    async () => {
+      window.SB.CLASSI_DEFAULT = ['1A', '1B'];
+      const ctx = rinCtx({
+        cards: [{ id: 'c1', classi: ['1A'] }],
+        fbSave: vi.fn().mockRejectedValue(new Error('denied')),
+      });
+      window.SB.db = ctx._db;
+      createAppHandlers(ctx).eseguiRinomina();
+      // `fbSave` mostra già il toast d'errore: qui conta solo che la rejection
+      // non resti senza gestore (la guardia di `test-setup` la attribuirebbe a
+      // questo test, facendo uscire vitest con 1).
+      await new Promise((r) => setTimeout(r, 0));
+      expect(ctx.fbSave).toHaveBeenCalled();
+    }
+  );
 });
 
 // ── togglePreferito ────────────────────────────────────────────────────────

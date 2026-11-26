@@ -97,6 +97,14 @@ describe('CardItem', () => {
     expect(screen.getByText('3A')).toBeInTheDocument();
   });
 
+  it("elenco classi sporco: il chip non stampa la virgola appesa («3A, »)", () => {
+    // `classiDi` scarta le voci non-stringa; il chip legge con lo stesso
+    // accessore del criterio, quindi una voce `null` non lascia la virgola.
+    renderCard({ classi: ['3A', null] });
+    expect(screen.getByText('3A')).toBeInTheDocument();
+    expect(screen.queryByText(/3A,\s/)).toBeNull();
+  });
+
   it('i badge extra sono marcati per la rivelazione al hover (a riposo: tipo + un stato)', () => {
     renderCard();
     // Il chip delle classi è "extra" (visibile solo al passaggio del mouse),

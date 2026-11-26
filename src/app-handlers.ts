@@ -2,6 +2,7 @@
 // Il ctx è tipizzato strutturalmente: i campi opzionali sono quelli forniti
 // da AppProvider al momento della creazione.
 import { classeCorrenteOf, ANNO_LEGACY } from './app-provider-helpers.ts';
+import { classiDi } from './card-classi.ts';
 import {
   classeContestoCommenti,
   classePerNuovaRisposta,
@@ -79,6 +80,29 @@ export function createAppHandlers(ctx: any) {
     } catch (e) {
       return Promise.reject(e);
     }
+  }
+
+  // Una scrittura già applicata in modo OTTIMISTICO (like, reazione, voto) ha la UI
+  // aggiornata prima del round-trip: quello che non deve fare è mentire sull'esito
+  // né lasciare una rejection senza gestore. La promise restituita risolve sempre
+  // (`true`/`false`): i gestori di click non hanno un `.catch` e una rejection non
+  // gestita fa uscire `vitest` con 1 (AGENTS.md, «Il verde non basta»). `updateCard`
+  // ha già il suo fallback su `fbSave`, che mostra lui il toast d'errore.
+  function esitoOttimistico(esegui: any): Promise<boolean> {
+    var p: any;
+    try {
+      p = esegui();
+    } catch (e: any) {
+      return Promise.resolve(false); // guasto sincrono: niente da salvare
+    }
+    return Promise.resolve(p).then(
+      function () {
+        return true;
+      },
+      function () {
+        return false;
+      }
+    );
   }
 
   function getCards() {
@@ -299,7 +323,12 @@ export function createAppHandlers(ctx: any) {
         if (commenti !== c.commenti) patch.commenti = commenti;
         if (fbSave)
           try {
-            fbSave(Object.assign({}, c, patch));
+            var scrittura = fbSave(Object.assign({}, c, patch));
+            // Il `try/catch` qui prende solo un guasto SINCRONO: una card non
+            // salvata torna come promise rifiutata, e `fbSave` ha già mostrato il
+            // toast d'errore. Senza questo `.catch` ogni card non salvata resta una
+            // rejection non gestita (in test: vitest esce 1, AGENTS.md).
+            if (scrittura && typeof scrittura.then === 'function') scrittura.catch(function () {});
           } catch (e: any) {}
       });
       try {
@@ -422,9 +451,10 @@ export function createAppHandlers(ctx: any) {
       var ottimo = Object.assign({}, card, { likes: (card.likes || 0) + (liked ? -1 : 1), likesBy: likesBy });
       // Ottimistic UI: riflette subito contatore + likeBy, prima del round-trip.
       if (ctx.onOptimistic) ctx.onOptimistic(cardId, ottimo, ['likes', 'likesBy']);
-      // Restituisce la Promise in modo che i chiamanti possano fare await/then.
-      return updateCard(cardId, { likes: ottimo.likes, likesBy: ottimo.likesBy }, ottimo).catch(function () {
-        if (fbSave) fbSave(ottimo);
+      // Restituisce la Promise in modo che i chiamanti possano fare await/then;
+      // l'esito non rigetta mai (vedi `esitoOttimistico`).
+      return esitoOttimistico(function () {
+        return updateCard(cardId, { likes: ottimo.likes, likesBy: ottimo.likesBy }, ottimo);
       });
     },
     toggleReazione: function (cardId: any, emoji: any) {
@@ -442,8 +472,8 @@ export function createAppHandlers(ctx: any) {
       reaz[emoji] = lista;
       var ottimo = Object.assign({}, card, { reazioni: reaz });
       if (ctx.onOptimistic) ctx.onOptimistic(cardId, ottimo, ['reazioni']);
-      updateCard(cardId, { reazioni: reaz }, ottimo).catch(function () {
-        if (fbSave) fbSave(ottimo);
+      return esitoOttimistico(function () {
+        return updateCard(cardId, { reazioni: reaz }, ottimo);
       });
     },
     vote: function (cid: any, oid: any) {
@@ -462,10 +492,15 @@ export function createAppHandlers(ctx: any) {
       });
       var ottimo = Object.assign({}, card, { opzioni: nuoveOpzioni });
       if (ctx.onOptimistic) ctx.onOptimistic(cid, ottimo, ['opzioni']);
-      updateCard(cid, { opzioni: nuoveOpzioni }, ottimo).catch(function () {
-        if (fbSave) fbSave(ottimo);
+      return esitoOttimistico(function () {
+        return updateCard(cid, { opzioni: nuoveOpzioni }, ottimo);
+      }).then(function (ok) {
+        // Il toast ASPETTA l'esito: prima confermava «Voto registrato ✓» a
+        // scrittura ancora in volo, quindi con la sessione scaduta o la rete giù
+        // l'utente leggeva confermato un voto che Firestore non aveva (stessa
+        // regola del preferito, AGENTS.md 13/14).
+        if (ok && ctx.showToast) ctx.showToast('Voto registrato ✓', 'ok');
       });
-      if (ctx.showToast) ctx.showToast('Voto registrato ✓', 'ok');
     },
     addCom: function () {
       var user = getUser();
@@ -547,7 +582,7 @@ export function createAppHandlers(ctx: any) {
                 // non devono ricevere l'avviso. Senza contesto (commento
                 // globale del docente, o ctx legacy dei test) si avvisa come
                 // prima tutta la card.
-                classi: contestoCom ? [contestoCom] : card.classi || ['TUTTE'],
+                classi: contestoCom ? [contestoCom] : classiDi(card),
                 annoScolastico: card.annoScolastico,
                 cardId: card.id,
                 cmId: cmIdNew,
@@ -709,7 +744,7 @@ export function createAppHandlers(ctx: any) {
                 classi:
                   (nuova && (nuova as any).classe) || contestoRep
                     ? [((nuova as any).classe || contestoRep) as string]
-                    : card.classi || ['TUTTE'],
+                    : classiDi(card),
                 annoScolastico: card.annoScolastico,
                 cardId: card.id,
                 cmId: nuova.id,
