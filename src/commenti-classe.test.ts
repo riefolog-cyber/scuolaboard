@@ -7,6 +7,7 @@ import {
   classePerNuovaRisposta,
   classePerNuovoCommento,
   commentiVisibili,
+  listaCommenti,
   mostraTuttiCommenti,
   rinominaClasseCommenti,
   trovaCommento,
@@ -77,6 +78,27 @@ describe('scrittura: classe del nuovo commento/risposta', () => {
     var lista = [{ id: 'x', risposte: [{ id: 'y', classe: '3A' }] }];
     expect(trovaCommento(lista, 'y')).toEqual({ id: 'y', classe: '3A' });
     expect(trovaCommento(lista, 'zzz')).toBe(null);
+  });
+});
+
+// Il campo si legge da un punto solo: una card senza `commenti` (documento
+// scritto da una versione precedente, import manuale) ha una lista VUOTA, non un
+// crash dentro il click handler che riscrive la card.
+describe('listaCommenti', () => {
+  it('card senza campo commenti: lista vuota', () => {
+    expect(listaCommenti({ id: 'c1' })).toEqual([]);
+  });
+  it('card assente: lista vuota', () => {
+    expect(listaCommenti(null)).toEqual([]);
+    expect(listaCommenti(undefined)).toEqual([]);
+  });
+  it('campo non-array (documento sporco): lista vuota', () => {
+    expect(listaCommenti({ id: 'c1', commenti: 'niente' })).toEqual([]);
+    expect(listaCommenti({ id: 'c1', commenti: 3 })).toEqual([]);
+  });
+  it('array vero: lo restituisce così com\'è', () => {
+    const lista = [{ id: 'cm1' }];
+    expect(listaCommenti({ id: 'c1', commenti: lista })).toBe(lista);
   });
 });
 

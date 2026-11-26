@@ -24,6 +24,7 @@ import { useAI } from '../ai-services.ts';
 import { useModals } from '../modals.ts';
 import { createAppHandlers, anteprimaTesto } from '../app-handlers.ts';
 import { eliminabileSoloDaClasse, senzaClasse, visibileAClasse } from '../card-classi.ts';
+import { listaCommenti } from '../commenti-classe.ts';
 import {
   fbSave,
   fbDel,
@@ -1404,7 +1405,7 @@ function AppProvider({ children }: any) {
         return cm;
       });
     }
-    var scrittura = fbSave(Object.assign({}, card, { commenti: aggiornaLista(card.commenti || []) }));
+    var scrittura = fbSave(Object.assign({}, card, { commenti: aggiornaLista(listaCommenti(card)) }));
     // L'editor si chiude SOLO quando la scrittura è riuscita. Prima `setEditingCm(null)`
     // era una riga sincrona dopo l'avvio della scrittura: con Firestore che nega il
     // testo appena digitato spariva insieme all'editor e il commento tornava quello
@@ -1447,7 +1448,7 @@ function AppProvider({ children }: any) {
         return item;
       });
     }
-    fbSave(Object.assign({}, card, { commenti: upd(card.commenti) }));
+    fbSave(Object.assign({}, card, { commenti: upd(listaCommenti(card)) }));
   }
 
   function setCardTimer(cardId: any, isoDeadline: any) {

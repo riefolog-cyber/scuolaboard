@@ -901,6 +901,89 @@ describe('addCom/addReply: notifiche', () => {
     expect(window.SB.notifyUser).not.toHaveBeenCalled();
   });
 
+  // Il commento inviato è un OVERLAY come il like e la cancellazione: si pota solo
+  // quando lo snapshot converge ai valori del patch, e una scrittura negata non
+  // converge mai. Senza l'annullamento il commento respinto resterebbe sullo
+  // schermo per sempre, con il toast rosso che dice il contrario.
+  it('addCom: la scrittura negata annulla l overlay e non svuota il campo', async () => {
+    clearServices();
+    var rifiuta: any;
+    const ctx = {
+      cards: [{ id: 'c1', titolo: 'T', commenti: [] }],
+      showCard: { id: 'c1' },
+      nc: { testo: 'Non deve restare' },
+      user: { uid: 'stud1', role: 'studente' },
+      myName: () => 'Luca',
+      setNc: vi.fn(),
+      showToast: vi.fn(),
+      onOptimistic: vi.fn(),
+      fbSave: vi.fn(function () {
+        return new Promise(function (_ok, ko) {
+          rifiuta = ko;
+        });
+      }),
+    };
+    const handlers = createAppHandlers(ctx);
+    handlers.addCom();
+    expect(ctx.onOptimistic).toHaveBeenCalledTimes(1);
+    rifiuta(new Error('denied'));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(ctx.onOptimistic).toHaveBeenCalledTimes(2);
+    expect(ctx.onOptimistic.mock.calls[1]).toEqual(['c1', null, []]);
+    expect(ctx.setNc).not.toHaveBeenCalled();
+  });
+
+  it('addReply: la scrittura negata annulla l overlay del thread', async () => {
+    clearServices();
+    var rifiuta: any;
+    const ctx = {
+      cards: [{ id: 'c1', titolo: 'T', commenti: [{ id: 'cm1', risposte: [] }] }],
+      showCard: { id: 'c1' },
+      replyTesto: 'Risposta respinta',
+      user: { uid: 'stud1', role: 'studente' },
+      myName: () => 'Luca',
+      setReplyTo: vi.fn(),
+      setReplyTesto: vi.fn(),
+      showToast: vi.fn(),
+      onOptimistic: vi.fn(),
+      fbSave: vi.fn(function () {
+        return new Promise(function (_ok, ko) {
+          rifiuta = ko;
+        });
+      }),
+    };
+    const handlers = createAppHandlers(ctx);
+    handlers.addReply('cm1');
+    expect(ctx.onOptimistic).toHaveBeenCalledTimes(1);
+    rifiuta(new Error('denied'));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(ctx.onOptimistic.mock.calls[1]).toEqual(['c1', null, []]);
+    // Il testo della risposta resta: si può riprovare senza riscriverlo.
+    expect(ctx.setReplyTesto).not.toHaveBeenCalled();
+  });
+
+  it('addReply su una card senza campo commenti non esplode', async () => {
+    clearServices();
+    const ctx = {
+      cards: [{ id: 'c1', titolo: 'T' }],
+      showCard: { id: 'c1' },
+      replyTesto: 'Risposta',
+      user: { uid: 'stud1', role: 'studente' },
+      myName: () => 'Luca',
+      setReplyTo: vi.fn(),
+      setReplyTesto: vi.fn(),
+      showToast: vi.fn(),
+      onOptimistic: vi.fn(),
+      fbSave: vi.fn().mockResolvedValue({}),
+    };
+    const handlers = createAppHandlers(ctx);
+    expect(function () {
+      handlers.addReply('cm1');
+    }).not.toThrow();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(ctx.onOptimistic.mock.calls[0][1].commenti).toEqual([]);
+  });
+
   it('addReply: risposta > 2000 char → toast warn', () => {
     const showToast = vi.fn();
     const handlers = createAppHandlers({

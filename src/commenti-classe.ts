@@ -82,6 +82,16 @@ export function classePerNuovaRisposta(padre: any, contesto: string | null): str
   return contesto || null;
 }
 
+// L'elenco dei commenti di una card, col caso "campo assente" risolto una volta
+// sola. Non è una comodità: `commenti` può mancare (card scritta da una versione
+// precedente, documento importato) e ogni scrittura che riscrive il campo ci fa
+// `.map`/`.filter`/`.concat` sopra — cioè un click handler che esplode su un
+// documento perfettamente valido. `trovaCommento` e `commentiVisibili` avevano
+// già questa guardia ognuno per conto suo; qui diventa l'unico punto.
+export function listaCommenti(card: any): any[] {
+  return card && Array.isArray(card.commenti) ? card.commenti : [];
+}
+
 // Cerca un commento (anche annidato) per id: serve a ereditare la classe del
 // padre in addReply.
 export function trovaCommento(lista: any, cmId: any): any {

@@ -8,6 +8,7 @@ import {
   classeContestoCommenti,
   classePerNuovaRisposta,
   classePerNuovoCommento,
+  listaCommenti,
   rinominaClasseCommenti,
   trovaCommento,
 } from './commenti-classe.ts';
@@ -130,14 +131,6 @@ export function createAppHandlers(ctx: any) {
   }
   function getShowCard() {
     return ctx.showCard;
-  }
-
-  // `commenti` può mancare: una card scritta da una versione precedente, o un
-  // documento importato, non ha l'array. `undefined.filter` non è un errore da
-  // mostrare all'utente, è una card senza commenti: leggere il campo passa da qui
-  // in ENTRAMBI i gestori che lo riscrivono, altrimenti i due casi divergono.
-  function listaCommenti(card: any) {
-    return card && Array.isArray(card.commenti) ? card.commenti : [];
   }
 
   // Fissa/sblocca una card in cima alla griglia (solo docente: `pinned` è fra i
@@ -616,7 +609,7 @@ export function createAppHandlers(ctx: any) {
       var contestoCom = classeContestoCommenti(ctx);
       var classeCom = classePerNuovoCommento(contestoCom);
       var nextCard = Object.assign({}, card, {
-        commenti: (card.commenti || []).concat([
+        commenti: listaCommenti(card).concat([
           {
             id: cmIdNew,
             autore: getMyName()(user),
@@ -683,17 +676,23 @@ export function createAppHandlers(ctx: any) {
         // Toast e azzeramento del campo SOLO dopo la conferma di scrittura. Prima
         // erano due righe sincrone DOPO la catena: partivano subito, insieme al
         // click, e dicevano "Commento inviato ✓" anche quando le Rules negavano la
-        // scrittura (o la rete era giù): il campo si svuotava, l'overlay ottimistico
-        // veniva poi potato e il commento spariva senza lasciare traccia. È lo
-        // stesso difetto corretto sul percorso di modifica card, mai applicato qui.
+        // scrittura (o la rete era giù), col campo svuotato: lo studente perdeva
+        // quello che aveva scritto. È lo stesso difetto corretto sul percorso di
+        // modifica card, mai applicato qui.
         .then(function () {
           if (ctx.setNc) ctx.setNc({ testo: '' });
           if (ctx.showToast) ctx.showToast('Commento inviato ✓', 'ok');
         })
-        // Il catch è vuoto PERCHÉ fbSave ha già mostrato il toast d'errore
-        // (app-utils.tsx): un secondo messaggio sarebbe doppio. Soprattutto il testo
-        // NON viene azzerato: lo studente lo ritrova e può riprovare.
-        .catch(function () {});
+        // Scrittura negata: fbSave ha già mostrato il toast d'errore
+        // (app-utils.tsx) — un secondo messaggio sarebbe doppio — e il testo NON
+        // viene azzerato, così lo studente lo ritrova e può riprovare. Va tolto
+        // anche l'overlay: si pota solo quando lo snapshot converge ai valori del
+        // patch, e un patch rifiutato non converge mai. Senza questo annullamento
+        // il commento respinto resterebbe sullo schermo per sempre, con un toast
+        // che dice il contrario.
+        .catch(function () {
+          if (ctx.onOptimistic) ctx.onOptimistic(card.id, null, []);
+        });
     },
     addReply: function (cmId: any) {
       var user = getUser();
@@ -711,7 +710,7 @@ export function createAppHandlers(ctx: any) {
       // La risposta eredita la classe del padre (vedi commenti-classe.ts): il
       // thread resta unito anche se il docente risponde con un altro filtro.
       var contestoRep = classeContestoCommenti(ctx);
-      var padreRep = trovaCommento(card.commenti, cmId);
+      var padreRep = trovaCommento(listaCommenti(card), cmId);
       var nuova = {
         id: Date.now(),
         autore: getMyName()(user),
@@ -728,7 +727,7 @@ export function createAppHandlers(ctx: any) {
           return item;
         });
       }
-      var nextCard = Object.assign({}, card, { commenti: ins(card.commenti) });
+      var nextCard = Object.assign({}, card, { commenti: ins(listaCommenti(card)) });
       if (ctx.onOptimistic) ctx.onOptimistic(card.id, nextCard, ['commenti']);
       saveCard(nextCard)
         .then(function () {
@@ -737,7 +736,7 @@ export function createAppHandlers(ctx: any) {
             var dbN2: any = (window as any).db;
             if (!SBn2 || !dbN2) return;
             // Risposta: notifica SEMPRE 1) autore parent, 2) prof (se studente risponde), 3) classe
-            var parent = (card.commenti || []).find(function (x: any) {
+            var parent = listaCommenti(card).find(function (x: any) {
               return String(x.id) === String(cmId);
             });
             if (!parent) {
@@ -749,7 +748,7 @@ export function createAppHandlers(ctx: any) {
                   }
                   if (list[i].risposte) find(list[i].risposte);
                 }
-              })(card.commenti || []);
+              })(listaCommenti(card));
             }
             var destAutore = parent ? parent.autore : null;
             if (destAutore && destAutore !== getMyName()(user)) {
@@ -847,7 +846,12 @@ export function createAppHandlers(ctx: any) {
           if (ctx.setReplyTesto) ctx.setReplyTesto('');
           if (ctx.showToast) ctx.showToast('Risposta inviata ✓', 'ok');
         })
-        .catch(function () {}); // fbSave ha già mostrato l'errore: il testo resta
+        // fbSave ha già mostrato l'errore: il testo resta. E l'overlay va tolto,
+        // altrimenti la risposta respinta resta appesa al thread per sempre (vedi
+        // addCom).
+        .catch(function () {
+          if (ctx.onOptimistic) ctx.onOptimistic(card.id, null, []);
+        });
     },
     executeDelReply: function (cmId: any, rId: any, cardId: any) {
       var card = getCards().find(function (c: any) {

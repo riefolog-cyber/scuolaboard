@@ -184,6 +184,35 @@ describe('regression: editCard dal CardItem', () => {
     // Il documento non è cambiato: il commento mostra ancora il testo vecchio.
     expect(db._get('cards', 'c1').commenti[0].testo).toBe('Commento originale');
   });
+
+  // Stessa regola per l'INVIO: il commento nuovo è un overlay, quindi una
+  // scrittura negata deve toglierlo. Prima restava sullo schermo per sempre —
+  // il toast rosso diceva "non salvato" e la card mostrava il commento, e al
+  // reload spariva: l'utente non aveva modo di capire quale delle due fosse vero.
+  it('se Firestore nega l invio del commento, il commento non resta sulla card e il testo resta nel campo', async () => {
+    const seed = {
+      users: { prof1: PROF_DOC },
+      cards: { c1: mkCard('c1', { titolo: 'Card senza commenti', commenti: [] }) },
+    };
+    const { db } = await renderApp({ seed, user: PROF });
+
+    fireEvent.click(await screen.findByText('Card senza commenti', {}));
+    const campo = (await screen.findByLabelText('Scrivi un commento')) as HTMLTextAreaElement;
+    fireEvent.input(campo, { target: { value: 'Commento respinto' } });
+
+    db._failWrites('cards');
+    // Invio da tastiera: è la stessa strada del pulsante (addCom), ma il campo
+    // è già lì e non c'è un secondo markup da indovinare.
+    fireEvent.keyDown(campo, { key: 'Enter' });
+
+    await waitFor(() => expect(screen.getAllByText(/Permesso negato|Errore di salvataggio/).length).toBeGreaterThan(0));
+    // Overlay annullato: la card torna allo stato vero (nessun commento)…
+    await waitFor(() => expect(screen.queryByText('Commento respinto')).toBeNull());
+    expect(screen.getByText(/Nessun commento\. Scrivi il primo!/)).toBeTruthy();
+    // …e il testo digitato è ancora nel campo, pronto per un nuovo tentativo.
+    expect((screen.getByLabelText('Scrivi un commento') as HTMLTextAreaElement).value).toBe('Commento respinto');
+    expect(db._get('cards', 'c1').commenti.length).toBe(0);
+  });
 });
 
 // Errore transitorio di rete: la bachecha NON deve svuotarsi.
