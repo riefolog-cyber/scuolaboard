@@ -8,11 +8,22 @@ import { useState, useEffect, useRef } from 'react';
 import { rispostaGiusta, quizTotale } from '../quiz-corretta.ts';
 import { escapeForPrompt } from '../utils/format.ts';
 
-// Pausa fra due chiamate AI consecutive. Deve corrispondere al throttle globale di
-// src/ai-services.ts (AI_THROTTLE_MS = 5000): emettere due richieste nello stesso tick
-// fa fallire la seconda, perché il controllo è sincrono e tutte e due leggono lo
-// stesso Date.now(). 5100 per lasciare un margine.
-var AI_PAUSA_MS = 5100;
+// Attesa prima di OGNI chiamata AI. La finestra vera la conosce solo
+// `ai-services.ts` (esposta come `SB.attesaAI`, calcolata da `ai-throttle.ts`):
+// qui c'erano 5.100 ms FISSI, e solo fra le domande dello stesso studente — fra
+// uno studente e l'altro non si aspettava nulla, quindi la prima domanda del
+// secondo partiva subito dopo l'ultima del primo e veniva rifiutata («Troppe
+// richieste AI»), lasciando la valutazione incompleta. Il numero fisso duplicava
+// anche la finestra: se cambia in ai-services, qui si aspetterebbe il valore
+// vecchio. La si chiama via `window.SB` per non importare ai-services (ne
+// sovrascriverebbe i mock nei test).
+async function attendiFinestraAI() {
+  var attesa = (window.SB && window.SB.attesaAI && window.SB.attesaAI()) || 0;
+  if (attesa > 0)
+    await new Promise(function (r) {
+      setTimeout(r, attesa);
+    });
+}
 
 var db = window.db;
 var quizListenRisposte = window.quizListenRisposte;
@@ -265,6 +276,10 @@ async function valutaAperteProfAI(card: any, ris: any[]) {
             '\nRISPOSTA: ' +
             escapeForPrompt(risposta.slice(0, 2000)) +
             '\n</USER_DATA>';
+          // Prima di OGNI chiamata, non solo fra le domande: il throttle misura
+          // dall'avvio dell'ultima e non guarda chi l'ha fatta (qui cambia anche
+          // lo studente).
+          await attendiFinestraAI();
           try {
             var res: any = await window.callGroqJSON(null, prompt, 600);
             if (!res) throw new Error('risposta vuota');
@@ -282,8 +297,6 @@ async function valutaAperteProfAI(card: any, ris: any[]) {
             falliti.push(item.i);
             fallitiTot++;
           }
-          // Tra una chiamata e l'altra: aspetta che il throttle (5s) lo consenta.
-          if (k < domAI.length - 1) await new Promise(function (r2) { setTimeout(r2, AI_PAUSA_MS); });
         }
         // `aiValutato` è vero solo se NON c'è nulla di fallito: dichiarare "valutato"
         // mentre mancano dei voti faceva comparire "✓ Tutte valutate" con il bottone

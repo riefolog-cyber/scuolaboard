@@ -61,6 +61,15 @@ var _lastAiCall = 0;
 // Unica fonte della finestra: ai-throttle.ts, che la usa anche per dire quanto
 // manca prima della prossima chiamata (analisi suddivisa, una per classe).
 var AI_THROTTLE_MS = INTERVALLO_AI_MS;
+// Quanto manca alla prossima chiamata consentita. Serve ai flussi INTERNI che
+// ne emettono più d'una in serie (analisi suddivisa per classe, valutazione
+// delle risposte aperte): il throttle è sincrono e agganciato all'AVVIO,
+// quindi chi non aspetta se la vede rifiutare — e i risultati parziali si
+// perdono. Registrata anche su `SB.attesaAI` (`useQuiz` la chiama così, senza
+// importare questo modulo: un import gli sovrascriverebbe i mock nei test).
+export function attesaProssimaAI(): number {
+  return attesaProssimaChiamata(_lastAiCall, Date.now(), AI_THROTTLE_MS);
+}
 // Timeout della singola richiesta al Worker. Senza, un Worker che non risponde
 // (o una rete che si blocca a metà) lascia il pannello AI in attesa per sempre:
 // nessun errore, solo lo spinner. 45s coprono una generazione lenta e restano
@@ -84,6 +93,11 @@ function timeoutSignal(ms: number): AbortSignal | undefined {
  * Invia la richiesta al Cloudflare Worker.
  */
 async function chiamaAI(type: any, content: any, options: any) {
+  // Prima si VALIDA, poi si consuma la finestra: con il controllo dopo, una
+  // chiamata sbagliata (parametri mancanti, un refuso di un flusso nuovo)
+  // bruciava 5 secondi di throttle a tutti, e il secondo tentativo corretto
+  // veniva rifiutato con «Troppe richieste AI» invece che eseguito.
+  if (!type || !content) throw new Error('Parametri chiamata AI mancanti (type=' + type + ')');
   var now = Date.now();
   if (now - _lastAiCall < AI_THROTTLE_MS) {
     throw new Error(
@@ -93,7 +107,6 @@ async function chiamaAI(type: any, content: any, options: any) {
   _lastAiCall = now;
 
   options = options || {};
-  if (!type || !content) throw new Error('Parametri chiamata AI mancanti (type=' + type + ')');
 
   // TRONCAMENTO PORTATO A 60.000 CARATTERI
   // Garantisce che la lezione lunghissima e tutti i commenti passino integri
@@ -307,6 +320,7 @@ window.aiCacheSetAll = cacheSetAll;
 // Integrazione nel sistema ScuolaBoard
 if (window.SB) {
   SB.callGroqJSON = callGroqJSON;
+  SB.attesaAI = attesaProssimaAI;
   SB.callGroqText = callGroqText;
   SB.aiLoad = aiLoad;
   SB.aiSave = aiSave;
@@ -469,18 +483,16 @@ export function useAI(user: any) {
           return;
         }
         for (var i = 0; i < classiConCard.length; i++) {
-          if (i > 0) {
-            // Il throttle di `chiamaAI` è globale e sincrono: due analisi di fila
-            // nello stesso giro facevano rifiutare la seconda («Troppe richieste
-            // AI»), e `runAI` non salva risultati parziali — quindi con più classi
-            // la suddivisione falliva quasi sempre. Si attende il tempo che manca
-            // invece di farsela negare.
-            var pausa = attesaProssimaChiamata(_lastAiCall, Date.now(), AI_THROTTLE_MS);
-            if (pausa > 0) {
-              await new Promise<void>(function (resolve) {
-                setTimeout(resolve, pausa);
-              });
-            }
+          // Anche la PRIMA classe, non solo dalla seconda: chi avvia l'analisi può
+          // aver appena usato un altro flusso AI (un riassunto, la generazione di
+          // un quiz) e la finestra del throttle vale per tutte le chiamate. Il
+          // throttle è globale e sincrono, `runAI` non salva risultati parziali:
+          // farsi rifiutare brucia l'intera analisi, aspettare costa al massimo 5s.
+          var pausa = attesaProssimaAI();
+          if (pausa > 0) {
+            await new Promise<void>(function (resolve) {
+              setTimeout(resolve, pausa);
+            });
           }
           var cl = classiConCard[i];
           var classCards = targetCards.filter(function (c: any) {

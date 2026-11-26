@@ -53,6 +53,17 @@ export function escluseDi(card: Card): string[] {
   });
 }
 
+// Le stesse voci una volta sola, in ordine di prima comparsa. Serve a CHI LEGGE
+// (etichette di card, dettaglio e foglio stampato) e al conteggio delle classi
+// di `eliminabileSoloDaClasse`: `classi: ['3A', '3A']` è una classe sola
+// scritta due volte, e mostrarla come «3A, 3A» farebbe credere a due
+// destinatari — su un foglio che finisce in mano agli studenti.
+function classiUniche(lista: string[]): string[] {
+  return lista.filter(function (x: string, i: number) {
+    return lista.indexOf(x) === i;
+  });
+}
+
 export function esclusa(card: Card, classe: string | null): boolean {
   if (!classe) return false;
   return escluseDi(card).indexOf(classe) >= 0;
@@ -119,9 +130,7 @@ export function eliminabileSoloDaClasse(card: Card, classe: string): boolean {
   // l'elenco e la card diventerebbe «solo prof» — l'opposto del gesto chiesto,
   // e per giunta in silenzio. Con una sola classe DISTINTA il gesto equivale
   // a cancellarla.
-  var uniche = cc.filter(function (x: string, i: number) {
-    return cc.indexOf(x) === i;
-  });
+  var uniche = classiUniche(cc);
   if (uniche.length <= 1) return false;
   // Più classi in elenco: eliminare da una sola lascia le altre, quindi sì.
   return uniche.indexOf(classe) >= 0;
@@ -155,12 +164,15 @@ export function escluseCoerenti(classi: any, classiEscluse: any): string[] {
 export function etichettaClassi(card: Card): string {
   var cc = classiDi(card);
   var ex = escluseDi(card);
-  var base = cc.length === 0 ? 'Solo prof' : cc.indexOf('TUTTE') >= 0 ? 'Tutte le classi' : cc.join(', ');
+  // `classiUniche`: un elenco con lo stesso nome ripetuto è UNA classe, e
+  // «3A, 3A» sulla stampa faceva credere a due destinatari.
+  var base =
+    cc.length === 0 ? 'Solo prof' : cc.indexOf('TUTTE') >= 0 ? 'Tutte le classi' : classiUniche(cc).join(', ');
   // Su una card «solo prof» le esclusioni non tolgono niente (`visibileAClasse`
   // esce prima di guardarle): «Solo prof tranne 3A» descriverebbe una regola
   // che non esiste, ed è il testo che finiva sul foglio stampato.
   if (!ex.length || cc.length === 0) return base;
-  return base + ' tranne ' + ex.join(', ');
+  return base + ' tranne ' + classiUniche(ex).join(', ');
 }
 
 // Le esclusioni in forma breve, per i chip della card e del dettaglio:
@@ -172,7 +184,7 @@ export function etichettaEsclusioni(card: Card): string {
   // Stessa ragione di `etichettaClassi`: su una card senza classi destinatarie
   // un chip «tranne 3A» farebbe credere a un'esclusione che non ha effetto.
   if (!ex.length || classiDi(card).length === 0) return '';
-  return 'tranne ' + ex.join(', ');
+  return 'tranne ' + classiUniche(ex).join(', ');
 }
 
 // Scrittura del gesto «togli da questa classe» (la ✕ sulla card filtrata).

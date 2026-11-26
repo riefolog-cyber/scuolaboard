@@ -132,6 +132,28 @@ describe('C3 — writeBatch in useQuiz', () => {
     expect(docUpdateSpies.some((s) => s.mock.calls.length > 0)).toBe(false); // fallback NON usato
   });
 
+  // Il throttle è agganciato all'avvio dell'ultima chiamata e non guarda chi
+  // l'ha fatta: fra l'ultima domanda di uno studente e la prima del successivo
+  // non passava nulla (l'attesa fissa era solo dentro il ciclo delle domande),
+  // quindi la seconda chiamata veniva rifiutata e quello studente restava senza
+  // valutazione. Ora la finestra si chiede a `SB.attesaAI` PRIMA di ogni chiamata.
+  it('valutaAperteProfAI: chiede la finestra del throttle prima di ogni chiamata, anche fra studenti', async () => {
+    (window as any).SB = (window as any).SB || {};
+    const attesa = vi.fn(() => 0);
+    (window as any).SB.attesaAI = attesa;
+    (window as any).callGroqJSON = vi.fn().mockResolvedValue({ voto: 0.5 });
+    const card = { id: 'c9', quizDomande: [{ tipo: 'aperta', testo: 'Spiega Y' }] };
+    const ris = [
+      { studente: 'Luca', risposte: { 0: 'prima' }, aiValutato: false, aiScores: {} },
+      { studente: 'Anna', risposte: { 0: 'seconda' }, aiValutato: false, aiScores: {} },
+    ];
+    apiRef.valutaAperteProfAI(card, ris);
+    await waitFor(() => expect(commitMock).toHaveBeenCalledTimes(1));
+    expect(attesa).toHaveBeenCalledTimes(2); // una per studente, non solo dentro il ciclo delle domande
+    fakeDb._ops.set.forEach((op: any) => expect(op.data.aiErrori).toEqual([]));
+    delete (window as any).SB.attesaAI;
+  });
+
   it('valutaAperteProfAI: una risposta vuota non viene valutata e non è un errore', async () => {
     (window as any).callGroqJSON = vi.fn().mockResolvedValue({ voto: 1 });
     const card = { id: 'c1', quizDomande: [{ tipo: 'aperta', testo: 'Spiega X' }] };

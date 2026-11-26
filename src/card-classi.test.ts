@@ -257,6 +257,19 @@ describe('card-classi: etichetta della destinazione', function () {
   it('card legacy senza il campo: vale per tutte', function () {
     expect(etichettaClassi({ id: 'legacy' })).toBe('Tutte le classi');
   });
+
+  // `classi: ['3A', '3A']` arriva da un import o da una scrittura a mano: è
+  // UNA classe. Mostrarla due volte farebbe credere a due destinatari, e sulla
+  // stampa il docente deciderebbe in base a un dato sbagliato.
+  it('lo stesso nome ripetuto si mostra una volta sola', function () {
+    expect(etichettaClassi({ classi: ['3A', '3A'] })).toBe('3A');
+  });
+
+  it('esclusioni ripetute: una sola volta', function () {
+    expect(etichettaClassi({ classi: ['TUTTE'], classiEscluse: ['3A', '3A'] })).toBe(
+      'Tutte le classi tranne 3A'
+    );
+  });
 });
 
 // Scrivere una classe in `classi` e contemporaneamente fra le escluse era
@@ -303,6 +316,10 @@ describe('card-classi: etichetta breve delle esclusioni', function () {
 
   it('card «solo prof»: senza destinatari l\'esclusione non ha effetto, niente chip', function () {
     expect(etichettaEsclusioni({ classi: [], classiEscluse: ['3A'] })).toBe('');
+  });
+
+  it('esclusioni ripetute: una sola volta anche nel chip', function () {
+    expect(etichettaEsclusioni({ classi: ['TUTTE'], classiEscluse: ['3A', '3A'] })).toBe('tranne 3A');
   });
 });
 

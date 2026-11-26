@@ -131,6 +131,32 @@ describe('chiamaAI: rami di errore', () => {
     expect(out).toBe('ok');
   });
 
+  // I flussi interni chiedono la finestra a `SB.attesaAI` prima di ogni
+  // chiamata. Se il calcolo o la registrazione sparissero, quei flussi
+  // tornerebbero a farsi rifiutare dal throttle senza che nessun test lo veda.
+  it('SB.attesaAI: quanto manca alla prossima chiamata, poi zero', async () => {
+    authMock();
+    window.fetch = vi.fn().mockResolvedValue(okResponse('ok'));
+    await window.SB.callGroqText(null, 'prima');
+    expect(window.SB.attesaAI()).toBe(5000);
+    vi.setSystemTime(Date.now() + 2000);
+    expect(window.SB.attesaAI()).toBe(3000);
+    vi.setSystemTime(Date.now() + 4000);
+    expect(window.SB.attesaAI()).toBe(0);
+  });
+
+  // Validare DOPO aver segnato la chiamata bruciava la finestra anche a una
+  // richiesta sbagliata: il tentativo corretto, un istante dopo, veniva
+  // respinto con «Troppe richieste AI» e sembrava un problema di rete.
+  it('parametri mancanti: errore subito, finestra del throttle non consumata', async () => {
+    authMock();
+    window.fetch = vi.fn().mockResolvedValue(okResponse('ok'));
+    await expect(window.SB.callGroqText(null, '')).rejects.toThrow(/Parametri chiamata AI mancanti/);
+    const out = await window.SB.callGroqText(null, 'prompt vero');
+    expect(out).toBe('ok');
+    expect(window.fetch).toHaveBeenCalledTimes(1);
+  });
+
   it('senza currentUser (logout) → errore login richiesto', async () => {
     window.SB.user = { role: 'prof' };
     window.SB.auth = { currentUser: null };
