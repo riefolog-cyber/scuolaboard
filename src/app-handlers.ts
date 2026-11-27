@@ -746,20 +746,12 @@ export function createAppHandlers(ctx: any) {
             var dbN2: any = (window as any).db;
             if (!SBn2 || !dbN2) return;
             // Risposta: notifica SEMPRE 1) autore parent, 2) prof (se studente risponde), 3) classe
-            var parent = listaCommenti(card).find(function (x: any) {
-              return String(x.id) === String(cmId);
-            });
-            if (!parent) {
-              (function find(list: any) {
-                for (var i = 0; i < list.length; i++) {
-                  if (String(list[i].id) === String(cmId)) {
-                    parent = list[i];
-                    break;
-                  }
-                  if (list[i].risposte) find(list[i].risposte);
-                }
-              })(listaCommenti(card));
-            }
+            // `padreRep` è la stessa ricerca, già fatta con `trovaCommento`
+            // (ricorsiva sulle risposte, in commenti-classe.ts). La copia
+            // scritta a mano qui sotto guardava il solo primo livello e serviva
+            // al caso "il padre è una RISPOSTA": due implementazioni della
+            // stessa regola, e la seconda non poteva che divergere.
+            var parent = padreRep;
             var destAutore = parent ? parent.autore : null;
             if (destAutore && destAutore !== getMyName()(user)) {
               dbN2
@@ -836,12 +828,14 @@ export function createAppHandlers(ctx: any) {
             // card hanno una discussione indipendente e non vanno avvisate.
             // Stessa regola di addCom: una proposta o una card nascosta non si
             // annuncia alla classe, che non può aprirla.
+            // La classe del thread è quella della risposta (ereditata dal
+            // padre) oppure, senza, quella del contesto; senza nessuna delle
+            // due si avvisa tutta la card, come prima. La stessa espressione
+            // era scritta due volte (test e valore): bastava cambiarne una.
+            var classeRisposta = (nuova && (nuova as any).classe) || contestoRep || null;
             if (SBn2.notifyClasse && annunciabileAllaClasse(card))
               SBn2.notifyClasse({
-                classi:
-                  (nuova && (nuova as any).classe) || contestoRep
-                    ? [((nuova as any).classe || contestoRep) as string]
-                    : classiDi(card),
+                classi: classeRisposta ? [classeRisposta] : classiDi(card),
                 // Stessa regola di addCom: l'esclusione della classe viaggia col
                 // fan-out, altrimenti lo studente escluso riceve l'avviso di una
                 // card che per lui non esiste.
