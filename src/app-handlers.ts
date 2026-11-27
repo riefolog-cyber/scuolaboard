@@ -3,7 +3,7 @@
 // da AppProvider al momento della creazione.
 import { classeCorrenteOf, ANNO_LEGACY } from './app-provider-helpers.ts';
 import { annunciabileAllaClasse } from './avvisi-classe.ts';
-import { classiDi } from './card-classi.ts';
+import { classiDi, escluseDi } from './card-classi.ts';
 import { votiDi } from './sondaggi.ts';
 import {
   classeContestoCommenti,
@@ -666,6 +666,12 @@ export function createAppHandlers(ctx: any) {
                 // globale del docente, o ctx legacy dei test) si avvisa come
                 // prima tutta la card.
                 classi: contestoCom ? [contestoCom] : classiDi(card),
+                // Le classi a cui il docente ha tolto la card non vanno avvisate:
+                // senza questo, lo studente escluso riceve l'invito ad aprire un
+                // commento su una card che la sua bacheca non gli mostra — la
+                // notifica tradirebbe il gesto del docente (stessa regola di
+                // `annunciaClasse`, che passa `escluseDi(card)` da sempre).
+                classiEscluse: escluseDi(card),
                 annoScolastico: card.annoScolastico,
                 cardId: card.id,
                 cmId: cmIdNew,
@@ -836,6 +842,10 @@ export function createAppHandlers(ctx: any) {
                   (nuova && (nuova as any).classe) || contestoRep
                     ? [((nuova as any).classe || contestoRep) as string]
                     : classiDi(card),
+                // Stessa regola di addCom: l'esclusione della classe viaggia col
+                // fan-out, altrimenti lo studente escluso riceve l'avviso di una
+                // card che per lui non esiste.
+                classiEscluse: escluseDi(card),
                 annoScolastico: card.annoScolastico,
                 cardId: card.id,
                 cmId: nuova.id,

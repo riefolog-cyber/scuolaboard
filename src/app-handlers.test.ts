@@ -951,6 +951,33 @@ describe('addCom/addReply: notifiche', () => {
     expect(window.SB.notifyClasse).not.toHaveBeenCalled();
   });
 
+  // Card «tutte tranne la 3A»: lo studente della 3A non la vede in bacheca, quindi
+  // non deve ricevere nemmeno l'avviso del commento. `classiEscluse` esisteva già
+  // in `notifyClasse` (e `annunciaClasse` la passava da sempre): il fan-out dei
+  // commenti no, e l'avviso lo invitava ad aprire una card che per lui non esiste.
+  it('addCom passa le classi escluse al fan-out alla classe', async () => {
+    window.SB.notifyUser = vi.fn();
+    window.SB.notifyClasse = vi.fn();
+    const db = notifDb();
+    window.SB.db = db;
+    window.db = db;
+    const ctx = {
+      cards: [{ id: 'c1', titolo: 'T', classi: ['TUTTE'], classiEscluse: ['3AI'], commenti: [] }],
+      showCard: { id: 'c1' },
+      nc: { testo: 'Ciao' },
+      user: { uid: 'stud1', role: 'studente' },
+      myName: () => 'Luca',
+      setNc: vi.fn(),
+      showToast: vi.fn(),
+      onOptimistic: vi.fn(),
+    };
+    createAppHandlers(ctx).addCom();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(window.SB.notifyClasse).toHaveBeenCalledWith(
+      expect.objectContaining({ classi: ['TUTTE'], classiEscluse: ['3AI'] })
+    );
+  });
+
   it('addCom senza user o con testo vuoto → no-op', () => {
     window.SB.notifyUser = vi.fn();
     const handlers = createAppHandlers({ cards: [], nc: { testo: '' }, user: null, showToast: vi.fn(), setNc: vi.fn() });
