@@ -65,6 +65,26 @@ export function mancantiDi(card: any): Array<{ uid: string; nome: string }> {
 // segnalare un problema, non il mezzo secondo tra salvataggio e fan-out.
 export var AVVISO_SOSPETTO_MS = 60 * 1000;
 
+// Una card che gli studenti NON possono aprire non si annuncia alla classe, in
+// nessuna delle due strade che la avvisano: la coda d'annuncio (pubblicazione e
+// recupero, qui sotto) e il fan-out dei commenti (`addCom`/`addReply` in
+// `app-handlers.ts`).
+//  - `proposta`: esiste solo per il docente, che la approva o la rifiuta. Il
+//    commento con cui la rimanda indietro è un dialogo fra lui e chi l'ha
+//    scritta, non un avviso per tutti i compagni;
+//  - `visibile === false`: il docente l'ha nascosta e `cards.ts` non la mostra
+//    agli studenti; la notifica sarebbe un invito ad aprire una card che per
+//    loro non esiste (il dettaglio resterebbe vuoto, senza spiegazioni).
+// Scritto una volta sola perché è già successo che una delle due strade lo
+// dimenticasse: la classe riceveva «ha commentato» per una card che non poteva
+// aprire.
+export function annunciabileAllaClasse(card: any): boolean {
+  if (!card) return false;
+  if (card.proposta) return false;
+  if (card.visibile === false) return false;
+  return true;
+}
+
 // La card va segnalata al docente come "avviso non inviato"?
 //  - `avvisiMancanti` pieno → sappiamo CHI non ha ricevuto l'avviso (invio
 //    interrotto a metà): è il caso più grave e va mostrato subito;
@@ -74,8 +94,7 @@ export var AVVISO_SOSPETTO_MS = 60 * 1000;
 // Proposte e card nascoste non si annunciano: nessun badge.
 export function avvisoInSospeso(card: any, nowMs: number): boolean {
   if (!card || card.avvisiPendenti !== true) return false;
-  if (card.proposta) return false;
-  if (card.visibile === false) return false;
+  if (!annunciabileAllaClasse(card)) return false; // proposta o card nascosta: nessun badge
   if (mancantiDi(card).length > 0) return true;
   var ts = Number(card.avvisiDaMs != null ? card.avvisiDaMs : card.id);
   if (!isFinite(ts)) return false;
@@ -266,8 +285,7 @@ export function avvisiDaRecuperare(cards: any[], annoScolastico: string, nowMs: 
   var min = nowMs - AVVISI_RECUPERO_MS;
   return cards.filter(function (c: any) {
     if (!c || c.avvisiPendenti !== true) return false; // solo card marcate da inviare
-    if (c.proposta) return false; // le proposte le decide il docente
-    if (c.visibile === false) return false; // card nascosta: nessun avviso
+    if (!annunciabileAllaClasse(c)) return false; // proposta o card nascosta: nessun avviso
     if (annoScolastico && c.annoScolastico !== annoScolastico) return false;
     var ts = Number(c.avvisiDaMs != null ? c.avvisiDaMs : c.id);
     if (!isFinite(ts)) return false;

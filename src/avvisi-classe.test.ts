@@ -18,6 +18,7 @@ import {
   annunciaClasse,
   confermaAnnunci,
   confermaAnnuncio,
+  annunciabileAllaClasse,
   avvisoInSospeso,
   etichettaAvviso,
   dettaglioMancanti,
@@ -702,6 +703,18 @@ describe('annunciaClasse: non rifiuta MAI in nessun modo di fallimento', () => {
   it('nessun servizio di notifica disponibile', async () => {
     delete (window as any).SB.notifyClasse;
     await expect(annunciaClasse({ card, anno: '2026/2027' })).resolves.toBeTruthy();
+  });
+});
+
+// ── annunciabileAllaClasse ──────────────────────────────────────────────────
+// La stessa risposta serve alla coda d'annuncio e al fan-out dei commenti: una
+// proposta o una card nascosta non si annunciano alla classe, che non può aprirle.
+describe('annunciabileAllaClasse · card che gli studenti non possono aprire', function () {
+  it('esclude proposta e card nascosta, ammette tutto il resto', function () {
+    expect(annunciabileAllaClasse({ id: 1, classi: ['3AI'] })).toBe(true);
+    expect(annunciabileAllaClasse({ id: 2, proposta: true })).toBe(false);
+    expect(annunciabileAllaClasse({ id: 3, visibile: false })).toBe(false);
+    expect(annunciabileAllaClasse(null)).toBe(false);
   });
 });
 

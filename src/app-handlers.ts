@@ -2,6 +2,7 @@
 // Il ctx è tipizzato strutturalmente: i campi opzionali sono quelli forniti
 // da AppProvider al momento della creazione.
 import { classeCorrenteOf, ANNO_LEGACY } from './app-provider-helpers.ts';
+import { annunciabileAllaClasse } from './avvisi-classe.ts';
 import { classiDi } from './card-classi.ts';
 import { votiDi } from './sondaggi.ts';
 import {
@@ -654,7 +655,10 @@ export function createAppHandlers(ctx: any) {
             // di questo fix era nuova_card_<cardId>: il PRIMO commento della classe
             // sembrava "già avvisato" dalla pubblicazione della card e i compagni
             // non ricevevano niente (dedupe in lettura, useNotifiche).
-            if (SBn.notifyClasse) {
+            // Proposte e card nascoste non si annunciano alla classe: gli studenti
+            // non le vedono (`cards.ts`) e l'avviso sarebbe un invito ad aprire una
+            // card che per loro non esiste.
+            if (SBn.notifyClasse && annunciabileAllaClasse(card)) {
               SBn.notifyClasse({
                 // Fan-out SOLO alla classe del commento: le altre classi che
                 // vedono la stessa card hanno una discussione indipendente e
@@ -824,7 +828,9 @@ export function createAppHandlers(ctx: any) {
             // distinto, non una riedizione di nuova_card_<cardId>. La classe è
             // quella del padre (o del contesto): le altre classi della stessa
             // card hanno una discussione indipendente e non vanno avvisate.
-            if (SBn2.notifyClasse)
+            // Stessa regola di addCom: una proposta o una card nascosta non si
+            // annuncia alla classe, che non può aprirla.
+            if (SBn2.notifyClasse && annunciabileAllaClasse(card))
               SBn2.notifyClasse({
                 classi:
                   (nuova && (nuova as any).classe) || contestoRep

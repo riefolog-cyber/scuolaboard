@@ -894,6 +894,63 @@ describe('addCom/addReply: notifiche', () => {
     expect(setNc).toHaveBeenCalledWith({ testo: '' });
   });
 
+  // Una proposta esiste solo per il docente (`cards.ts` non la mostra agli
+  // studenti): «il prof ha commentato» alla classe sarebbe un invito ad aprire
+  // una card che per lei non esiste. Le notifiche ai prof restano: anche su una
+  // proposta il docente vuole sapere che è arrivato un commento.
+  it('addCom su una proposta non fa fan-out alla classe', async () => {
+    window.SB.notifyUser = vi.fn();
+    window.SB.notifyClasse = vi.fn();
+    const db = notifDb();
+    window.SB.db = db;
+    window.db = db;
+    const ctx = {
+      cards: [{ id: 'p1', titolo: 'Proposta', classi: ['3AI'], proposta: true, commenti: [] }],
+      showCard: { id: 'p1' },
+      nc: { testo: 'Aggiungi le fonti' },
+      user: { uid: 'prof1', role: 'prof' },
+      myName: () => 'Prof Rossi',
+      setNc: vi.fn(),
+      showToast: vi.fn(),
+      onOptimistic: vi.fn(),
+    };
+    createAppHandlers(ctx).addCom();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(window.SB.notifyClasse).not.toHaveBeenCalled();
+  });
+
+  // Una card nascosta è stata tolta dalla bacheca dal docente: la classe non deve
+  // ricevere l'avviso di una risposta a un thread che non può aprire.
+  it('addReply su una card nascosta non fa fan-out alla classe', async () => {
+    window.SB.notifyUser = vi.fn();
+    window.SB.notifyClasse = vi.fn();
+    const db = notifDb();
+    window.SB.db = db;
+    window.db = db;
+    const ctx = {
+      cards: [
+        {
+          id: 'c1',
+          titolo: 'Nascosta',
+          classi: ['3AI'],
+          visibile: false,
+          commenti: [{ id: 'cm1', risposte: [] }],
+        },
+      ],
+      showCard: { id: 'c1' },
+      replyTesto: 'Ci penso io',
+      user: { uid: 'stud1', role: 'studente' },
+      myName: () => 'Luca',
+      setReplyTo: vi.fn(),
+      setReplyTesto: vi.fn(),
+      showToast: vi.fn(),
+      onOptimistic: vi.fn(),
+    };
+    createAppHandlers(ctx).addReply('cm1');
+    await new Promise((r) => setTimeout(r, 0));
+    expect(window.SB.notifyClasse).not.toHaveBeenCalled();
+  });
+
   it('addCom senza user o con testo vuoto → no-op', () => {
     window.SB.notifyUser = vi.fn();
     const handlers = createAppHandlers({ cards: [], nc: { testo: '' }, user: null, showToast: vi.fn(), setNc: vi.fn() });
